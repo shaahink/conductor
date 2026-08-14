@@ -112,19 +112,19 @@ Both were found by grep over `src/` on 2026-08-06 while advising a live run, not
 is "not built" in the usual sense — the machinery exists in both cases and the gap is in what reaches
 it.
 
-- **`mutatingLanes[]` is plan config that nothing reads.** `PlanConfig.cs:93` declares
-  `List<MutatingLaneConfig> MutatingLanes` and `docs/plan-config.md` documents its seven fields, but
-  no code path in `src/` ever touches the property — the only reference anywhere outside the
-  declaration is `B12_3Tests.PlanConfig_MutatingLanes_DefaultsEmpty` asserting it defaults empty.
-  Contrast `AnalysisLanes`, read in three places (`LaneCoordinator.StartAnalysisLanes`,
-  `RunLoop.cs:375`, `PromptBuilder.cs:299`). The Tier-B machinery underneath is real and does work —
-  `MutatingLaneRunner`, `Lanes/PathClaimTracker`, worktree isolation, the merge staged in a third
-  worktree — but it is reachable from exactly one direction: `LaneCoordinator.RunFollowupFixLanesAsync`
-  turns `.conductor/followups.md` entries into lanes via `FollowupEntryToMutatingLane`, after a stage
-  confirms, in a sequential `foreach`. So a plan that declares `mutatingLanes[]` gets silence, and
-  Tier B lanes are never concurrent with anything. Either wire the config to the runner or delete the
-  field **and** its doc section — a documented field that does nothing costs a plan author a session
-  to discover.
+- ~~**`mutatingLanes[]` is plan config that nothing reads.**~~ **Closed by deletion, KS3.3
+  (2026-08-14)** — the "delete the field **and** its doc section" branch. `PlanConfig.MutatingLanes`
+  declared a block that no code path in `src/` ever touched; its only reference outside the
+  declaration was a test asserting it defaults empty. The property, its doc table and the key in four
+  shipped plans are gone, `plan set mutatingLanes …` now refuses, and `doctor` names the key as inert
+  if an old file still carries it. `KS3_3SchemaHonestyTests.NoSettablePlanRootPropertyIsReadByNothing`
+  keeps the general shape from coming back.
+  <br>**Still open, and the half the deletion did not touch:** Tier B is reachable from exactly one
+  direction. `MutatingLaneRunner`, `Lanes/PathClaimTracker`, worktree isolation and the merge staged in
+  a third worktree are all real, but the only path in is
+  `LaneCoordinator.RunFollowupFixLanesAsync`, turning `.conductor/followups.md` entries into lanes via
+  `FollowupEntryToMutatingLane` after a stage confirms, in a sequential `foreach`. So Tier B lanes are
+  never concurrent with anything, and nothing an author writes can schedule one.
 - **Lane spend is outside the cost cap.** `LaneRunner`, `LaneWorkerPool` and `MutatingLaneRunner`
   contain no cost or token accounting of any kind, while `maxRunCostUsd` / `maxRunTokens` are computed
   from session costs (`sessions/NNN/cost.json`). Every analysis lane, parallel audit and fix-lane

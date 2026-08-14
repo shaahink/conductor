@@ -105,10 +105,13 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
             CheckPlanDrift(plan),
             CheckArgvLength(plan),
         };
-        // The two sweeps read the template files, so they are async all the way down rather than
-        // blocking here (MA0045 is an error in this tree).
+        // These read files — the templates, and the plan document as raw text — so they are async all
+        // the way down rather than blocking here (MA0045 is an error in this tree).
         checks.Add(await CheckTemplateBracesAsync(plan).ConfigureAwait(false));
         checks.Add(await CheckEscalationTokenAsync(plan).ConfigureAwait(false));
+        // KS3.3 — the file's own keys, judged against the shape the engine declares. Warn-level:
+        // an inert key cannot break a run, it just cannot do what the author thinks it does.
+        checks.Add(await CheckInertKeysAsync(plan).ConfigureAwait(false));
 
         var (currentCostUsd, hasRun) = TryReadCostFromRunDb(plan);
         // KS5.4: the grants live in the persisted run_state row, not on the event spine the status

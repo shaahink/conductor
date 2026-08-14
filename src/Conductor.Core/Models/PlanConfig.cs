@@ -86,10 +86,14 @@ public sealed class PlanConfig
     /// <summary>Read-only analysis lanes that run concurrently with sessions (B12.1 Tier A).
     /// Each lane spawns an agent in a scratch temp directory — it can never write the working tree.</summary>
     public List<AnalysisLaneConfig> AnalysisLanes { get; set; } = new();
-    /// <summary>Tier B isolated-worktree mutating lanes that run behind a full-battery merge gate
-    /// (B12.3). Each lane runs in its own <c>git worktree</c> on a scratch branch; the lane's
-    /// changes are only merged into the primary tree if the merge-gate battery is green.</summary>
-    public List<MutatingLaneConfig> MutatingLanes { get; set; } = new();
+    // KS3.3: `mutatingLanes` used to be declared here. It was parsed, round-tripped by every editor,
+    // documented with a seven-field table — and read by no code path in src/, for the whole life of
+    // the field. The Tier B machinery it appeared to configure (MutatingLaneRunner, worktree
+    // isolation, the merge gate) is real but reachable from exactly one direction:
+    // LaneCoordinator.FollowupEntryToMutatingLane, built from .conductor/followups.md after a stage
+    // confirms. A plan that declared the block got silence. Removing the property is what makes the
+    // silence audible: the key now resolves to nothing, so `plan set` refuses it and `doctor` names
+    // it as inert instead of the plan claiming a feature it never had.
     /// <summary>Plan-level workflow definitions keyed by name. When a stage or the plan references
     /// a workflow name not in this dictionary, the built-in definitions (deliver-verify, etc.) are used
     /// as fallbacks (M3.1).</summary>

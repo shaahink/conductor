@@ -39,6 +39,7 @@ prints the exact `conductor plan reload` command when it does not.
 | `branchPattern` | string | Regex — conductor warns if the current branch doesn't match. |
 | `pauseOnBlocked` | bool | Park at NeedsHuman when a BLOCKED row is found. Default true. |
 | `batteryCollapse` | bool | Skip agent's pre-session ritual, defer to conductor's battery. Saves tokens by not paying an agent to run gates the engine runs anyway; **the size of the saving has never been measured** (FU-B10-2 — it needs an A/B on the same checkpoints with only this flag flipped). |
+| `verifyEachDelivery` | bool | Default true. Queue a Verify session after every delivery. Set false to rely on the audit and the gate battery instead. It is the **lowest-precedence** QA input there is: a `pipeline.qa` dial and a stage's `overrides.skipVerification` both outrank it, in either direction. |
 | `promptExtra` | string | Prepended to every session prompt (high-level context). |
 
 ### `satelliteRepos` — when the work lands next door (SC4.3)
@@ -141,6 +142,7 @@ to spawn and the deterministic default takes over) but you should know before th
 | `command` | string | CLI exe. Default `"opencode"`. |
 | `args` | string[] | Args with `{prompt}`. |
 | `model` | string | Model override for status calls. |
+| `timeoutMinutes` | int | How long a status call may run. Default 5. |
 | `maxPerHour` | int | Rate limit. Default 12. |
 
 ## `stages[]` — Stage definitions
@@ -159,6 +161,10 @@ to spawn and the deterministic default takes over) but you should know before th
 | `agent` | object | Per-stage agent override (merged over plan default). |
 | `preHook` | object | Command run before the first session. Non-zero exit blocks the stage. |
 | `postHook` | object | Command run after confirmation. Best-effort, never blocks. |
+| `workflow` | string | Name of the workflow this stage runs (see `workflows` below). Falls back to `defaultWorkflow`, then to `deliver-verify`. |
+| `overrides` | object | Per-stage workflow overrides. `skipVerification` (bool) is the one field, and it outranks the plan's `verifyEachDelivery` in both directions. A key this object does not declare is refused at load, naming the key that does the job. |
+| `qa` | object | Per-stage QA dial — same shape as `pipeline.qa` (`mode`: `off` · `everySession` · `phaseGate`, plus `verifierThreshold`). Outranks the plan-level dial for this stage only. |
+| `pathClaims` | string[] | Repo-relative paths this stage's work is expected to touch. Used to keep concurrent lanes off each other's files; on a single-session plan it is inert by construction, not by accident. |
 
 ### Braces in prose — `{word}` is refused, `{{word}}` is a literal
 
@@ -181,6 +187,11 @@ Text the engine substitutes for you — a tracker handoff, gate output, an agent
 is data: braces in it are passed through verbatim and can never fail a run.
 
 ## `workflows` — Declarative session steps
+
+| Field | Type | Description |
+|---|---|---|
+| `workflows` | object | Workflow definitions keyed by the name a stage refers to. Each is `{ "name", "repeat", "steps" }`. |
+| `defaultWorkflow` | string | The workflow used by stages that name none. Unset = the built-in `deliver-verify`. |
 
 Named workflows keyed by name; a stage picks one with `workflow`, the plan with `defaultWorkflow`.
 Built-ins: `deliver-verify` (default), `big-dev-then-big-audit`, `docs-only`, `spike`. Each step is
@@ -233,9 +244,17 @@ docs-only or spike plan with no build/test surface.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `stallMinutes` | int | 12 | No output for this long → kill + resume. |
+| `stallMinutes` | int | 12 | No agent output, no tool call and no live `bg` child for this long → the session is stalled and the grace window below starts. |
+| `stallGraceMinutes` | int | 3 | How long a stalled session gets to recover before it is hard-killed. The stall is *detected* at `stallMinutes` and *acted on* this much later, so the shortest path from silence to a kill is the sum of the two. |
 | `sessionTimeoutMinutes` | int | 240 | Hard session timeout. |
+| `stallSeconds` | int | null | Seconds-precision override for `stallMinutes`. Minutes are the right unit for a real plan and useless for a rehearsal run whose sessions last seconds — that is the only reason these three exist. null = use the minutes field. |
+| `stallGraceSeconds` | int | null | Seconds-precision override for `stallGraceMinutes`. |
+| `sessionTimeoutSeconds` | int | null | Seconds-precision override for `sessionTimeoutMinutes`. |
 | `maxResumesPerSession` | int | 2 | Max times a session can be resumed after stall/timeout. |
+| `maxSessions` | int | null | Live session cap for the whole run: when the run's session count reaches it the loop **parks** at the next boundary (Paused, with the reason) instead of spawning another session, and raising or clearing it resumes the same run. null or 0 = no cap. Unlike the process-scoped `--max-sessions` flag — which stops the *process* — this is editable in flight (Face → Plan → Settings, or `plan set`, both of which queue a reload). |
+| `authPreflight` | bool | true | Ask the agent CLI for one token (~$0.001) before the run's first session, so a run cannot start on a dead credential and discover it thirteen sessions in. Only recognised provider CLIs are probed; `doctor --no-auth-check` skips the same probe. |
+| `sameFailureCircuitBreaker` | bool | true | When 2 consecutive sessions end with the same non-success outcome *and* matching symptoms (same failing gates, same stall shape), stop queuing another identical fix session and consult the advisor instead. This is what stops a retry loop from spending the whole budget re-running the failure. |
+| `verifierThreshold` | int | 80 | Verifier score (0–100) a session must reach for its checkpoints to be marked DONE; below it the findings feed a retry. Overridable per stage (`stages[].qa.verifierThreshold`) and per plan (`pipeline.qa.verifierThreshold`); a value outside 1–100 is refused at load. |
 | `stageSlackFactor` | int | 2 | Budget multiplier: `stage.sessions × this`. |
 | `backoffMinutes` | int | 30 | Wait on usage/rate limit. |
 | `maxBackoffs` | int | 10 | Hard cap on consecutive backoffs. |
@@ -330,6 +349,7 @@ over the changes it exists to check.
 | Field | Type | Description |
 |---|---|---|
 | `command` | string | CLI command for needs-human / completion. |
+| `args` | string[] | Arguments for `command`. `{message}` is the only placeholder substituted — an args list without it spawns the command with nothing to say. |
 | `webhook`, `discord`, `slack` | object | Each has `url` + optional `headers`. |
 
 ## `telegram` — Telegram bot
@@ -340,6 +360,7 @@ over the changes it exists to check.
 | `pollIntervalSeconds` | int | getUpdate polling interval. Default 4. |
 | `enableTwoWay` | bool | Enable incoming commands via Telegram. |
 | `apiBaseUrl` | string | Bot API root. Defaults to `https://api.telegram.org`; set it only to point at a test double. |
+| `messageThreadId` | int | The forum topic every push of this run belongs to, when the chat is a forum supergroup. Unset — the ordinary case — means the run threads itself by replying to its own first message, which is the only way to group a run in a non-forum chat. |
 
 Token read from the `CONDUCTOR_TELEGRAM_TOKEN` environment variable, or from
 `<stateDir>/secrets.local.json` (written by the Face's Telegram tab / `POST /telegram/token`, and
@@ -412,9 +433,12 @@ ordered list in the session prompt.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `lessons` | bool | true | Inject rolling lessons brief. |
-| `recentFailure` | bool | true | Inject compact failed-session summary. |
+| `lessons` | bool | true | Inject rolling lessons brief (`.conductor/lessons.md`). |
+| `recentFailure` | bool | true | Inject compact failed-session summary when the last session didn't verify. |
+| `ledger` | bool | true | Inject recent knowledge-ledger entries (`conductor note`). |
+| `bugs` | bool | true | Inject the run's open tracked bugs (`conductor bug new`). |
 | `lessonsMaxEntries` | int | 3 | Max lessons entries. |
+| `ledgerMaxEntries` | int | 8 | Max ledger entries. |
 | `maxBytes` | int | 2048 | Total byte cap for all battery sections. |
 
 ## `analysisLanes[]` — Tier A parallel analysis
@@ -432,28 +456,79 @@ Read-only lanes that run in a scratch directory concurrently with the primary se
 | `enabled` | bool | Default true. |
 | `maxOutputLines` | int | Default 200. |
 
-## `mutatingLanes[]` — Tier B isolated worktree lanes
+### There is no `mutatingLanes` block (KS3.3)
 
-> **Not scheduled — declaring this block does nothing (2026-08-06).** `PlanConfig.MutatingLanes` is
-> parsed and then never read by any code path in `src/`. The runner underneath is real, but the only
-> way to reach it is a follow-up: `LaneCoordinator.RunFollowupFixLanesAsync` builds lanes from
-> `.conductor/followups.md` entries after a stage confirms, and runs them **sequentially**. The table
-> below describes the runner's inputs, not a working plan field. Filed in
-> [`docs/dev/NEXT-FEATURES.md`](dev/NEXT-FEATURES.md).
+This page used to carry a `mutatingLanes[]` table with seven fields, above a blockquote admitting the
+block was never scheduled. The property is **deleted** now, so the key resolves to nothing: `plan set`
+refuses it and `doctor` names it as inert if it is still sitting in a file. Tier B lanes themselves are
+untouched and still real — they are reached from follow-ups
+(`LaneCoordinator.RunFollowupFixLanesAsync` builds them from `.conductor/followups.md` after a stage
+confirms, sequentially), which is a different thing from a plan block and now reads as one.
 
-Lanes that may write, isolated in a git worktree and merged behind a gate.
+## `supervisor` — The babysitter, named in the plan
+
+The command `conductor watch` runs when a wake fires, with the ~30-line brief on stdin. Keeping it here
+rather than in a shell loop means the supervision survives the terminal it was started from, ships with
+the repo, and shows up in a diff. Costs nothing while quiet: the wait is a file-stat loop and the
+command is invoked only on a wake. The wake set, the brief and the standing-orders contract are
+documented in [`operating.md` §3](operating.md).
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool | true | Set false to keep the block and its orders in the plan while silencing the command — the reviewable way to turn a babysitter off for one night. |
+| `command` | string | — | Run through the platform shell with the brief on stdin. Blank disables the block as surely as `enabled: false`. |
+| `timeoutMinutes` | int | 10 | How long the command may run before it is killed. |
+| `maxPerHour` | int | 6 | Invocations per rolling hour; 0 = unlimited. A cost fuse, not a nicety: a run that parks, is resumed by the supervisor and parks again on the same cause is a model invocation every few seconds until someone notices the bill. Fires are counted in `.conductor/supervisor-fires.log`, so the cap survives the fresh process every wake starts. |
+| `standingOrders` | string | — | What the supervisor may decide alone and what it must escalate. Carried **into** the brief, so the agent reads its authority on the same stdin as the wake instead of being trusted to have been told separately. Unset = nothing stated, which a careful supervisor reads as "escalate everything". |
+| `remote` | object | — | Send the wake off-box — see below. |
+
+### `supervisor.remote` — when the supervisor is not on this machine
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool | true | Set false to keep the URL in the plan while silencing delivery. |
+| `webhookUrl` | string | — | Receives the wake brief as the POST body, verbatim (`application/json`) — the same document the local supervisor gets on stdin, not a "something happened" ping. |
+| `headers` | object | — | Headers for the webhook. Values expand `${NAME}` and `%NAME%` from the environment, so the plan can name a credential without ever containing one. |
+| `telegram` | bool | false | Also push a compact wake line to `telegram.allowedChatIds`, sent by the `watch` process — so it still arrives when the engine is the thing that died. |
+| `timeoutSeconds` | int | 20 | Ceiling on any one delivery. |
+| `maxPerHour` | int | 12 | Dispatches per rolling hour; 0 = unlimited. Deliberately a separate fuse from `supervisor.maxPerHour`: a local supervisor that has burnt its budget is exactly when the human most needs the wake to reach them. |
+
+Delivery is best-effort by design — a webhook that is down must not turn a parked run into a second
+outage, so a failed send is reported on stderr and the watch still exits on its wake code.
+
+## `packs` — Domain context, merged into every prompt
+
+An array of pack **names**. Each resolves to `<templatesDir>/packs/<name>.md`, falling back to
+`<planDir>/packs/<name>.md` so a pack written for one era is not stranded there, and the concatenation
+is substituted into every prompt as `{packs}`. A name carrying a path separator or `..` is refused
+rather than combined into a path — plan JSON can arrive over the control plane's import endpoint. A
+name that resolves to no file is skipped silently.
+
+```jsonc
+"packs": ["dotnet-engineer", "modern-csharp", "agent-pitfalls"],
+```
+
+Use them for house style and the mistakes agents habitually make in this codebase's domain, instead of
+restating those in every stage's notes.
+
+**Packs are not free.** They land in the same composed prompt as `promptExtra` and the stage notes, and
+on Windows the prompt reaches the agent as a command-line **argument**: through a `.cmd`/`.bat` shim the
+ceiling is 8191 characters, and an argv over it is truncated rather than refused — the agent gets a
+prompt that stops mid-sentence and nothing says so. `conductor doctor` measures the composed length per
+stage and fails before a run rather than after; `conductor init` says the same thing where it offers the
+block. Keep packs short, or move the long-form material into `readOrder`, which costs file reads instead
+of argv.
+
+## `pipeline` — Declarative pipeline rules
+
+Absent (the default) means every classic behaviour is reproduced exactly: a plan with no `pipeline`
+block behaves byte-for-byte as it did before the block existed.
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | string | Lane identifier. |
-| `kind` | string | `"delivery"`, `"fix"`, `"refactor"`. |
-| `name` | string | Human-readable name. |
-| `prompt` | string | Work prompt for the agent. |
-| `stageTrigger` | string | Only run for this stage. |
-| `timeoutMinutes` | int | Default 30. |
-| `enabled` | bool | Default true. |
-| `agent` | object | Per-lane agent override. |
-| `mergeGates` | array | Gates to verify the merge. null = use plan-level gates. |
+| `roles` | object | Maps a session role — `deliver`, `verify`, `audit`, `fix` — to the agent that runs it. A missing role uses the stage/plan default agent. A role's `model` is subject to the same `{model}`-placeholder rule as `agent.model`, and `doctor` fails on the gap. |
+| `qa` | object | The QA frequency dial: `mode` ∈ `off` · `everySession` · `phaseGate`, plus an optional `verifierThreshold` (1–100). Outranks `verifyEachDelivery`; a stage's own `qa` outranks it. A typo'd mode is refused at load rather than silently projecting to classic behaviour. |
+| `multiItem` | object | Whether one session may claim several conflict-free ready items. Absent or disabled = one active checkpoint per session. |
 
 ## `audit` — Phase-end audit
 

@@ -222,7 +222,6 @@
     "docs/history/CONDUCTOR-KARVAN.md"
   ],
   "analysisLanes": [],
-  "mutatingLanes": [],
   "workflows": {
     "deliver": {
       "name": "deliver",

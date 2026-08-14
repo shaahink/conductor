@@ -220,7 +220,6 @@
     "docs/history/CONDUCTOR-SARBAN.md"
   ],
   "analysisLanes": [],
-  "mutatingLanes": [],
   "workflows": {
     "deliver": {
       "name": "deliver",

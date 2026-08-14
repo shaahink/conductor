@@ -351,14 +351,27 @@ public sealed class B12_3Tests
         Assert.Null(lane.MergeGates);
     }
 
-    // ---------------------------------------------------------------- PlanConfig.MutatingLanes defaults empty
+    // ---------------------------------------------------------------- the plan property, retired (KS3.3)
 
+    /// <summary>This slot used to hold <c>PlanConfig_MutatingLanes_DefaultsEmpty</c>, which asserted
+    /// that <c>plan.MutatingLanes</c> defaults to an empty list. It was the ONLY reference to the
+    /// property anywhere outside its own declaration — a test proving that config nothing reads
+    /// starts out with nothing in it. KS3.3 deleted the property, so the assertion it replaces is
+    /// the one that matters: a plan may no longer declare a block the scheduler never sees.
+    /// <para>Tier B itself is untouched. <see cref="MutatingLaneConfig"/>, <c>MutatingLaneRunner</c>
+    /// and the worktree/merge-gate machinery are live and reached through
+    /// <c>LaneCoordinator.FollowupEntryToMutatingLane</c> — every other fact in this file still
+    /// covers them.</para></summary>
     [Fact]
-    public void PlanConfig_MutatingLanes_DefaultsEmpty()
+    public void TheInertPlanBlockIsGoneFromTheSchemaWhileTierBItselfStays()
     {
-        var plan = new PlanConfig();
-        Assert.NotNull(plan.MutatingLanes);
-        Assert.Empty(plan.MutatingLanes);
+        Assert.False(Conductor.Core.Planning.PlanKeySchema.Resolve("mutatingLanes").Known);
+        Assert.DoesNotContain("mutatingLanes",
+            Conductor.Core.Planning.PlanKeySchema.KeysOf(typeof(PlanConfig)), StringComparer.OrdinalIgnoreCase);
+
+        // The lane type and its defaults are still real — this deletes a plan key, not a feature.
+        Assert.Equal("delivery", new MutatingLaneConfig().Kind);
+        Assert.True(Conductor.Core.Planning.PlanKeySchema.Resolve("analysisLanes.0.kind").Known);
     }
 
     // ---------------------------------------------------------------- MutatingLaneResult states

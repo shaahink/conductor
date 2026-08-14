@@ -140,6 +140,26 @@ public static class PlanKeySchema
         return ElementTypeOf(type) is not null ? [] : JsonProperties(type).Select(JsonNameOf).ToList();
     }
 
+    /// <summary>KS3.3 — the declared keys the plan allows one level BELOW <paramref name="dottedPath"/>,
+    /// with a list unwrapped to its element ("the keys of a <c>stages[]</c> entry"). Empty for a scalar,
+    /// for an unknown path, and for a dictionary, whose next segment is a name the author invents rather
+    /// than one the schema declares.
+    /// <para>This is what lets the docs-match-reality pin DERIVE which keys <c>docs/plan-config.md</c>
+    /// owes a row instead of restating a hand-kept list — the exact rot that suite exists to stop.</para></summary>
+    public static IReadOnlyList<string> KeysUnder(string dottedPath)
+    {
+        ArgumentNullException.ThrowIfNull(dottedPath);
+        var type = typeof(PlanConfig);
+        foreach (var segment in dottedPath.Split('.', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var next = Step(type, segment, out _);
+            if (next is null) return [];
+            type = next;
+        }
+        if (IsDictionary(type)) return [];
+        return KeysOf(ElementTypeOf(type) ?? type);
+    }
+
     /// <summary>One segment of the walk: the type reached by following <paramref name="segment"/>, or
     /// null when this type declares no such thing.</summary>
     private static Type? Step(Type type, string segment, out string canonical)
@@ -169,7 +189,13 @@ public static class PlanKeySchema
         if (type.IsPrimitive || type == typeof(string) || type == typeof(decimal) || type.IsEnum)
             return [];
         return type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.CanRead && p.CanWrite && p.GetCustomAttribute<JsonIgnoreAttribute>() is null);
+            .Where(p => p.CanRead && p.CanWrite
+                && p.GetCustomAttribute<JsonIgnoreAttribute>() is null
+                // KS3.3: the extension bucket is where keys the type does NOT declare are parked so
+                // that load can refuse them by name. Its own property name (`unknownFields`) is not a
+                // key a plan may set — treating it as one made `plan set advisor.unknownFields x`
+                // resolve, which is the inert-key trap with the trap's own evidence locker as bait.
+                && p.GetCustomAttribute<JsonExtensionDataAttribute>() is null);
     }
 
     private static string JsonNameOf(PropertyInfo prop) =>
