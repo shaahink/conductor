@@ -39,15 +39,29 @@ dotnet run --project src\Conductor -- run -p <plan>
 ## 2. Scaffold a new plan
 
 ```powershell
-# Preferred: detects the repo type (dotnet/node/go/rust/python) and writes matching build+test
-# gates, plus editable copies of the prompt templates.
+# Preferred: one command from an empty repo to a plan `conductor doctor` has nothing to fail on.
+# Detects the repo type (dotnet/node/go/rust/python) for the gates, names an agent CLI this machine
+# actually has, and writes editable copies of every prompt template.
 cd C:\MyProject
+conductor plan new
+
+# Have an idea, a PRD, or a tracker from the last project? Hand it over — a structured document is
+# parsed for free, and only free prose needs a model, which you name yourself:
+conductor plan new --from-idea .\docs\PRD.md
+conductor plan new --advisor claude --from-idea "port the ingest pipeline off the legacy scheduler"
+
+# Then the check that matters. `0 fail` is the bar the scaffold is built to:
+conductor doctor
+
+# The older scaffold, still shipped and unchanged:
 conductor init
 
-# Creates:
+# Either one creates:
 #   C:\MyProject\conductor.plan.json
 #   C:\MyProject\TRACKER.md
-#   C:\MyProject\templates\{session.md,fix.md}
+#   C:\MyProject\templates\   (all eight: session, fix, resume, verify, review, audit,
+#                              advisor, chat — the directory listing IS the answer to
+#                              "what can I change?")
 
 # Have only an idea? Route it through the advisor and get a drivable plan out:
 conductor init --from-idea "port the ingest pipeline off the legacy scheduler"
@@ -58,7 +72,8 @@ conductor new-plan -o C:\MyProject --name MyProject
 
 ## 3. Edit the plan
 
-Open `conductor.plan.json` and set the real paths:
+`plan new --from-idea` exists so this step is optional — the JSON never has to be opened. When you
+do want to read it, this is the shape:
 
 ```json
 {
@@ -313,8 +328,8 @@ Closing the Face never stops the run: it is a viewer over the control plane, and
 ## 13. Quick reference: creating a new iteration
 
 ```powershell
-# 1. Scaffold (detects repo type, writes matching gates)
-conductor init
+# 1. Scaffold (detects repo type, writes matching gates, picks an agent CLI this machine has)
+conductor plan new
 
 # 2. Edit plan JSON (set repo, stages, gates)
 notepad conductor.plan.json
@@ -457,9 +472,17 @@ conductor log [options]
 
 conductor plan <verb> [options]
   -p, --plan <PATH>
+  new [<idea|file>]          Scaffold plan + tracker + templates here, doctor-clean
+       -o, --output <DIR>    Directory to scaffold into (default: cwd)
+       --name <NAME>         Plan name (default: the directory's name)
+       --repo <PATH>         Repo to drive (default: the output directory)
+       --from-idea <T|FILE>  Free prose, a PRD path, or an existing tracker
+       --agent <COMMAND>     Agent CLI to write in (default: claude/opencode, whichever is here)
+       --advisor <COMMAND>   Enable the advisor, pointed here — what free prose needs
   set <key> <value>          Hot-update a plan field (limits.stallMinutes 15)
   reload                     Re-read + validate plan JSON
   add-stage <json>           Append a new stage
+  import <file|"text">       Turn a document or prose into stages and declared work
 
 conductor audit <STAGE> [options]
   -p, --plan <PATH>

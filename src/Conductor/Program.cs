@@ -102,7 +102,7 @@ app.Configure(c =>
     c.AddCommand<HeartbeatCommand>("heartbeat")
         .WithDescription("Ask the running conductor to refresh .conductor/REPORT.md immediately (only meaningful during a live session; also in the : command palette).");
     c.AddCommand<PlanCommand>("plan")
-        .WithDescription("Plan management: set a field, reload+validate, or add a stage. Sub-commands: set <key> <value>, reload, add-stage <json>.");
+        .WithDescription("Plan management: scaffold one, set a field, reload+validate, add a stage, or import a document. Sub-commands: new [[--from-idea \"…\"]], set <key> <value>, reload, add-stage <json>, import <file|\"text\">.");
     c.AddCommand<TasksCommand>("tasks")
         .WithDescription("Show task graph: sub-tasks per checkpoint from the event log.");
     c.AddCommand<TaskCommand>("task")

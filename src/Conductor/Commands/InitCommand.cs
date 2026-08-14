@@ -170,9 +170,87 @@ public sealed class InitCommand : Command<InitCommand.Settings>
     internal static IReadOnlyList<(string Path, string Content)> TemplateScaffold(string templatesDir) =>
         [.. PromptBuilder.BuiltInNames.Select(t => (Path.Combine(templatesDir, t), PromptBuilder.BuiltIn(t)))];
 
-    internal static string BuildPlanJson(string name, string repo, RepoKind kind)
+    /// <summary>KS3.1 — the agent CLI a scaffold names when nothing better is known: the one
+    /// <c>init</c> has always written. <see cref="PlanNewCommand.ResolveAgentCommand"/> reaches for it
+    /// last, after asking PATH.</summary>
+    internal const string DefaultAgentCommand = "opencode";
+
+    /// <summary>KS3.1 — the <c>agent</c> block body for a named CLI, indented for
+    /// <see cref="BuildPlanJson"/>. The COMMAND is written through verbatim (an operator may name a
+    /// path, not a bare name); what the name selects is the argument shape, because a CLI named
+    /// without the flags it needs is worse than one not named at all. Anything the table does not know
+    /// gets the opencode shape, which is what <c>init</c> has always written — that is why <c>init</c>
+    /// is byte-identical after this change.</summary>
+    internal static string AgentBlockBody(string command)
+    {
+        var quoted = JsonString(command);
+        return Path.GetFileNameWithoutExtension(command).Equals("claude", StringComparison.OrdinalIgnoreCase)
+            ? $$"""
+                    "command": "{{quoted}}",
+                    // A conductor session edits files with nobody watching, and headless claude denies
+                    // every tool prompt it cannot ask about — so the scaffold ships the skip-permissions
+                    // flag. Delete it if you would rather approve each tool yourself, and plan to sit
+                    // with the run when you do.
+                    "args": ["-p", "{prompt}", "--output-format", "stream-json", "--verbose", "--dangerously-skip-permissions", "--session-id", "{sessionId}"],
+                    "provider": "claude"
+                """
+            : $$"""
+                    "command": "{{quoted}}",
+                    "args": ["run", "{prompt}"],
+                    "provider": "opencode"
+                """;
+    }
+
+    /// <summary>A command as it must appear inside a JSON string: a Windows path is full of backslashes
+    /// and a plan that fails to parse is a scaffold that deletes itself at the self-check.</summary>
+    private static string JsonString(string value) => value
+        .Replace("\\", "\\\\", StringComparison.Ordinal)
+        .Replace("\"", "\\\"", StringComparison.Ordinal);
+
+    /// <summary>W4.2's commented advisor hint, verbatim — lifted out of the plan template only so the
+    /// live block (KS3.1) can take its place without the template growing a second copy of everything
+    /// around it. <c>init</c> emits exactly this, exactly here, as it always has.</summary>
+    private const string CommentedAdvisorHint = """
+          // W4.2 — the advisor. A model consulted only where you ask for one: turning prose into a
+          // plan (`conductor init --from-idea "…"`, `conductor plan import "…"`), refining or
+          // splitting a card, and judging a stuck stage. Never inside scheduling — the loop stays
+          // deterministic. A structured plan document needs none of this; it parses for free.
+          // Uncomment and point it at any CLI that answers on stdout. Omit "args" and you get the
+          // shipped default, ["-p", "{prompt}"]; an unfilled "{model}" (and the flag before it) is
+          // dropped, so this block works with or without `plan import --model`.
+          //
+          // "advisor": {
+          //   "enabled": true,
+          //   "command": "claude",
+          //   "args": ["-p", "{prompt}", "--output-format", "json", "--model", "{model}"],
+          //   "output": "json",
+          //   "timeoutMinutes": 6
+          // },
+        """;
+
+    /// <summary>KS3.1 — the advisor block, live rather than commented, for the one case where the
+    /// operator has asked for a model by name (<c>plan new --advisor</c>). Everything else keeps the
+    /// commented hint: the advisor is consulted mid-run too, so switching it on is a spend decision and
+    /// belongs to whoever typed the flag, not to a scaffold.</summary>
+    internal static string AdvisorBlockBody(string command) => $$"""
+          "advisor": {
+            "enabled": true,
+            "command": "{{JsonString(command)}}",
+            "args": ["-p", "{prompt}", "--model", "{model}"],
+            "output": "text",
+            "timeoutMinutes": 6
+          },
+        """;
+
+    internal static string BuildPlanJson(
+        string name, string repo, RepoKind kind, string? agentCommand = null, string? advisorCommand = null)
     {
         var repoNorm = repo.Replace("\\", "/");
+        var agentBody = AgentBlockBody(
+            string.IsNullOrWhiteSpace(agentCommand) ? DefaultAgentCommand : agentCommand).TrimEnd();
+        var advisorBlock = string.IsNullOrWhiteSpace(advisorCommand)
+            ? CommentedAdvisorHint
+            : AdvisorBlockBody(advisorCommand.Trim()).TrimEnd();
         var (build, tests) = GatesFor(kind);
         var gates = (build.Length == 0 && tests.Length == 0)
             ? "[]"
@@ -189,26 +267,10 @@ public sealed class InitCommand : Command<InitCommand.Settings>
           "tracker": "TRACKER.md",
           "templatesDir": "templates",
           "agent": {
-            "command": "opencode",
-            "args": ["run", "{prompt}"],
-            "provider": "opencode"
+        {{agentBody}}
           },
 
-          // W4.2 — the advisor. A model consulted only where you ask for one: turning prose into a
-          // plan (`conductor init --from-idea "…"`, `conductor plan import "…"`), refining or
-          // splitting a card, and judging a stuck stage. Never inside scheduling — the loop stays
-          // deterministic. A structured plan document needs none of this; it parses for free.
-          // Uncomment and point it at any CLI that answers on stdout. Omit "args" and you get the
-          // shipped default, ["-p", "{prompt}"]; an unfilled "{model}" (and the flag before it) is
-          // dropped, so this block works with or without `plan import --model`.
-          //
-          // "advisor": {
-          //   "enabled": true,
-          //   "command": "claude",
-          //   "args": ["-p", "{prompt}", "--output-format", "json", "--model", "{model}"],
-          //   "output": "json",
-          //   "timeoutMinutes": 6
-          // },
+        {{advisorBlock}}
 
           // SF6.3 — where the run reaches you when you are not at the desk. The bot token is read from
           // CONDUCTOR_TELEGRAM_TOKEN (or saved from the Face's Telegram tab) and is never written here,

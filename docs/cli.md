@@ -53,6 +53,7 @@ through the variable — and it is never silent: the warning naming both files g
 | `demo` | Run a complete plan end to end against a built-in fake agent, in a throwaway directory. No credentials, no spend, no PowerShell. The fastest honest answer to "does this work on my machine". |
 | `journey` | Pre-flight itinerary: identity, stages, gates, human moments. No state written, no agent spawned. Run this before `run`. |
 | `doctor` | <2s health check: agent CLI, git, face binary, DNS/disk/API, budget, Telegram. Says exactly what's missing. Not a resume preview — see `status` for that. |
+| `plan new` | Authoring from nothing: one command from an empty repo to a plan, a tracker and the editable templates, **doctor-clean by construction** — the agent block names a CLI this machine actually has, and no scaffolded template spells the escalation token. `--from-idea` takes free prose, a PRD path or an existing tracker; a structured document is parsed for free, prose needs a model you name with `--advisor`. The JSON never has to be opened. |
 | `init` | Scaffold a plan + TRACKER.md + editable templates, with gates chosen from the detected repo type (dotnet/node/go/rust/python). `--from-idea "…"` turns prose into stages in the same command. |
 | `new-plan` | Bare-minimum scaffold: plan + tracker, no gate detection. |
 
@@ -113,7 +114,7 @@ command palette, and from Telegram.
 | `inject <txt>` | Queue an instruction for the agent's next session |
 | `heartbeat` | Force a fresh `.conductor/REPORT.md` now (only meaningful mid-session) |
 | `rollover <tokens\|off\|clear>` | Set/clear this run's session-token rollover (run-state only) |
-| `plan set/reload/add-stage/import` | Plan management: hot-update fields, reload, add stages, import prose or markdown |
+| `plan new/set/reload/add-stage/import` | Plan management: scaffold one, hot-update fields, reload, add stages, import prose or markdown. A sub-command the dispatcher does not know is refused and names the ones it does — it no longer falls through to the plan summary. |
 
 ## Diagnostics
 

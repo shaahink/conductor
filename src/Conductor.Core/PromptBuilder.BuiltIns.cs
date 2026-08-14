@@ -19,6 +19,13 @@ public sealed partial class PromptBuilder
     internal static readonly string[] BuiltInNames =
         ["session.md", "fix.md", "resume.md", "verify.md", "review.md", "audit.md", "advisor.md", "chat.md"];
 
+    /// <summary>KS3.1 (promptExtra trap 9) — none of these bodies SPELLS the escalation token, they
+    /// describe it. <c>ProgressConventions.MentionsHuman</c> matches <c>conventions.humanToken</c> as a
+    /// case-insensitive substring of the handoff, so a session that quotes its own prompt back into the
+    /// handoff parks the run; and <c>doctor</c>'s escalation sweep (KS1.4) reads every file under
+    /// <c>templatesDir</c>, which is where <c>init</c> and <c>plan new</c> put copies of exactly these.
+    /// Spelling it here made every scaffold doctor-red on a check the operator could not have caused.
+    /// The same rule bites labels that merely end in it: <c>NeedsHuman:</c> matched too.</summary>
     internal static string BuiltIn(string name) => name switch
     {
         "session.md" => """
@@ -36,7 +43,7 @@ public sealed partial class PromptBuilder
 
             Conductor rules (in addition to the plan's):
             - Keep the handoff, checkpoint titles and notes free of curly braces: a literal brace in prose the engine composes back into a prompt reads as an unresolved placeholder and parks the run.
-            - If genuinely blocked on a human decision, add a line starting `HUMAN:` to the tracker handoff block, `conductor note` the reason, commit, push, and end the session.
+            - If genuinely blocked on a human decision, open a tracker handoff line with the word HUMAN then a colon, `conductor note` the reason, commit, push, and end the session.
             - Leave the working tree clean (commit or revert leftovers) and the branch pushed.
             - End in conductor's result format (K5.1); prose goes in the handoff: `SESSION-RESULT:` + a headline of at most fifteen words, up to three `- outcome` bullets, then `artefacts:`, `evidence:` and `gaps:` lines.
 
@@ -65,7 +72,7 @@ public sealed partial class PromptBuilder
 
             {tools}
 
-            If genuinely blocked on a human decision, add a line starting `HUMAN:` to the tracker handoff, commit, push, and stop.
+            If genuinely blocked on a human decision, open a tracker handoff line with the word HUMAN then a colon, commit, push, and stop.
             End in conductor's result format (K5.1): `SESSION-RESULT:` + a headline of at most fifteen words, up to three `- outcome` bullets, then `artefacts:`, `evidence:` and `gaps:` lines.
 
             {packs}
@@ -100,7 +107,7 @@ public sealed partial class PromptBuilder
             Available actions (choose the strongest that applies):
             - BlockRetry: stall pattern detected (2+ identical failures with zero commits) — block further attempts until a human or condition clears
             - ResetBudget: session exhausted its attempt budget on a fixable problem — reset the attempt counter, granting more tries
-            - NeedsHuman: a human must intervene before anything else runs (broken environment, bad config, decision needed)
+            - NeedsHuman — a human must intervene before anything else runs (broken environment, bad config, decision needed)
             - ApplyFix: run a configured remediation script (e.g., kill stale agent process, clean temp files) then retry
             - RerunGates: re-run the gate battery instead of another agent session — claims may already be true
             - retry: a fresh fix-session is likely to succeed (legacy: maps to fresh attempt)
@@ -133,7 +140,7 @@ public sealed partial class PromptBuilder
 
             {tools}
 
-            If you find an issue that needs a human decision, add a line starting `HUMAN:` to the tracker handoff, commit, push, and stop.
+            If you find an issue that needs a human decision, open a tracker handoff line with the word HUMAN then a colon, commit, push, and stop.
             End by printing one paragraph starting with `SESSION-RESULT:` summarising the audit verdict and what you changed.
 
             {packs}
