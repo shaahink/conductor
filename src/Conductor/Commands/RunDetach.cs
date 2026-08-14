@@ -121,12 +121,31 @@ public static class RunDetach
             return 1;
         }
 
-        var (exe, prefix, resolveError) = ResolveSelf();
-        if (resolveError is not null)
+        var outcome = await SpawnAsync(settings, planPath, plan, ct).ConfigureAwait(false);
+        if (!outcome.SpawnOk)
         {
-            AnsiConsole.MarkupLine($"[red]error:[/] cannot detach: {Markup.Escape(resolveError)}.");
+            AnsiConsole.MarkupLine($"[red]error:[/] {Markup.Escape(outcome.Error ?? "detach failed")}");
             return 1;
         }
+
+        await ReportAsync(outcome, plan, planPath, settings).ConfigureAwait(false);
+        return outcome.Info is null && !outcome.EngineAlive ? 1 : 0;
+    }
+
+    /// <summary>
+    /// KS2.3: the detached launch itself — spawn, handshake, settle — with no console I/O, so the
+    /// hub's start action and <c>run --detach</c> are ONE code path rather than a verb and a
+    /// re-implementation. The sarban field log's <c>Start-Process … -RedirectStandardError</c>
+    /// incantation is retired by this method existing: anything that wants a detached engine calls
+    /// here and gets the capture log, the pid check and the settle window it would otherwise forget.
+    /// </summary>
+    public static async Task<DetachOutcome> SpawnAsync(RunCommand.Settings settings, string planPath, PlanConfig plan, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+
+        var (exe, prefix, resolveError) = ResolveSelf();
+        if (resolveError is not null)
+            return DetachOutcome.Failed($"cannot detach: {resolveError}.");
 
         var stateDir = Path.GetFullPath(plan.StateDir);
         var logsDir = Path.Combine(stateDir, "logs");
@@ -142,15 +161,12 @@ public static class RunDetach
 
         var spawn = DetachedProcess.Start(exe, args, Directory.GetCurrentDirectory(), detachLog);
         if (!spawn.Ok)
-        {
-            AnsiConsole.MarkupLine($"[red]error:[/] {Markup.Escape(spawn.Error ?? "detach failed")}");
-            return 1;
-        }
+            return DetachOutcome.Failed(spawn.Error ?? "detach failed", detachLog, stateDir);
 
         var info = await AwaitHandshakeAsync(discovery, spawn.Pid, ct).ConfigureAwait(false);
         if (info is not null && !await SurvivesSettleAsync(spawn.Pid, ct).ConfigureAwait(false)) info = null;
-        await ReportAsync(spawn, info, plan, planPath, settings, detachLog, stateDir).ConfigureAwait(false);
-        return info is null && !Alive(spawn.Pid) ? 1 : 0;
+        return new DetachOutcome(true, spawn.Pid, spawn.BrokeAwayFromJob,
+            info is not null || Alive(spawn.Pid), info, detachLog, stateDir, null);
     }
 
     private static async Task<ControlPlaneInfo?> AwaitHandshakeAsync(string discovery, int childPid, CancellationToken ct)
@@ -196,36 +212,35 @@ public static class RunDetach
         catch (System.ComponentModel.Win32Exception) { return true; }
     }
 
-    private static async Task ReportAsync(DetachSpawn spawn, ControlPlaneInfo? info, PlanConfig plan,
-        string planPath, RunCommand.Settings settings, string detachLog, string stateDir)
+    private static async Task ReportAsync(DetachOutcome o, PlanConfig plan, string planPath, RunCommand.Settings settings)
     {
         var planArg = Markup.Escape(planPath);
-        if (info is null && !Alive(spawn.Pid))
+        if (o.Info is null && !o.EngineAlive)
         {
-            AnsiConsole.MarkupLine($"[red]detach failed:[/] the engine (pid {spawn.Pid}) exited before its control plane was usable. Its last output:");
-            foreach (var line in await TailAsync(detachLog, 15).ConfigureAwait(false))
+            AnsiConsole.MarkupLine($"[red]detach failed:[/] the engine (pid {o.Pid}) exited before its control plane was usable. Its last output:");
+            foreach (var line in await TailAsync(o.DetachLog, 15).ConfigureAwait(false))
                 AnsiConsole.MarkupLine($"[grey]  |[/] {Markup.Escape(line)}");
-            AnsiConsole.MarkupLine($"[grey]full output: {Markup.Escape(detachLog)}[/]");
+            AnsiConsole.MarkupLine($"[grey]full output: {Markup.Escape(o.DetachLog)}[/]");
             return;
         }
 
-        AnsiConsole.MarkupLine($"[bold]run detached[/] — pid [yellow]{spawn.Pid}[/] · plan {Markup.Escape(plan.Name)}");
-        if (info is not null)
-            AnsiConsole.MarkupLine($"  control plane: [yellow]{Markup.Escape(info.BaseUrl)}[/]");
+        AnsiConsole.MarkupLine($"[bold]run detached[/] — pid [yellow]{o.Pid}[/] · plan {Markup.Escape(plan.Name)}");
+        if (o.Info is not null)
+            AnsiConsole.MarkupLine($"  control plane: [yellow]{Markup.Escape(o.Info.BaseUrl)}[/]");
         else if (settings.NoControlPlane)
             AnsiConsole.MarkupLine("  control plane: [grey]disabled by --no-control-plane — this run cannot be attached to[/]");
         else
-            AnsiConsole.MarkupLine($"  control plane: [yellow]not yet published[/] after {HandshakeTimeout.TotalSeconds:0}s — the engine is alive; check {Markup.Escape(detachLog)}");
+            AnsiConsole.MarkupLine($"  control plane: [yellow]not yet published[/] after {HandshakeTimeout.TotalSeconds:0}s — the engine is alive; check {Markup.Escape(o.DetachLog)}");
 
         AnsiConsole.MarkupLine($"  attach:        [yellow]conductor face -p {planArg}[/]");
         AnsiConsole.MarkupLine($"  watch:         [yellow]conductor status -p {planArg}[/]");
         // The run log, and then the console stream the detached engine can no longer show anyone.
         // Both paths are checked against the live rig — a banner pointing at a file that does not
         // exist is the same class of lie as a doc comment that does not match the code.
-        AnsiConsole.MarkupLine($"  logs:          {Markup.Escape(RunLogPath(stateDir))}");
-        AnsiConsole.MarkupLine($"  console:       {Markup.Escape(detachLog)}");
+        AnsiConsole.MarkupLine($"  logs:          {Markup.Escape(RunLogPath(o.StateDir))}");
+        AnsiConsole.MarkupLine($"  console:       {Markup.Escape(o.DetachLog)}");
         AnsiConsole.MarkupLine($"  stop:          [yellow]conductor abort -p {planArg}[/]");
-        AnsiConsole.MarkupLine(spawn.BrokeAwayFromJob
+        AnsiConsole.MarkupLine(o.BrokeAwayFromJob
             ? "[grey]this shell can close, log off, or be torn down — the run is in its own process group and does not go with it.[/]"
             : "[grey]this shell can close — the run is in its own process group. Note: it could not leave this shell's job object, so a forced teardown of the whole job would still reach it.[/]");
     }
@@ -246,4 +261,26 @@ public static class RunDetach
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return []; }
     }
+}
+
+/// <summary>
+/// What one detached launch actually did — the measured facts, not the banner. <see cref="Info"/> is
+/// non-null only when the child's OWN discovery file named the child's pid (<see cref="RunDetach.IsOurs"/>)
+/// and the child then survived <see cref="RunDetach.SettleWindow"/>: the URL in it was read back, never
+/// predicted. <see cref="EngineAlive"/> is the liveness measured right after the settle — a spawn can
+/// outlive its handshake (plane not published yet) and a handshake can outlive its spawn (the plan-lock
+/// race), and the two callers care about the difference.
+/// </summary>
+public sealed record DetachOutcome(
+    bool SpawnOk,
+    int Pid,
+    bool BrokeAwayFromJob,
+    bool EngineAlive,
+    ControlPlaneInfo? Info,
+    string DetachLog,
+    string StateDir,
+    string? Error)
+{
+    public static DetachOutcome Failed(string error, string detachLog = "", string stateDir = "") =>
+        new(false, 0, false, false, null, detachLog, stateDir, error);
 }

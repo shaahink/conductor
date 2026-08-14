@@ -559,13 +559,18 @@ NEXT-FEATURES with the field-log evidence)
    means `templatesDir` broke) — then sweep it:
    `[regex]::Matches($out,'\{[A-Za-z_][A-Za-z0-9_]*\}')` must return nothing. After ANY plan
    edit: dry-run again.
-5. **Launch detached with stderr redirected** (a prompt refusal is stderr-only until SC3.3 lands):
+5. **Launch detached with stderr redirected** (a prompt refusal is stderr-only until SC3.3 lands).
+   *Retired by KS2.3:* the hand-rolled `Start-Process … -RedirectStandardOutput/-RedirectStandardError`
+   block that used to sit here is the verb now — it forgot the pid check and the settle window every
+   time it was retyped, so that shape moved into the engine:
 
    ```powershell
-   Start-Process conductor -ArgumentList 'run','-p','plans\conductor-sarban-core.plan.json','--headless' `
-     -WorkingDirectory C:\code\conductor -WindowStyle Hidden `
-     -RedirectStandardOutput $env:TEMP\sarban-core-out.txt -RedirectStandardError $env:TEMP\sarban-core-err.txt
+   conductor run -p plans\conductor-sarban-core.plan.json --detach
    ```
+
+   The engine captures the child's stdout+stderr itself (`<stateDir>\logs\detach-<stamp>.log`),
+   reads the bound URL back from the child's discovery file, and prints both. The hub's *start*
+   action (bare `conductor`) is the same code path.
 6. **Arm the log-tail monitor** with the conductor-drive skill's canonical filter. During the core
    run Telegram cannot push — the driving engine still has the bug SC1 fixes — so the monitor is
    the only wake signal. A `stage → X` line with no `session #N start` within two minutes means
@@ -618,10 +623,11 @@ value across without echoing it:
 
 ```powershell
 $env:CONDUCTOR_TELEGRAM_TOKEN = [Environment]::GetEnvironmentVariable('CONDUCTOR_TELEGRAM_TOKEN','User')
-Start-Process conductor -ArgumentList 'run','-p','plans\conductor-sarban-face.plan.json','--headless' `
-  -WorkingDirectory C:\code\conductor -WindowStyle Hidden `
-  -RedirectStandardOutput $env:TEMP\sarban-face-out.txt -RedirectStandardError $env:TEMP\sarban-face-err.txt
+conductor run -p plans\conductor-sarban-face.plan.json --detach
 ```
+
+(The launch itself is `run --detach` since KS2.3 — the child inherits this shell's environment, so
+the token read-across above still matters; the output capture it used to hand-roll is the engine's.)
 
 `conductor doctor` warning `telegram configured but no bot token` in a given shell means that shell,
 not the machine — check with `[Environment]::GetEnvironmentVariable(...,'User')` before believing it.

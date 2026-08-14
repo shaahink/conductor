@@ -207,7 +207,7 @@ public sealed class KS2_1HubTests : IDisposable
     [Fact]
     public void The_hub_can_never_reach_the_plan_resolver()
     {
-        foreach (var file in new[] { "HubCommand.cs", "HubModel.cs", "HubView.cs", "HubActions.cs" })
+        foreach (var file in new[] { "HubCommand.cs", "HubModel.cs", "HubView.cs", "HubActions.cs", "HubLaunch.cs" })
         {
             var path = Path.Combine(RepoRoot(), "src", "Conductor", "Commands", file);
             Assert.True(File.Exists(path), $"{file} is gone — the hub moved without this test moving with it");

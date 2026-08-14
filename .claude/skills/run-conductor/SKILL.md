@@ -98,6 +98,11 @@ $exe = "src\Conductor\bin\Debug\net10.0\conductor.exe"
 & $exe run     -p <plan> --dry-run                            # print the next session prompt, spawn nothing
 & $exe run     -p <plan> --headless --max-sessions 2          # the real loop, plain line output, no TUI
 & $exe status  -p <plan>                                      # read run.db back, fast + offline (--deep adds an LLM narrative)
+& $exe run     -p <plan> --detach                             # launch that must outlive this shell: own process
+                                                              # group, stdout+stderr captured to
+                                                              # <stateDir>\logs\detach-<stamp>.log, URL read back
+                                                              # from the child's discovery file. NEVER hand-roll
+                                                              # Start-Process for this (KS2.3 retired that shape).
 ```
 
 The authoritative verb list is `Program.cs` (or `conductor <verb> --help`) — see Gotchas, the

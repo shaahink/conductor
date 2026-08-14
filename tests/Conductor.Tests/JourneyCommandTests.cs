@@ -184,4 +184,20 @@ public sealed class JourneyCommandTests
             try { TestTemp.DeleteTree(repo); } catch { }
         }
     }
+
+    // ── KS2.3: the hub's preview is this verb ──
+
+    /// <summary>The hub's journey preview is this command run as a sibling process — not a copy of
+    /// the rendering — so what the hub shows before a launch and what <c>conductor journey</c> prints
+    /// are one output that cannot drift into two.</summary>
+    [Fact]
+    public void TheHubPreviewsWithThisVerbItself()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Conductor.slnx"))) dir = dir.Parent;
+        Assert.NotNull(dir);
+
+        var hub = File.ReadAllText(Path.Combine(dir!.FullName, "src", "Conductor", "Commands", "HubCommand.cs"));
+        Assert.Contains("SiblingAsync(\"journey\", \"-p\", p)", hub, StringComparison.Ordinal);
+    }
 }

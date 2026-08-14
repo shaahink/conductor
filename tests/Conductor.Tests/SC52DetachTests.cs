@@ -188,6 +188,27 @@ public sealed class SC52DetachTests
         Assert.Contains("LogPath = Path.Combine(plan.StateDir, \"conductor.log\")", runContext, StringComparison.Ordinal);
     }
 
+    /// <summary>KS2.3: the handshake and the settle window are not verb decor — they live in
+    /// <c>SpawnAsync</c>, the one method both doors call, so the hub cannot attach to a URL the verb
+    /// would have refused to print. Source-level on purpose: a copy of the spawn that skipped the
+    /// settle would pass every value-level test right up until the plan-lock race it exists for.</summary>
+    [Fact]
+    public void The_verb_and_the_hub_ride_the_same_handshake_and_settle()
+    {
+        var runDetach = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor", "Commands", "RunDetach.cs"));
+        var hubLaunch = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor", "Commands", "HubLaunch.cs"));
+
+        // The shared path owns both rules…
+        var spawnBody = runDetach[runDetach.IndexOf("Task<DetachOutcome> SpawnAsync", StringComparison.Ordinal)..];
+        Assert.Contains("AwaitHandshakeAsync", spawnBody, StringComparison.Ordinal);
+        Assert.Contains("SurvivesSettleAsync", spawnBody, StringComparison.Ordinal);
+
+        // …and both doors go through it.
+        var launchBody = runDetach[runDetach.IndexOf("Task<int> LaunchAsync", StringComparison.Ordinal)..runDetach.IndexOf("Task<DetachOutcome> SpawnAsync", StringComparison.Ordinal)];
+        Assert.Contains("SpawnAsync(settings, planPath, plan, ct)", launchBody, StringComparison.Ordinal);
+        Assert.Contains("RunDetach.SpawnAsync", hubLaunch, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void ResolveSelf_PointsAtSomethingThatExists()
     {

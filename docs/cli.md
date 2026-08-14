@@ -11,6 +11,12 @@ home, the runs answering on the fleet ports (4317-4336), the runs the catalogue 
 discoverable from where you are standing, and four things to do about any of it — **attach** a Face to
 a run that is already going, **start** one from a plan here, **plan new**, or **history**.
 
+**start** is the whole launch drill in one flow: the plan's `journey` itinerary first (read-only —
+nothing is written and nothing spawns at preview time), then a yes/no, then the engine launches
+*detached* through the same path as `run --detach` — child output captured to a per-launch
+`logs/detach-<stamp>.log`, the bound URL read back from the child's discovery file — and the Face
+attaches to that URL. Killing the Face afterwards leaves the engine running; that is the point.
+
 Every run's status is the *reconciled* word, not the column: an engine that was killed never wrote the
 correction, so a row that still says `running` with nothing holding its store lists as `orphaned`.
 
@@ -62,6 +68,12 @@ run          Run the plan: engine + control plane + Face TUI, one command. Resum
                                   until you resume
              --headless           plain line output, no Face TUI (control plane still runs)
              --no-face            control plane runs, but nothing is spawned to view it
+             --detach             launch the engine into its own process group and return: the
+                                  child runs headless with its stdout+stderr captured to
+                                  <stateDir>/logs/detach-<stamp>.log, and the URL printed is read
+                                  back from the child's own discovery file (pid-checked, given a
+                                  2s settle), never predicted from --port. Your shell can close;
+                                  the run does not go with it. Attach later with `conductor face`.
 ```
 
 `conductor run` is **one process tree**: engine + localhost HTTP/SSE control plane, and it spawns the

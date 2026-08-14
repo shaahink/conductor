@@ -179,9 +179,10 @@ public sealed class HubCommand : AsyncCommand<HubCommand.Settings>
         return await FaceCommand.AttachAsync(row.BaseUrl, token).ConfigureAwait(false);
     }
 
-    /// <summary>Start a run from a plan here. KS2.1 goes as far as the itinerary — <c>journey</c>
-    /// writes no state and spawns no agent — and says what launches it; KS2.3 replaces that last line
-    /// with the detached launch itself.</summary>
+    /// <summary>Start a run from a plan here. KS2.3: the itinerary first — <c>journey</c> writes no
+    /// state and spawns no agent — then, on a yes, the SAME detached spawn <c>run --detach</c> uses,
+    /// and the Face attaches to the URL the child published. The order lives in
+    /// <see cref="HubLaunch.StartFlowAsync"/> where a test can hold it still.</summary>
     private static async Task<int> StartAsync(HubModel model)
     {
         if (model.Plans.Count == 0)
@@ -197,9 +198,13 @@ public sealed class HubCommand : AsyncCommand<HubCommand.Settings>
                 .AddChoices(model.Plans));
 
         var full = Path.GetFullPath(plan.Path);
-        var exit = await SiblingAsync("journey", "-p", full).ConfigureAwait(false);
-        AnsiConsole.MarkupLine($"[grey]start it with [/][yellow]conductor run -p {Markup.Escape(full)}[/][grey].[/]");
-        return exit;
+        return await HubLaunch.StartFlowAsync(
+            full,
+            p => SiblingAsync("journey", "-p", p),
+            () => AnsiConsole.Confirm($"launch [yellow]{Markup.Escape(plan.Name)}[/] detached now?"),
+            p => HubLaunch.LaunchDetachedAsync(p, CancellationToken.None),
+            FaceCommand.AttachAsync,
+            line => AnsiConsole.MarkupLine($"[grey]{Markup.Escape(line)}[/]")).ConfigureAwait(false);
     }
 
     /// <summary>Run another verb of THIS binary, sharing the console. The hub is a door onto the CLI,
