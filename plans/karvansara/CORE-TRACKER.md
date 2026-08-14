@@ -4,13 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: the ks3 lane landed - KS3.1-KS3.3 (60101eb, 106637b+fb37c83, 985bdf4) plus the salvaged
-  round-8 park alignment (b8a6002); full battery on the merged tree green, engine and face.
+last: KS0.1 unparked and CLOSED - stage KS0 is complete. The owner's repair did run
+  (backups/repair-20260813T200231Z), so the catalogue is 26 runs / 26 distinct / 0 duplicates,
+  and payesh's `npm run evidence` exits 0 on it. No code change was needed; bug 36 fixed.
 open: KS3.4 - refuted seven rounds, one defect class: the compose leg's decision stops before
   the session the real launch spawns. Round-7 findings and live rigs: plans/karvansara/contracts/.
   The round-8 direction is in the KS3 stage notes; the park branch (b8a6002) is the pattern.
 then: KS3.5 per contracts/KS3.json, KS9 (scratch repo only; KS9.3 expects precise-refusal
   SKIPPED), KS10.1-10.2 per contracts/KS9-10.json. KS10.3 is owner-only.
+for KS10.2, pre-measured so you need not: payesh main is stale by exactly 3 runs going
+  abandoned -> closed (KS0.2's close verb improving them; ZERO figures moved, 287/300 and
+  25/32 both held). It is one command there - `npm run harvest && npm run evidence` - then
+  branch, commit corpus.json, open the PR. I left that tree clean per trap 16. New bugs 41
+  (anonymity gate fails closed on the generic word "website") and 42 are KS10's, not blockers.
 gaps for KS10.1's closure ledger: the face tokens-cap row still quotes the plan-file ceiling;
   approve lost CtlCommand's yes/force flags; one owner-gate-plus-lowered-cap path spends a
   session before parking.
