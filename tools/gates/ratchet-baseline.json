@@ -1,5 +1,6 @@
 {
   "_comment": "Absolute floors for the ratchet gate (tools/gates/ratchet.ps1). minTests counts [Fact]/[Theory] ATTRIBUTES under tests/, not executed cases (a [Theory] with 10 InlineData is one attribute, ten cases). minTests only ever goes UP as work lands; maxPragmas only ever goes DOWN. Lowering minTests or raising maxPragmas is a human decision, and the gate rejects it against the pushed branch.",
-  "minTests": 550,
+  "_minTests": "KS1.6 raised the floor from 550 - the number left behind when M1.1 deleted 73 TUI attributes - to what the suite actually carries on this branch, measured by the gate itself. A floor three-quarters below the real count is not a ratchet, it is a formality: the suite could have lost 1,382 attributes without the gate saying a word.",
+  "minTests": 1932,
   "maxPragmas": 38
 }
