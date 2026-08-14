@@ -14,7 +14,7 @@
    ✓ build                 │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints                            
    ● test 4s               │  cost       $224.21   +$0.02 overhead                                            
    ○ lint                  │  tokens     2.5k in · 1.8k out · 900 reasoning                                   
-                           │  window     $138.40 / $125.00  OVER by $13.40                                    
+                           │  budget     $224.21 / $210.00  OVER by $14.21                                    
  ── TASKS ──               │                                                                                  
    ✓ Add truth-tier con…   │  Workspace                                                                       
    ● Wire RunDb.GetLast…   │  repo       C:/Code/conductor                                                    
