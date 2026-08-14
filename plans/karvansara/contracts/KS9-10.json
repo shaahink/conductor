@@ -1,0 +1,327 @@
+{
+ "stage": "KS9 + KS10 (KS10.3 = owner-only handover)",
+ "checkpoints": [
+  {
+   "id": "KS9.1",
+   "acceptance": [
+    "SecretsStore grows a GitHub token field alongside TelegramToken in the SAME secrets.local.json under plan.StateDir (read/write helpers mirroring TryReadTelegramToken/WriteTelegramToken), and CONDUCTOR_GITHUB_TOKEN takes precedence over the file — the exact rule TelegramService.cs:143-145 uses for the Telegram token.",
+    "A GitHub REST client lands in Conductor.Core on the ReleaseClient pattern: raw HttpClient, source-generated System.Text.Json context, explicit ProductInfoHeaderValue User-Agent and Accept: application/vnd.github+json, and it RETURNS (value, error) for network/HTTP conditions instead of throwing. No Octokit; no new PackageReference in src/Conductor.Core/Conductor.Core.csproj.",
+    "An API base-URL override env var (ReleaseClient.FeedEnvVar precedent: default is api.github.com, an override is announced by every surface that uses it) exists so tests and proofs can point at a loopback fake or a scratch endpoint with no live call.",
+    "`github` is registered in src/Conductor/Program.cs via AddCommand and NOT hidden; `conductor github sync --backfill <run>` resolves the run the way budget/money do (RunSources.Resolve: run id, prefix, catalogue slug, repo name, or a run.db path) and opens the store read-only (RunArchive.TryOpen / Mode=ReadOnly).",
+    "Backfill posts one Issue per checkpoint-kind TaskItem folded from the event log (new TaskGraph().Fold(store.ReadAllEvents(runId)).Checkpoints()), carrying: title `<CheckpointId> — <Title>`; open/closed + `status:*` label from TaskItem.Status; `source:*` from TaskItem.Source; a `confirmed` label ONLY when TaskItem.Confirmed is true (the DONE ✓ distinction must survive the mirror); a stage Milestone from TaskItem.StageId; and a stable identity marker `<!-- conductor:task <taskId> -->` in the body.",
+    "Backfill posts a `run:<slug>` Issue carrying plan name, repo, branch and engine version (BuildInfo.Current), one comment per SessionFinished event (Number, StageId, Outcome, NewCommits, NewlyDone, CostUsd, Tokens*) and closes it when the run finished.",
+    "Idempotence: running the identical backfill a second time creates ZERO new issues and ZERO duplicate comments — upsert-never-clobber via a local map table plus marker search when the map is lost; an item whose declaration disappeared is retired with a label + closing comment, never deleted (WorkGraphSync semantics, verbatim in spirit).",
+    "Off by default and fails precisely: with no `github` plan block and no token, every existing verb and the run loop behave byte-identically, and the verb itself prints exactly what is missing (which token source it looked at, which config key is off) rather than a stack trace.",
+    "Nothing inbound: no code path reads GitHub state back into run state, the tracker, or the task graph. The only writer of task state remains Events/TaskWrites.cs.",
+    "The `github` plan block (enabled/repo/board/projectNumber/runHistoryIssue/reportAsPrComment/labelPrefix) is added to PlanConfig ONLY in this same checkpoint as the code that reads it, and is documented in docs/plan-config.md here — the mutatingLanes anti-pattern (inert plan config nothing reads) is explicitly avoided.",
+    "owner/repo derivation is FACTORED OUT of Reporter.RemoteUrl (Reporter.cs:468, git@ and https origins normalised, cached under _remoteUrlLock) rather than re-shelling git; a plan-level `github.repo` overrides it."
+   ],
+   "proofs": [
+    "tests/Conductor.Tests/KS9_1*.cs using the StubHandler : HttpMessageHandler idiom (UpdateCheckTests.cs:171) for status/error paths, and a loopback recording listener on the RecordingBotApi.cs pattern to assert the REQUEST BODIES: issue title/labels/milestone/marker, run-issue comment per SessionFinished, and that a second pass issues zero POST /issues.",
+    "Token precedence test: env set + file set -> env wins; file only -> file; neither -> null and the verb's refusal names both sources.",
+    "Live scratch-repo proof: `dotnet run --project src/Conductor -- github sync --backfill <a finished karvan run id> --repo <owner>/<scratch>` run TWICE; second run reports 0 created / N unchanged. Both transcripts + the scratch issue URLs in .conductor/evidence/KS9/ks9-1-backfill.md. Scratch repo only — never shaahink/conductor.",
+    "`dotnet build Conductor.slnx -clp:ErrorsOnly`; `dotnet test Conductor.slnx` (full, unfiltered — the handoff number must be the full-suite number); `powershell -File tools/gates/ratchet.ps1` (source-scan + git only, it does not rebuild the engine).",
+    "`dotnet run --project src/Conductor -- github sync --backfill <run>` with no token: exit non-zero, message names CONDUCTOR_GITHUB_TOKEN and the secrets file, no network call attempted (assert via the base-URL override pointed at a dead port)."
+   ],
+   "files": [
+    "src/Conductor.Core/Integrations/Github/GithubClient.cs (NEW)",
+    "src/Conductor.Core/Integrations/Github/GithubBoardSync.cs (NEW)",
+    "src/Conductor.Core/Integrations/Github/GithubJsonContext.cs (NEW)",
+    "src/Conductor.Core/Integrations/Github/GithubIdentity.cs (NEW — marker + owner/repo derivation)",
+    "src/Conductor.Core/Models/GithubConfig.cs (NEW)",
+    "src/Conductor/Commands/GithubCommand.cs (NEW)",
+    "src/Conductor.Core/Store/Migrations/v13_github_map.sql (NEW — github_map(task_id, issue_number, last_pushed_seq))",
+    "src/Conductor.Core/Integrations/SecretsStore.cs",
+    "src/Conductor.Core/Models/PlanConfig.cs (476 lines today — 500 is the hard ceiling)",
+    "src/Conductor/Program.cs",
+    "src/Conductor/Commands/CompletionCommand.cs",
+    "src/Conductor.Core/Reporter.cs (RemoteUrl at :468, FormatCommitLink at :453)",
+    "src/Conductor.Core/Store/MigrationRunner.cs (CurrentVersion = 12 today)",
+    "src/Conductor.Core/Store/IRunStore.cs",
+    "src/Conductor.Core/Store/SqliteRunStore.Queries.cs",
+    "src/Conductor.Core/Conductor.Core.csproj (EmbeddedResource Store\\Migrations\\*.sql at :42)",
+    "docs/cli.md",
+    "docs/plan-config.md",
+    "docs/dev/adr/0005-push-only-remote-observability.md",
+    "tests/Conductor.Tests/architecture-baseline.json (must stay {} — do not add entries)",
+    ".conductor/evidence/KS9/ks9-1-backfill.md (NEW)"
+   ],
+   "tests_to_pin": [
+    "tests/Conductor.Tests/KS9_1GithubTokenTests.cs (NEW) — env-over-file precedence, missing-token refusal text",
+    "tests/Conductor.Tests/KS9_1GithubBackfillTests.cs (NEW) — board mapping, run-issue diary, second-pass idempotence, retire-not-delete, confirmed label",
+    "tests/Conductor.Tests/K7_2DocsVerbCoverageTests.cs — CliReference_NamesEveryShippedVerb goes RED until docs/cli.md names `github`",
+    "tests/Conductor.Tests/B11_2Tests.cs — completion verb list (PowerShell $verbs + bash compgen -W) must gain `github` or the test fails both ways",
+    "tests/Conductor.Tests/TestEnvironmentIsolation.cs:29 — extend to clear CONDUCTOR_GITHUB_TOKEN process-wide, exactly as CONDUCTOR_TELEGRAM_TOKEN is cleared",
+    "tests/Conductor.Tests/ArchitectureBoundaryTests.cs — add: no GitHub type is a ConductorEvent outside Conductor.Core.Events, and no GitHub read feeds task state"
+   ],
+   "dependencies": [],
+   "risks": [
+    "promptExtra trap 11: SCRATCH REPO ONLY. Never create/edit/close an issue on shaahink/conductor or any real repo. The first real backfill is KS10.3, owner-run.",
+    "promptExtra trap 2: the `conductor` on PATH is the PUBLISHED v0.4.0 engine (C:/Users/shahi/scoop/shims/conductor.cmd) and has no `github` verb. Exercise only through `dotnet run --project src/Conductor -- github ...`. Testing the verb through the shim proves nothing.",
+    "Architecture ratchet is at zero debt: lineCeiling 500, maxTypesPerFile 3, and BOTH baseline maps in tests/Conductor.Tests/architecture-baseline.json are empty ({}). A single 600-line GithubClient.cs fails the build. Split by responsibility up front. Raising a ceiling is a HUMAN decision — do not.",
+    "tools/gates/ratchet.ps1 also fails if the [Fact]/[Theory] count falls below minTests 550 or pragmas rise above maxPragmas 38 (tools/gates/ratchet-baseline.json).",
+    "Migration numbering: CurrentVersion is 12 and v13 is unclaimed. Parallel lanes (KS1.x/KS5.x) may also want v13 — check MigrationRunner.CurrentVersion at merge time and renumber rather than colliding.",
+    "secrets.local.json lives at <repo>/.conductor — for THIS repo that is the LIVE run's scratch dir. Never write a real token there during proofs; use a scratch rig's own state dir. Never echo a token into evidence, logs, or a commit.",
+    "GitHub answers 403 to any request without a User-Agent — the single most likely mis-diagnosis ('rate limited' / 'private repo').",
+    "Adding the `github` block to PlanConfig without the reader repeats the mutatingLanes[] defect the design doc names by name (NEXT-FEATURES.md:115).",
+    "Reporter.RemoteUrl caches globally keyed on repo under a Lock — a refactor that breaks the cache key silently re-shells git per call.",
+    "promptExtra trap 13: PowerShell tooling is Windows PowerShell 5.1 and ASCII-only; never call `gh --jq` with a double-quoted filter — fetch raw JSON and ConvertFrom-Json."
+   ]
+  },
+  {
+   "id": "KS9.2",
+   "acceptance": [
+    "The live mirror is a RECONCILER over IRunStore.ReadEventsAfter(runId, afterSeq) (IRunStore.cs:155; SqliteRunStore.Events.cs:209) on the WatchLoop cursor pattern (WatchLoop.cs:187) — it does NOT implement IEventSink (Events/EventLog.cs:8) and is not registered as one in src/Conductor/Hosting/ConductorHost.cs.",
+    "The cursor is persisted (github_map / a github_cursor row in run.db) and advances ONLY after a batch has been fully pushed, so it resumes correctly across process restarts and across a crash mid-batch.",
+    "The reconciler fires at the boundaries the engine already treats as boundaries — the same call sites as Notify: run start (RunLoop.Plumbing.cs NotifyRunStart), session end (RunLoop.Plumbing.cs:259), park/blocked (VerdictEngine.Blocked.cs:77), attention (VerdictEngine.cs:466), owner-gate (VerdictEngine.Phase.cs:150), run complete (VerdictEngine.Completion.cs:71) — plus the manual `conductor github sync` catch-up from KS9.1.",
+    "A failed sync NEVER blocks the loop: with the API base URL pointed at a dead port mid-run, the session and verdict path produce an outcome identical to the same run with sync disabled, one line is logged, and the cursor does not advance.",
+    "Convergence on reconnect: after the failure window, the next pass pushes exactly the missed deltas and the board equals the fold — no manual repair, no full re-post.",
+    "Replay from cursor zero produces ZERO duplicate issues and ZERO duplicate comments (marker lookup + map rebuild).",
+    "Batching: one session boundary produces ONE reconcile pass with a bounded request count, not one request per event (assert request count against a recording fake, not 'it looks batched').",
+    "Still nothing inbound: the tracker remains the verified contract, no GitHub read reaches run state, and a human dragging a card on GitHub changes nothing in the run (documented as correct behaviour, not a bug)."
+   ],
+   "proofs": [
+    "tests/Conductor.Tests/KS9_2*.cs against a recording loopback API: seed N events -> reconcile -> assert request count and bodies; flip the handler to fail -> reconcile -> assert cursor unchanged AND the caller's return value unchanged; restore -> reconcile -> assert convergence and zero duplicates; then reconcile from cursor 0 -> assert zero new issues.",
+    "Live scratch rig: a tiny plan in %TEMP% with ITS OWN state home (CONDUCTOR_STATE_HOME), its own port, and `-p` passed explicitly, driven by `dotnet run --project src/Conductor -- demo` / fake-agent; the network is 'killed' by flipping the base-URL override to a dead port mid-run and restored after. Run log + board state before/after in .conductor/evidence/KS9/ks9-2-live-mirror.md.",
+    "Architecture proof: a test asserting no type under Integrations/Github implements IEventSink and none is registered in ConductorHost's IEventSink registration.",
+    "Full battery: `dotnet build Conductor.slnx -clp:ErrorsOnly`; `dotnet test Conductor.slnx`; `powershell -File tools/gates/ratchet.ps1`."
+   ],
+   "files": [
+    "src/Conductor.Core/Integrations/Github/GithubReconciler.cs (NEW)",
+    "src/Conductor.Core/Integrations/Github/GithubCursor.cs (NEW — or fold into the v13 migration's table access)",
+    "src/Conductor.Core/Store/Migrations/v13_github_map.sql (from KS9.1 — extend with the cursor if not already there)",
+    "src/Conductor.Core/Orchestration/RunLoop.Plumbing.cs (session-end push at :259, Notify at :287)",
+    "src/Conductor.Core/Orchestration/VerdictEngine.cs (Notify at :100, NotifyOperator at :455, attention at :466)",
+    "src/Conductor.Core/Orchestration/VerdictEngine.Blocked.cs",
+    "src/Conductor.Core/Orchestration/VerdictEngine.Completion.cs",
+    "src/Conductor.Core/Orchestration/VerdictEngine.Phase.cs",
+    "src/Conductor.Core/Orchestration/RunContext.cs",
+    "src/Conductor/Hosting/ConductorHost.cs (DI, IEventSink registration ~:135-200)",
+    "src/Conductor/Commands/GithubCommand.cs",
+    "tests/Conductor.Tests/ArchitectureBoundaryTests.cs",
+    ".conductor/evidence/KS9/ks9-2-live-mirror.md (NEW)"
+   ],
+   "tests_to_pin": [
+    "tests/Conductor.Tests/KS9_2ReconcilerTests.cs (NEW) — cursor advance/hold, batching request count, convergence after outage, replay-from-zero idempotence",
+    "tests/Conductor.Tests/KS9_2NetworkFailureDoesNotBlockTheLoopTests.cs (NEW) — identical session outcome with a dead endpoint",
+    "tests/Conductor.Tests/ArchitectureBoundaryTests.cs (extend) — the GitHub sync is never a hot IEventSink"
+   ],
+   "dependencies": [
+    "KS9.1"
+   ],
+   "risks": [
+    "ArchitectureBoundaryTests.CommandsDoNotReachIntoOrchestrationInternals forbids any file under src/Conductor/Commands from naming SessionRunner, RunLoop, VerdictEngine, GateOrchestrator or RunContext in CODE (comments are stripped). GithubCommand's catch-up must go through Orchestrator/ConductorHost or a Core service — naming RunContext fails the build.",
+    "The Notify idiom is fire-and-forget `_ = ...Async(...)` (RunLoop.Plumbing.cs:287) which swallows faults. The reconciler must not copy that silence: log the failure and hold the cursor, per the design's failure posture.",
+    "promptExtra trap 0: never aim a run-control verb (run, pause, resume, abort, goto, plan reload, ...) at C:/Code/conductor. The live-run proof spawns YOUR build against a scratch rig under the temp directory.",
+    "promptExtra trap 3: a second conductor run may share this machine. Give the rig its own port and state dir; read the port back from the rig's own discovery file; never kill a conductor/face/dotnet process by pid without a Get-CimInstance Win32_Process command-line check.",
+    "promptExtra trap 4: CONDUCTOR_PLAN beats the CWD until KS0.3's fix is in the engine you run. Pass -p explicitly in every rig command and clear CONDUCTOR_PLAN in any spawned shell — the F0/R0 phantom stages in plans/karvan/CORE-TRACKER.md are the scar.",
+    "A reconciler that reads GitHub to decide what to push re-introduces the ingress D-7/A16/ADR 0005 all forbid. Decide from the fold + local map only.",
+    "promptExtra trap 12: orphaned dotnet test hosts flake the full suite; stopping one is sanctioned only after the trap-3 command-line check."
+   ]
+  },
+  {
+   "id": "KS9.3",
+   "acceptance": [
+    "Config gate: `board: \"issues+project\"` requires a non-zero `projectNumber`; a missing or invalid project number refuses at the boundary with a named error, never a silent no-op.",
+    "Scope check happens BEFORE any mutation: the checkpoint determines whether the available token carries the `project` scope (Projects v2 is GraphQL-only; REST cannot move a board item).",
+    "REFUSAL BRANCH (the live case today — `gh auth status` reports scopes 'delete_repo','gist','read:org','repo','user','workflow' with NO 'project'): the checkpoint emits a PRECISE refusal naming (a) the scopes observed, (b) the scope required, (c) where the token came from (CONDUCTOR_GITHUB_TOKEN / secrets file / gh), and (d) the exact one-time command the OWNER must run — `gh auth refresh -s project` — and the tracker row is marked SKIPPED with that refusal as its evidence. No half-built board code is left that a later reader could mistake for working: anything merged sits behind `board: \"issues+project\"` and refuses at the boundary with the same message.",
+    "SUCCESS BRANCH (only if the scope is present): for a live run against the scratch repo/project, every card's Status column matches what `conductor status` reports for the same checkpoint/stage, and stage columns mirror stage status.",
+    "A session NEVER runs `gh auth refresh` — it is interactive and mutates the owner's credential. Granting the scope is an owner act.",
+    "Whichever branch is taken, the refusal or the proof is a line in KS10.1's closure ledger, and the run does not park on it (a cut-line checkpoint that cannot proceed is SKIPPED, not BLOCKED-forever)."
+   ],
+   "proofs": [
+    "`gh auth status` captured verbatim into .conductor/evidence/KS9/ks9-3-projects-scope.md (today: no `project` scope — the refusal branch is live).",
+    "tests/Conductor.Tests/KS9_3*.cs: a stubbed scope-less token response produces the exact refusal string (scopes observed, scope required, token source, `gh auth refresh -s project`) and performs zero mutations; a stubbed missing projectNumber refuses by name.",
+    "Claim through the driving run's PATH engine: `conductor task --skipped KS9.3 --evidence .conductor/evidence/KS9/ks9-3-projects-scope.md` (task claims go through the PATH copy by design — promptExtra trap 2's stated exception).",
+    "`dotnet build Conductor.slnx -clp:ErrorsOnly`; `dotnet test Conductor.slnx`; `powershell -File tools/gates/ratchet.ps1`."
+   ],
+   "files": [
+    "src/Conductor.Core/Integrations/Github/GithubProjects.cs (NEW — success branch only)",
+    "src/Conductor.Core/Models/GithubConfig.cs (board / projectNumber validation)",
+    "src/Conductor/Commands/GithubCommand.cs",
+    "plans/karvansara/CORE-TRACKER.md (KS9.3 row -> SKIPPED with evidence)",
+    ".conductor/evidence/KS9/ks9-3-projects-scope.md (NEW)",
+    "docs/cli.md (the `--project` half documented as requiring the scope)"
+   ],
+   "tests_to_pin": [
+    "tests/Conductor.Tests/KS9_3ProjectsScopeRefusalTests.cs (NEW) — exact refusal text, zero mutations without the scope, named refusal for a missing projectNumber"
+   ],
+   "dependencies": [
+    "KS9.1",
+    "KS9.2"
+   ],
+   "risks": [
+    "This is the stage's own cut line: half-done is explicitly worse than SKIPPED. Do not merge a partially wired GraphQL path that looks live.",
+    "promptExtra trap 13: never `gh --jq` from PowerShell when the filter contains double quotes — fetch raw JSON and ConvertFrom-Json. GraphQL payloads make this trap very likely here.",
+    "promptExtra trap 11 still binds: any board experiment is a scratch project on a scratch repo.",
+    "Projects v2 is GraphQL-only — reaching for REST here produces a plausible-looking no-op that passes a naive test.",
+    "Do not park the run on a missing owner grant; a park with the escalation token in the tracker handoff hot-loops and floods Telegram (trap 9 — write escalation in prose)."
+   ]
+  },
+  {
+   "id": "KS10.1",
+   "acceptance": [
+    "ARCHITECTURE.md reconciles with the engine for everything this plan changed: the projects map and 'The seams' / 'Where do I add X' sections name the new GitHub sync seam and any KS1/KS2/KS3/KS5 surface; the rollback paragraph matches ControlDispatcher's actual reset/force semantics (KS1.5's pin); the file-organisation convention still states the ratchet's real numbers (500-line ceiling, 3 types per file).",
+    "docs/dev/README.md stops naming Karvan as 'the design authority for current work': its Current-work table points at docs/dev/KARVANSARA-PLAN-2026-08-13.md and plans/karvansara/CORE-TRACKER.md, and either the karvan brief/tracker move per the page's own stated convention (brief -> docs/history/, tracker -> docs/history/archive/trackers/) or the table says why they have not.",
+    "A closure ledger exists naming EVERY bug id and EVERY followup row this era closed, each with the stage/commit that closed it, plus a living owner for every row left open — nothing silently dropped. Bugs are cross-checked against run.db (bugs outlive the run), followups against .conductor/followups.md.",
+    "`conductor budget` is RE-RUN against this run's own store (the deduped catalogue KS0.1 produced) and its figures — session floor, wrap-up spend, cap, nudge-versus-floor, rollover rate, tokens and dollars per checkpoint — are written into docs/dev/TOKEN-BUDGET-TUNING.md as a new dated section beside §9, each figure quoting the command that produced it. No figure is typed by hand.",
+    "If the re-measure disagrees with this plan's 32M / 0.70 estimate, THE PRESCRIPTION WINS: docs/dev/KARVANSARA-PLAN-2026-08-13.md is corrected in place (not deleted, not silently left wrong) and the disagreement is stated with the measurement. karvansara-edge compiles against this number.",
+    "Every other wrong claim about the tree in the plan doc, GITHUB-SYNC-DESIGN and NEXT-FEATURES is corrected in place, not dropped.",
+    "The existing SF7.1 ledger contracts still hold: every followup row states a disposition, no closure is circular (`CLOSED (FU-xx-nn)` is banned), every bug names an owner, every sha the ledgers cite resolves to a real commit."
+   ],
+   "proofs": [
+    "`dotnet run --project src/Conductor -- budget --json` and `... money --json` against this run's store, raw output saved to .conductor/evidence/KS10/ks10-1-budget-remeasure.json and quoted verbatim in TOKEN-BUDGET-TUNING's new section.",
+    "`dotnet test Conductor.slnx --filter SF7_1DocsMatchRealityTests` green — Ledgers.cs (disposition, no circular closure, bug owners), FieldNotes.cs (one row per finding, every cited sha exists).",
+    "`conductor bug list --all` output diffed against the closure ledger table (empty diff), saved in .conductor/evidence/KS10/ks10-1-closure-ledger.md.",
+    "`git log --oneline master..feat/karvansara` cross-checked against every commit the ledger cites.",
+    "Full battery: `dotnet build Conductor.slnx -clp:ErrorsOnly`; `dotnet test Conductor.slnx`; face gates `cd face-go && go build ./... && go vet ./... && go test ./...`; `powershell -File tools/gates/ratchet.ps1`."
+   ],
+   "files": [
+    "ARCHITECTURE.md (309 lines; sections at :10 :27 :146 :173 :223 :281 :300)",
+    "docs/dev/README.md (Current-work table still names karvan as the design authority)",
+    "docs/dev/TOKEN-BUDGET-TUNING.md (298 lines; §9 'This era's own numbers' at :250)",
+    "docs/dev/KARVANSARA-PLAN-2026-08-13.md (the plan's readOrder target — see trap 14)",
+    "docs/dev/GITHUB-SYNC-DESIGN-2026-08-13.md",
+    "docs/dev/NEXT-FEATURES.md",
+    "docs/dev/adr/0005-push-only-remote-observability.md",
+    ".conductor/followups.md",
+    "plans/karvansara/CORE-TRACKER.md",
+    ".conductor/evidence/KS10/ks10-1-budget-remeasure.json (NEW)",
+    ".conductor/evidence/KS10/ks10-1-closure-ledger.md (NEW)",
+    "docs/history/CONDUCTOR-KARVANSARA.md (NEW — only if the era brief is promoted per the docs/dev/README convention)"
+   ],
+   "tests_to_pin": [
+    "tests/Conductor.Tests/SF7_1DocsMatchRealityTests.Ledgers.cs (extend) — the karvansara closure ledger obeys the same disposition/owner/non-circular rules",
+    "tests/Conductor.Tests/SF7_1DocsMatchRealityTests.Karvansara.cs (NEW) — TOKEN-BUDGET-TUNING's current-era section names the verb that produced its figures; docs/dev/README.md's design-authority row names the live plan doc, not a closed era",
+    "tests/Conductor.Tests/SF7_1DocsMatchRealityTests.FieldNotes.cs — every cited sha still resolves after the merge-base moves"
+   ],
+   "dependencies": [
+    "KS1.5",
+    "KS9.1",
+    "KS9.2",
+    "KS9.3",
+    "(all delivering stages KS1, KS2, KS3, KS5 — a ledger cannot close rows their checkpoints have not yet closed)"
+   ],
+   "risks": [
+    "promptExtra trap 2: `conductor budget` on PATH is the published v0.4.0 engine. Re-measure with `dotnet run --project src/Conductor -- budget`, or the era's own number comes from last era's binary.",
+    "The measure is only true on the DEDUPED catalogue (KS0.1). Before believing a figure, check imported.json in the state home (trap 5) — a duplicated run doubles the denominator.",
+    "promptExtra trap 15: the 32M / 22.4M pair was measured, not guessed. If you believe it is wrong, say so WITH a measurement in the handoff; do not work around it by splitting a checkpoint. A model change invalidates the pair and that re-derivation is the owner's.",
+    "promptExtra trap 14: docs/dev/KARVANSARA-PLAN-2026-08-13.md is the plan's readOrder target and plans/karvansara/CORE-TRACKER.md is its tracker. If either MOVES, update the plan and reload it in the same checkpoint or the next session reads nothing.",
+    "promptExtra trap 9: keep the literal escalation token (the word HUMAN followed by a colon) out of the tracker handoff unless escalating now — prose about the convention parks the run just as hard.",
+    "ARCHITECTURE.md and docs/dev/README.md both describe an era-close file move; moving the karvan tracker breaks any tool addressing it by path (docs/dev/README already warns about plans/conductor-w52.plan.json addressing W-series docs by path)."
+   ]
+  },
+  {
+   "id": "KS10.2",
+   "acceptance": [
+    "README.md reconciles: every fenced command block executes as written against the fresh build, and the first command a reader runs matches KS2.1's bare-`conductor` hub behaviour.",
+    "docs/cli.md names every verb src/Conductor/Program.cs registers and does not hide — `github` plus anything KS2/KS3/KS5 added — so K7_2DocsVerbCoverageTests.CliReference_NamesEveryShippedVerb is green. Hiding a verb to pass the test is not an option.",
+    "The completion scripts carry the same verb set: a new verb is THREE places — Program.cs, docs/cli.md, and CompletionCommand.cs (PowerShell `$verbs = @('...')` and bash `compgen -W \"...\"`), both asserted by B11_2Tests against a source scan of Program.cs.",
+    "The docs user set reconciles: operating.md (control verbs + the watch-reason wake table, already derived from WatchReason), quickstart.md, troubleshooting.md, tracker.md (its '## Runtime files' fenced block must name every Path.Combine(plan.StateDir, \"...\") artifact the engine writes — already pinned), plan-config.md (every settable key including `github`), and the docs/README.md index (Start here + Reference tables list the pages that now exist).",
+    ".github templates updated wherever a verb changed: ISSUE_TEMPLATE/bug_report.yml's `Ran: conductor run -p ...` example, its `conductor --version` and `conductor demo` prompts and its log-tail instruction; PULL_REQUEST_TEMPLATE.md's four-command gate battery + the exact `tools/gates/ratchet.ps1` path.",
+    "CHANGELOG.md `[Unreleased]` is written as THE RELEASE BODY THE WORLD READS — user-visible changes only, Keep-a-Changelog sections, no internal checkpoint chatter — and `sh tools/changelog-section.sh Unreleased` prints it non-empty and exits 0, proving release.yml's guard job will find the section once KS10.3 renames it to the version.",
+    "SF7_1DocsMatchRealityTests is EXTENDED (not merely kept green) so that every verb this era added and every command README quotes is pinned by a test rather than by good intentions.",
+    "The extension is proven RED on a seeded stale doc: remove `github` from cli.md (or break one README command block), capture the failing output, revert, capture green. Both captures are the evidence.",
+    "payesh: in the EXISTING worktree C:/Code/conductor-site-harvest on branch ks01/harvest-dedup-refresh (HEAD 6e5f395, corpus already refreshed by KS0.1), `npm run evidence` (harvest --check) is green against the deduped catalogue and `npm run anonymity` passes; a PR is open against shaahink/payesh `main` and NOTHING is pushed to main. If the harvest cannot run for a reason outside this plan, the precise refusal goes into KS10.1's closure ledger and that half is SKIPPED."
+   ],
+   "proofs": [
+    "`dotnet test Conductor.slnx --filter \"K7_2DocsVerbCoverageTests|B11_2Tests|SF7_1DocsMatchRealityTests\"` green; then the seeded-stale-doc run captured RED; then green again after revert — all three in .conductor/evidence/KS10/ks10-2-docs-pin.md.",
+    "A transcript executing every README fenced command block against the fresh build (`dotnet run --project src/Conductor -- ...`), saved to .conductor/evidence/KS10/ks10-2-readme-blocks.txt.",
+    "`sh tools/changelog-section.sh Unreleased` output saved to evidence (exit 0, non-empty body).",
+    "In C:/Code/conductor-site-harvest: `npm run evidence` and `npm run anonymity` output, plus the PR URL fetched as raw JSON (`gh pr view --json url,state` then ConvertFrom-Json — never --jq from PowerShell), in .conductor/evidence/KS10/ks10-2-payesh-pr.md.",
+    "Full battery: `dotnet build Conductor.slnx -clp:ErrorsOnly`; `dotnet test Conductor.slnx` (full, unfiltered); face gates; `powershell -File tools/gates/ratchet.ps1`."
+   ],
+   "files": [
+    "README.md (244 lines)",
+    "docs/cli.md (150)",
+    "docs/operating.md (398)",
+    "docs/quickstart.md (493)",
+    "docs/troubleshooting.md (99)",
+    "docs/tracker.md (123)",
+    "docs/plan-config.md (444)",
+    "docs/README.md (40)",
+    "docs/platforms.md (84 — touch only if a platform rail changed)",
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/ISSUE_TEMPLATE/feature_request.yml",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    "CHANGELOG.md ([Unreleased] section)",
+    "src/Conductor/Commands/CompletionCommand.cs",
+    "tools/changelog-section.sh (read-only — the contract, do not soften)",
+    ".github/workflows/release.yml (read-only — the guard job that consumes the section)",
+    ".conductor/evidence/KS10/ks10-2-docs-pin.md (NEW)",
+    ".conductor/evidence/KS10/ks10-2-readme-blocks.txt (NEW)",
+    ".conductor/evidence/KS10/ks10-2-payesh-pr.md (NEW)",
+    "C:/Code/conductor-site-harvest/src/data/corpus.json (EXISTS, already refreshed at 6e5f395)",
+    "C:/Code/conductor-site-harvest/anonymise.json (EXISTS — fails closed: a run with no entry is excluded)",
+    "C:/Code/conductor-site-harvest/scripts/harvest.mjs (EXISTS, read-only reference)"
+   ],
+   "tests_to_pin": [
+    "tests/Conductor.Tests/SF7_1DocsMatchRealityTests.Readme.cs (NEW) — every fenced `conductor ...` command in README.md names a verb Program.cs registers, with flags that parse (UseStrictParsing means a stale flag is a real failure)",
+    "tests/Conductor.Tests/SF7_1DocsMatchRealityTests.Verbs.cs (NEW) — every verb this era added is named in docs/cli.md AND in both completion lists AND in docs/operating.md where that page promises control verbs",
+    "tests/Conductor.Tests/K7_2DocsVerbCoverageTests.cs (must stay green)",
+    "tests/Conductor.Tests/B11_2Tests.cs (must stay green)",
+    "tests/Conductor.Tests/SF7_1DocsMatchRealityTests.cs — TrackerDocNamesEveryRuntimeArtifactTheEngineCanWrite / OperatingDocWakeTableNamesEveryWatchReason / PlanConfigDocStatesTheAdvisorDefaults (extend the plan-config pin to cover the `github` block)"
+   ],
+   "dependencies": [
+    "KS9.1",
+    "KS10.1",
+    "KS2.1",
+    "KS3.3",
+    "KS3.4",
+    "KS5.1"
+   ],
+   "risks": [
+    "promptExtra trap 16: C:/Code/conductor-site (shaahink/payesh) is a LIVE PUBLIC SITE and a push to its main auto-deploys payesh.vercel.app to the world. Work only in the C:/Code/conductor-site-harvest worktree on ks01/harvest-dedup-refresh, open a PR, and stop. The owner merges at KS10.3.",
+    "The harvest's anonymisation FAILS CLOSED: a run with no prefix entry in anonymise.json is excluded from the corpus entirely. If this era's own run should appear, an entry (label / scenario / repoKey, plus disposition when the store still says running) is required — and if a harvest wants to emit a literal where an evidence key belongs, that is a bug to report, not a value to paste.",
+    "harvest.mjs's refuseBudgetShaped() makes it a BUILD FAILURE for any budget-shaped key whose source is not `conductor money` / `conductor budget`. Do not hand-compute a floor, cap, rollover rate or $/checkpoint into the corpus.",
+    "harvest.mjs shells `conductor history --json --limit 0` — that resolves the PATH shim (published v0.4.0). If the era changed that JSON, prepend the fresh build's output dir to PATH for the harvest; NEVER run tools/install.ps1 (trap 1).",
+    "Leave the heading as `[Unreleased]`. KS10.3 renames it to `## [X.Y.Z] - <date>`; renaming early makes changelog-section.sh Unreleased fail and gives the owner nothing to rename.",
+    "A verb marked .IsHidden() is exempt from cli.md — hiding to make K7_2 green is the exact cheat the test exists to prevent.",
+    "promptExtra trap 13: ASCII-only PowerShell 5.1; no `gh --jq` with double quotes.",
+    "face-go changes (if README screenshots/keys changed) must obey trap 10: goldens live in face-go/internal/tui/testdata/golden and are regenerated only in a separate rebaseline commit."
+   ]
+  },
+  {
+   "id": "KS10.3",
+   "acceptance": [
+    "OWNER-ONLY — no session performs any of this. Contracted here as a handover checklist for the owner; a delivery agent's only job is to leave the checklist runnable and the tracker row untouched.",
+    "1. Owner confirms NO other conductor run is live on this machine (`conductor ps`; verify process command lines with Get-CimInstance Win32_Process — never kill by pid).",
+    "2. Owner merges feat/karvansara into master (owner-signed) and pushes.",
+    "3. Owner renames CHANGELOG.md `## [Unreleased]` to `## [X.Y.Z] - <date>` and verifies `sh tools/changelog-section.sh X.Y.Z` prints the intended body.",
+    "4. Owner tags vX.Y.Z and pushes. release.yml's `guard` job must pass — it re-runs changelog-section.sh and asserts the version derived from tag height IS the tag (every checkout is fetch-depth 0). The published release body must equal KS10.2's section verbatim.",
+    "5. Owner reinstalls via tools/install.ps1 — the FIRST install of this run — and `conductor version` reports the released version, matching the releases page.",
+    "6. Optional, owner-only and interactive: `gh auth refresh -s project` if KS9.3 is to be revisited (today the token carries repo but not project).",
+    "7. Era's closing act: `conductor github sync --backfill <this run>` against the REAL repo — the first non-scratch use of KS9, on the run that built it.",
+    "8. Owner merges the payesh PR (branch ks01/harvest-dedup-refresh) so payesh.vercel.app matches the shipped engine, and confirms the Vercel deploy.",
+    "9. Owner closes the era: KS10.3 marked DONE in plans/karvansara/CORE-TRACKER.md, brief moved to docs/history/ and tracker to docs/history/archive/trackers/ per docs/dev/README.md's stated convention."
+   ],
+   "proofs": [
+    "Releases page body == the CHANGELOG section (visual + `gh release view vX.Y.Z --json body` as raw JSON).",
+    "`conductor version` (PATH shim, post-install) == the released tag.",
+    "The karvansara-core run's board and run issue visible on github.com/shaahink/conductor/issues.",
+    "payesh PR merged and payesh.vercel.app rebuilt from the deduped corpus."
+   ],
+   "files": [
+    "CHANGELOG.md (owner renames the section)",
+    "plans/karvansara/CORE-TRACKER.md (owner marks KS10.3)",
+    ".github/workflows/release.yml (read-only — the guard the tag must satisfy)",
+    "tools/install.ps1 (owner-run, HERE and nowhere else in this era)",
+    "C:/Code/conductor-site-harvest (branch ks01/harvest-dedup-refresh — the PR the owner merges)"
+   ],
+   "tests_to_pin": [],
+   "dependencies": [
+    "KS10.1",
+    "KS10.2",
+    "KS9.1"
+   ],
+   "risks": [
+    "promptExtra trap 1: tools/install.ps1 overwrites the published engine that is DRIVING the run. It runs here, owner-only, after the run is finished — never earlier, never from a session.",
+    "promptExtra trap 11 lifts only at this point: this is the first sanctioned write to a real GitHub repo.",
+    "promptExtra trap 3: another conductor run may share the machine — the reinstall is unsafe until the owner confirms otherwise.",
+    "If KS10.2 left the CHANGELOG heading as a version instead of [Unreleased], or left the section empty, the tag build dies in the guard job before five platforms compile.",
+    "The backfill at step 7 is the first time KS9's idempotence runs against a repo with existing issues — a marker/map bug shows up here as duplicate issues on the public repo."
+   ]
+  }
+ ],
+ "lane_notes": "PATHS: entries in `files` are relative to the checkout root — primary tree C:/Code/conductor (branch feat/karvansara), lane worktrees C:/Code/conductor-lane-face | -ks1 | -ks5. Anything outside the repo is given absolute (payesh worktree C:/Code/conductor-site-harvest, branch ks01/harvest-dedup-refresh, HEAD 6e5f395; live site checkout C:/Code/conductor-site = shaahink/payesh).\n\nVERIFIED 2026-08-13 against the tree (the spec's file:line claims were re-checked): ReleaseClient at src/Conductor.Core/Update/ReleaseClient.cs (User-Agent + Accept + FeedEnvVar override + never-throws contract); SecretsStore at src/Conductor.Core/Integrations/SecretsStore.cs is Telegram-only, one SecretsFile class, <StateDir>/secrets.local.json; the env-over-file rule is TelegramService.cs:143-145; IEventSink at Events/EventLog.cs:8; IRunStore.ReadEventsAfter at Store/IRunStore.cs:155 with the cursor precedent at Watch/WatchLoop.cs:187; WorkGraphSync.SyncResult at Planning/WorkGraphSync.cs; Reporter.RemoteUrl at Reporter.cs:468 and FormatCommitLink at :453; TaskItem at Models/TaskItem.cs carries CheckpointId/Status/Source/StageId/Commit/Evidence/Confirmed/StatusSinceUtc/SessionNumber/Attempts exactly as the design table assumes; SessionFinished at Events/Kinds/SessionEvents.cs:17 carries Number/StageId/Outcome/NewCommits/SatelliteCommits/NewlyDone/CostUsd/Tokens*. NO github code exists in src/ or tests/ today — all of KS9 is NEW.\n\nBUILD AND EXERCISE: the `conductor` on PATH is C:/Users/shahi/scoop/shims/conductor.cmd, version 0.4.0+1a554372eb74 — the PUBLISHED engine driving this run. Exercise every change through `dotnet run --project src/Conductor -- <verb>` (or `go run ./cmd/...` in face-go). The ONE exception is a task claim, which must go through the PATH copy because it targets the driving run: `conductor task --done|--skipped <CP> --commit <sha> --evidence <path>` (also --todo, --blocked, --amend --note).\n\nGATES (from the plan; run these, nothing else): fast — `dotnet build Conductor.slnx -clp:ErrorsOnly` and `cmd /c \"cd /d C:\\code\\conductor\\face-go && go build ./... && go vet ./...\"`; full — `dotnet test Conductor.slnx` and `cmd /c \"cd /d C:\\code\\conductor\\face-go && go test ./...\"`. gatePolicy is perPhase, verifyEachDelivery true. `powershell -File tools/gates/ratchet.ps1` is SAFE to run as a proof (source-scan + git; it does not rebuild or install). NEVER add a gate or proof step that runs tools/install.ps1 or publishes to the engine's install path (trap 7). `conductor gate -p <plan>` runs the battery with no agent session — the cheap way to exercise GateRunner live (KS0.3's handoff).\n\nRATCHETS THAT WILL BITE KS9 HARDEST: tests/Conductor.Tests/architecture-baseline.json has lineCeiling 500, maxTypesPerFile 3, and BOTH debt maps EMPTY ({}). Any new file over 500 lines or holding a 4th public/internal type fails the build, and adding a baseline entry fails tools/gates/ratchet.ps1. tools/gates/ratchet-baseline.json holds minTests 550 (may only rise) and maxPragmas 38 (may only fall). Layering rules in tests/Conductor.Tests/ArchitectureBoundaryTests.cs: Core may not name the shell; the store may not write to the console; NOTHING under src/Conductor/Commands may name SessionRunner, RunLoop, VerdictEngine, GateOrchestrator or RunContext in code; every ConductorEvent must live in the Conductor.Core.Events namespace.\n\nADDING A VERB IS THREE PLACES, ENFORCED: src/Conductor/Program.cs (AddCommand, not .IsHidden()), docs/cli.md (K7_2DocsVerbCoverageTests.CliReference_NamesEveryShippedVerb scans Program.cs and requires a code span `verb` or `conductor verb`), and src/Conductor/Commands/CompletionCommand.cs (B11_2Tests parses `$verbs = @('...')` and `compgen -W \"...\"` and fails on a missing OR a stale verb). Sub-verbs use the CatalogueCommand idiom (a `[verb]` CommandArgument switch); two-word verbs use the Program.cs RewriteRunRecordVerbs rewrite. UseStrictParsing is on — an unrecognised flag is an error, so a stale flag in README/cli.md is a real failure.\n\nSTORE/MIGRATION IDIOM: SQL files at src/Conductor.Core/Store/Migrations/vNN_*.sql, embedded via the csproj glob at :42, applied by MigrationRunner with CurrentVersion (12 today — v13 is the next free number; coordinate with parallel lanes before claiming it). Read-only access to a finished run is RunArchive.TryOpen (Mode=ReadOnly); run selection for a measuring verb is RunSources.Resolve (id/prefix/slug/repo/db-path).\n\nTEST IDIOMS: name new files tests/Conductor.Tests/KS9_1*.cs, KS9_2*.cs, KS9_3*.cs (KS0_3ShadowBuildTests.cs is the live example). HTTP fakes: `StubHandler : HttpMessageHandler` (UpdateCheckTests.cs:171) for status/error paths; RecordingBotApi.cs is the in-process loopback listener pattern when you need to assert what actually went on the wire — prefer it for the GitHub board proofs, because an in-process harness has twice been too lenient here. tests/Conductor.Tests/TestEnvironmentIsolation.cs clears CONDUCTOR_TELEGRAM_TOKEN process-wide; extend it for CONDUCTOR_GITHUB_TOKEN or an ambient token will make the suite hit the network.\n\nORDERING: KS9.1 -> KS9.2 -> KS9.3 strictly (client/token/backfill, then reconciler, then the cut-line board). KS9 must land before KS10.2 (cli.md cannot name `github` before it exists without turning K7_2 red the other way). KS10.1 before KS10.2 (the closure ledger holds any payesh/KS9.3 refusal). KS10.3 is owner-only and last.\n\nEVIDENCE + COMMITS: evidence goes to .conductor/evidence/<STAGE>/<cp>-<slug>.md (KS0 is the live example; KS9/ and KS10/ are NEW dirs). Report config is commit:false/push:false, so the SESSION commits: one commit per checkpoint, conventional subject `type(scope): KS9.1 - sentence`, body prose, trailers `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>` and the Claude-Session line; push feat/karvansara. Keep face-go sources LF. If you move the plan's readOrder target (docs/dev/KARVANSARA-PLAN-2026-08-13.md) or the tracker (plans/karvansara/CORE-TRACKER.md), update the plan and reload it in the SAME checkpoint (trap 14).\n\nTRACKER/HANDOFF: overwrite the handoff block, max 12 lines, no history. Never put the literal escalation token (the word HUMAN followed by a colon) in it unless escalating right now — the match is a plain substring and prose about the convention parks the run and floods Telegram (trap 9). Report the FULL-suite number in the handoff, never a filtered one.\n\nSAFETY, ALWAYS: this repo's .conductor/ is the live state of the run driving you — read-only and claim verbs only, never run/pause/resume/abort/goto/plan reload/rollback against C:/Code/conductor (trap 0). Any live-run proof spawns your build against a scratch rig under the temp directory with its own port and its own CONDUCTOR_STATE_HOME, with `-p` passed explicitly and CONDUCTOR_PLAN cleared in every spawned shell (trap 4). Never kill a conductor/conductor-face/dotnet process without a Get-CimInstance Win32_Process command-line check proving it belongs to this repo (traps 3, 12). PowerShell tooling targets Windows PowerShell 5.1 and stays ASCII-only; never `gh --jq` with a double-quoted filter — fetch raw JSON and ConvertFrom-Json (trap 13). Template edits under plans/karvansara/templates/ must be swept for stray literal braces — an unresolved placeholder kills the engine with a stderr-only refusal when the stage first renders (trap 8).\n\nGITHUB POSTURE (KS9, non-negotiable, from docs/dev/GITHUB-SYNC-DESIGN-2026-08-13.md read in full): one-way push, off by default, nothing inbound — no webhook receiver, no polling, no reading issue state back. GitHub is a view and an archive, never an ingress; the tracker stays the verified contract and Events/TaskWrites.cs stays the only writer of task state. A human dragging a card on GitHub changes nothing, and that is correct behaviour worth a documented line. Scope the sync to the CURRENT plan's stages or it imports garbage (the F0/R0 stray rows in plans/karvan/CORE-TRACKER.md are the standing example). Failure posture matches webhooks: a failed sync never blocks the loop — log it, hold the cursor, converge later. Amend docs/dev/adr/0005-push-only-remote-observability.md in the same PR as the sync lands (the PR template requires it, and 0005 is the ADR this touches).\n\nKS9.3 SCOPE FACT, VERIFIED TODAY: `gh auth status` reports account shaahink, token scopes 'delete_repo','gist','read:org','repo','user','workflow' — NO 'project'. The refusal branch is the live path unless the owner runs `gh auth refresh -s project` first; a session must not run it (interactive, mutates the owner's credential).\n\nCHANGELOG MECHANICS (KS10.2/KS10.3): tools/changelog-section.sh matches a heading by the text inside `## [ ]`, so `sh tools/changelog-section.sh Unreleased` is a valid local proof today. release.yml's guard job runs the same script for the tag's version and uploads the output as release-body.md — a tag whose section is missing dies before any platform compiles. KS10.2 writes the section and leaves the heading as [Unreleased]; KS10.3 renames it.\n\nPAYESH (KS10.2): the harvest branch already exists with the refreshed corpus (KS0.1 did it, 6e5f395), so the remaining work is re-verify + PR, not re-harvest from scratch. Commands run in C:/Code/conductor-site-harvest: `npm run evidence` (harvest --check), `npm run anonymity`, `npm run check`. Its three load-bearing rules: run-level truth comes from `conductor history --json --limit 0` and never from SQL; every store is opened read-only; anonymisation fails closed (a run absent from anonymise.json is excluded, not renamed). refuseBudgetShaped() turns any hand-computed budget figure into a build failure. Never push to main — it auto-deploys payesh.vercel.app to the world."
+}

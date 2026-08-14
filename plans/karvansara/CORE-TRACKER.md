@@ -4,19 +4,18 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: the KS5 lane landed whole (a157e40..2ba91d7): KS5.1-KS5.4 delivered and adversarially
-  verified (KS5.4 through three rounds), rebased onto the KS2a merge, fast-forwarded; battery on
-  the merged tree 2436/2436 + face build/vet/test green. KS2.0-KS2.6 landed just before (e6b80c2).
+last: the ks3 lane landed - KS3.1-KS3.3 (60101eb, 106637b+fb37c83, 985bdf4) plus the salvaged
+  round-8 park alignment (b8a6002); full battery on the merged tree green, engine and face.
+open: KS3.4 - refuted seven rounds, one defect class: the compose leg's decision stops before
+  the session the real launch spawns. Round-7 findings and live rigs: plans/karvansara/contracts/.
+  The round-8 direction is in the KS3 stage notes; the park branch (b8a6002) is the pattern.
+then: KS3.5 per contracts/KS3.json, KS9 (scratch repo only; KS9.3 expects precise-refusal
+  SKIPPED), KS10.1-10.2 per contracts/KS9-10.json. KS10.3 is owner-only.
 gaps for KS10.1's closure ledger: the face tokens-cap row still quotes the plan-file ceiling;
-  approve lost CtlCommand's --yes/--force; one owner-gate-plus-lowered-cap path spends a session
-  before parking.
-measured: concurrent full suites on this machine kill each other's MSBuild nodes: run batteries
-  serially with -nodeReuse:false -p:UseSharedCompilation=false, or MSB4166 lies about the tree.
-in flight: lane/ks3 holds KS3.1-KS3.3 verified; KS3.4 refuted seven rounds, each a new face of one
-  defect - the preflight compose leg diverges from the live launch (latest: three "no session
-  composes" headlines that a red gate or audit re-decides into a real session). KS3.5 waits behind
-  it; the lane is paused for an owner decision - fix round 8 or re-scope the clause.
-next: settle KS3.4, KS3.5, merge lane/ks3; wave 3 = KS9, wave 4 = KS10.1/10.2, KS10.3 owner-only.
+  approve lost CtlCommand's yes/force flags; one owner-gate-plus-lowered-cap path spends a
+  session before parking.
+measured: full batteries run serially with -nodeReuse:false -p:UseSharedCompilation=false, or
+  MSB4166 lies about the tree. The driving engine is the pre-karvansara published build.
 
 
 ## Baseline numbers (tracker-counted - the engine is stopped, the tracker is the board)
@@ -24,7 +23,7 @@ next: settle KS3.4, KS3.5, merge lane/ks3; wave 3 = KS9, wave 4 = KS10.1/10.2, K
 | Metric | Value |
 |---|---|
 | Total checkpoints | 32 |
-| Done | 21 |
+| Done | 24 |
 | Claimed (unconfirmed) | 0 |
 
 ## Checkpoints
@@ -68,9 +67,9 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS3.1 | conductor plan new interviews from an idea, PRD or tracker and emits plan JSON, tracker and templates doctor-clean by construction - from an empty repo, one command, zero-fail, the JSON never opened in an editor | TODO | - | - |
-| KS3.2 | The editor stops destroying: comment header preserved across plan set, add-stage and import, no silent progress-kind or gate-timeout rewrites - the add-a-stage replay diffs to only the stage | TODO | - | - |
-| KS3.3 | Schema honesty: the eight undocumented keys documented, mutatingLanes removed or wired, doctor warns on inert keys, and plan-config.md matches PlanConfig under the docs-match-reality pin | TODO | - | - |
+| KS3.1 | conductor plan new interviews from an idea, PRD or tracker and emits plan JSON, tracker and templates doctor-clean by construction - from an empty repo, one command, zero-fail, the JSON never opened in an editor | DONE | 60101eb | .conductor/evidence/KS3/ks3-1.md |
+| KS3.2 | The editor stops destroying: comment header preserved across plan set, add-stage and import, no silent progress-kind or gate-timeout rewrites - the add-a-stage replay diffs to only the stage | DONE | 106637b | .conductor/evidence/KS3/ks3-2.md |
+| KS3.3 | Schema honesty: the eight undocumented keys documented, mutatingLanes removed or wired, doctor warns on inert keys, and plan-config.md matches PlanConfig under the docs-match-reality pin | DONE | 985bdf4 | .conductor/evidence/KS3/ks3-3.md |
 | KS3.4 | conductor preflight runs the launch drill as one verb - doctor, journey, dry-run compose, version-versus-release, rebuild check, escalation-block check - one verdict, each seeded drill failure caught | TODO | - | - |
 | KS3.5 | Import bridges: a spec-kit tasks.md, a Task-Master tasks.json and a plain markdown checklist each convert to a plan, and the spec-kit sample drives conductor demo to completion | TODO | - | - |
 

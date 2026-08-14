@@ -1,0 +1,291 @@
+{
+ "stage": "KS3",
+ "checkpoints": [
+  {
+   "id": "KS3.1",
+   "acceptance": [
+    "`plan new` is a real subverb: PlanCommand.Settings.Verb switch (src/Conductor/Commands/PlanCommand.cs:46-53) routes \"new\", and an UNKNOWN plan subverb no longer falls silently into PrintPlanSummary — it refuses and names the known subverbs.",
+    "From an empty git-initialised temp dir with no plan file, ONE invocation writes conductor.plan.json + TRACKER.md + templates/ containing every PromptBuilder.BuiltInNames entry, and the JSON is never opened in an editor during the drill.",
+    "Three input kinds are accepted — free idea text, a PRD file path, an existing tracker markdown — and each yields >=1 real stage and >=1 declared checkpoint, i.e. InitCommand.PlaceholderStageId (\"S1 … rename me\") is dropped when real stages arrive (InitCommand.DropPlaceholderStage).",
+    "`doctor -p <produced plan> --no-auth-check --no-update-check` exits 0 with `0 fail` on the produced artefacts, including the plan-semantics lints KS1.4 adds and the inert-key warn KS3.3 adds.",
+    "Structured input takes the deterministic parser (PlanImportService.ParseStructured) and spawns no model; only freeform prose consults the advisor, and with no advisor configured the command says exactly that and still leaves a loadable scaffold on disk (never a half-written one).",
+    "Existing entrypoints are unchanged: `init`, `init --from-idea`, `new-plan`, `plan import` keep current behaviour and their existing tests stay green."
+   ],
+   "proofs": [
+    "Transcript: `dotnet run --project src/Conductor -- plan new --output <tmp> --from-idea \"<idea>\"` in a fresh git-init temp repo, followed by `dotnet run --project src/Conductor -- doctor -p <tmp>/conductor.plan.json --no-auth-check --no-update-check` printing `N ok · M warn · 0 fail` and exit 0.",
+    "New xunit facts in tests/Conductor.Tests/KS3_1PlanNewTests.cs: file set written (plan + tracker + every PromptBuilder.BuiltInNames template), DoctorCommand check list contains zero State==\"fail\", placeholder stage absent once real stages exist, structured input path asserts the advisor was never spawned.",
+    "Fact asserting `plan <unknown-verb>` exits non-zero and names set/reload/add-stage/import/new instead of printing the summary.",
+    "dotnet build Conductor.slnx -clp:ErrorsOnly green; dotnet test Conductor.slnx green (full suite number in the handoff)."
+   ],
+   "files": [
+    "src/Conductor/Commands/PlanCommand.cs",
+    "src/Conductor/Commands/PlanNewCommand.cs (NEW)",
+    "src/Conductor/Commands/InitCommand.cs",
+    "src/Conductor/Commands/NewPlanCommand.cs",
+    "src/Conductor/Commands/PlanImportCommand.cs",
+    "src/Conductor.Core/PlanImportService.cs",
+    "src/Conductor.Core/Planning/MarkdownPlanParser.cs",
+    "src/Conductor.Core/Planning/ParsedPlan.cs",
+    "src/Conductor.Core/PromptBuilder.BuiltIns.cs",
+    "docs/cli.md",
+    "docs/quickstart.md",
+    "tests/Conductor.Tests/KS3_1PlanNewTests.cs (NEW)"
+   ],
+   "dependencies": [
+    "KS3.2",
+    "KS3.3",
+    "KS1.4"
+   ],
+   "tests_to_pin": [
+    "tests/Conductor.Tests/KS3_1PlanNewTests.cs (NEW)",
+    "tests/Conductor.Tests/InitCommandTests.cs",
+    "tests/Conductor.Tests/SF6_3InitScaffoldTests.cs",
+    "tests/Conductor.Tests/W4FromIdeaTests.cs",
+    "tests/Conductor.Tests/W4ImportTests.cs",
+    "tests/Conductor.Tests/DoctorCommandTests.cs",
+    "tests/Conductor.Tests/K7_2DocsVerbCoverageTests.cs"
+   ],
+   "risks": [
+    "NewPlanCommand.BuildMinimalPlanJson emits `\"stages\": []`, which PlanConfig.CollectErrors rejects (\"plan.stages is empty\") — the existing scaffold self-check pattern is a landmine; do not copy it into plan new.",
+    "promptExtra trap 2: exercise through `dotnet run --project src/Conductor --`, never the PATH `conductor` (that is the published engine driving this run).",
+    "Traps 0 and 4: run every scratch drill under the temp directory with an explicit -p and CONDUCTOR_PLAN cleared; never point plan new at C:/code/conductor.",
+    "Trap 8: any generated template with a literal `{token}` kills the engine at first render with a stderr-only refusal — sweep every scaffolded template; a doubled brace emits a literal one.",
+    "Trap 9: generated tracker templates must not carry the literal escalation token in the handoff block.",
+    "architecture-baseline.json enforces a 500-line ceiling with zero approved violations — put the new command in its own file."
+   ]
+  },
+  {
+   "id": "KS3.2",
+   "acceptance": [
+    "A plan file carrying `//` comments survives `plan set <key> <value>` with every comment line intact, key order intact, and no byte changed except the edited leaf and `planVersion`.",
+    "Same preservation across `plan add-stage` (today PlanConfig.Save(), PlanAddStageCommand.cs:56) and across an applied `plan import` (PlanDiff.Apply then save).",
+    "Add-a-stage replay: a textual diff of the file before/after shows ONLY the new stage object plus the planVersion line — `progress.kind`, gate `timeoutMinutes`, `gatePolicy` and `limits.*` defaults are NOT materialised into a file that did not carry them.",
+    "The lossy-rewrite apology path is retired: PlanSetCommand no longer writes a `<plan>.bak` nor prints \"This rewrite drops N comment line(s)\" for a file it now preserves (PlanSetCommand.cs:151-167).",
+    "The Face's plan editor uses the same preserving writer — both Save() call sites in src/Conductor/Http/ControlPlaneServer.Plan.cs (:62, :145) go through it, so a Face edit cannot undo a CLI-preserved file.",
+    "Refusal semantics unchanged: an undeclared key without --create still exits 1 leaving the file byte-identical; a post-edit validation failure still leaves the file untouched.",
+    "docs/plan-config.md lines 9-12 (\"`conductor plan set` cannot keep them … saves the annotated original as `<plan>.bak`\") are rewritten to the new truth."
+   ],
+   "proofs": [
+    "Replay test in tests/Conductor.Tests/KS3_2PlanEditPreservesTests.cs: fixture = an init-scaffolded plan (comments plus only the keys init writes); run ExecuteAddStage with one stage JSON; assert the before/after line diff contains only the stage block and the planVersion line, and that `progress`, `gatePolicy`, `limits.stallMinutes` are still absent.",
+    "Fact: comment-line count before == after for plan set, add-stage and import-apply; comment TEXT compared verbatim.",
+    "Fact: `plan set` run twice with the same value is a no-op beyond planVersion (idempotence).",
+    "Transcript: `dotnet run --project src/Conductor -- plan set limits.maxRunCostUsd 5 -p <scratch plan>` on a commented scratch plan, then `git diff` on the scratch repo showing one changed line, and no `.bak` produced.",
+    "dotnet test Conductor.slnx green with PlanSetCommandTests updated."
+   ],
+   "files": [
+    "src/Conductor/Commands/PlanSetCommand.cs",
+    "src/Conductor/Commands/PlanAddStageCommand.cs",
+    "src/Conductor/Commands/PlanCommand.cs",
+    "src/Conductor/Commands/PlanImportCommand.cs",
+    "src/Conductor/Commands/PlanReloadCommand.cs",
+    "src/Conductor.Core/Models/PlanConfig.cs",
+    "src/Conductor.Core/Planning/PlanDiff.cs",
+    "src/Conductor.Core/Planning/PlanDocumentEditor.cs (NEW)",
+    "src/Conductor/Http/ControlPlaneServer.Plan.cs",
+    "src/Conductor/Commands/InitCommand.cs",
+    "docs/plan-config.md",
+    "tests/Conductor.Tests/KS3_2PlanEditPreservesTests.cs (NEW)"
+   ],
+   "dependencies": [],
+   "tests_to_pin": [
+    "tests/Conductor.Tests/PlanSetCommandTests.cs — Set_KeepsTheAnnotatedFileBesideTheRewrittenOne (rewrite to assert preservation)",
+    "tests/Conductor.Tests/PlanSetCommandTests.cs — CountCommentLines_CountsWhatTheRewriteWillDrop (retire or repurpose)",
+    "tests/Conductor.Tests/PlanSetCommandTests.cs — Set_RefusesAnUndeclaredKey_AndLeavesTheFileByteIdentical",
+    "tests/Conductor.Tests/PlanSetCommandTests.cs — Set_StillSetsARealKeyThatTheSerialiserOmittedForBeingNull",
+    "tests/Conductor.Tests/PlanSetCommandTests.cs — Set_CreatesADeclaredBlockThatIsAbsentFromTheFile",
+    "tests/Conductor.Tests/PlanSetCommandTests.cs — Set_LandsOnTheExistingKeyWhenTheCaseIsWrong",
+    "tests/Conductor.Tests/KS3_2PlanEditPreservesTests.cs (NEW)",
+    "tests/Conductor.Tests/ControlPlaneServerPlanTests.cs",
+    "tests/Conductor.Tests/W4ImportTests.cs",
+    "tests/Conductor.Tests/PlanConfigTests.cs"
+   ],
+   "risks": [
+    "System.Text.Json has NO comment-preserving writer: JsonSerializer, JsonDocument and JsonNode all drop trivia (PlanConfig.JsonOpts sets ReadCommentHandling = Skip). The fix is a hand-rolled text-span editor over the raw file, or the plan's sanctioned alternative — an owned `header` field.",
+    "PlanConfig.Save() re-serialises the whole object, so it MATERIALISES defaults (progress.kind, gate timeoutMinutes, gatePolicy) — that is the 'adding one stage changed three unrelated things' trap, and it is a separate bug from comment loss.",
+    "PlanConfig.Save() is also called from InitCommand.FromIdea:129 and ControlPlaneServer.Plan.cs:62/:145 — changing its semantics touches every one of them.",
+    "Encoding inconsistency any byte-identity assertion must account for: PlanSetCommand writes UTF8 WITHOUT BOM (:169) while PlanConfig.Save writes WITH BOM (new UTF8Encoding(true), PlanConfig.cs:180).",
+    "Trap 0: plans/karvansara/core.plan.json is the annotated LIVE plan of the run driving you and the exact artifact this checkpoint protects — never run plan set/add-stage/import against it or any file under C:/code/conductor.",
+    "KS3.3 rewrites the same docs/plan-config.md opening paragraph — sequence, do not parallelise."
+   ]
+  },
+  {
+   "id": "KS3.3",
+   "acceptance": [
+    "docs/plan-config.md documents all nine keys with a row or section each, defaults matching the code: `supervisor` (SupervisorConfig — enabled true, timeoutMinutes 10, maxPerHour 6, standingOrders, remote/SupervisorRemote), `packs` (PlanConfig.Packs, resolves to <templatesDir>/packs/<name>.md), `pipeline` (PipelineRules), `verifyEachDelivery` (default true, lowest-precedence QA input), `limits.maxSessions` (int?, null/0 = no cap), `limits.stallGraceMinutes` (3), `limits.authPreflight` (true), `limits.sameFailureCircuitBreaker` (true), `limits.verifierThreshold` (80).",
+    "`mutatingLanes` stops being inert: either PlanConfig.MutatingLanes is REMOVED (property gone; `grep -rn \"\\.MutatingLanes\" src/` empty; docs/plan-config.md:405-427 section and its 'Not scheduled' blockquote deleted) or it is WIRED (LaneCoordinator schedules plan.MutatingLanes and a test proves a declared lane actually runs). Verified today: zero readers in src/.",
+    "A derived docs-match-reality test enumerates settable paths off PlanKeySchema/PlanConfig reflection and fails naming any path with no `| `key` |` row or named section in docs/plan-config.md; it goes RED when one documented row is deleted.",
+    "A companion test asserts no settable PlanConfig root property is read by nothing (the mutatingLanes shape) and goes red on a seeded inert property.",
+    "`conductor doctor` gains an inert-key check that WARNS naming every key present in the plan FILE for which PlanKeySchema.Resolve(...).Known is false — today PlanConfig and LimitsConfig carry no [JsonExtensionData], so a hand-edited `limits.maxRunCostUsdd` loads silently and no surface says so.",
+    "The new check is warn-level only (never fail), doctor still exits 0 on a clean plan, and doctor's sub-2s budget is not blown.",
+    "PlanSetCommandTests.EveryKeyInEveryShippedPlanResolves stays green — a removal also strips the key from plans/conductor-sarban-core.plan.json:223 and plans/conductor-sarban-face.plan.json:239 (that test scans plans/*.plan.json top level only), and from plans/karvan/core.plan.json:225 and plans/karvan/lanes.plan.json:213 for consistency."
+   ],
+   "proofs": [
+    "Transcript: `dotnet run --project src/Conductor -- doctor -p <scratch plan seeded with limits.maxRunCostUsdd> --no-auth-check --no-update-check` printing a warn line naming the key, exit 0; and the same on a clean plan printing no such line.",
+    "New partial tests/Conductor.Tests/SF7_1DocsMatchRealityTests.PlanKeys.cs deriving the key set by reflection and asserting a row per settable path; demonstrated red by deleting one row from docs/plan-config.md, then green again.",
+    "tests/Conductor.Tests/KS3_3SchemaHonestyTests.cs: the nine keys each have a doc row with the code's default; the no-inert-root-property assertion; a seeded inert property makes it red.",
+    "Command output pasted as evidence: `grep -rn \"\\.MutatingLanes\" src/` empty (removal branch) or a passing lane-scheduling test (wiring branch).",
+    "dotnet test Conductor.slnx green including PlanSetCommandTests.EveryKeyInEveryShippedPlanResolves."
+   ],
+   "files": [
+    "docs/plan-config.md",
+    "src/Conductor.Core/Models/PlanConfig.cs",
+    "src/Conductor.Core/Models/LimitsConfig.cs",
+    "src/Conductor.Core/Models/SupervisorConfig.cs",
+    "src/Conductor.Core/Models/AnalysisLaneConfig.cs",
+    "src/Conductor.Core/Lanes/LaneCoordinator.cs",
+    "src/Conductor.Core/MutatingLaneRunner.cs",
+    "src/Conductor.Core/Planning/PlanKeySchema.cs",
+    "src/Conductor/Commands/DoctorCommand.PlanKeys.cs (NEW)",
+    "src/Conductor/Commands/DoctorCommand.cs",
+    "plans/conductor-sarban-core.plan.json",
+    "plans/conductor-sarban-face.plan.json",
+    "plans/karvan/core.plan.json",
+    "plans/karvan/lanes.plan.json",
+    "tests/Conductor.Tests/SF7_1DocsMatchRealityTests.PlanKeys.cs (NEW)",
+    "tests/Conductor.Tests/KS3_3SchemaHonestyTests.cs (NEW)"
+   ],
+   "dependencies": [
+    "KS3.2"
+   ],
+   "tests_to_pin": [
+    "tests/Conductor.Tests/SF7_1DocsMatchRealityTests.PlanKeys.cs (NEW)",
+    "tests/Conductor.Tests/KS3_3SchemaHonestyTests.cs (NEW)",
+    "tests/Conductor.Tests/SF7_1DocsMatchRealityTests.cs — PlanConfigDocStatesTheAdvisorDefaultsAdvisorConfigActuallyHas",
+    "tests/Conductor.Tests/PlanSetCommandTests.cs — EveryKeyInEveryShippedPlanResolves",
+    "tests/Conductor.Tests/SF0_1InertPlanKeysTests.cs",
+    "tests/Conductor.Tests/B12_3Tests.cs — PlanConfig_MutatingLanes_DefaultsEmpty (must be retired or rewritten on the removal branch)",
+    "tests/Conductor.Tests/B12_4Tests.cs",
+    "tests/Conductor.Tests/DoctorCommandTests.cs"
+   ],
+   "risks": [
+    "Deleting MutatingLaneConfig (the TYPE) orphans MutatingLaneRunner and LaneCoordinator.FollowupEntryToMutatingLane (:247) and reds B12_3Tests/B12_4Tests — remove only the PlanConfig PROPERTY.",
+    "B12_3Tests.PlanConfig_MutatingLanes_DefaultsEmpty asserts the property exists; it must be retired in the same commit as the removal or the build breaks.",
+    "`pipeline` is PipelineRules, owned by Conductor.Planning — a reflection-derived doc test will demand rows for its nested keys; scope the derivation deliberately (PlanKeySchema.SearchDepth is 4) or the test becomes unsatisfiable.",
+    "`packs` interacts with the Windows 8191-char composed-prompt ceiling (bugs 15/21) — repeat init's warning in the doc rather than presenting packs as free.",
+    "DoctorCommand.cs is 468 lines against a hard 500-line ceiling with an empty approved-violations baseline — the new check must live in a new partial file.",
+    "The inert-key check must read the raw file (comments skipped) and must not warn on `//` comment text or on author-named dictionary keys under `workflows`.",
+    "docs/plan-config.md's opening paragraph is also rewritten by KS3.2 — sequence them."
+   ]
+  },
+  {
+   "id": "KS3.4",
+   "acceptance": [
+    "`preflight` is registered non-hidden in src/Conductor/Program.cs, added to CompletionCommand.Verbs, and given a row in docs/cli.md's `## Pre-flight` table — K7_2DocsVerbCoverageTests.CliReference_NamesEveryShippedVerb and B11_2Tests.Completion_ContainsAllRegisteredVerbs_Exhaustive both stay green.",
+    "One invocation runs six legs and prints ONE verdict with one exit code: doctor (0 fail), journey resolution (model + workflow per stage), dry-run prompt compose, running-version vs latest release, rebuild/staleness check (BuildInfo.Current vs working tree / installed binary), escalation-block check (plan.Conventions.HumanToken absent from the tracker handoff block extracted via ProgressConventions.BuildHandoffRegex).",
+    "Six seeded fixtures each make preflight exit non-zero naming exactly the failing leg: (a) agent.command not on PATH, (b) agent.model pinned while args/resumeArgs carry no {model}, (c) a template under templatesDir with an unresolvable placeholder, (d) running version older than the release feed reports, (e) a stale/rebuild-required engine, (f) the escalation token inside the handoff block.",
+    "Read-only: preflight spawns no agent session and creates no file under plan.StateDir (no run.db row, no state.json, no control.json), and honours --no-auth-check / --no-update-check exactly as doctor does.",
+    "The launch-drill checklist it replaces is marked superseded in .claude/skills/run-conductor/SKILL.md, and the external conductor-drive skill's `### 4. Pre-flight — three commands, no spend` section is recorded in the handoff as needing the same edit outside the repo.",
+    "Legs reuse shipped implementations rather than reimplementing them — DoctorCommand's check list, JourneyCommand's resolution, RunOptions(DryRun: true) compose, DoctorCommand.CheckUpdateAsync's cached 4s release probe."
+   ],
+   "proofs": [
+    "Six transcripts, one per seeded fixture: `dotnet run --project src/Conductor -- preflight -p <fixture> --no-auth-check` with the recorded exit code and the line naming the failing leg; plus a seventh on a clean fixture exiting 0 with one green verdict.",
+    "tests/Conductor.Tests/KS3_4PreflightTests.cs: a fact per seeded failure asserting non-zero and the named leg; a read-only fact asserting Directory.EnumerateFiles(plan.StateDir) is unchanged after a preflight run.",
+    "dotnet test Conductor.slnx green, specifically K7_2DocsVerbCoverageTests and B11_2Tests after the verb is added.",
+    "`dotnet run --project src/Conductor -- completion powershell` output containing `preflight` in the $verbs list."
+   ],
+   "files": [
+    "src/Conductor/Commands/PreflightCommand.cs (NEW)",
+    "src/Conductor/Program.cs",
+    "src/Conductor/Commands/CompletionCommand.cs",
+    "src/Conductor/Commands/DoctorCommand.cs",
+    "src/Conductor/Commands/DoctorCommand.State.cs",
+    "src/Conductor/Commands/DoctorCommand.Update.cs",
+    "src/Conductor/Commands/JourneyCommand.cs",
+    "src/Conductor/Commands/RunCommand.cs",
+    "src/Conductor.Core/BuildInfo.cs",
+    "src/Conductor.Core/Update/UpdateCheck.cs",
+    "src/Conductor.Core/Update/ReleaseClient.cs",
+    "src/Conductor.Core/Models/ProgressConventions.cs",
+    "docs/cli.md",
+    "docs/operating.md",
+    "docs/quickstart.md",
+    ".claude/skills/run-conductor/SKILL.md",
+    "tests/Conductor.Tests/KS3_4PreflightTests.cs (NEW)"
+   ],
+   "dependencies": [
+    "KS1.4",
+    "KS3.3",
+    "KS2.1"
+   ],
+   "tests_to_pin": [
+    "tests/Conductor.Tests/KS3_4PreflightTests.cs (NEW)",
+    "tests/Conductor.Tests/K7_2DocsVerbCoverageTests.cs — CliReference_NamesEveryShippedVerb",
+    "tests/Conductor.Tests/B11_2Tests.cs — Completion_ContainsAllRegisteredVerbs_Exhaustive",
+    "tests/Conductor.Tests/DoctorCommandTests.cs",
+    "tests/Conductor.Tests/JourneyCommandTests.cs",
+    "tests/Conductor.Tests/SF7_1DocsMatchRealityTests.Skill.cs",
+    "tests/Conductor.Tests/UpdateCheckTests.cs"
+   ],
+   "risks": [
+    "The conductor-drive skill lives OUTSIDE the repo at C:/Users/shahi/.claude/skills/conductor-drive/SKILL.md and cannot be committed — edit the in-repo .claude/skills/run-conductor/SKILL.md and name the external file in the handoff.",
+    "SF7_1DocsMatchRealityTests.Skill.cs pins exact sentences in .claude/skills/run-conductor/SKILL.md (asserts 'transition fallback' and 'legacy-claim' present, two sentences absent) — an unguarded edit there goes red.",
+    "Doctor's auth ping spends ~$0.001 and hits the model backend; every proof run must pass --no-auth-check, and preflight must not turn it on by default beyond what doctor already does.",
+    "The release-feed leg must stay inside DoctorCommand.Update.cs's 4s budget and 6h user-level cache and must never write into .conductor/ — preflight advertises itself as read-only.",
+    "Trap 9: the escalation check matches a plain SUBSTRING — preflight's own output, its docs and its fixtures must never put the literal token into a tracker handoff block.",
+    "Adding a top-level verb is three edits (Program.cs, CompletionCommand.Verbs, docs/cli.md); missing either of the last two reds a shipped test.",
+    "KS1.4 owns the doctor plan-semantics lints including the escalation-token sweep — implement once, shared, not twice.",
+    "KS2.1 turns bare `conductor` into a default command; verify `preflight` still routes after that lands.",
+    "New file must stay under the 500-line ceiling (empty approved-violations baseline)."
+   ]
+  },
+  {
+   "id": "KS3.5",
+   "acceptance": [
+    "Three deterministic converters land behind one entry point — spec-kit `tasks.md`, Task-Master `tasks.json`, plain markdown checklist to ImportResult — reachable from `conductor plan import <file>` with zero model spend, selected by CONTENT detection rather than filename alone.",
+    "Each converter has a committed sample fixture in the repo and a test asserting stage count, checkpoint ids and dependency order for that fixture.",
+    "The spec-kit sample converts to stage ids matching [A-Za-z]{1,4}\\d+ and checkpoint ids matching [A-Za-z]{1,4}\\d+\\.[A-Za-z0-9]+ — the exact regexes FakeAgentCommand.StageFromPrompt (:157-160) and FakeAgentCommand.FirstOpenRow (:183) require, or the demo agent can never claim a row.",
+    "`conductor demo` gains a seam (e.g. --from <tasks.md> or --plan <path>) that drives the converted plan to a terminal completed status with every checkpoint DONE, no credentials, in a throwaway directory, with state still pinned inside it (DemoCommand.PinStateToTheThrowawayRepo) so no machine-catalogue row is created.",
+    "Default `conductor demo` with no args is unchanged: DemoCommand.PlanJson/Tracker consts and DemoCommandTests (ScaffoldedPlanLoads, GatesPinNoShellSoTheDemoIsPortable, DemoStateStaysInsideTheThrowawayRepo) stay green.",
+    "The imported plan's gates are real, host-portable subprocesses with no pinned `shell` — reuse RepoKindDetector.GatesFor or fall back to the demo's own `git `-prefixed gates.",
+    "docs/cli.md and docs/quickstart.md name the three bridges."
+   ],
+   "proofs": [
+    "Transcript: `dotnet run --project src/Conductor -- demo --from tests/Conductor.Tests/fixtures/speckit/tasks.md --keep -o <tmp>` reaching exit 0 with final status Completed; the kept repo's TRACKER.md showing every row DONE and .conductor/REPORT.md attached as evidence.",
+    "tests/Conductor.Tests/KS3_5ImportBridgeTests.cs: one fact per converter over its fixture (stage count, checkpoint ids, dependency order), plus an id-shape fact asserting the spec-kit output satisfies FakeAgentCommand.StageFromPrompt and FakeAgentCommand.FirstOpenRow (call those internals directly).",
+    "Fact asserting the converted plan's gates carry no `shell` and that StateHome.Resolve for the demo repo returns StateSource.Pointer with no catalogue file written.",
+    "dotnet test Conductor.slnx green with DemoCommandTests, MarkdownPlanImportTests, W4ImportTests and PlanImportServiceTests untouched-and-passing."
+   ],
+   "files": [
+    "src/Conductor.Core/PlanImportService.cs",
+    "src/Conductor.Core/Planning/MarkdownPlanParser.cs",
+    "src/Conductor.Core/Planning/ParsedPlan.cs",
+    "src/Conductor.Core/Planning/SpecKitImporter.cs (NEW)",
+    "src/Conductor.Core/Planning/TaskMasterImporter.cs (NEW)",
+    "src/Conductor.Core/Planning/ChecklistImporter.cs (NEW)",
+    "src/Conductor/Commands/PlanImportCommand.cs",
+    "src/Conductor/Commands/DemoCommand.cs",
+    "src/Conductor/Commands/FakeAgentCommand.cs",
+    "src/Conductor.Core/RepoKindDetector (src/Conductor.Core — referenced by InitCommand.DetectRepoKind)",
+    "tests/Conductor.Tests/fixtures/speckit/tasks.md (NEW)",
+    "tests/Conductor.Tests/fixtures/taskmaster/tasks.json (NEW)",
+    "tests/Conductor.Tests/fixtures/checklist/checklist.md (NEW)",
+    "tests/Conductor.Tests/KS3_5ImportBridgeTests.cs (NEW)",
+    "docs/cli.md",
+    "docs/quickstart.md"
+   ],
+   "dependencies": [
+    "KS3.1",
+    "KS3.2",
+    "KS3.3"
+   ],
+   "tests_to_pin": [
+    "tests/Conductor.Tests/KS3_5ImportBridgeTests.cs (NEW)",
+    "tests/Conductor.Tests/DemoCommandTests.cs — ScaffoldedPlanLoads, GatesPinNoShellSoTheDemoIsPortable, DemoStateStaysInsideTheThrowawayRepo",
+    "tests/Conductor.Tests/MarkdownPlanImportTests.cs",
+    "tests/Conductor.Tests/PlanImportServiceTests.cs",
+    "tests/Conductor.Tests/W4ImportTests.cs",
+    "tests/Conductor.Tests/W5RehearsalTests.cs"
+   ],
+   "risks": [
+    "Cut-first: KS3.5 is third on the era's cut list (after KS8 and KS9.3). Deliver it last in the stage and park it rather than half-ship it.",
+    "DemoCommand.PlanJson and DemoCommand.Tracker are consts pinned by DemoCommandTests (gates must be shell-less and start with `git `) — the new seam must not change the default scaffold.",
+    "FakeAgentCommand claims through `conductor task --done` spawned as Environment.ProcessPath with NO -p on purpose, relying on CONDUCTOR_PLAN reaching the child. An imported-plan demo must carry the same env, and traps 3/4 apply: own state dir, own port, and CONDUCTOR_PLAN must never leak to the driving run.",
+    "Gates from an imported plan must be commands that actually exist on the host, or the demo never goes green — git is the only guaranteed one.",
+    "The converted plan's stage/checkpoint id shape is a hard constraint of the fake agent's regexes, not a style preference; a spec-kit T001-style id will silently never be claimed.",
+    "PlanConfig.CollectErrors rejects an empty stages list and any {token} in stage notes — a converter that passes prose through verbatim can produce an unloadable plan.",
+    "Removing/cleaning the demo dir on Windows needs SqliteConnection.ClearAllPools plus attribute reset (DemoCommand.ForceDelete) — reuse it, do not reimplement."
+   ]
+  }
+ ],
+ "lane_notes": "STAGE-WIDE — read before touching anything.\n\nORDERING. KS3.2 → KS3.3 → KS3.1 → KS3.4 → KS3.5. KS3.2 must land before KS3.1 and KS3.5 or every plan those checkpoints write is written by the destroying editor. KS3.2 and KS3.3 both rewrite docs/plan-config.md's opening paragraph (lines 9-12) — sequence them, do not run them as parallel lanes. KS3.5 is a cut line: deliver last, park rather than half-ship.\n\nCROSS-STAGE. KS1.4 lands doctor's plan-semantics lints (gate-command path probe, checkpoint-id-vs-tracker cross-check, hook dry-run, plan drift, argv-length 8191 check, brace sweep, escalation-token sweep). KS3.1's \"doctor-clean by construction\" and KS3.4's doctor + escalation legs build on it — if KS1.4 has not landed, implement against today's doctor and re-verify after. KS3.4's escalation-block leg and KS1.4's HUMAN-token sweep must be ONE implementation. KS2.1 makes bare `conductor` a default command; `preflight` must survive that routing. KS10.2 re-pins docs/cli.md and docs/plan-config.md — leave both extendable.\n\nHOW TO EXERCISE (trap 2). The `conductor` on PATH is the PUBLISHED engine driving this run; it does not have your changes. Always `dotnet run --project src/Conductor -- VERB ...`. Testing a new verb through the PATH shim only proves the published engine lacks it. Exception by design: `conductor task --done` claims go through the PATH copy, because they target the driving run.\n\nNEVER AIM AT THIS REPO (traps 0, 1, 4). No run-control verb (run, pause, resume, abort, approve, plan set, plan reload, plan add-stage, plan import, goto, skip, retry-stage, rollback, kill) may target C:/code/conductor or plans/karvansara/core.plan.json — that file is the live annotated plan and the exact artifact KS3.2 exists to protect. Every live proof spawns YOUR build against a scratch repo under the temp directory with its own tiny plan, its own state dir and its own port. Pass -p explicitly on every verb and clear CONDUCTOR_PLAN in any shell you spawn. Never run tools/install.ps1 or overwrite the published engine.\n\nGATES (from the plan — run these, never the tools/gates battery, which rebuilds the running engine, trap 7 / bug 16):\n  engine-fast:  dotnet build Conductor.slnx -clp:ErrorsOnly\n  engine-full:  dotnet test Conductor.slnx\n  face-fast:    cmd /c \"cd /d C:\\code\\conductor\\face-go && go build ./... && go vet ./...\"\n  face-full:    cmd /c \"cd /d C:\\code\\conductor\\face-go && go test ./...\"\nKS3 is engine-only; no face-go change is expected. The handoff carries the FULL-suite number, never a filtered one — `dotnet test --filter` is for the inner loop only.\n\nARCHITECTURE CEILING IS ENFORCED. tests/Conductor.Tests/architecture-baseline.json: lineCeiling 500, maxTypesPerFile 3, filesOverLineCeiling {} (zero approved violations). DoctorCommand.cs is already 468 lines — KS3.3's inert-key check and any KS3.4 doctor reuse go in a NEW partial, following the repo's convention (DoctorCommand.State.cs, DoctorCommand.Update.cs).\n\nTHE TWO VERB PINS. A new top-level verb is three edits: Program.cs (`AddCommand<X>(\"verb\")`, not `.IsHidden()`), CompletionCommand.Verbs, and docs/cli.md. K7_2DocsVerbCoverageTests.CliReference_NamesEveryShippedVerb scans Program.cs against docs/cli.md; B11_2Tests.Completion_ContainsAllRegisteredVerbs_Exhaustive scans it against both completion scripts. `plan new` is a SUBverb and trips neither — but PlanCommand's `_ => PrintPlanSummary` default currently swallows unrecognised subverbs silently; fix that in KS3.1.\n\nCOMMENT PRESERVATION, THE REAL CONSTRAINT. System.Text.Json has no comment-preserving writer — JsonSerializer, JsonDocument and JsonNode all drop trivia (PlanConfig.JsonOpts sets ReadCommentHandling = Skip). `plan set` round-trips through JsonNode (PlanSetCommand.cs:44-169); `plan add-stage` goes through PlanConfig.Save() (PlanConfig.cs:176-181), which re-serialises the whole object and therefore also materialises defaults — that is the separate half of the trap (\"adding one stage changed three unrelated things\"). Sanctioned fixes: a hand-rolled text-span editor over the raw file, or an owned `header` field. Encoding gotcha: plan set writes UTF8 WITHOUT BOM, PlanConfig.Save writes WITH BOM.\n\nMUTATINGLANES, PRECISELY. PlanConfig.MutatingLanes (PlanConfig.cs:93) has ZERO readers in src/ — verified by `grep -rn \"\\.MutatingLanes\" src/`. But MutatingLaneConfig (src/Conductor.Core/Models/AnalysisLaneConfig.cs:29) and MutatingLaneRunner ARE live: LaneCoordinator.FollowupEntryToMutatingLane (:247) builds them from .conductor/followups.md after a stage confirms. On the removal branch, remove the PLAN PROPERTY only, retire B12_3Tests.PlanConfig_MutatingLanes_DefaultsEmpty in the same commit, and strip the key from plans/conductor-sarban-core.plan.json:223 and plans/conductor-sarban-face.plan.json:239 (PlanSetCommandTests.EveryKeyInEveryShippedPlanResolves scans plans/*.plan.json at top level only) plus plans/karvan/core.plan.json:225 and plans/karvan/lanes.plan.json:213.\n\nTEMPLATES AND PROSE (traps 8, 9). Any template written under a plan's templatesDir is validated for unresolved placeholders; a stray {token} kills the engine at first render with a stderr-only refusal. Sweep every generated template — only real placeholder names, and a doubled brace emits a literal one. Stage notes and promptExtra are refused at load for the same reason (PlanConfig.ValidateProse). Never put the literal escalation token (the word HUMAN followed by a colon) in a tracker handoff block, a generated tracker template, or preflight's own output — the match is a plain substring, it parks the run and floods Telegram.\n\nDOCS-MATCH-REALITY IS THE HOUSE IDIOM. SF7_1DocsMatchRealityTests is a partial class split across five files (.cs, .Backlog, .FieldNotes, .Ledgers, .Skill) with RepoRoot()/Doc() helpers. Add KS3.3's plan-config pin as a NEW partial (SF7_1DocsMatchRealityTests.PlanKeys.cs) that DERIVES its expectation from PlanKeySchema/PlanConfig reflection — never a hand-typed key list; that is the exact rot this suite exists to stop. Prove each new pin RED on a seeded stale doc before it counts.\n\nTEST PLACEMENT. Engine tests are flat in tests/Conductor.Tests/ named by checkpoint (KS0_1CatalogueRepairTests.cs, KS0_3ShadowBuildTests.cs …) — follow that: KS3_1PlanNewTests.cs, KS3_2PlanEditPreservesTests.cs, KS3_3SchemaHonestyTests.cs, KS3_4PreflightTests.cs, KS3_5ImportBridgeTests.cs. Fixtures under tests/Conductor.Tests/fixtures/. Temp dirs cleaned with TestTemp.DeleteTree in Dispose.\n\nPROCESS HYGIENE (traps 3, 12). A second conductor run may share this machine. Never kill a conductor.exe, conductor-face.exe or stray dotnet by pid without checking its command line with Get-CimInstance Win32_Process; stopping an orphaned `dotnet test` host is sanctioned only after that check proves it belongs to this repo. Never kill a conductor process, yours or anyone's.\n\nWINDOWS/SHELL/COMMITS. PowerShell tooling targets 5.1 and stays ASCII-only (em-dashes have torn string literals here). Go sources are LF. Commit per checkpoint with the repo's trailer convention and push feat/karvansara. If you move a file the run depends on (the plan's readOrder target, the tracker, a template), update the plan and reload it in the same checkpoint.\n\nBUDGET. 32M / 0.70 on claude-opus-5 is measured, not guessed. If you believe the ceiling is wrong, say so with a measurement in the handoff — do not work around it by splitting a checkpoint you were not asked to split."
+}
