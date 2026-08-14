@@ -24,7 +24,7 @@ public sealed class ControlDispatcher(
     Action save,
     Action deleteControlFile,
     Action<StageConfig, string> skipStage,
-    Func<CancellationToken, Task> approveAwaitingOwner)
+    Func<string?, CancellationToken, Task> approveAwaitingOwner)
 {
     // Skip/pause requested mid-session can't take effect until the agent finishes — the run loop
     // consumes these once the current session ends via the Consume* methods below.
@@ -56,6 +56,11 @@ public sealed class ControlDispatcher(
         _reloadPending = false;
         return true;
     }
+
+    /// <summary>KS5.4: is a reload waiting to be applied? Read — never consumed — by the end-of-session
+    /// budget check, which stands aside when the answer is yes so the ceiling it compares against is the
+    /// one the queued reload is about to install rather than the one it replaces.</summary>
+    public bool ReloadPending => _reloadPending;
 
     /// <summary>G3.2: point the goto/skip stage lookups at the freshly reloaded plan.</summary>
     public void SwapPlan(PlanConfig fresh) => _plan = fresh;
@@ -133,7 +138,10 @@ public sealed class ControlDispatcher(
                 {
                     if (state.Status == RunStatus.AwaitingOwner)
                     {
-                        await approveAwaitingOwner(ct).ConfigureAwait(false);
+                        // KS5.4: the amount an `approve` may carry. ControlFile.Parse has already made
+                        // sure a plain `resume` cannot smuggle one in on the shared value field — both
+                        // words map to this one action, and only one of them may raise a ceiling.
+                        await approveAwaitingOwner(cmd.Value, ct).ConfigureAwait(false);
                         deleteControlFile();
                         break;
                     }

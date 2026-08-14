@@ -61,6 +61,18 @@ public sealed class RunContext
     public long? EffectiveMaxSessionTokens =>
         SoftBreak.EffectiveCap(State.MaxSessionTokensThisRun, Plan.Limits.MaxSessionTokens);
 
+    /// <summary>KS5.4: the cost ceiling this run is governed by — the plan's <c>limits.maxRunCostUsd</c>
+    /// plus every dollar an owner has since approved on top of it. Read by the cap check, by
+    /// <c>/state</c> and by the report line, so an operator, the wire and the park cannot be looking at
+    /// three different ceilings. No cap configured means none: a grant cannot invent one.</summary>
+    public decimal? EffectiveMaxRunCostUsd =>
+        Budget.BudgetCeiling.EffectiveCostCap(Plan.Limits.MaxRunCostUsd, State.BudgetGrantUsd);
+
+    /// <summary>KS5.4: the token half of the same ceiling. Both halves of one park move by the same
+    /// machinery so they cannot diverge.</summary>
+    public long? EffectiveMaxRunTokens =>
+        Budget.BudgetCeiling.EffectiveTokenCap(Plan.Limits.MaxRunTokens, State.BudgetGrantTokens);
+
     /// <summary>W4.4: the QA override of the item a session is working on — the first not-done
     /// checkpoint of the stage in the PRE-session snapshot, which is exactly the item the assignment
     /// policy claims. Empty when the card has no override (the common case), so every caller

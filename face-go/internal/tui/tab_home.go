@@ -572,11 +572,17 @@ func homeProgress(s *api.StateDto) string {
 // which the approval restarts, while the lifetime keeps counting the entire run. The Face went on
 // comparing lifetime spend to the cap, which is how "$224.21 / $125.00 · 0% headroom" reached a
 // screenshot — a frame in which every number was real and the sentence they formed was false.
+//
+// KS5.4 moved where the two questions live. An approval no longer resets the run's spend — it raises
+// the ceiling — so costSpent/costCap is one monotone comparison for the whole run and is what the
+// budget row renders. windowCostUsd keeps the other question, "what has it spent since I last
+// approved", which is the one an owner asks after saying yes.
 type budgetSpend struct {
-	spent    float64  // spend measured against the cap: the CURRENT window, in-flight session folded in
-	cap      float64  // 0 = no cost cap; the row does not render at all
-	lifetime float64  // every session this run ever ran; == spent until the first approval
-	approved int      // budget approvals so far; > 0 means window and lifetime have diverged
+	spent    float64  // every dollar the run has billed, in-flight session folded in
+	cap      float64  // the ceiling in force (plan cap + approved raises); 0 = no cap, no row
+	lifetime float64  // the same total from the wire's lifetime field; the fallback's honest limit
+	window   float64  // spend since the last approval raised the ceiling; == spent until the first one
+	approved int      // budget approvals so far; > 0 means a raise is in force and window < spent
 	since    string   // when the current window opened (wire timestamp), "" when never approved
 	over     *float64 // dollars past the cap, or nil when inside it. NEVER folded into a percentage.
 }
@@ -589,6 +595,7 @@ func (m Model) homeBudget(s *api.StateDto) budgetSpend {
 	b := budgetSpend{
 		spent:    s.CostSpent,
 		lifetime: s.LifetimeCostUsd,
+		window:   s.WindowCostUsd,
 		approved: s.BudgetApprovals,
 		since:    s.BudgetWindowStartedUtc,
 	}
@@ -597,7 +604,7 @@ func (m Model) homeBudget(s *api.StateDto) budgetSpend {
 	}
 	// Pre-SC2.3 engine: no block on the wire at all. Fall back to plan limits + total spend.
 	if b.cap == 0 && b.spent == 0 && b.lifetime == 0 {
-		b.spent, b.lifetime = s.TotalCostUsd, s.TotalCostUsd
+		b.spent, b.lifetime, b.window = s.TotalCostUsd, s.TotalCostUsd, s.TotalCostUsd
 		if m.plan.doc != nil {
 			if lim := m.plan.doc.Limits.MaxRunCostUsd; lim != nil {
 				b.cap = *lim
@@ -632,14 +639,16 @@ func (m Model) homeBudgets(s *api.StateDto) []homeLine {
 	}
 	b := m.homeBudget(s)
 	if b.cap > 0 {
-		label := "budget"
-		if b.approved > 0 {
-			label = "window" // the row measures the window now, and must stop calling itself the run
-		}
-		rows = append(rows, hRow(label,
+		// KS5.4: always "budget", and always the run against the ceiling in force. The row used to
+		// rename itself "window" after an approval because an approval used to zero the spend; now it
+		// raises the cap instead, so this row keeps answering the same question all run long.
+		rows = append(rows, hRow("budget",
 			homeHeadroom(fmt.Sprintf("$%.2f / $%.2f", b.spent, b.cap), b.spent/b.cap, b.over), homeDetail))
 		if b.approved > 0 {
-			rows = append(rows, hRow("lifetime", homeLifetime(b), homeDetail))
+			// "window" is the wire's own word for this figure (windowCostUsd) and it fits the shared
+			// homeLabelW gutter, which "since approval" does not — a label that long butts straight
+			// against its value, the exact defect homeWiringLabels exists to prevent.
+			rows = append(rows, hRow("window", homeSinceApproval(b), homeDetail))
 		}
 	}
 	if m.plan.doc != nil {
@@ -653,14 +662,19 @@ func (m Model) homeBudgets(s *api.StateDto) []homeLine {
 	return rows
 }
 
-// homeLifetime names what the budget row above it deliberately excludes: everything spent before the
-// approvals. Without this row the two numbers a takeover sees — the window here and the run total in
-// the top bar — look like a contradiction; with it they are one sentence.
-func homeLifetime(b budgetSpend) string {
-	line := peachStyle.Render(fmt.Sprintf("$%.2f", b.lifetime)) +
-		subtleStyle.Render(fmt.Sprintf("  across %s", plural(b.approved, "approval")))
+// homeSinceApproval names what the budget row above it deliberately cannot: how much of that total was
+// spent AFTER the owner last said yes. The row above is the run against the ceiling in force and stays
+// monotone; this one restarts at each approval, and together they are one sentence — "$224 of a $210
+// ceiling, and $138 of it since you approved". Before KS5.4 the roles were reversed, because the
+// approval zeroed the spend and the raised ceiling had no name on any surface at all.
+//
+// It names WHICH approval rather than how many there have been: the figure restarts at the last one,
+// so "across 2 approvals" would claim a span the number does not cover.
+func homeSinceApproval(b budgetSpend) string {
+	line := peachStyle.Render(fmt.Sprintf("$%.2f", b.window)) +
+		subtleStyle.Render(fmt.Sprintf("  since approval #%d", b.approved))
 	if t, ok := timefmt.Parse(b.since); ok {
-		line += subtleStyle.Render(" · window since " + timefmt.StampAge(t))
+		line += subtleStyle.Render(" · " + timefmt.StampAge(t))
 	}
 	return line
 }

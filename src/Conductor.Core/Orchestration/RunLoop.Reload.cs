@@ -116,6 +116,11 @@ public sealed partial class RunLoop
             && fresh.Stages.FirstOrDefault(s => s.Id.Equals(cur, StringComparison.OrdinalIgnoreCase)) is { } liveStage)
             ApplyStageOverrides(liveStage);
 
+        // KS5.4: the same rule for the SPEND cap — a reloaded ceiling that this run's spend is inside
+        // again un-parks the budget park it was raised for. See ResumeIfBudgetParkCleared for why it
+        // touches nothing else that is parked.
+        ResumeIfBudgetParkCleared(_ctx);
+
         // G3.3: if this reload raised/cleared the session cap that parked the run, un-park it —
         // the operator's Plan-tab edit IS the resume. Only a cap-park is auto-resumed; an operator
         // pause stays paused.

@@ -105,7 +105,7 @@ command palette, and from Telegram.
 | `kill` | Kill the current agent session (loop re-evaluates) |
 | `skip` | Skip the current stage (flagged for human review) |
 | `abort` | Kill the session and stop the conductor |
-| `approve` | Approve an owner-gated stage so the conductor advances |
+| `approve` | Approve whatever the run is parked on. An owner gate advances; a budget park has its spend ceiling **raised** — by `--amount <usd>` / `--tokens <n>`, or by one more of the plan's own cap when you give neither. The run states the new ceiling; nothing already spent is forgiven. An amount on a non-budget park is refused, not ignored. |
 | `retry-stage` | Reset attempt counter, re-queue deliver for the current stage |
 | `rollback` | Reset working tree to the stage start commit (`--yes` to force) |
 | `goto <ID>` | Jump to a different stage |

@@ -144,13 +144,19 @@ type StateDto struct {
 	// The cap is measured against the WINDOW; an owner approval past a budget park restarts that
 	// window while LifetimeCostUsd keeps counting the whole run, so the two can never be subtracted.
 	//
+	// KS5.4 (engine) changed which field carries which question. An approval now RAISES the ceiling
+	// instead of zeroing the spend, so CostSpent/CostCap/CostRemaining are one monotone comparison
+	// for the life of the run, and WindowCostUsd is the one that restarts: spend since the owner last
+	// said yes. The wire shape is unchanged — no field was renamed or removed.
+	//
 	// How the in-flight session's cost is known. Closed vocabulary, defined by the engine's
 	// LiveCostEstimator: "measured" | "streamed" | "estimated-from-run-rate" | "no-rate-yet" |
 	// "none". "" = an older engine that does not serve the basis at all.
 	SessionCostBasis string `json:"sessionCostBasis"`
-	// Spend against the cap: the current budget window, in-flight session included.
+	// Spend against the cap, in-flight session included. Monotone since KS5.4: nothing zeroes it.
 	CostSpent float64 `json:"costSpent"`
-	// limits.maxRunCostUsd, or nil when the plan sets no cost cap. A nil cap is NOT an infinite one:
+	// The ceiling in force — limits.maxRunCostUsd plus every raise an owner has approved on top of it
+	// (KS5.4) — or nil when the plan sets no cost cap. A nil cap is NOT an infinite one:
 	// "this plan set no ceiling" and "there is loads left" are different facts and must not render
 	// the same. CostRemaining is nil for the same reason, and goes NEGATIVE when the window is over.
 	CostCap       *float64 `json:"costCap"`
@@ -159,7 +165,7 @@ type StateDto struct {
 	MeanSessionCost      float64 `json:"meanSessionCost"`
 	CheckpointsRemaining int     `json:"checkpointsRemaining"`
 	// Window vs lifetime. Equal until an owner approves past a budget park; after that the window
-	// restarts at that instant and the lifetime keeps counting.
+	// measures only what has been spent since that approval and the lifetime keeps counting.
 	WindowCostUsd   float64 `json:"windowCostUsd"`
 	LifetimeCostUsd float64 `json:"lifetimeCostUsd"`
 	// When the current window opened — the instant of the approval. "" = never approved past a park.

@@ -52,17 +52,21 @@ public sealed record StateDto(
     string SessionCostBasis = LiveCostEstimator.BasisNone,
     // Spend against the cap: the CURRENT budget window, in-flight session included. This â€” not
     // LifetimeCostUsd â€” is what limits.maxRunCostUsd is compared with.
+    // KS5.4: and it is monotone. An approval raises the ceiling instead of zeroing this, so the run has
+    // ONE spend figure from its first session to its last, and one comparison to make with it.
     decimal CostSpent = 0m,
-    // limits.maxRunCostUsd, or null when the plan sets no cost cap. Null cap = null remaining, not
-    // an infinite one: "no cap" and "loads left" are different facts and must not render the same.
+    // The ceiling in force: limits.maxRunCostUsd PLUS every raise an owner has approved on top of it
+    // (KS5.4), or null when the plan sets no cost cap. Null cap = null remaining, not an infinite one:
+    // "no cap" and "loads left" are different facts and must not render the same.
     decimal? CostCap = null,
     decimal? CostRemaining = null,
     // Mean cost of the run's finished, priced sessions â€” the honest input to "how many more fit".
     decimal MeanSessionCost = 0m,
     int CheckpointsRemaining = 0,
     // Window vs lifetime. Equal until an owner approves past a budget park; after that the window
-    // restarts at that instant and the lifetime keeps counting, so a takeover can no longer subtract
-    // one from the other and call the difference spend.
+    // measures only what has been spent SINCE that approval, so a takeover can no longer subtract one
+    // from the other and call the difference spend. KS5.4: it is the approval, not a reset, that opens
+    // the new window - lifetimeCostUsd and costSpent both keep counting straight through it.
     decimal WindowCostUsd = 0m,
     decimal LifetimeCostUsd = 0m,
     DateTime? BudgetWindowStartedUtc = null,

@@ -23,13 +23,18 @@ public class OwnerApprovalTests
     }
 
     [Fact]
-    public void BudgetApprovalResetsWindowAndDoesNotConfirm()
+    public void BudgetApprovalRaisesTheCeilingAndDoesNotConfirm()
     {
         // Regression: a budget/token-cap park is AFTER a session with work still owed — approving must
-        // reset the budget window and continue, never confirm the stage.
+        // continue the run, never confirm the stage.
+        // KS5.4: and what it does to continue is RAISE THE CEILING. The outcome used to be called
+        // ResetBudgetAndResume and it meant it — PerRunCostUsd and PerRunTokens were zeroed — which is
+        // how a $3.00 cap came to permit $7.00 with no surface naming a ceiling anywhere between. The
+        // rename is the point of this arm: the name is what a reader of the switch sees first.
         var outcome = OwnerApproval.Decide(AwaitingOwnerReason.Budget);
-        Assert.Equal(ApprovalOutcome.ResetBudgetAndResume, outcome);
+        Assert.Equal(ApprovalOutcome.RaiseCeilingAndResume, outcome);
         Assert.NotEqual(ApprovalOutcome.ConfirmStage, outcome);
+        Assert.NotEqual(ApprovalOutcome.ResumeSession, outcome);
     }
 
     [Fact]

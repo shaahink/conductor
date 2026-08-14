@@ -29,7 +29,7 @@ public sealed class G3LiveReloadTests
     private static ControlDispatcher Dispatcher(RecordingSink sink, RunState state) =>
         new(new PlanConfig { Name = "p", Repo = ".", Tracker = "T.md" }, state, sink,
             NullEventSink.Instance, log: _ => { }, save: () => { }, deleteControlFile: () => { },
-            skipStage: (_, _) => { }, approveAwaitingOwner: _ => Task.CompletedTask);
+            skipStage: (_, _) => { }, approveAwaitingOwner: (_, _) => Task.CompletedTask);
 
     [Theory]
     [InlineData(true)]
@@ -216,6 +216,131 @@ public sealed class G3LiveReloadTests
             await cts.CancelAsync();
             var code = await runTask.WaitAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
             Assert.Equal(130, code); // clean cancellation path, state saved
+        }
+        finally
+        {
+            await cts.CancelAsync();
+            try { TestTemp.DeleteTree(repo); } catch (IOException) { }
+        }
+    }
+
+    /// <summary>
+    /// KS5.4 — the SPEND cap, the same two halves as the session cap above.
+    /// <para>Half 1 (ordering): a `plan reload` raising <c>limits.maxRunCostUsd</c>, queued while the
+    /// session that would trip the old cap is still running, is in force by the time the cap is
+    /// compared — so the run never parks at all. The assertion is on the EVENT, not on the eventual
+    /// status: a run that parked and was then un-parked by the same reload would reach session 2 too,
+    /// and only <c>OwnerApprovalRequested</c> can tell the two apart. That event's absence is the
+    /// ordering.</para>
+    /// <para>Half 2 (un-park): a cap raised while the run is ALREADY parked on it resumes the run, the
+    /// way G3.3 resumes a session-cap park. The operator's Settings edit is the approval.</para>
+    /// </summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task LiveCostCap_ReloadRaisingItBeatsTheParkAndAlsoUnParks()
+    {
+        var repo = Path.Combine(Path.GetTempPath(), $"conductor-costcap-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(repo);
+        using var cts = new CancellationTokenSource();
+        try
+        {
+            ProcResult Git(string args) => ProcessRunner.Run("git",
+                args.Split(' ', StringSplitOptions.RemoveEmptyEntries), repo,
+                TimeSpan.FromSeconds(30), CancellationToken.None);
+            Git("init -b main");
+            Git("config user.email cost@test");
+            Git("config user.name Cost");
+            await File.WriteAllTextAsync(Path.Combine(repo, "README.md"), "# c", CancellationToken.None);
+            Git("add README.md");
+            Git("commit -m init --no-gpg-sign");
+            await File.WriteAllTextAsync(Path.Combine(repo, "TRACKER.md"),
+                "# Plan\n\n## Handoff\nnone.\n\n| # | Checkpoint | Status | Commit | Evidence |\n|---|---|---|---|---|\n| H0.1 | never done | TODO | | |\n",
+                CancellationToken.None);
+            // Slow enough that the reload below is queued while session 1 is still spending — which is
+            // the case the ordering is about. A reload queued between sessions would prove nothing.
+            var agentScript = Path.Combine(repo, "fake-agent.cmd");
+            await File.WriteAllTextAsync(agentScript, string.Join("\r\n",
+                "@echo off",
+                "echo {\"type\":\"text\",\"part\":{\"text\":\"noop session.\"}}",
+                "ping -n 4 127.0.0.1 >nul",
+                "echo {\"type\":\"step_finish\",\"part\":{\"cost\":0.05,\"tokens\":{\"input\":10,\"output\":5}}}",
+                "exit /b 0",
+                ""), CancellationToken.None);
+
+            var planPath = Path.Combine(repo, "cost.plan.json");
+            var seed = new PlanConfig
+            {
+                Name = "cost-live",
+                Repo = repo.Replace("\\", "/"),
+                Tracker = "TRACKER.md",
+                Stages = [new StageConfig { Id = "H0", Title = "Cost", Sessions = 5 }],
+                Agent = new AgentConfig { Command = "cmd.exe", Args = ["/c", agentScript, "{prompt}"], Provider = "opencode" },
+                GatePolicy = "perSession",
+                Gates = [new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 }],
+            };
+            seed.Limits.MaxRunCostUsd = 0.01m;  // one session's $0.05 is over it
+            seed.Report.Commit = false;
+            await File.WriteAllTextAsync(planPath, JsonSerializer.Serialize(seed, PlanConfig.JsonOpts),
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), CancellationToken.None);
+            var plan = PlanConfig.Load(planPath);
+
+            var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+            using var host = ConductorHost.Build(plan, state, new PlainSink(),
+                new RunOptions(DryRun: false, Once: false, MaxSessions: 0), consoleSink: false);
+            var store = host.Services.GetRequiredService<Conductor.Core.Store.IRunStore>();
+            var inbox = host.Services.GetRequiredService<System.Collections.Concurrent.ConcurrentQueue<ControlCommand>>();
+            var runTask = host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token);
+
+            // Half 1 — raise the cap in the plan file and queue the reload WHILE session 1 is running.
+            var deadline = DateTime.UtcNow.AddSeconds(60);
+            while (state.Status != RunStatus.Running && DateTime.UtcNow < deadline)
+                await Task.Delay(50, CancellationToken.None);
+            Assert.Equal(RunStatus.Running, state.Status);
+            var raised = PlanConfig.Load(planPath);
+            // Above session 1's $0.05 and below session 2's $0.10: the reload has to clear the boundary
+            // the run is about to reach, and the run has to reach a ceiling again shortly after so half
+            // 2 has a park to un-park. A cap so high the run never parks again would time out here
+            // having exhausted the stage's attempts instead — a different failure wearing this one's hat.
+            raised.Limits.MaxRunCostUsd = 0.08m;
+            raised.Save();
+            inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
+
+            deadline = DateTime.UtcNow.AddSeconds(90);
+            while (state.SessionCounter < 2 && state.Status != RunStatus.AwaitingOwner && DateTime.UtcNow < deadline)
+                await Task.Delay(100, CancellationToken.None);
+            Assert.True(state.SessionCounter >= 2,
+                $"the reload raised the cap before the boundary — the run should not have stopped (status {state.Status})");
+            Assert.Empty(store.ReadAllEvents(state.RunId).OfType<OwnerApprovalRequested>());
+            Assert.True(state.PerRunCostUsd > seed.Limits.MaxRunCostUsd,
+                "the run really did spend past the ORIGINAL cap — otherwise this proves nothing");
+
+            // Half 2 — let it park on the raised cap, then raise that one and watch the reload un-park.
+            deadline = DateTime.UtcNow.AddSeconds(180);
+            while (state.Status != RunStatus.AwaitingOwner && DateTime.UtcNow < deadline)
+                await Task.Delay(100, CancellationToken.None);
+            Assert.True(state.Status == RunStatus.AwaitingOwner,
+                $"the run should have reached the raised $0.08 ceiling; it is {state.Status} " +
+                $"after {state.SessionCounter} session(s) having spent ${state.BilledWindowCostUsd}");
+            Assert.Equal(AwaitingOwnerReason.Budget, state.AwaitingOwnerReason);
+            var parkedAt = state.SessionCounter;
+
+            var raisedAgain = PlanConfig.Load(planPath);
+            raisedAgain.Limits.MaxRunCostUsd = 100.00m;
+            raisedAgain.Save();
+            inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
+
+            deadline = DateTime.UtcNow.AddSeconds(90);
+            while (state.SessionCounter <= parkedAt && DateTime.UtcNow < deadline)
+                await Task.Delay(100, CancellationToken.None);
+            Assert.True(state.SessionCounter > parkedAt, "raising the cost cap should un-park the run it parked");
+            Assert.Null(state.AwaitingOwnerReason);
+            // The un-park is a reload, not an approval: no ceiling was granted and no approval counted.
+            Assert.Equal(0, state.BudgetApprovals);
+            Assert.Equal(0m, state.BudgetGrantUsd);
+
+            await cts.CancelAsync();
+            var code = await runTask.WaitAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
+            Assert.Equal(130, code);
         }
         finally
         {

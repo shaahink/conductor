@@ -90,7 +90,7 @@ going. Destructive ones need `--yes`.
 | Command | Does |
 |---|---|
 | `inject "<instruction>"` | Prepend an instruction to the agent's NEXT session prompt. The steering wheel. |
-| `approve` | Clear an owner-gated stage so the run advances (also `R` in the TUI). |
+| `approve [--amount <usd>] [--tokens <n>]` | Clear whatever the run is parked on (also `R` in the TUI). On an owner gate it advances the stage. On a **budget park it raises the run's spend ceiling** by the amount you name — or, with neither flag, by one more of the plan's own `limits.maxRunCostUsd` / `maxRunTokens`. The log line and the toast state the ceiling before and after and the spend it forgives nothing of. An amount on a non-budget park is refused. |
 | `pause` | Stop after the current session. `resume` continues. |
 | `pause-after-stage` | Park at Paused once the current stage completes. |
 | `resume` | Resume a paused / needs-attention run. |
@@ -166,7 +166,7 @@ while ($true) { conductor watch --json } # the night watch: the plan's superviso
 |---|---|---|
 | `needs-human` | Agent escalated a `HUMAN:` item, or `pauseOnBlocked` parked the run | `status` → `inject` / `resume` / `skip` |
 | `owner-gate` · `approval-park` | A stage wants owner approval before it advances | `status` → `approve` |
-| `budget-park` | Cost or token cap hit; the run stopped rather than spend past it | `status` → `approve` re-opens the window |
+| `budget-park` | Cost or token cap hit; the run stopped rather than spend past it | `status` → `approve --amount <usd>` raises the ceiling (or raise `limits.maxRunCostUsd` and `plan reload`, which un-parks it too) |
 | `circuit-breaker` | Repeated failures on one stage tripped the breaker | `status` → `inject "<what to try instead>"` → `pause` |
 | `phase-red-twice` | A phase gate went RED twice on the same stage — the agent is not converging | `gate --full` → `inject` → `pause` |
 | `engine-gone` | The conductor process vanished (crash, closed terminal, reboot) | `status` → `run` (resumes from `run.db`) |

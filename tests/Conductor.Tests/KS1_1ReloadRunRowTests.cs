@@ -270,7 +270,7 @@ public sealed class KS1_1ReloadRunRowTests : IDisposable
 
         var dispatcher = new ControlDispatcher(plan, state, sink, store, log: _ => { }, save: () => { },
             deleteControlFile: () => { }, skipStage: (_, _) => { },
-            approveAwaitingOwner: _ => Task.CompletedTask);
+            approveAwaitingOwner: (_, _) => Task.CompletedTask);
         var loop = new RunLoop(ctx, sessions: null!, verdicts: null!,
             new GateOrchestrator(plan, state, store, store), new LaneCoordinator(plan, state, sink, store, _ => { }),
             dispatcher, saveAndReport: () => { });

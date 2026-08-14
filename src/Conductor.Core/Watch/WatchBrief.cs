@@ -59,7 +59,9 @@ public static class WatchBrief
         "needs-human" => ["conductor status", "conductor resume", "conductor skip"],
         "owner-gate" => ["conductor status", "conductor approve"],
         "approval-park" => ["conductor status", "conductor approve"],
-        "budget-park" => ["conductor status", "conductor approve (resets the budget window)"],
+        // KS5.4: approve raises the ceiling, it does not reset the counter — and a supervisor reading
+        // this list is exactly the reader who must not believe the run got a fresh cap for free.
+        "budget-park" => ["conductor status", "conductor approve --amount <usd> (raises the ceiling)"],
         "circuit-breaker" => ["conductor status", "conductor inject \"<what to try instead>\"", "conductor pause"],
         "phase-red-twice" => ["conductor gate --full", "conductor inject \"<what the battery says>\"", "conductor pause"],
         "engine-gone" => ["conductor status", "conductor run (resumes from saved state)"],

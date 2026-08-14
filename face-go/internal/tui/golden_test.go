@@ -1036,16 +1036,20 @@ func TestGolden(t *testing.T) {
 			return m
 		}},
 		// SF2.3's headline frame, pinned because it is the one the screenshot critique caught wrong:
-		// a run that has been approved past a budget park once and is over the NEW window. Both
-		// halves of the fix are visible at once — the overrun stated in dollars where "0% headroom"
-		// used to sit, and the lifetime named on its own row so the window figure above it cannot be
-		// mistaken for what the run has cost.
+		// a run over its ceiling with one approval behind it. The overrun is stated in dollars where
+		// "0% headroom" used to sit.
+		//
+		// KS5.4 re-cut the numbers, because the engine's semantics changed under it: an approval raises
+		// the ceiling ($125 -> $210 here) instead of zeroing the spend, so the run reads $224.21 against
+		// $210.00 — genuinely $14.21 over, monotone, one comparison — and the row beneath names the
+		// $138.40 spent since that approval. Under the old shape the same frame showed $138.40 / $125.00
+		// with $224.21 living only on a second row, which is the arithmetic the field log caught lying.
 		{"home_over_budget", func(m tea.Model) tea.Model {
 			st := fixedState()
 			st.TotalCostUsd, st.LifetimeCostUsd = 224.21, 224.21
-			st.CostSpent, st.WindowCostUsd = 138.40, 138.40
-			cap125, remaining := 125.0, -13.40
-			st.CostCap, st.CostRemaining = &cap125, &remaining
+			st.CostSpent, st.WindowCostUsd = 224.21, 138.40
+			cap210, remaining := 210.0, -14.21
+			st.CostCap, st.CostRemaining = &cap210, &remaining
 			st.BudgetApprovals, st.BudgetWindowStartedUtc = 1, "2026-07-15T08:00:00Z"
 			st.SessionCostUsd, st.SessionCostBasis = 0, api.BasisNoRate
 			m, _ = m.Update(MsgStateUpdated{State: st})

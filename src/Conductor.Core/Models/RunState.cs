@@ -134,8 +134,11 @@ public sealed class RunState
     public decimal TotalSideCostUsd { get; set; }
 
     /// <summary>KS5.2: every billed dollar in the CURRENT budget window — the number
-    /// <c>CheckBudgetCap</c> compares with <c>limits.maxRunCostUsd</c> and the number <c>/state</c>
-    /// serves as <c>costSpent</c>. One property so the two cannot answer differently.</summary>
+    /// <c>CheckBudgetCap</c> compares with the run's cost ceiling and the number <c>/state</c> serves as
+    /// <c>costSpent</c>. One property so the two cannot answer differently.
+    /// <para>KS5.4: nothing zeroes this any more. An approval raises the ceiling instead, so the window
+    /// is the run and the comparison against the ceiling is monotone — which is what makes it readable.
+    /// "Spend since the last approval" is <see cref="SpendSinceLastRaiseUsd"/>.</para></summary>
     [JsonIgnore]
     public decimal BilledWindowCostUsd => PerRunCostUsd + PerRunSideCostUsd;
 
@@ -145,15 +148,42 @@ public sealed class RunState
     public decimal BilledLifetimeCostUsd => TotalCostUsd + TotalSideCostUsd;
 
     /// <summary>SC2.3: when the CURRENT budget window opened — i.e. the instant of the owner approval
-    /// that last zeroed <see cref="PerRunCostUsd"/>. Null means no approval has happened, so the window
-    /// IS the run and window spend equals lifetime spend. Without it, <c>PerRunCostUsd</c> is a number
-    /// with no anchor: a surface reading "$4 spent" cannot say spent since when, and the difference
-    /// between that and <see cref="TotalCostUsd"/> was silently read as a discount.</summary>
+    /// that last raised this run's ceiling. Null means no approval has happened, so the window IS the
+    /// run and window spend equals lifetime spend. Without it, <see cref="SpendSinceLastRaiseUsd"/> is a
+    /// number with no anchor: a surface reading "$4 spent" cannot say spent since when, and the
+    /// difference between that and <see cref="TotalCostUsd"/> was silently read as a discount.
+    /// <para>KS5.4: the approval no longer zeroes anything, so this dates a RAISE rather than a
+    /// deletion. What it anchors is unchanged.</para></summary>
     public DateTime? BudgetWindowStartedUtc { get; set; }
 
     /// <summary>SC2.3: how many times an owner has approved past a budget park on this run. Zero means
     /// every spend figure on every surface is a lifetime figure and can be compared directly.</summary>
     public int BudgetApprovals { get; set; }
+
+    /// <summary>KS5.4: dollars an owner has approved ON TOP of <c>limits.maxRunCostUsd</c>. The ceiling
+    /// this run is governed by is the plan's cap plus this — see
+    /// <see cref="Core.Budget.BudgetCeiling.EffectiveCostCap"/>. Held as a grant rather than as an
+    /// absolute ceiling so that a later <c>plan reload</c> raising the configured cap composes with it
+    /// instead of overwriting it.</summary>
+    public decimal BudgetGrantUsd { get; set; }
+
+    /// <summary>KS5.4: tokens an owner has approved on top of <c>limits.maxRunTokens</c>. Same rule as
+    /// <see cref="BudgetGrantUsd"/>; the two halves of a budget park move by the same machinery so they
+    /// cannot end up meaning different things.</summary>
+    public long BudgetGrantTokens { get; set; }
+
+    /// <summary>KS5.4: what each approval actually changed — from-ceiling, to-ceiling, when, and the
+    /// spend standing at that instant. The provenance an operator (or a takeover) needs to answer "who
+    /// raised this, to what, and how much had it already spent". Append-only.</summary>
+    public List<BudgetRaise> BudgetRaises { get; set; } = new();
+
+    /// <summary>KS5.4: billed spend since the last approval raised the ceiling — the question SC2.3's
+    /// window was asked to answer, now derived from the raise record instead of from a counter that had
+    /// been zeroed. With no raise on file the whole run is the answer, which is the same number SC2.3
+    /// served before its first approval.</summary>
+    [JsonIgnore]
+    public decimal SpendSinceLastRaiseUsd
+        => BilledWindowCostUsd - (BudgetRaises.Count > 0 ? BudgetRaises[^1].SpentUsd : 0m);
 
     /// <summary>SC2.2: the attempt number the NEXT session on this stage will report. <see
     /// cref="AttemptsThisStage"/> counts attempts already spent, so every line that announces a session

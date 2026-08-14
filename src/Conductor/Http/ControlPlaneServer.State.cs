@@ -1,4 +1,5 @@
 using Conductor.Core;
+using Conductor.Core.Budget;
 using Conductor.Core.Http;
 using System.Net;
 using Conductor.Core.Events;
@@ -156,11 +157,14 @@ public sealed partial class ControlPlaneServer
     /// every surface. <paramref name="liveState"/> is the run loop's own RunState — the only place
     /// <see cref="RunState.PerRunCostUsd"/> (spend in the CURRENT budget window) and the approval
     /// bookkeeping live.</summary>
-    /// <remarks>The distinction that makes this worth a function: <c>limits.maxRunCostUsd</c> is
-    /// compared against the WINDOW, and an owner approval resets that window to zero — while
-    /// <see cref="RunState.TotalCostUsd"/> keeps counting every session the run ever ran. Serving one
-    /// number and letting readers subtract produced a remaining figure that was wrong by the entire
-    /// pre-approval spend. Both are on the wire now, each named for what it is.
+    /// <remarks>The distinction that makes this worth a function: <c>costSpent</c> is what the run has
+    /// billed and <c>costCap</c> is the ceiling in force, which is the plan's <c>limits.maxRunCostUsd</c>
+    /// plus every raise an owner has approved. Serving one number and letting readers subtract produced
+    /// a remaining figure that was wrong by the entire pre-approval spend.
+    /// <para>KS5.4 removed the reset that made this hard: an approval raises the ceiling and leaves the
+    /// spend alone, so spend-vs-cap is one monotone comparison from the first session to the last.
+    /// <c>windowCostUsd</c> keeps SC2.3's other question — what has it spent since the last approval —
+    /// and is the only figure here that moves backwards.</para>
     /// <para><paramref name="dto"/> arrives with the in-flight estimate already folded into
     /// <c>TotalCostUsd</c> and <c>SessionCostUsd</c> by <see cref="WithLiveSessionMetrics"/>, so the
     /// window adds the same in-flight figure and the two stay consistent to the cent.</para></remarks>
@@ -175,7 +179,10 @@ public sealed partial class ControlPlaneServer
         // carries the run's side spend for the same reason: window may never exceed lifetime.
         var window = liveState.BilledWindowCostUsd + inFlight;
         var lifetime = dto.TotalCostUsd + liveState.TotalSideCostUsd;
-        var cap = limits?.MaxRunCostUsd;
+        // KS5.4: the EFFECTIVE ceiling — the plan's cap plus everything an owner has approved on top of
+        // it. Serving the plan's raw cap here would have put the wire back where the field log found it:
+        // a run governed by $6.00 while every surface printed $3.00.
+        var cap = BudgetCeiling.EffectiveCostCap(limits?.MaxRunCostUsd, liveState.BudgetGrantUsd);
 
         var priced = liveState.History.Where(h => h.EndedUtc != null && h.CostUsd is > 0).ToList();
         var mean = priced.Count > 0
@@ -191,7 +198,11 @@ public sealed partial class ControlPlaneServer
             CostRemaining = cap is { } c ? c - window : null,
             MeanSessionCost = mean,
             CheckpointsRemaining = Math.Max(0, dto.TotalCount - dto.DoneCount),
-            WindowCostUsd = window,
+            // KS5.4: spend SINCE THE LAST RAISE. costSpent/costCap/costRemaining are now one monotone
+            // comparison for the life of the run — an approval widens the ceiling instead of zeroing the
+            // spend — so this is the field that keeps answering SC2.3's question, "what has it spent
+            // since I last approved". With no approval on file it is the whole run, exactly as before.
+            WindowCostUsd = liveState.SpendSinceLastRaiseUsd + inFlight,
             LifetimeCostUsd = lifetime,
             BudgetWindowStartedUtc = liveState.BudgetWindowStartedUtc,
             BudgetApprovals = liveState.BudgetApprovals,

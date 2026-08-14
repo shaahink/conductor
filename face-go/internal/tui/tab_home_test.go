@@ -200,37 +200,53 @@ func TestHomeHeadroomRendersAnOverrunAsDollarsNotZeroPercent(t *testing.T) {
 }
 
 // The wire's budget block wins over the Face's own subtraction. Before SF2.3 Home compared LIFETIME
-// spend against the cap; after an owner approves past a budget park those are different questions,
-// and the run below is inside its window by $113 while looking $99 over if you subtract wrong.
-func TestHomeBudgetPrefersTheWindowOverLifetimeAfterAnApproval(t *testing.T) {
+// spend against the cap and got the sentence wrong the moment an owner approved past a budget park.
+//
+// KS5.4 changed which of the two numbers each row carries, because the engine changed what an approval
+// DOES: it raises the ceiling and leaves the spend alone. So the budget row is now the run against the
+// ceiling in force ($224.21 of $310.00, monotone all run long) and the second row is what has been
+// spent since the owner last said yes ($12.00). Both are still on the wire; neither surface subtracts.
+func TestHomeBudgetRendersTheRaisedCeilingAndTheSpendSinceTheApproval(t *testing.T) {
 	m := newTestModel()
 	m.plan.doc = &api.PlanDto{Limits: api.PlanLimitsDto{}}
-	cap125, rem := 125.0, 113.0
+	cap310, rem := 310.0, 85.79
 	state := &api.StateDto{
 		TotalCostUsd: 224.21, LifetimeCostUsd: 224.21,
-		CostSpent: 12.0, WindowCostUsd: 12.0, CostCap: &cap125, CostRemaining: &rem,
+		CostSpent: 224.21, WindowCostUsd: 12.0, CostCap: &cap310, CostRemaining: &rem,
 		BudgetApprovals: 2, BudgetWindowStartedUtc: "2026-07-15T09:00:00Z",
 	}
 	rows := m.homeBudgets(state)
 	if len(rows) != 2 {
-		t.Fatalf("an approved run gets a window row AND a lifetime row, got %d", len(rows))
+		t.Fatalf("an approved run gets a budget row AND a since-approval row, got %d", len(rows))
 	}
-	window := stripANSI(rows[0].text)
-	if !strings.Contains(window, "$12.00 / $125.00") || !strings.Contains(window, "90% headroom") {
-		t.Errorf("the cap is measured against the window, got %q", window)
+	budget := stripANSI(rows[0].text)
+	if !strings.Contains(budget, "$224.21 / $310.00") || !strings.Contains(budget, "27% headroom") {
+		t.Errorf("the run is measured against the RAISED ceiling, got %q", budget)
 	}
-	if strings.Contains(window, "OVER") {
-		t.Errorf("this run is well inside its window; it must not read as over budget: %q", window)
+	if strings.Contains(budget, "OVER") {
+		t.Errorf("this run is inside its raised ceiling; it must not read as over budget: %q", budget)
 	}
-	if !strings.Contains(window, "window") {
-		t.Errorf("a row that measures the window must stop calling itself the run's budget: %q", window)
+	if !strings.Contains(budget, "budget") || strings.Contains(budget, "window") {
+		t.Errorf("a monotone run-vs-ceiling row must not call itself a window: %q", budget)
 	}
-	life := stripANSI(rows[1].text)
-	if !strings.Contains(life, "$224.21") || !strings.Contains(life, "2 approvals") {
-		t.Errorf("lifetime row must name the total and how many approvals it spans, got %q", life)
+	since := stripANSI(rows[1].text)
+	if !strings.Contains(since, "$12.00") || !strings.Contains(since, "since approval #2") {
+		t.Errorf("the second row names the spend and WHICH approval it is measured from, got %q", since)
 	}
-	if !strings.Contains(life, "window since") {
-		t.Errorf("the lifetime row dates the current window, got %q", life)
+	// "across 2 approvals" would be a lie under the new semantics: the figure restarts at the last
+	// approval, so it spans one of them, not all of them.
+	if strings.Contains(since, "across") {
+		t.Errorf("the figure restarts at the last approval; it does not span them all: %q", since)
+	}
+	if strings.Contains(since, "$224.21") {
+		t.Errorf("the second row must not repeat the run total the row above already carries: %q", since)
+	}
+	if !strings.Contains(since, "ago") {
+		t.Errorf("the window row dates the window it measures, got %q", since)
+	}
+	// Every label shares the homeLabelW gutter; one longer than it butts against its own value.
+	if label := strings.SplitN(since, "$", 2)[0]; len(label) != homeLabelW {
+		t.Errorf("the window row's label must pad to exactly homeLabelW=%d, got %q", homeLabelW, label)
 	}
 }
 

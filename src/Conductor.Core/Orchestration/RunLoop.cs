@@ -114,7 +114,9 @@ public sealed partial class RunLoop
                     // G3.2: the top of this loop is the session boundary — the only safe point to swap
                     // the live plan (no agent is running here; paused/idle iterations pass through too,
                     // so an edit made while parked is live before the next resume).
-                    if (Dispatcher.ConsumeReloadPending() || PlanFileChangedOnDisk()) ApplyPlanReload();
+                    // KS5.4: and the ceiling is compared against the plan that just landed, not the one
+                    // it replaced (ReloadThenCheckCap).
+                    if (ReloadThenCheckCap()) continue;
 
                     if (_ctx.State.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                     {
@@ -433,7 +435,9 @@ public sealed partial class RunLoop
                 _verdicts.EmitBlockedUntilPark(rec);
 
                 _ctx.AbsorbOutOfProcessSpend(); // KS5.2: a second writer's rows become cap-visible here.
-                if (CheckBudgetCap()) continue;
+                // KS5.4: a queued reload may be raising the very ceiling this would park on — the
+                // comparison waits one turn for the swap only the top of the loop may make.
+                if (!Dispatcher.ReloadPending && CheckBudgetCap()) continue;
 
                 if (Dispatcher.ConsumePendingSkip())
                 {
@@ -480,18 +484,7 @@ public sealed partial class RunLoop
         }
     }
 
-    // G3.2's live plan reload lives in RunLoop.Reload.cs — one responsibility, one file, and this
-    // one was over the architecture ratchet's 500-line ceiling.
-
-    /// <summary>G3.1 `run --paused`: park the run before the first session so the operator can author
-    /// the plan / pre-seed the kanban with the control plane up. Pure so the flag→status wiring is
-    /// unit-testable. Never masks a state that needs attention (NeedsHuman/Aborted keep their reason),
-    /// and dry runs ignore it (nothing spawns anyway).</summary>
-    internal static bool ApplyStartPause(RunState state, RunOptions opts)
-    {
-        if (!opts.StartPaused || opts.DryRun) return false;
-        if (state.Status is RunStatus.NeedsHuman or RunStatus.Aborted) return false;
-        state.Status = RunStatus.Paused;
-        return true;
-    }
+    // G3.2's live plan reload lives in RunLoop.Reload.cs, the spend rail in RunLoop.Budget.cs, and the
+    // startup/control machinery in RunLoop.Control.cs — one responsibility, one file, and this one was
+    // over the architecture ratchet's 500-line ceiling.
 }

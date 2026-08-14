@@ -188,9 +188,6 @@ public sealed partial class RunLoop
             : "notifications: telegram will deliver this run's pushes");
     }
 
-    /// <summary>W3.3: an unbounded run is a policy choice, not a default anyone opted into. The
-    /// U-series run had no cap and spent $139.68 before dying, so the run says so out loud at start
-    /// (and `doctor` warns). Caps stay the owner's to set — nothing is invented here.</summary>
     /// <summary>K3.3: say at launch when the engine driving this run was built from a dirty tree.
     /// A client-site run executed on <c>0.2.3-alpha…dirty</c> and nobody knew until the machine was
     /// asked afterwards — the binary claims a version that no commit can reproduce, so every verdict
@@ -202,14 +199,6 @@ public sealed partial class RunLoop
         if (!engine.Dirty) return;
         _ctx.Log($"⚠ dirty engine: this run is driven by {engine.Full} — built from a working tree with " +
                  "uncommitted changes, so its commit does not reproduce this binary");
-    }
-
-    private void WarnOnUnboundedSpend()
-    {
-        if (_ctx.Options.DryRun) return;
-        if (_ctx.Plan.Limits.MaxRunCostUsd.HasValue || _ctx.Plan.Limits.MaxRunTokens.HasValue) return;
-        _ctx.Log("⚠ no spend cap: limits.maxRunCostUsd and limits.maxRunTokens are both unset — " +
-                 "this run can spend without bound (set one in the plan, or in the Face's Plan tab)");
     }
 
     /// <summary>W3.2: one ~$0.001 ping at run start so a run cannot begin on a dead credential.
@@ -233,6 +222,18 @@ public sealed partial class RunLoop
         }
         _ctx.Log($"auth preflight FAILED: {result.Message}");
         _verdicts.NeedsHuman($"auth preflight failed before session 1 — {result.Message}");
+    }
+
+    /// <summary>G3.1 `run --paused`: park the run before the first session so the operator can author
+    /// the plan / pre-seed the kanban with the control plane up. Pure so the flag→status wiring is
+    /// unit-testable. Never masks a state that needs attention (NeedsHuman/Aborted keep their reason),
+    /// and dry runs ignore it (nothing spawns anyway).</summary>
+    internal static bool ApplyStartPause(RunState state, RunOptions opts)
+    {
+        if (!opts.StartPaused || opts.DryRun) return false;
+        if (state.Status is RunStatus.NeedsHuman or RunStatus.Aborted) return false;
+        state.Status = RunStatus.Paused;
+        return true;
     }
 
     private void EnsureStateDirGitignore()

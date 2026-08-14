@@ -159,8 +159,11 @@ public static class OwnerQueue
 
         var (command, what) = state.Status switch
         {
+            // KS5.4: approving RAISES the run's spend ceiling by a stated amount (`--amount`, or one
+            // more of the plan's own cap) and un-spends nothing. The card used to say "resets the
+            // budget window", which is what it did and is why a $3.00 cap could permit $7.00.
             RunStatus.AwaitingOwner when state.AwaitingOwnerReason == AwaitingOwnerReason.Budget
-                => ("conductor approve", "approving resets the budget window and the run continues"),
+                => ("conductor approve", "approving raises this run's spend ceiling by a stated amount and continues; nothing already spent is forgiven"),
             RunStatus.AwaitingOwner
                 => ("conductor approve", "this run asks for an approval at every stage boundary"),
             RunStatus.NeedsHuman

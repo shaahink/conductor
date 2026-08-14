@@ -222,14 +222,24 @@ public static class RunSummary
     internal static string SpendLine(PlanConfig plan, RunState state, decimal agentCost, decimal overhead)
     {
         var total = agentCost + overhead;
-        var cap = plan.Limits.MaxRunCostUsd;
+        // KS5.4: the ceiling in force, not the one in the plan file. An approval raises the run's
+        // ceiling above limits.maxRunCostUsd, and a report quoting the plan's figure would understate
+        // by exactly the amount an owner had approved — the report is the artifact a takeover reads.
+        var cap = Core.Budget.BudgetCeiling.EffectiveCostCap(plan.Limits.MaxRunCostUsd, state.BudgetGrantUsd);
+        // …and when it is not the plan's own figure, the line says so on the spot. An unannotated
+        // "cap $6.00" against a plan file that reads 3.00 sends the reader looking for the difference;
+        // this is the sentence the field log had no way to print.
+        var raised = state.BudgetGrantUsd > 0 && plan.Limits.MaxRunCostUsd is { } configured
+            ? $" (raised from ${configured:0.00} by {state.BudgetApprovals} approval(s))"
+            : "";
         var vsCap = cap is > 0
-            ? $" · cap ${cap:0.00} ({(cap.Value <= 0 ? 0 : total / cap.Value * 100m):0.#}% used)"
+            ? $" · cap ${cap:0.00}{raised} ({(cap.Value <= 0 ? 0 : total / cap.Value * 100m):0.#}% used)"
             : " · no cap set (limits.maxRunCostUsd unset)";
-        // SC2.3 taught this one: after an owner approves past a budget park, PerRunCostUsd is the
-        // WINDOW since that approval, not the run. Saying which is which is the whole point.
+        // SC2.3 taught this one: after an owner approves past a budget park there are two questions,
+        // "what has this run cost" and "what has it cost since I last approved". Saying which is which
+        // is the whole point; KS5.4 only changed where the second one is measured from.
         var window = state.BudgetApprovals > 0
-            ? $" · window since approval #{state.BudgetApprovals} (${state.PerRunCostUsd:0.0000})"
+            ? $" · ${state.SpendSinceLastRaiseUsd:0.0000} since approval #{state.BudgetApprovals}"
             : "";
         return $"${total:0.0000} total (agent ${agentCost:0.0000} + gates ${overhead:0.0000}){vsCap}{window}";
     }

@@ -323,9 +323,12 @@ public class SC23LiveSpendTests
         Assert.Equal(0, dtoBefore.BudgetApprovals);
         Assert.Null(dtoBefore.BudgetWindowStartedUtc);
 
-        // The approval zeroes the window and stamps when the new one opened. The lifetime is untouched:
-        // approving a budget raises the ceiling, it does not un-spend the money. Serving only one of
-        // these was the whole defect — the takeover subtraction was wrong by the pre-approval spend.
+        // The approval opens a new window and stamps when. The lifetime is untouched: approving a
+        // budget raises the ceiling, it does not un-spend the money. Serving only one of these was the
+        // whole defect — the takeover subtraction was wrong by the pre-approval spend.
+        // (KS5.4 note: the engine no longer zeroes a counter to open that window — it records the raise
+        // and measures from it. This arm hand-builds the state, so what it pins is the WIRE contract —
+        // window <= lifetime, both served, each named — which is exactly what survived the change.)
         var opened = new DateTime(2026, 7, 31, 19, 3, 0, DateTimeKind.Utc);
         var after = new RunState
         {

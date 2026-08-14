@@ -336,7 +336,7 @@ public sealed class KS5_3ReloadPrescriptionTests : IDisposable
 
         var dispatcher = new ControlDispatcher(plan, state, sink, events, log: _ => { }, save: () => { },
             deleteControlFile: () => { }, skipStage: (_, _) => { },
-            approveAwaitingOwner: _ => Task.CompletedTask);
+            approveAwaitingOwner: (_, _) => Task.CompletedTask);
         var loop = new RunLoop(ctx, sessions: null!, verdicts: null!,
             new GateOrchestrator(plan, state, events, store),
             new LaneCoordinator(plan, state, sink, events, _ => { }),

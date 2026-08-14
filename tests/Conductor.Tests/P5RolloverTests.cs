@@ -66,7 +66,7 @@ public sealed class P5RolloverTests : IDisposable
         var state = new RunState { RunId = "r" };
         var saved = 0;
         var dispatcher = new ControlDispatcher(plan, state, new PlainSink(), new CollectingEventSink(),
-            _ => { }, () => saved++, () => { }, (_, _) => { }, _ => Task.CompletedTask);
+            _ => { }, () => saved++, () => { }, (_, _) => { }, (_, _) => Task.CompletedTask);
 
         // ON at a cap — immediately, even mid-session (nothing to defer).
         await dispatcher.DispatchAsync(

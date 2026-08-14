@@ -46,6 +46,13 @@ public static class ControlFile
         var intentId = root.TryGetProperty("intentId", out var ii) && ii.ValueKind == JsonValueKind.String ? ii.GetString() : null;
         var stageId = root.TryGetProperty("stageId", out var si) && si.ValueKind == JsonValueKind.String ? si.GetString() : null;
         var value = root.TryGetProperty("value", out var val) && val.ValueKind == JsonValueKind.String ? val.GetString() : null;
+        // KS5.4: `approve` and `resume` are deliberately the same ACTION — the run loop decides what to
+        // do from why the run parked, not from which word was typed. Only `approve` may carry an
+        // amount, though, and a raised ceiling is the one thing on this wire that spends money. So the
+        // word is remembered exactly this far: a body that says `resume` arrives with no value, whatever
+        // else it happens to contain.
+        if (action == ControlAction.ResumeRun && !string.Equals(cmd, "approve", StringComparison.OrdinalIgnoreCase))
+            value = null;
         return new ControlCommand(action, confirmed, intentId, stageId, force, value);
     }
 }

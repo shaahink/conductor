@@ -208,60 +208,8 @@ public sealed partial class VerdictEngine
         return false;
     }
 
-    internal async Task ApproveAwaitingOwnerAsync(CancellationToken ct)
-    {
-        var stageId = _ctx.State.CurrentStage
-            ?? _ctx.Plan.Stages.FirstOrDefault(s => !_ctx.State.ConfirmedStages.Contains(s.Id) && !_ctx.State.SkippedStages.Contains(s.Id))?.Id;
-        switch (OwnerApproval.Decide(_ctx.State.AwaitingOwnerReason))
-        {
-            case ApprovalOutcome.ResumeSession:
-                _ctx.SessionApproved = true;
-                _ctx.State.AwaitingOwnerReason = null;
-                _ctx.State.Status = RunStatus.Idle;
-                if (stageId != null) _ctx.Events.Emit(new OwnerApprovalGranted { StageId = stageId });
-                _ctx.Save();
-                _ctx.Log("owner approved (approval mode) — running the next session");
-                break;
-            case ApprovalOutcome.ResetBudgetAndResume:
-                // SC2.3: the window is about to be zeroed — record what it held and when the new one
-                // opens, BEFORE the zeroing, or the run loses the only account of the spend it is
-                // forgiving. The lifetime total (History) is untouched by design: an approval raises
-                // the ceiling, it does not un-spend the money.
-                // KS5.2: the window is every billed dollar, the agent's and the lanes'/advisor's alike,
-                // because that is the sum the cap was compared against. Zeroing one half would leave a
-                // "reset" window still carrying spend.
-                var closedWindow = _ctx.BilledWindowUsd;
-                var closedTokens = _ctx.RunTokens;
-                _ctx.RunCostUsd = 0;
-                _ctx.RunTokens = 0;
-                _ctx.RunOverheadUsd = 0;
-                _ctx.RunSideCostUsd = 0;
-                _ctx.State.PerRunCostUsd = 0;
-                _ctx.State.PerRunTokens = 0;
-                _ctx.State.PerRunOverheadCostUsd = 0;
-                _ctx.State.PerRunSideCostUsd = 0;
-                _ctx.State.BudgetWindowStartedUtc = DateTime.UtcNow;
-                _ctx.State.BudgetApprovals++;
-                _ctx.State.AwaitingOwnerReason = null;
-                _ctx.State.Status = RunStatus.Idle;
-                if (stageId != null) _ctx.Events.Emit(new OwnerApprovalGranted { StageId = stageId });
-                _ctx.Save();
-                _ctx.Log($"owner approved (budget) — window reset to $0.00 after ${closedWindow:0.00} / " +
-                         $"{closedTokens / 1000.0:0.#}k; lifetime spend is still ${_ctx.State.TotalCostUsd:0.00} " +
-                         $"over {_ctx.State.History.Count} session(s) — approval {_ctx.State.BudgetApprovals}, continuing");
-                break;
-            default:
-                if (stageId == null) { _ctx.State.Status = RunStatus.Idle; _ctx.Save(); break; }
-                if (!_ctx.State.OwnerApprovedStages.Contains(stageId))
-                {
-                    _ctx.Events.Emit(new OwnerApprovalGranted { StageId = stageId });
-                    _ctx.State.OwnerApprovedStages.Add(stageId);
-                    _ctx.Log($"owner approved stage {stageId} — continuing");
-                }
-                await ConfirmStageAsync(stageId, ct).ConfigureAwait(false);
-                break;
-        }
-    }
+    // KS5.4: the owner-approval path lives in VerdictEngine.Approval.cs — one file, one job, and this
+    // one was four lines under the architecture ratchet's ceiling.
 
     internal async Task RunStageHookAsync(string stageId, string label, HookConfig hook, CancellationToken ct)
     {

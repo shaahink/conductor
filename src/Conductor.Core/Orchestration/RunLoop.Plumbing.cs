@@ -72,32 +72,8 @@ public sealed partial class RunLoop
             _ctx.Log($"qa dial: {dial.Mode}{(dial.VerifierThreshold is { } t ? $" (threshold {t})" : "")}");
     }
 
-    // ---------------------------------------------------------------- budget
-
-    private bool CheckBudgetCap()
-    {
-        // KS5.2: BilledWindowUsd, not RunCostUsd — a run whose spend was all lanes and advisors could
-        // never reach its own ceiling. See RunContext.BilledWindowUsd for what is in the total and why.
-        if (_ctx.Plan.Limits.MaxRunCostUsd is { } costCap && _ctx.BilledWindowUsd >= costCap)
-        {
-            _ctx.Events.Emit(new OwnerApprovalRequested { StageId = _ctx.State.CurrentStage ?? "?" });
-            _ctx.State.Status = RunStatus.AwaitingOwner;
-            _ctx.State.AwaitingOwnerReason = AwaitingOwnerReason.Budget;
-            _ctx.Log($"budget cap: ${_ctx.BilledWindowUsd:0.00} >= ${costCap:0.00} (limit) — awaiting owner approval to continue");
-            _saveAndReport();
-            return true;
-        }
-        if (_ctx.Plan.Limits.MaxRunTokens is { } tokenCap && _ctx.RunTokens >= tokenCap)
-        {
-            _ctx.Events.Emit(new OwnerApprovalRequested { StageId = _ctx.State.CurrentStage ?? "?" });
-            _ctx.State.Status = RunStatus.AwaitingOwner;
-            _ctx.State.AwaitingOwnerReason = AwaitingOwnerReason.Budget;
-            _ctx.Log($"token cap: {_ctx.RunTokens / 1000.0:0.#}k >= {tokenCap / 1000.0:0.#}k (limit) — awaiting owner approval to continue");
-            _saveAndReport();
-            return true;
-        }
-        return false;
-    }
+    // The spend rail — the ceiling in force, the park that reaching it causes, and the un-park a raised
+    // ceiling triggers — lives in RunLoop.Budget.cs (KS5.4).
 
     // ---------------------------------------------------------------- process lock
 

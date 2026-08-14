@@ -167,7 +167,12 @@ public sealed class OwnerQueueTests : IDisposable
         Assert.Equal("run cost $12.40 over maxRunCostUsd $10.00", park.Title);
         Assert.Equal("conductor approve", park.Command);
         Assert.Equal(5400, park.AgeSeconds(Now));
-        Assert.Contains("budget window", park.Detail, StringComparison.Ordinal);
+        // KS5.4: the card says what approving DOES, and what it does is raise the ceiling. It used to
+        // say "resets the budget window" — true of the old engine, and the sentence that let a $3.00
+        // cap permit $7.00 with no surface naming the number in force.
+        Assert.Contains("raises", park.Detail, StringComparison.Ordinal);
+        Assert.Contains("ceiling", park.Detail, StringComparison.Ordinal);
+        Assert.DoesNotContain("reset", park.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
