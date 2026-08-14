@@ -1,16 +1,16 @@
 ﻿# Conductor — Karvansara core - the open door run report
 
-_Updated 2026-08-13 19:17 UTC · branch `feat/karvansara` · HEAD `a8fa298`_
+_Updated 2026-08-13 19:56 UTC · branch `feat/karvansara` · HEAD `b7ebabe`_
 
-**Status:** Idle
-**Stage:** KS0 — Leftovers - the catalogue stops corrupting itself · attempts used 1 · working ▸ KS0.1
-**Checkpoints:** 1/32 done · **Sessions run:** 4 · **Cost:** $37.5336 (agent $37.4738 + gates $0.0597) · **Tokens:** 635,105 in / 249,995 out
+**Status:** Aborted
+**Stage:** KS0 — Leftovers - the catalogue stops corrupting itself · attempts used 0 · working ▸ KS0.1
+**Checkpoints:** 2/32 done · **Sessions run:** 5 · **Cost:** $42.7517 (agent $42.6699 + gates $0.0819) · **Tokens:** 747,797 in / 296,563 out
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| KS0 | Leftovers - the catalogue stops corrupting itself | ███░░░░░░░ 1/3 | **← active** |
+| KS0 | Leftovers - the catalogue stops corrupting itself | ███████░░░ 2/3 | **← active** |
 | KS1 | Truth - every read surface reconciles | ░░░░░░░░░░ 0/6 | todo |
 | KS2 | The open door - bare conductor is the app, and every section reads | ░░░░░░░░░░ 0/8 | todo |
 | KS3 | Authoring - no human writes JSON | ░░░░░░░░░░ 0/5 | todo |
@@ -18,13 +18,13 @@ _Updated 2026-08-13 19:17 UTC · branch `feat/karvansara` · HEAD `a8fa298`_
 | KS9 | The far door - GitHub is the remotest view | ░░░░░░░░░░ 0/3 | todo |
 | KS10 | Ship core | ░░░░░░░░░░ 0/3 | todo |
 
-<details><summary>KS0 — Leftovers - the catalogue stops corrupting itself (1/3)</summary>
+<details><summary>KS0 — Leftovers - the catalogue stops corrupting itself (2/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | KS0.1 | Legacy-db import dedups by run id - never plan slug - consults imported.json before importing, and a repair pass with a backup collapses the existing duplicates, leaving one row per real run and the payesh evidence path green on the deduped store | 🚫 BLOCKED | - |
 | KS0.2 | conductor run close and adopt verbs close or annotate a run record with provenance through the store, an honest status writer covers non-terminal parks, and the four phantom running rows are closed via the verb - the WATCH-HANDOFF hand-SQL procedure retired | ✅ DONE | [`15627b9`](https://github.com/shaahink/conductor/commit/15627b9) |
-| KS0.3 | The sharp-small batch goes red to green by reproduction script: the gate battery builds to a shadow path and never rebuilds the running engine, CWD beats the CONDUCTOR_PLAN env var with a warning on override, the fresh-run.db first-write FK error dies, and lessons.md stops duplicate-appending with a pinned test | 🔄 IN PROGRESS | - |
+| KS0.3 | The sharp-small batch goes red to green by reproduction script: the gate battery builds to a shadow path and never rebuilds the running engine, CWD beats the CONDUCTOR_PLAN env var with a warning on override, the fresh-run.db first-write FK error dies, and lessons.md stops duplicate-appending with a pinned test | ✅ DONE | [`eb9778e`](https://github.com/shaahink/conductor/commit/eb9778e) |
 
 </details>
 
@@ -107,6 +107,7 @@ _Updated 2026-08-13 19:17 UTC · branch `feat/karvansara` · HEAD `a8fa298`_
 | 2 | KS0 | Resume | 1r1 | 08-13 16:53 | 0:18 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $8.2066 | $0.0203 | 231,483/48,625 |
 | 3 | KS0 | Deliver | 1 | 08-13 17:15 | 0:52 | Advanced | KS0.2 | 6 | engine-fast:OK · face-fast:OK | $16.6961 | $0.0209 | 211,030/106,915 |
 | 4 | KS0 | Deliver | 1 | 08-13 18:11 | 1:02 | AgentError |  | 1 | engine-fast:OK · face-fast:OK | $12.5711 | $0.0185 | 192,592/94,455 |
+| 5 | KS0 | Fix | 2 | 08-13 19:17 | 0:23 | Advanced | KS0.3 | 2 | engine-fast:OK · face-fast:OK | $5.1960 | $0.0221 | 112,692/46,568 |
 
 ## Money
 
@@ -114,11 +115,11 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 2 | 33.8M | 98.2% | $24.94 | 1 | 33.8M | $24.94 |
-| stage KS0 | 2 | 33.8M | 98.2% | $24.94 | 1 | 33.8M | $24.94 |
-| 2026-08 | 2 | 33.8M | 98.2% | $24.94 | 1 | 33.8M | $24.94 |
+| **run total** | 4 | 56.4M | 98.1% | $42.75 | 2 | 28.2M | $21.38 |
+| stage KS0 | 4 | 56.4M | 98.1% | $42.75 | 2 | 28.2M | $21.38 |
+| 2026-08 | 4 | 56.4M | 98.1% | $42.75 | 2 | 28.2M | $21.38 |
 
-_Where the money goes: agent $24.90 (100%) · gate $0.04 (0%) · blended $0.74/M tokens._
+_Where the money goes: agent $42.67 (100%) · gate $0.08 (0%) · blended $0.76/M tokens._
 
 ## Timeline
 
@@ -140,6 +141,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-13 19:11:46  • session #4 KS0 Deliver started (attempt 1/6)
 08-13 20:17:14  ▪ gate engine-fast pass [session]  (1m17s)
 08-13 20:17:14  ▪ gate face-fast pass [session]  (1m47s)
+08-13 20:17:15  • session #4 KS0 → AgentError · 1 commit(s)  (1h05m28s)
+08-13 20:17:17  • session #5 KS0 Fix started (attempt 2/6)
+08-13 20:44:11  ▪ gate engine-fast pass [session]  (1m35s)
+08-13 20:44:11  ▪ gate face-fast pass [session]  (2m05s)
+08-13 20:44:16  • session #5 KS0 → Advanced · done KS0.3 · 2 commit(s)  (26m59s)
 ```
 
 ## Health
@@ -147,7 +153,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 4 · retries 0 (0 %) · overall Warn
+sessions 5 · retries 1 (20 %) · overall Warn
 ⚠ [context-saturation] session #3: 23,814,216 context tokens (≥ 20,000,000)
 ```
 
@@ -157,8 +163,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvansara
-working tree: M .conductor/REPORT.md, M plans/karvansara/CORE-TRACKER.md, M src/Conductor.Core/GateRunner.cs, M src/Conductor.Core/Orchestration/RunContext.cs, M src/Conductor.Core/Orchestration/RunLoop.cs, ?? src/Conductor.Core/ShadowBuild.cs, ?? tests/Conductor.Tests/KS0_3FreshStoreFkTests.cs, ?? tests/Conductor.Tests/KS0_3ShadowBuildTests.cs (+1 more)
-vs upstream: 1 ahead
+working tree: M .conductor/REPORT.md, M plans/karvansara/CORE-TRACKER.md
+vs upstream: up to date
 ```
 
 ### Commits by session
@@ -182,6 +188,9 @@ vs upstream: 1 ahead
   - `bc3f071` feat(concepts): the ideas move — ten drawings that take input, and the still stands whole without JS [conductor-site]
   - `39c3214` fix(articles): the strip is above the argument — two directions righted, and a ratio given its name [conductor-site]
   - `236eb82` feat(site): the word becomes the mark — a drawn logo, the loop on the cover, and a head crawlers can read [conductor-site]
+- **s5 (KS0 Fix)** — 2 commit(s):
+  - [`b7ebabe`](https://github.com/shaahink/conductor/commit/b7ebabe) docs(tracker): KS0.3 - the handoff carries the full-suite number, not a filtered one
+  - [`eb9778e`](https://github.com/shaahink/conductor/commit/eb9778e) fix(gates,store): KS0.3 - the gate builds beside the engine, not over it (bugs #16, #27)
 
 ## Phase handovers (audit)
 
@@ -208,30 +217,30 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> API Error: Connection lost mid-response. The response above may be incomplete.
+> **KS0.3 complete — bug 16 proven live, bug 27 landed, full suite green**
+> - Bug 16 closed by a real red/green rig through `conductor gate`; bugs 16, 20, 27 all closed
+> - Gate log now names the command that actually ran, not the one the plan declared — caught by the rig
+> - Full suite 2156/2156 green; KS0.3 claimed DONE, stage KS0 finished bar the blocked KS0.1
+>
+> artefacts: eb9778e, b7ebabe, src/Conductor.Core/ShadowBuild.cs, src/Conductor.Core/GateRunner.cs, src/Conductor.Core/Orchestration/RunContext.cs, src/Conductor.Core/Orchestration/RunLoop.cs, tools/ks0/ks0-3-bug16-shadow-build.ps1, tools/ks0/ks0-3-bug27-fresh-db-fk.ps1
+>
+> evidence: .conductor/evidence/KS0/ks0-3-sharp-small-batch.md, .conductor/evidence/KS0/ks0-3-bug16.txt, .conductor/evidence/KS0/ks0-3-bug27.txt
+>
+> gaps: KS0.1 remains BLOCKED on bug #36 — one owner-run `conductor catalogue repair --apply` while no engine holds the store
 
 ## Tracker handoff
 
 ```
-last: KS0.2 landed and claimed (15627b9, ed6aab9, f82f3b1). FU-F1-06 is dead after three eras:
-  UpdateRunStatus writes status and no ended_utc, called from RunContext.Save so every park routes
-  through it. `conductor run close|adopt <id>` ships. Evidence: .conductor/evidence/KS0/ks0-2-run-close.md
-measured, do not re-derive: the catalogue held SEVEN non-terminal rows, not four. Three are LIVE -
-  9647f1b8 (this run), 8faf849d + d6fd22ba (DevContext2, another repo's conductor on this machine) -
-  and the verb refuses all three before --dry-run prints. The four real phantoms are closed through it;
-  non-terminal 7 -> 3, every survivor with a live pid in `conductor ps`.
-three traps this era must keep: only parks that OUTLIVE the engine get their own status word (Idle,
-  Waiting, Backoff, VerifyingGates stay `running`, or StateRepair thinks it may write a live store);
-  NEVER bump the run.db schema version - the published v12 engine drives these sessions and
-  MigrationRunner throws on a newer store, so a v13 store would brick `conductor task` and the run;
-  and the ArchitectureTests ratchets are NOT in a scoped filter - the type ceiling had been red since
-  KS0.1 (CatalogueCommand 5 types, StateRepair 6). Split, never raised, in e4c9984. Add a file, then
-  run `--filter FullyQualifiedName~ArchitectureTests` before you claim; it takes 9 seconds.
-red/green: last full suite before the split was 2122/2123, the one failure being that ratchet; after
-  the split ArchitectureTests + all KS0_* are 60 green. A full suite was not re-run to completion.
-still open on KS0.1: df9c4af8's truncated copy in 308cfb9b, the live store. Bug #36 - one owner-run
-  `conductor catalogue repair --apply` while no engine holds it takes 26/25 to 25/25 and payesh green.
-next: KS0.3 - the sharp-small batch, each bug red then green by reproduction script (#16 shadow-path
-  gates, #20 CWD beats CONDUCTOR_PLAN, #27 fresh-run.db FK, lessons.md duplicate append). Bug #37 filed:
-  `history --json` missed three catalogued non-terminal rows a direct store read found - it is KS1.3's.
+last: KS0.3 landed COMPLETE (a8fa298, eb9778e) - four bugs, each red-then-green by a script under
+  tools/ks0/, pinned by tests/Conductor.Tests/KS0_3*.cs; bugs #16, #20, #27 closed. Evidence:
+  .conductor/evidence/KS0/ks0-3-sharp-small-batch.md. KS0 is finished bar the blocked KS0.1.
+measured: FULL suite 2156/2156 green in 6m51s on eb9778e - the whole tree, no filter. The red battery
+  that queued session #5 was no defect: session #4 died mid-work and left sound work uncommitted.
+worth reusing: `conductor gate -p <plan>` runs the battery with NO agent session - the cheap way to
+  exercise GateRunner live. A lock rig must TOUCH a source first or MSBuild skips the copy and the
+  lock never fires; an empty Directory.Build.props stops a %TEMP% csproj inheriting analyzers as
+  errors. Shadow build is a proven no-op for THIS run's gates - engine installed outside the tree.
+still open on KS0.1: bug #36 - one owner-run `conductor catalogue repair --apply` while no engine
+  holds the karvansara store takes the catalogue 26/25 to 25/25 and turns the payesh harvest green.
+next: KS1.1 - plan reload updates the run row, limits provenance labelled at-launch versus now.
 ```
