@@ -374,9 +374,11 @@ func TestPickerListsPastRunsUnderTheLiveOnes(t *testing.T) {
 	}
 }
 
-// The whole point of read-only: the cursor reaches a finished run, and enter on it attaches to
-// nothing. It says where the run CAN be read instead of failing silently.
-func TestEnterOnAPastRunAttachesToNothing(t *testing.T) {
+// KS2.2 — enter on a finished run OPENS it. Before, it printed a note naming another command and did
+// nothing, which is the one row in this screen that answered a keypress with a suggestion. The run has
+// no control plane of its own, so the answer leaves by a different door: ChosenPast, which the engine
+// turns into a read-only archive plane over that run's run.db.
+func TestEnterOnAPastRunOpensTheReadOnlyArchive(t *testing.T) {
 	p := NewPicker(liveFleet()).WithPast(pastFleet())
 	p.width, p.height = 100, 30
 
@@ -384,8 +386,8 @@ func TestEnterOnAPastRunAttachesToNothing(t *testing.T) {
 	if p.cursor != len(p.runs)+len(p.past)-1 {
 		t.Fatalf("end put the cursor at %d, want the last past row", p.cursor)
 	}
-	if !strings.Contains(p.Render(), "read-only (no engine to attach to)") {
-		t.Errorf("detail row does not say a past run cannot be attached:\n%s", p.Render())
+	if !strings.Contains(p.Render(), "read-only archive") {
+		t.Errorf("detail row does not say the row opens read-only:\n%s", p.Render())
 	}
 
 	after, cmd := p.handleKey("enter")
@@ -393,14 +395,38 @@ func TestEnterOnAPastRunAttachesToNothing(t *testing.T) {
 	if !ok {
 		t.Fatalf("handleKey returned %T", after)
 	}
-	if cmd != nil {
-		t.Error("enter on a past run asked the program to quit")
+	if cmd == nil {
+		t.Error("enter on a past run did not end the picker")
 	}
 	if _, chosen := next.Chosen(); chosen {
-		t.Error("enter on a past run chose a run to attach to")
+		t.Error("a past run was handed over as a LIVE run to attach to")
 	}
-	if !strings.Contains(next.Render(), "conductor history e9e21d10") {
-		t.Errorf("frame does not name the verb that opens it:\n%s", next.Render())
+	past, opened := next.ChosenPast()
+	if !opened {
+		t.Fatal("enter on a past run chose nothing to open")
+	}
+	want := pastFleet()[len(pastFleet())-1]
+	if past.RunID != want.RunID {
+		t.Errorf("opened run %q, want %q", past.RunID, want.RunID)
+	}
+	// The whole point of the read-only route: nothing about a past row can carry a write token.
+	if past.RunDb == "" {
+		t.Error("the chosen past run names no database for the engine to serve")
+	}
+}
+
+// A live row must never come back through the archive door, and a picker nobody pressed enter on
+// must not claim either kind of choice.
+func TestChosenPastIsEmptyUntilAPastRowIsChosen(t *testing.T) {
+	p := NewPicker(liveFleet()).WithPast(pastFleet())
+	if _, opened := p.ChosenPast(); opened {
+		t.Error("a fresh picker claims to have opened an archive")
+	}
+	if _, opened := pick(t, p, "enter").ChosenPast(); opened {
+		t.Error("enter on a LIVE row came back as an archive choice")
+	}
+	if _, opened := pick(t, p, "esc").ChosenPast(); opened {
+		t.Error("quitting came back as an archive choice")
 	}
 }
 

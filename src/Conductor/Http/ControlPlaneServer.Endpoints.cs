@@ -382,72 +382,13 @@ public sealed partial class ControlPlaneServer
 
     // ── M5.1: timeline ──
 
+    /// <summary>KS2.2: the fold itself is <see cref="TimelineProjection"/> in core now, because the
+    /// archive plane serves the same rows from the same rules — a second copy here would be a second
+    /// timeline the moment an event type is added to one of them. The <c>TokenDelta</c> skip and the
+    /// wording of every row are unchanged; this endpoint just names the reader.</summary>
     private async Task WriteTimelineAsync(HttpListenerContext ctx)
     {
-        var events = ReadEvents();
-        var entries = new List<TimelineEntryDto>();
-        foreach (var evt in events)
-        {
-            string kind = "unknown", desc = "";
-            string? stageId = null, outcome = null;
-            int? sessionNum = null;
-            decimal? cost = null;
-
-            switch (evt)
-            {
-                case SessionStarted s:
-                    kind = "session";
-                    desc = $"session #{s.Number} {s.Kind} started";
-                    stageId = s.StageId;
-                    sessionNum = s.Number;
-                    break;
-                case SessionFinished f:
-                    kind = "session";
-                    desc = $"session #{f.Number} finished: {f.Outcome}";
-                    stageId = f.StageId;
-                    sessionNum = f.Number;
-                    cost = f.CostUsd;
-                    outcome = f.Outcome;
-                    break;
-                case GateFinished g:
-                    kind = "gate";
-                    desc = $"gate {g.Name}: {(g.Passed ? "pass" : "FAIL")} ({g.DurationMs}ms)";
-                    stageId = g.Scope;
-                    outcome = g.Passed ? "pass" : "fail";
-                    break;
-                case TokenDelta:
-                    break; // skip — too noisy for timeline
-                case AttentionRequested a:
-                    kind = "attention";
-                    desc = $"needs human: {a.Reason}";
-                    break;
-                case StageEntered se:
-                    kind = "stage";
-                    desc = $"stage {se.StageId} entered";
-                    stageId = se.StageId;
-                    break;
-                case StageConfirmed sConfirmed:
-                    kind = "stage";
-                    desc = $"stage {sConfirmed.StageId} confirmed";
-                    stageId = sConfirmed.StageId;
-                    break;
-                case PlanReloaded p:
-                    kind = "run";
-                    desc = $"plan reloaded — v{p.PlanVersion} · {p.Stages} stages · {p.Gates} gates";
-                    break;
-                default:
-                    continue;
-            }
-            entries.Add(new TimelineEntryDto(
-                Utc: evt.Ts.ToString("O"),
-                Kind: kind,
-                Description: desc ?? "",
-                StageId: stageId,
-                SessionNumber: sessionNum,
-                CostUsd: cost,
-                Outcome: outcome));
-        }
-        await WriteJsonAsync(ctx, new TimelineDto(entries),
+        await WriteJsonAsync(ctx, TimelineProjection.From(ReadEvents()),
             ControlPlaneJsonContext.Default.TimelineDto).ConfigureAwait(false);
     }
 

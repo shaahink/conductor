@@ -55,8 +55,10 @@ type FleetRun struct {
 
 // PastRun is one run this machine REMEMBERS but is not serving, read by the engine from the state
 // catalogue K3.1 built. It mirrors Conductor.Core.Fleet.FacePastRun. There is no base url and no
-// token because there is no control plane behind a finished run: the picker lists these, and cannot
-// attach to one.
+// token because no engine is behind a finished run — but since KS2.2 there is still something to
+// open: choosing one hands RunID back to the engine, which serves that run's run.db through a
+// read-only archive plane and points a Face at it. Read-only is then structural, not a convention:
+// the archive carries no write token, so every write affordance in the Face hides itself.
 type PastRun struct {
 	Repo            string  `json:"repo"`
 	PlanName        string  `json:"planName"`
@@ -151,13 +153,17 @@ type PickerModel struct {
 	width  int
 	height int
 	chosen int // -1 until enter; index into runs
-	note   string
+	// KS2.2: -1 until enter lands on a past row. A past run has no control plane of its own, so the
+	// choice is handed BACK to the engine, which opens a read-only archive plane over that run's
+	// run.db and points a fresh Face at it. Two fields rather than one signed index because the two
+	// choices are answered by different code on the other side and must not be told apart by sign.
+	chosenPast int
 }
 
 // NewPicker builds the picker over a fleet. The cursor starts on the run in this directory when there
 // is one — the row the person who typed `conductor face` here most likely means.
 func NewPicker(runs []FleetRun) PickerModel {
-	p := PickerModel{runs: runs, chosen: -1, width: 80, height: 24}
+	p := PickerModel{runs: runs, chosen: -1, chosenPast: -1, width: 80, height: 24}
 	for i, r := range runs {
 		if r.Self {
 			p.cursor = i
@@ -191,6 +197,16 @@ func (p PickerModel) Chosen() (FleetRun, bool) {
 	return p.runs[p.chosen], true
 }
 
+// ChosenPast reports a selected FINISHED run (KS2.2). It is never a live one: the caller acts on this
+// by asking the engine for a read-only archive plane over that run's database, which is a different
+// route from Chosen()'s "attach to this URL" — so the two answers stay two methods.
+func (p PickerModel) ChosenPast() (PastRun, bool) {
+	if p.chosenPast < 0 || p.chosenPast >= len(p.past) {
+		return PastRun{}, false
+	}
+	return p.past[p.chosenPast], true
+}
+
 func (p PickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -219,11 +235,12 @@ func (p PickerModel) handleKey(key string) (tea.Model, tea.Cmd) {
 	case "end", "G":
 		p.cursor = p.rowCount() - 1
 	case "enter", " ":
-		// A finished run has no control plane to attach to, so enter on one is not a refusal to be
-		// silent about — it is the moment to say where the run CAN be read.
+		// KS2.2: a finished run opens too. It has no engine and no control plane of its own, so the
+		// choice leaves the Face and the engine serves that run's run.db read-only; before this, enter
+		// on a past row printed a note naming another command and did nothing.
 		if p.isPast(p.cursor) {
-			p.note = "read-only history · conductor history " + p.past[p.cursor-len(p.runs)].ShortRunID()
-			return p, nil
+			p.chosenPast = p.cursor - len(p.runs)
+			return p, tea.Quit
 		}
 		p.chosen = p.cursor
 		return p, tea.Quit
@@ -285,9 +302,6 @@ func (p PickerModel) Render() string {
 		key("enter") + subtleStyle.Render(" attach"),
 		key("esc") + subtleStyle.Render(" quit"),
 	}, subtleStyle.Render(" · "))
-	if p.note != "" {
-		hint = subtleStyle.Render(truncate(p.note, p.width-2))
-	}
 
 	return lipgloss.NewStyle().MaxWidth(p.width).MaxHeight(p.height).
 		Render(box + "\n " + hint)
@@ -368,7 +382,7 @@ func (p PickerModel) renderPastRow(index int, r PastRun, width int) string {
 func (p PickerModel) renderDetail(width int) string {
 	if p.isPast(p.cursor) {
 		r := p.past[p.cursor-len(p.runs)]
-		head := fmt.Sprintf("run %s  ·  finished  ·  read-only (no engine to attach to)", r.ShortRunID())
+		head := fmt.Sprintf("run %s  ·  finished  ·  read-only archive (served from run.db)", r.ShortRunID())
 		tail := r.PlanName
 		if r.RunDb != "" {
 			tail += "  ·  " + r.RunDb

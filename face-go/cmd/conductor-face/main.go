@@ -41,6 +41,8 @@ plane ports itself and — when it cannot tell which run you mean, or you passed
 --pick — hands them over in CONDUCTOR_FLEET. A run picker then runs before the
 dashboard: ↑↓ or 1-9 to choose, enter to attach, esc to quit. That envelope
 carries each run's write token, which is why it is an env var and not a flag.
+The picker also lists the runs this machine remembers; enter on one of those
+opens it READ-ONLY, served from its run.db with no engine and no write token.
 
 --theme overrides the scheme for this launch only. To CHANGE the saved choice,
 switch live from the palette (':' then 'theme') — that writes it to
@@ -95,9 +97,19 @@ func main() {
 	case fleetErr == nil && *url == "":
 		// The engine could not pick for us: run the picker FIRST, then attach to what came back.
 		// An explicit --url outranks it — the caller already named the run they mean.
-		chosen, ok := runPicker(fleet)
+		picker, ok := runPicker(fleet)
 		if !ok {
 			return // looked at the fleet, attached to nothing — a normal exit, not a failure
+		}
+		if past, isPast := picker.ChosenPast(); isPast {
+			// KS2.2: a finished run has no plane of its own. Hand the id back to the engine, which
+			// opens a read-only archive over its run.db and starts a Face on that.
+			handOffArchive(past)
+			return
+		}
+		chosen, ok := picker.Chosen()
+		if !ok {
+			return
 		}
 		baseURL, stateDir = chosen.BaseURL, chosen.StateDir
 		source = api.NewLiveSourceWithToken(baseURL,
@@ -133,20 +145,45 @@ func main() {
 // to every process on the machine.
 const fleetEnv = "CONDUCTOR_FLEET"
 
-// runPicker shows the pre-flight run picker and returns the chosen run. A fleet of one still gets the
-// screen: the engine only hands one over when it could NOT decide (or when the user asked to choose),
-// so showing a list of one is the honest answer to "which run?" rather than a silent attach.
-func runPicker(fleet tui.Fleet) (tui.FleetRun, bool) {
+// runPicker shows the pre-flight run picker and returns the model it ended on. A fleet of one still
+// gets the screen: the engine only hands one over when it could NOT decide (or when the user asked to
+// choose), so showing a list of one is the honest answer to "which run?" rather than a silent attach.
+//
+// It returns the whole model rather than one run because there are now two kinds of answer — a live
+// run to attach to, and a finished run for the engine to serve read-only — and collapsing them into
+// one value would make the caller guess which it got.
+func runPicker(fleet tui.Fleet) (tui.PickerModel, bool) {
 	final, err := tea.NewProgram(tui.NewPicker(fleet.Runs).WithPast(fleet.Past)).Run()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "conductor-face: %v\n", err)
 		os.Exit(1)
 	}
 	picker, ok := final.(tui.PickerModel)
-	if !ok {
-		return tui.FleetRun{}, false
+	return picker, ok
+}
+
+// pickEnv names a file the engine is waiting on. `conductor face` sets it before launching us; when
+// the picker lands on a finished run we write that run's id there and exit, and the engine opens the
+// read-only archive plane over it. A FILE and not stdout because stdout is the terminal the TUI just
+// finished painting, and not argv because argv is where nothing private may go — the same rule that
+// keeps write tokens in CONDUCTOR_FLEET.
+const pickEnv = "CONDUCTOR_PICK"
+
+// handOffArchive tells the engine which finished run to serve. When nobody is listening (a bare
+// `conductor-face` with a hand-made CONDUCTOR_FLEET), it says what would have opened it — that is a
+// real case, and silently doing nothing is what KS2.2 exists to stop.
+func handOffArchive(past tui.PastRun) {
+	path := os.Getenv(pickEnv)
+	if path == "" {
+		fmt.Fprintf(os.Stderr,
+			"conductor-face: nothing is waiting to open run %s. Try:  conductor face --archive %s\n",
+			past.ShortRunID(), past.ShortRunID())
+		return
 	}
-	return picker.Chosen()
+	if err := os.WriteFile(path, []byte(past.RunID), 0o600); err != nil {
+		fmt.Fprintf(os.Stderr, "conductor-face: could not hand run %s back to the engine: %v\n",
+			past.ShortRunID(), err)
+	}
 }
 
 // stageOrDash and writeMode format the no-TTY fleet listing above; the picker itself renders them.

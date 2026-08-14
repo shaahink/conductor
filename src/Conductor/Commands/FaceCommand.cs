@@ -30,7 +30,7 @@ namespace Conductor.Commands;
 /// <c>CONDUCTOR_FLEET</c> and its picker asks. That variable carries write tokens, which is why it is
 /// an environment variable and not an argument.</para>
 /// </summary>
-public sealed class FaceCommand : AsyncCommand<FaceCommand.Settings>
+public sealed partial class FaceCommand : AsyncCommand<FaceCommand.Settings>
 {
     public sealed class Settings : PlanSettings
     {
@@ -45,11 +45,28 @@ public sealed class FaceCommand : AsyncCommand<FaceCommand.Settings>
         [CommandOption("--timeout <MS>")]
         [Description("Per-port probe budget in milliseconds (default 2500). Raise it if a busy engine is missed.")]
         public int? TimeoutMs { get; init; }
+
+        [CommandOption("--archive <RUN>")]
+        [Description("Open a FINISHED run read-only: a run id, an id prefix, a catalogue slug, a repo name, or a run.db path.")]
+        public string? Archive { get; init; }
+
+        [CommandOption("--serve")]
+        [Description("With --archive: serve the read-only plane and print its url instead of opening a face.")]
+        public bool Serve { get; init; }
+
+        [CommandOption("--port <N>")]
+        [Description("With --archive: first port to bind (default 4400 — deliberately outside the fleet window).")]
+        public int? Port { get; init; }
     }
 
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
+
+        // KS2.2 — a finished run is served, not probed for. Answered before the port scan because
+        // there is nothing on a port to find.
+        if (!string.IsNullOrWhiteSpace(settings.Archive))
+            return await ArchiveAsync(settings.Archive, settings.Serve, settings.Port).ConfigureAwait(false);
 
         var psi = FaceProcess();
         if (psi is null) return 1;
@@ -96,7 +113,9 @@ public sealed class FaceCommand : AsyncCommand<FaceCommand.Settings>
                 psi.Environment[FaceTarget.FleetEnvVar] =
                     FaceTarget.Serialize(decision.Fleet, await TokensForAsync(decision.Fleet).ConfigureAwait(false),
                         localStateDir, past);
-                return await LaunchAsync(psi).ConfigureAwait(false);
+                // KS2.2: the picker can now answer with a FINISHED run, which has no url to attach to.
+                // It writes that run's id here and exits; we open the read-only archive over it.
+                return await LaunchThenMaybeArchiveAsync(psi).ConfigureAwait(false);
 
             default:
                 return await NothingToAttachToAsync(psi, localStateDir, localPlanName).ConfigureAwait(false);
