@@ -114,8 +114,13 @@ public sealed partial class RunLoop
                     // so an edit made while parked is live before the next resume).
                     if (Dispatcher.ConsumeReloadPending() || PlanFileChangedOnDisk()) ApplyPlanReload();
 
-                    if (!_ctx.Options.DryRun && _ctx.State.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
+                    if (_ctx.State.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                     {
+                        // KS2.6: the guard used to be `!DryRun && …`, so a preview run that reached a
+                        // park did not idle — it re-parked and re-notified at full speed (the
+                        // 2026-08-02 flood). A dry run is a preview and never waits, so it SAYS what
+                        // it found and stops. A live run idles as before.
+                        if (_ctx.Options.DryRun) { LogDryRunPark(); return 0; }
                         PushIdleSnapshot();
                         await Task.Delay(800, ct).ConfigureAwait(false);
                         continue;
@@ -189,7 +194,7 @@ public sealed partial class RunLoop
                                 _ctx.Plan.Limits.DnsHealthCheck?.BackoffMultiplier ?? 2.0,
                                 _ctx.Plan.Limits.DnsHealthCheck?.MaxBackoffSeconds ?? 3600);
                             _ctx.DnsParkedUntil = DateTime.UtcNow.AddSeconds(backoff);
-                            _ctx.Log($"preflight still failing (×{_ctx.PreflightConsecutiveFailures}) — parking {backoff}s");
+                            NotifyPreflightPark(_ctx.PreflightConsecutiveFailures, backoff, "still failing");
                             PushIdleSnapshot();
                             await Task.Delay(1000, ct).ConfigureAwait(false);
                             continue;
@@ -365,10 +370,7 @@ public sealed partial class RunLoop
                         _ctx.Plan.Limits.DnsHealthCheck?.MaxBackoffSeconds ?? 3600);
                     _ctx.DnsParkedUntil = DateTime.UtcNow.AddSeconds(backoff);
                     var failures = string.Join("; ", preflightResults.Where(r => !r.Passed).Select(r => $"{r.Name}:{r.Message}"));
-                    _ctx.Log($"preflight FAILED (×{_ctx.PreflightConsecutiveFailures}): {failures} — parking {backoff}s");
-                    _ = _ctx.Telegram.PushWithKeyboardAsync(
-                        $"Conductor {_ctx.Plan.Name}: preflight failed — {failures}",
-                        [("Resume", "resume"), ("Skip", "skip")], CancellationToken.None);
+                    NotifyPreflightPark(_ctx.PreflightConsecutiveFailures, backoff, failures);
                     _ctx.Save();
                     continue;
                 }
@@ -399,6 +401,7 @@ public sealed partial class RunLoop
                     }
                 }
 
+                _ctx.Notifier.Resolve();   // KS2.6: work is happening — the open park incident is over
                 try { await _sessions.RunAsync(stage, track, ct).ConfigureAwait(false); }
                 catch (PromptCompositionException ex) { ParkOnPromptRefusal(stage, ex); continue; }
                 sessionsThisRun++;

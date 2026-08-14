@@ -12,11 +12,16 @@ public sealed class WebhookNotifier : IDisposable
     private readonly PlanConfig _plan;
     private readonly ILogger<WebhookNotifier> _log;
     private readonly HttpClient _http;
+    private readonly bool _dryRun;
 
-    public WebhookNotifier(PlanConfig plan, ILogger<WebhookNotifier> logger)
+    /// <param name="dryRun">KS2.6: a <c>--dry-run</c> POSTs nowhere. Enforced in the notifier itself
+    /// and not only at the call sites, for the same reason the Telegram leg is: a preview run that
+    /// reaches a real endpoint is indistinguishable from a real one at the receiving end.</param>
+    public WebhookNotifier(PlanConfig plan, ILogger<WebhookNotifier> logger, bool dryRun = false)
     {
         _plan = plan;
         _log = logger;
+        _dryRun = dryRun;
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
     }
 
@@ -24,6 +29,7 @@ public sealed class WebhookNotifier : IDisposable
 
     public void FireAsync(string message)
     {
+        if (_dryRun) return;
         var n = _plan.Notify;
         if (n == null) return;
 

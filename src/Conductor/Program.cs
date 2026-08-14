@@ -53,6 +53,8 @@ app.Configure(c =>
         .WithDescription("Show plan, tracker, and session status.");
     c.AddCommand<WatchCommand>("watch")
         .WithDescription("Block silently on a live run and return only when something needs judgment: a park, a churn loop, a phase gate RED twice, the engine gone, the run ended. --json for the brief, --timeout for a heartbeat, --hook to hand it to a supervisor.");
+    c.AddCommand<WatchesCommand>("watches")
+        .WithDescription("What is armed on this machine: every live run, the supervisor block watching it, how much of its hourly fuse is burnt, where a remote wake goes, and the park-push cap in force. Read-only; --json for machines.");
     c.AddCommand<GateCommand>("gate")
         .WithDescription("Re-run the gate battery at HEAD (no agent spawned). --full for full battery, default fast-tier only. Clears pendingFix if all green.");
     c.AddCommand<ReportCommand>("report")

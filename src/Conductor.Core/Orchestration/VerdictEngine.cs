@@ -99,6 +99,7 @@ public sealed partial class VerdictEngine
     /// sentence on the Telegram leg — the webhooks and the notify command still get the sentence.</remarks>
     private void Notify(string message, PushSeverity severity = PushSeverity.Quiet, bool telegram = true)
     {
+        if (!_ctx.Notifier.AllowOneOff()) return;   // KS2.6: a dry run reaches nobody, on every leg
         if (telegram) _ = _telegram.PushAsync(message, severity);
         _webhooks.FireAsync(message);
 
@@ -461,6 +462,11 @@ public sealed partial class VerdictEngine
         _ctx.Events.Emit(new AttentionRequested { Reason = reason });
         _ctx.Log($"🛑 NEEDS HUMAN: {reason}");
         _saveAndReport();
+        // KS2.6: the park buzzes ONCE. The 2026-08-02 incident is this very line reached again and
+        // again over one unchanged fact — a handoff MENTIONING the escalation token in prose — while
+        // nothing counted. The run holds parked for as long as it takes and says so once; a
+        // DIFFERENT reason is a different incident and does buzz. See ParkNotifier.
+        if (!_ctx.Notifier.Admit(nameof(RunStatus.NeedsHuman), reason)) return;
         // K5.4: the whole point of severity. The run has stopped and cannot restart itself — this is
         // the one message that has earned the right to buzz a phone at 3am.
         Notify($"Conductor {_ctx.Plan.Name}: needs attention — {reason}", PushSeverity.Alert);

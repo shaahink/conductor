@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Conductor.Core.Events;
+using Conductor.Core.Integrations;
+using Conductor.Core.Integrations.Messaging;
 using Conductor.Models;
 
 namespace Conductor.Core.Orchestration;
@@ -235,5 +237,39 @@ public sealed partial class RunLoop
         var gi = Path.Combine(_ctx.Plan.StateDir, ".gitignore");
         if (!File.Exists(gi))
             File.WriteAllText(gi, "*\n!.gitignore\n!REPORT.md\n");
+    }
+
+    /// <summary>KS2.6: what a <c>--dry-run</c> says when it walks into a park. A preview never waits,
+    /// so it reports the park and stops rather than spinning the loop against an unchanged fact —
+    /// which is how one handoff mentioning the escalation token produced roughly two hundred phone
+    /// notifications. The sentence carries the reason, because "parked" without it is the same
+    /// unanswerable message the flood was made of.</summary>
+    private void LogDryRunPark()
+    {
+        var reason = _ctx.State.AttentionReason is { Length: > 0 } r ? r : "no reason recorded";
+        _ctx.Sink.Log($"--- DRY RUN: this run is parked at {_ctx.State.Status} — {reason}. " +
+                      "Nothing would be spawned until it is cleared (`conductor resume` / `conductor approve`) ---");
+        _ctx.Log($"dry run: parked at {_ctx.State.Status} — {reason}; previewing no further");
+    }
+
+    /// <summary>KS2.6: a preflight backoff park SAYS it is parked, and for how long.
+    /// <para>The DNS/preflight branch only ever logged. A transient network cut therefore produced a
+    /// silent multi-hour park — the observed case was fourteen hours of doubling backoff with nothing
+    /// on the owner's phone — because the backoff maxes at an hour and every re-check after the first
+    /// wrote a log line nobody was watching. The push fires per ESCALATION rather than once at the
+    /// start: the incident key carries the consecutive-failure count, so each new, longer park is a
+    /// new incident and each repeat inside one is suppressed by <see cref="ParkNotifier"/>.</para></summary>
+    private void NotifyPreflightPark(int consecutiveFailures, int backoffSeconds, string detail)
+    {
+        _ctx.Log($"preflight FAILED (×{consecutiveFailures}): {detail} — parking {backoffSeconds}s");
+        if (!_ctx.Notifier.Admit(nameof(RunStatus.Waiting), $"preflight x{consecutiveFailures}")) return;
+        var window = backoffSeconds >= 120
+            ? FormattableString.Invariant($"{backoffSeconds / 60.0:0.#} minutes")
+            : FormattableString.Invariant($"{backoffSeconds} seconds");
+        Notify($"Conductor {_ctx.Plan.Name}: preflight failed (×{consecutiveFailures}) — {detail}. " +
+               $"PARKED, backing off {window} before the next check.", PushSeverity.Alert);
+        _ = _ctx.Telegram.PushWithKeyboardAsync(
+            $"Conductor {_ctx.Plan.Name}: parked on preflight — {detail} (backing off {window})",
+            [("Resume", "resume"), ("Skip", "skip")], CancellationToken.None);
     }
 }

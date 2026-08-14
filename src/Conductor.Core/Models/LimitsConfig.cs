@@ -105,6 +105,15 @@ public sealed class LimitsConfig
     /// reload) resumes it. Editable in flight, unlike the process-scoped <c>--max-sessions</c> flag
     /// (which stops the process rather than parking). null/0 = no cap.</summary>
     public int? MaxSessions { get; set; }
+
+    /// <summary>KS2.6: how many notifications ONE park incident may emit. An incident is keyed on
+    /// (status, attention reason), so a park that holds unchanged for a week is one incident and one
+    /// push, while a new distinct reason opens a new incident and does notify. Default 1; 0 removes
+    /// the cap (the pre-KS2.6 behaviour, which is how one handoff mentioning the escalation token in
+    /// prose produced roughly two hundred phone notifications on 2026-08-02).
+    /// <para>Read by <see cref="Conductor.Core.Integrations.ParkNotifier"/>, which every notify path
+    /// in the engine passes through.</para></summary>
+    public int MaxPushesPerIncident { get; set; } = Conductor.Core.Integrations.ParkNotifier.DefaultMaxPerIncident;
 }
 
 /// <summary>O2: DNS preflight configuration for network health validation before spawning.</summary>

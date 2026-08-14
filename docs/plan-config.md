@@ -247,6 +247,33 @@ docs-only or spike plan with no build/test surface.
 | `dnsHealthCheck` | object | — | Pre-session DNS check (hosts, intervalSeconds). |
 | `overheadCostPerSecond` | decimal | 0.0001 | Gate runtime cost estimate rate. |
 | `batterySettleSeconds` | int | 120 | Ceiling on how long the gate battery waits for the session's own `bg:` children to exit before it judges. `0` disables the wait. |
+| `maxPushesPerIncident` | int | 1 | How many notifications ONE park may emit. See below. `0` removes the cap. |
+
+### A park notifies once (KS2.6)
+
+An **incident** is keyed on `(status, attention reason)`. The first park on a given pair pushes; every
+repeat of the same pair is silent, however many loop iterations pass — a NEEDS HUMAN park holds
+quietly for as long as it takes. A **different** reason opens a new incident and does notify, and a
+session that actually runs closes the open incident, so the same cause reached again after real work
+buzzes again.
+
+The cap exists because it was measured: on 2026-08-02 a tracker handoff that merely *mentioned* the
+escalation token in prose was matched (the match is a plain case-insensitive substring, and stays
+one), the run parked, and — because the park's idle delay was skipped under `--dry-run` — the loop
+re-parked and re-notified at full speed for roughly two hundred phone notifications about one
+unchanged fact.
+
+Two related rules are not configurable:
+
+- **`--dry-run` notifies nobody.** A preview spawns no agent, spends nothing, and sends no Telegram
+  push, no webhook POST and no `notify.command` invocation — on the run-start, session-end,
+  run-complete, blocked-until, owner-gate and NEEDS HUMAN paths alike. It also no longer spins: a dry
+  run that walks into a park says what it found and stops.
+- **A preflight backoff park says so.** The DNS/preflight branch used to only log, so a network blip
+  could park a run for hours in silence. It now pushes once per backoff *escalation*, naming the
+  window it is backing off for.
+
+`conductor watches` lists the cap in force per live run, beside what would wake anybody for it.
 
 ### The battery settles, then retries once (SC4.1)
 

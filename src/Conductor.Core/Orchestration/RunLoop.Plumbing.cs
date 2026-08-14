@@ -286,6 +286,7 @@ public sealed partial class RunLoop
 
     private void Notify(string message, PushSeverity severity = PushSeverity.Quiet)
     {
+        if (!_ctx.Notifier.AllowOneOff()) return;   // KS2.6: a dry run reaches nobody, on every leg
         _ = _ctx.Telegram.PushAsync(message, severity);
         _ctx.Webhooks.FireAsync(message);
 

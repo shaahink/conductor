@@ -194,3 +194,144 @@ public class SF5_1WatchWakeSetTests
         Assert.Equal(1, w.PhaseRedsFor("S2"));
     }
 }
+
+/// <summary>
+/// KS2.6 — <c>conductor watches</c>: what is ARMED on this machine.
+///
+/// <para>The two failures the checkpoint is named for are the same gap read from opposite ends: a
+/// preflight blip parked a run for fourteen hours with nobody told, and a handoff mentioning the
+/// escalation token told the owner two hundred times. Neither could be checked beforehand, because
+/// nothing ever answered "is anything watching this run, and how loud is it allowed to be?". These
+/// pin the answers themselves — every field is a sentence, and the one that must never be guessed is
+/// the unreadable plan: an unreadable supervisor block is NOT "no supervisor".</para>
+/// </summary>
+public sealed class KS2_6WatchRosterTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "conductor-ks26r-" + Guid.NewGuid().ToString("N")[..8]);
+    private static readonly DateTimeOffset Now = new(2026, 8, 14, 12, 0, 0, TimeSpan.Zero);
+
+    public KS2_6WatchRosterTests() => Directory.CreateDirectory(_dir);
+
+    public void Dispose()
+    {
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { }
+    }
+
+    private static PlanConfig Plan(SupervisorConfig? supervisor = null, int pushes = 1) => new()
+    {
+        Name = "ks26", Repo = "C:/nowhere", Tracker = "TRACKER.md",
+        Supervisor = supervisor,
+        Limits = new LimitsConfig { MaxPushesPerIncident = pushes },
+    };
+
+    private WatchRosterEntry Describe(PlanConfig? plan, string? stateDir = null) =>
+        WatchRoster.Describe("repo", "ks26", "run-abcdef123", "Running", 4317, 42, plan, stateDir ?? _dir, Now);
+
+    [Fact]
+    public void ARunWithNoSupervisorBlockIsListedAsWatchedByNothing()
+    {
+        var e = Describe(Plan());
+
+        Assert.Equal("none", e.Supervisor);
+        Assert.Equal("none", e.Remote);
+        Assert.Equal("-", e.Fuse);
+        Assert.True(e.Unwatched);
+    }
+
+    [Fact]
+    public void AnArmedSupervisorNamesItsCommandAndItsTimeout()
+    {
+        var e = Describe(Plan(new SupervisorConfig { Command = "claude -p night-watch", TimeoutMinutes = 7 }));
+
+        Assert.Contains("claude -p night-watch", e.Supervisor, StringComparison.Ordinal);
+        Assert.Contains("(7m)", e.Supervisor, StringComparison.Ordinal);
+        Assert.False(e.Unwatched);
+    }
+
+    /// <summary>The two ways a block can be present and inert. Both must read differently from
+    /// "none", because "there is a supervisor block and it does nothing" is the state an owner most
+    /// needs told.</summary>
+    [Fact]
+    public void ADeclaredButInertSupervisorSaysWhichKindOfInert()
+    {
+        Assert.Equal("disabled in the plan",
+            Describe(Plan(new SupervisorConfig { Enabled = false, Command = "claude -p x" })).Supervisor);
+        Assert.Equal("declared, no command",
+            Describe(Plan(new SupervisorConfig { Command = "  " })).Supervisor);
+    }
+
+    [Fact]
+    public void TheHourlyFuseIsCountedFromTheRunsOwnLedgerAndSaysWhenItIsBurnt()
+    {
+        var sup = new SupervisorConfig { Command = "claude -p x", MaxPerHour = 2 };
+
+        Assert.Equal("0/2 this hour", WatchRoster.FuseText(sup, _dir, Now));
+
+        SupervisorPolicy.RecordFire(_dir, Now.AddMinutes(-5));
+        Assert.Equal("1/2 this hour", WatchRoster.FuseText(sup, _dir, Now));
+
+        SupervisorPolicy.RecordFire(_dir, Now.AddMinutes(-1));
+        Assert.Equal("2/2 this hour BURNT", WatchRoster.FuseText(sup, _dir, Now));
+
+        // An hour later the same two fires are out of the window.
+        Assert.Equal("0/2 this hour", WatchRoster.FuseText(sup, _dir, Now.AddHours(2)));
+    }
+
+    [Fact]
+    public void AnUncappedFuseSaysSoRatherThanShowingAFractionOfZero()
+        => Assert.Equal("0/hr (uncapped)",
+            WatchRoster.FuseText(new SupervisorConfig { Command = "x", MaxPerHour = 0 }, _dir, Now));
+
+    [Fact]
+    public void TheRemoteNamesEveryTargetAWakeWouldTravelTo()
+    {
+        var both = new SupervisorRemote { WebhookUrl = "https://example.invalid/hook", Telegram = true, MaxPerHour = 12 };
+        var text = WatchRoster.RemoteText(both, _dir, Now);
+        Assert.StartsWith("webhook+telegram", text, StringComparison.Ordinal);
+        Assert.Contains("0/12 this hour", text, StringComparison.Ordinal);
+
+        Assert.Equal("none", WatchRoster.RemoteText(null, _dir, Now));
+        Assert.Equal("disabled in the plan",
+            WatchRoster.RemoteText(new SupervisorRemote { Enabled = false, Telegram = true }, _dir, Now));
+        Assert.Equal("declared, no target", WatchRoster.RemoteText(new SupervisorRemote(), _dir, Now));
+    }
+
+    /// <summary>A local supervisor that has burnt its fuse is exactly the hour a remote wake matters,
+    /// so a run with only a remote is watched, not unwatched.</summary>
+    [Fact]
+    public void ARunWithOnlyARemoteIsStillWatched()
+    {
+        var e = Describe(Plan(new SupervisorConfig
+        {
+            Command = "",
+            Remote = new SupervisorRemote { Telegram = true },
+        }));
+
+        Assert.False(e.Unwatched);
+        Assert.Equal("declared, no command", e.Supervisor);
+    }
+
+    /// <summary>The park-push cap in force, read off the same key the engine's limiter reads.</summary>
+    [Fact]
+    public void ThePushCapInForceIsListedPerRun()
+    {
+        Assert.Equal("1/incident", Describe(Plan()).Pushes);
+        Assert.Equal("4/incident", Describe(Plan(pushes: 4)).Pushes);
+        Assert.Equal("uncapped", Describe(Plan(pushes: 0)).Pushes);
+    }
+
+    /// <summary>The one answer that must never be invented. A run whose plan cannot be read from here
+    /// is still listed, saying exactly that — reporting it as "no supervisor" would be the surface
+    /// claiming to know the opposite of what it knows.</summary>
+    [Fact]
+    public void ARunWhosePlanCannotBeReadSaysSoRatherThanClaimingNothingIsArmed()
+    {
+        var e = Describe(plan: null);
+
+        Assert.Equal("plan not readable from here", e.Supervisor);
+        Assert.Equal("?", e.Remote);
+        Assert.Equal("?", e.Pushes);
+        Assert.False(e.Unwatched);
+        Assert.Equal("run-abcd", e.ShortRunId[..8]);
+    }
+}

@@ -32,8 +32,15 @@ public sealed class RunContext
     public IRunStore? Store { get; }
     public ProcessSupervisor? ProcessSupervisor { get; }
     public ConcurrentQueue<ControlCommand>? ControlInbox { get; }
+    /// <summary>KS2.6: under <c>--dry-run</c> this is a <c>MutedTelegramService</c> wrapping the real
+    /// one — every push in the run path goes through this property, so a preview run cannot reach a
+    /// phone through a call site nobody remembered to guard.</summary>
     public ITelegramService Telegram { get; }
     public WebhookNotifier Webhooks { get; }
+
+    /// <summary>KS2.6: the gate every notification passes through — dry-run silence and the
+    /// one-push-per-incident rate limit. See <see cref="ParkNotifier"/>.</summary>
+    public ParkNotifier Notifier { get; }
     public IWorkflowResolver Workflows { get; }
     public IAssignmentPolicy Assignments { get; }
     public IQaPolicy Qa { get; }
@@ -138,7 +145,8 @@ public sealed class RunContext
         IWorkflowResolver? workflowResolver,
         ILogger logger,
         IAssignmentPolicy? assignmentPolicy = null,
-        IQaPolicy? qaPolicy = null)
+        IQaPolicy? qaPolicy = null,
+        ParkNotifier? notifier = null)
     {
         Plan = plan;
         State = state;
@@ -153,7 +161,10 @@ public sealed class RunContext
         Store = store;
         ProcessSupervisor = processSupervisor;
         ControlInbox = controlInbox;
-        Telegram = telegram;
+        // KS2.6: derived from the run's own options unless a caller hands one in (the replay harness
+        // does, to drive a dry-run LOOP with a live notifier and count what the flood used to send).
+        Notifier = notifier ?? new ParkNotifier(options.DryRun, plan.Limits.MaxPushesPerIncident);
+        Telegram = Notifier.DryRun ? new MutedTelegramService(telegram) : telegram;
         Webhooks = webhooks;
         Workflows = workflowResolver ?? new WorkflowEngine();
         Assignments = assignmentPolicy ?? new DefaultAssignmentPolicy();

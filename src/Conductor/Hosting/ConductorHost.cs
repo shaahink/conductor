@@ -121,7 +121,10 @@ public static class ConductorHost
         builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<TelegramService>());
 
         // B6.4: Webhook notifier (generic/Discord/Slack) — fire-and-forget HTTP POST.
-        builder.Services.AddSingleton<WebhookNotifier>();
+        // KS2.6: constructed explicitly rather than by convention, so the dry-run flag reaches it.
+        // A preview run must not POST to a real endpoint.
+        builder.Services.AddSingleton(sp => new WebhookNotifier(
+            plan, sp.GetRequiredService<ILogger<WebhookNotifier>>(), dryRun: opts.DryRun));
 
         // B9.2: planner decomposition — produces ordered sub-tasks from a checkpoint.
         builder.Services.AddSingleton<IPlanner>(new CheckpointPlanner());

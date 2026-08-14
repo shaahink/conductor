@@ -147,9 +147,14 @@ public sealed partial class VerdictEngine
             _ctx.State.AwaitingOwnerReason = AwaitingOwnerReason.OwnerGate;
             _ctx.Log($"owner-gate: stage {id} green — awaiting owner approval (run `conductor approve` or press R in the TUI)");
             _saveAndReport();
-            Notify($"Conductor {_ctx.Plan.Name}: stage {id} is green and awaiting owner approval");
-            _ = _telegram.PushWithKeyboardAsync($"Stage {id} green — owner approval needed",
-                [("Approve", "approve")], CancellationToken.None);
+            // KS2.6: a park is an incident, and this one is keyed on the stage it is waiting for —
+            // so the owner is asked once per gate, and a second gate later still asks.
+            if (_ctx.Notifier.Admit(nameof(RunStatus.AwaitingOwner), $"owner-gate {id}"))
+            {
+                Notify($"Conductor {_ctx.Plan.Name}: stage {id} is green and awaiting owner approval");
+                _ = _telegram.PushWithKeyboardAsync($"Stage {id} green — owner approval needed",
+                    [("Approve", "approve")], CancellationToken.None);
+            }
             return;
         }
         basis ??= GateRunner.ConfirmationBasis(
