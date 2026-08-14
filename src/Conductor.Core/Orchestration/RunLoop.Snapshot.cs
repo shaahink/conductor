@@ -18,22 +18,8 @@ namespace Conductor.Core.Orchestration;
 public sealed partial class RunLoop
 {
     // ---------------------------------------------------------------- prompt construction
-
-    private string BuildPrompt(SessionKind kind, StageConfig stage, int sessionNumber, int attempt, int maxAttempts)
-    {
-        var isReview = stage.Kind.Equals("review", StringComparison.OrdinalIgnoreCase);
-        var reviewPath = isReview ? Path.Combine(_ctx.Plan.StateDir, "reviews", $"{stage.Id}.md") : "";
-        return kind switch
-        {
-            SessionKind.Resume => _ctx.Prompts.Resume(stage, sessionNumber, attempt, maxAttempts, _ctx.State.PendingResume!),
-            SessionKind.Audit => _ctx.Prompts.Audit(stage, sessionNumber, _ctx.State.PendingAudit!, _ctx.State.CurrentStageStartHead ?? "HEAD~1"),
-            SessionKind.Verify => _ctx.Prompts.Verify(stage, sessionNumber, _ctx.State.PendingVerify!),
-            SessionKind.Fix => _ctx.Prompts.Fix(stage, sessionNumber, attempt, maxAttempts, _ctx.State.PendingFix!),
-            _ => isReview
-                ? _ctx.Prompts.Review(stage, sessionNumber, attempt, maxAttempts, reviewPath)
-                : _ctx.Prompts.Deliver(stage, sessionNumber, attempt, maxAttempts),
-        };
-    }
+    // (Round 6: the dry-run branch's private prompt switch is gone — SessionComposer.Compose is the
+    // one place a session's prompt is put together, and the dry run calls it like the dispatch does.)
 
     /// <summary>SC3.3: an unresolvable placeholder is a config defect, not a crash. It used to travel
     /// all the way out of the process — the refusal reached stderr, nothing reached conductor.log, and

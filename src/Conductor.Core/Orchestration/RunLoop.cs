@@ -31,6 +31,27 @@ public sealed partial class RunLoop
     /// for the rest of the run.</summary>
     private readonly Action<PlanConfig>? _onPlanSwapped;
 
+    /// <summary>Round 6: the decision's kind ladder ends in the workflow's start kind, and that rung
+    /// must consult the SAME collaborators the session runner will — the context's resolver and QA
+    /// policy, and the live work graph for the per-item dial — or the decision and the dispatch can
+    /// disagree at the session boundary. Lazy because the context's seams are set at construction.</summary>
+    private LaunchKindInputs? _kindInputs;
+    private LaunchKindInputs KindInputs => _kindInputs ??= new LaunchKindInputs(_ctx.Workflows, _ctx.Qa, LiveGraph);
+
+    /// <summary>The work graph as the runner will fold it: from the live store when there is one,
+    /// from run.db at rest when there is not (a dry-run host registers no store — round 5).</summary>
+    private TaskGraph? LiveGraph()
+    {
+        if (_ctx.Store is not { } store) return SessionComposer.GraphAtRest(_ctx.Plan, _ctx.State.RunId);
+        try
+        {
+            var graph = new TaskGraph();
+            graph.Fold(store.ReadAllEvents(_ctx.State.RunId));
+            return graph;
+        }
+        catch (InvalidOperationException) { return null; }
+    }
+
     private readonly ControlDispatcher? _dispatcher;
     private ControlDispatcher? _dispatcherLazy;
     private ControlDispatcher Dispatcher => _dispatcherLazy ??= _dispatcher ?? new ControlDispatcher(
@@ -143,8 +164,11 @@ public sealed partial class RunLoop
                 // KS3.4: WHICH branch fires next — phase gate, completion, a park, or a composed
                 // session of a given kind on a given stage — is StageSelection.NextAction's answer,
                 // and `preflight`'s compose leg reads the SAME function. This loop owns only the side
-                // effects of executing that answer; it holds no private copy of the decision.
-                var next = StageSelection.NextAction(_ctx.Plan, _ctx.State, track);
+                // effects of executing that answer; it holds no private copy of the decision. The
+                // kind inputs are the runner's own collaborators (round 6): the workflow rung of the
+                // ladder must consult the same resolver, QA policy and work graph the session runner
+                // will, or the decision and the dispatch part ways at the session boundary again.
+                var next = StageSelection.NextAction(_ctx.Plan, _ctx.State, track, kinds: KindInputs);
 
                 if (next.Step == LaunchStep.ParkedStatus)
                 {
@@ -200,11 +224,9 @@ public sealed partial class RunLoop
                 var stage = next.Stage!;
                 if (stage.Id != _ctx.State.CurrentStage)
                 {
-                    _ctx.State.CurrentStage = stage.Id;
-                    _ctx.State.CurrentStageStartHead = Git.Head(_ctx.Plan.Repo);
-                    _ctx.State.AttemptsThisStage = 0;
-                    _ctx.State.PendingFix = null;
-                    _ctx.State.WorkflowStepIndices.Remove(stage.Id); // reset workflow step for new stage
+                    // The field mutations are SessionComposer.ProjectStageEntry — one copy, because a
+                    // surface composing at rest must apply the same entry (round 6: the start head).
+                    SessionComposer.ProjectStageEntry(_ctx.State, stage, Git.Head(_ctx.Plan.Repo));
 
                     // M3.2: apply per-stage overrides
                     ApplyStageOverrides(stage);
@@ -296,19 +318,27 @@ public sealed partial class RunLoop
                 {
                     if (next.SleepUntilUtc is { } wakes)
                         _ctx.Sink.Log($"--- DRY RUN: state.blockedUntilUtc {wakes:yyyy-MM-dd HH:mm:ss}Z is still in the future — a live run sleeps at the session boundary until then before spawning ---");
-                    var kind = next.Kind;
-                    string prompt;
                     // SC3.3: --dry-run exists to find exactly this before a run spends anything.
+                    // Round 6: the WHOLE composition — kind, retarget, synthesized pendings, battery,
+                    // claimed items, task context, parallel-audit findings — is SessionComposer's,
+                    // the same call the live dispatch makes, so what a dry run prints is the prompt a
+                    // launch would spawn rather than a private subset of it. A dry run's host holds
+                    // no store, so the graph is the at-rest read and the knowledge batteries are
+                    // absent — the same measured string preflight's compose leg reports.
                     // next.AttemptNumber == State.NextAttemptNumber here (the stage-entry block above
                     // already reset the counter when the stage changed) — read off the decision so the
                     // number every surface renders is the decision's, not a private re-derivation.
-                    try { prompt = BuildPrompt(kind, stage, _ctx.State.SessionCounter + 1, next.AttemptNumber, maxAttempts); }
+                    SessionComposer.Composition composed;
+                    try
+                    {
+                        composed = SessionComposer.Compose(_ctx.Plan, _ctx.Prompts, _ctx.Assignments,
+                            _ctx.State, track, LiveGraph(),
+                            _ctx.Store, next.Kind, stage, _ctx.State.SessionCounter + 1, next.AttemptNumber,
+                            _ctx.State.PendingResume, _ctx.State.PendingAudit, _ctx.State.PendingVerify, _ctx.State.PendingFix);
+                    }
                     catch (PromptCompositionException ex) { _ctx.Sink.Log($"--- DRY RUN: prompt for stage {stage.Id} REFUSED: {ex.Message} ---"); return 1; }
-                    var batterySection = _ctx.Prompts.BatterySection(_ctx.State, _ctx.Store);
-                    if (batterySection.Length > 0)
-                        prompt = prompt.TrimEnd() + "\n\n" + batterySection;
-                    _ctx.Sink.Log($"--- DRY RUN: would start session #{_ctx.State.SessionCounter + 1} ({kind}, stage {stage.Id}) with prompt: ---");
-                    _ctx.Sink.Log(prompt);
+                    _ctx.Sink.Log($"--- DRY RUN: would start session #{_ctx.State.SessionCounter + 1} ({composed.Kind}, stage {composed.Stage.Id}) with prompt: ---");
+                    _ctx.Sink.Log(composed.Prompt);
                     return 0;
                 }
 
@@ -344,27 +374,23 @@ public sealed partial class RunLoop
 
                 _lanes.StartAnalysisLanes(stage, track.HandoffBlock, ct);
 
-                if (_ctx.State.PendingParallelAudit != null && _ctx.State.PendingFix == null && _ctx.State.PendingResume == null)
+                // Round 6: both parallel-audit branches are the DECISION's now — the lane spawn and
+                // the HIGH-outcome fix were re-decided here, after StageSelection had answered, so
+                // the drill named a Deliver for a launch that spawned a lane agent and composed a
+                // Fix. The loop executes the decision's flags; the conditions live in one place.
+                if (next.SpawnsParallelAuditLane)
                 {
-                    _lanes.StartParallelAudit(_ctx.State.PendingParallelAudit, ct);
+                    _lanes.StartParallelAudit(_ctx.State.PendingParallelAudit!, ct);
                 }
-                if (_ctx.State.ParallelAuditOutcome is { Completed: true } outcome && _ctx.State.PendingFix == null)
+                if (next.QueuesParallelAuditFix)
                 {
-                    if (outcome.MaxSeverity == AuditFindingSeverity.High)
-                    {
-                        var fixNote = $"prior parallel audit found HIGH-severity issues in stage {outcome.StageId}:\n{Trunc(outcome.Findings, 2000)}";
-                        _ctx.State.PendingFix = new PendingFix
-                        {
-                            FromSession = _ctx.State.History.LastOrDefault()?.Number ?? 0,
-                            GateFailures = "",
-                            ProgressSummary = fixNote,
-                        };
-                        _ctx.State.ParallelAuditOutcome = null;
-                        _ctx.State.Status = RunStatus.Idle;
-                        _ctx.Log($"parallel audit: HIGH findings from stage {outcome.StageId} — queuing fix session");
-                        _ctx.Save();
-                        continue;
-                    }
+                    var outcome = _ctx.State.ParallelAuditOutcome!;
+                    _ctx.State.PendingFix = SessionComposer.FixFromParallelAudit(_ctx.State, outcome);
+                    _ctx.State.ParallelAuditOutcome = null;
+                    _ctx.State.Status = RunStatus.Idle;
+                    _ctx.Log($"parallel audit: HIGH findings from stage {outcome.StageId} — queuing fix session");
+                    _ctx.Save();
+                    continue;
                 }
 
                 _ctx.Notifier.Resolve();   // KS2.6: work is happening — the open park incident is over

@@ -62,60 +62,34 @@ public sealed partial class SessionRunner
         var pendingFix = _ctx.State.PendingFix; _ctx.State.PendingFix = null;
         var pendingVerify = _ctx.State.PendingVerify; _ctx.State.PendingVerify = null;
 
-        // Resolve session kind: workflow-driven (M3.1) with pending-state fallback
-        // for crash recovery (Resume must carry the agent session id).
-        var kind = ResolveSessionKind(stage, pendingResume, pendingAudit, pendingVerify, pendingFix, preTrack);
-
-        // A workflow-resolved kind can arrive without its pending context (a custom workflow that
-        // opens on a QA step, or a pending cleared out from under the recorded index). Verify and
-        // audit have a well-defined meaning without one — review the stage's work since it started
-        // — so synthesize that context rather than dereference null. A fix without failure context
-        // is just a delivery attempt; fall back honestly.
-        var lastSession = _ctx.State.History.Count > 0 ? _ctx.State.History[^1].Number : _ctx.State.SessionCounter;
-        if (kind == SessionKind.Verify && pendingVerify is null)
-            pendingVerify = new PendingVerify { FromSession = lastSession, StageId = stage.Id, StageStartHead = _ctx.State.CurrentStageStartHead ?? "" };
-        else if (kind == SessionKind.Audit && pendingAudit is null)
-            pendingAudit = new PendingAudit { StageId = stage.Id, StageStartHead = _ctx.State.CurrentStageStartHead ?? "" };
-        else if (kind == SessionKind.Fix && pendingFix is null)
-            kind = SessionKind.Deliver;
-
-        // W1.3 (bug #6): a Verify session reviews the stage that DELIVERED. After an advance the
-        // loop's current stage has already moved on — PendingVerify.StageId is authoritative for
-        // the prompt, the session record, and the verdict scope. (All three U-series verifies were
-        // dispatched against the NEXT stage and produced nothing usable.)
-        if (kind == SessionKind.Verify && pendingVerify is { StageId.Length: > 0 } pv
-            && !pv.StageId.Equals(stage.Id, StringComparison.OrdinalIgnoreCase)
-            && _ctx.Plan.Stages.FirstOrDefault(s => s.Id.Equals(pv.StageId, StringComparison.OrdinalIgnoreCase)) is { } deliveredStage)
-        {
-            _ctx.Log($"verify session targets stage {deliveredStage.Id} (the delivered work), not the loop's current {stage.Id}");
-            stage = deliveredStage;
-        }
-
-        // P1: ask the assignment policy who runs this session and which ready items it claims.
-        // With no `pipeline` rules the default policy reproduces the classic behavior exactly
-        // (stage/plan default agent, the first not-done checkpoint, one item).
-        // PF3: each item carries the declared paths of its OPEN task cards, so multi-item claims
-        // are refused on REAL data, not just plan-declared stage paths. Folded once here; the P3
-        // task-context section below reuses the same graph.
+        // P1/PF3/W4.4: the work graph, folded ONCE — the kind ladder's per-item QA dial, the
+        // assignment policy's declared path claims and the P3 task-context section all read this
+        // same projection (the dial used to fold a private second copy).
         TaskGraph? taskGraph = null;
         if (_ctx.Store != null)
         {
             taskGraph = new TaskGraph();
             taskGraph.Fold(_ctx.Store.ReadAllEvents(_ctx.State.RunId));
         }
-        // SC5.3: a SKIPPED checkpoint is settled work — the engine must stop scheduling it, or
-        // `task --skipped` is a verb that moves a card on the board and changes nothing at all.
-        var readyItems = preTrack.ForStage(stage.Id).Where(c => c.IsOpen)
-            .Select(c => new ReadyItem { Id = c.Id, Title = c.Title, PathClaims = taskGraph?.DeclaredOpenPaths(c.Id) })
-            .ToList();
-        var assignment = _ctx.Assignments.Assign(_ctx.Plan.Pipeline, kind, readyItems, claimedPaths: null);
-        if (assignment.Model != null || assignment.Persona != null || assignment.Command != null)
-            _ctx.Log($"P1 assignment: role '{DefaultAssignmentPolicy.RoleFor(kind)}' → " +
-                     $"{(assignment.Command != null ? $"command {assignment.Command} " : "")}" +
-                     $"{(assignment.Model != null ? $"model {assignment.Model} " : "")}" +
-                     $"{(assignment.Persona != null ? $"persona {assignment.Persona}" : "")}".TrimEnd());
-        if (assignment.Items.Count > 1)
-            _ctx.Log($"P1 assignment: multi-item session — claims {string.Join(", ", assignment.Items.Select(i => i.Id))}");
+
+        // Resolve session kind: workflow-driven (M3.1) with pending-state fallback for crash
+        // recovery (Resume must carry the agent session id). The ladder IS the launch decision's
+        // (StageSelection — round 6): the same function `preflight`'s drill and the dry run read,
+        // consulted here with the live step-index dictionary because a stage's very first workflow
+        // resolution advances and records it, and that side effect belongs where the session begins.
+        var kind = ResolveSessionKind(stage, pendingResume, pendingAudit, pendingVerify, pendingFix, preTrack, taskGraph);
+
+        // W1.3 (bug #6): a Verify session reviews the stage that DELIVERED. After an advance the
+        // loop's current stage has already moved on — PendingVerify.StageId is authoritative for
+        // the prompt, the session record, and the verdict scope. (All three U-series verifies were
+        // dispatched against the NEXT stage and produced nothing usable.) The rule is shared with
+        // the compose surfaces, so the drill names the same stage this dispatch records.
+        var target = SessionComposer.EffectiveStage(_ctx.Plan, stage, kind, pendingVerify);
+        if (!ReferenceEquals(target, stage))
+        {
+            _ctx.Log($"verify session targets stage {target.Id} (the delivered work), not the loop's current {stage.Id}");
+            stage = target;
+        }
 
         _ctx.State.SessionCounter++;
         var attempt = _ctx.State.NextAttemptNumber; // SC2.2: the one source every attempt line reads
@@ -131,6 +105,36 @@ public sealed partial class SessionRunner
             await File.WriteAllTextAsync(reviewPath, skeleton, ct).ConfigureAwait(false);
             _ctx.Log($"review stage {stage.Id}: scaffolded review artifact at {reviewPath}");
         }
+
+        // Round 6: the prompt — template render (assignment-persona resolved), battery section,
+        // claimed-items list, task-context cards, parallel-audit findings — is SessionComposer's,
+        // ONE call shared with the dry run and preflight's compose leg, so the measured length IS
+        // the spawned length. This runner performs only the mutations the composition implies.
+        var composed = SessionComposer.Compose(_ctx.Plan, _ctx.Prompts, _ctx.Assignments,
+            _ctx.State, preTrack, taskGraph, _ctx.Store,
+            kind, stage, _ctx.State.SessionCounter, attempt,
+            pendingResume, pendingAudit, pendingVerify, pendingFix);
+        kind = composed.Kind;
+        stage = composed.Stage;
+        pendingAudit = composed.Audit;
+        pendingVerify = composed.Verify;
+        pendingFix = composed.Fix;
+        var assignment = composed.Assignment;
+        var prompt = composed.Prompt;
+        if (composed.ConsumesParallelAuditOutcome)
+            _ctx.State.ParallelAuditOutcome = null;
+
+        // P1: with no `pipeline` rules the default policy reproduces the classic behavior exactly
+        // (stage/plan default agent, the first not-done checkpoint, one item). SC5.3: a SKIPPED
+        // checkpoint is settled work — the composer offers only open items, so `task --skipped`
+        // actually stops the scheduling it claims to.
+        if (assignment.Model != null || assignment.Persona != null || assignment.Command != null)
+            _ctx.Log($"P1 assignment: role '{DefaultAssignmentPolicy.RoleFor(kind)}' → " +
+                     $"{(assignment.Command != null ? $"command {assignment.Command} " : "")}" +
+                     $"{(assignment.Model != null ? $"model {assignment.Model} " : "")}" +
+                     $"{(assignment.Persona != null ? $"persona {assignment.Persona}" : "")}".TrimEnd());
+        if (assignment.Items.Count > 1)
+            _ctx.Log($"P1 assignment: multi-item session — claims {string.Join(", ", assignment.Items.Select(i => i.Id))}");
 
         var personaName = assignment.Persona ?? _ctx.Plan.ResolvePersona(stage);
         var activeCp = preTrack.ForStage(stage.Id).FirstOrDefault(c => c.IsOpen);
@@ -155,47 +159,6 @@ public sealed partial class SessionRunner
             }
             if (tasks.Count > 0)
                 _ctx.Log($"B9.2: decomposed checkpoint {activeCp.Id} into {tasks.Count} sub-task(s)");
-        }
-
-        var prompt = BuildPrompt(kind, stage, _ctx.State.SessionCounter, attempt, maxAttempts,
-            pendingResume, pendingAudit, pendingVerify, pendingFix, isReview, reviewPath, assignment.Persona);
-        var batterySection = _ctx.Prompts.BatterySection(_ctx.State, _ctx.Store);
-        if (batterySection.Length > 0)
-            prompt = prompt.TrimEnd() + "\n\n" + batterySection;
-
-        // P1: a multi-item session must SEE every item it claimed — the prompt names each one.
-        if (assignment.Items.Count > 1)
-        {
-            var claimedList = new StringBuilder();
-            claimedList.AppendLine("## Claimed items this session");
-            claimedList.AppendLine("The assignment policy claimed ALL of the following conflict-free items for this single session. Deliver each one and update its tracker row (Status + Commit + Evidence) individually.");
-            foreach (var item in assignment.Items)
-                claimedList.AppendLine($"- **{item.Id}** — {item.Title}");
-            prompt = prompt.TrimEnd() + "\n\n" + claimedList.ToString().TrimEnd() + "\n";
-        }
-
-        // P3/W2.3: the cards for the claimed checkpoints — title and owner-attached context — are real
-        // prompt input, not decoration, and are rendered by the same composer the card detail serves.
-        // (taskGraph was folded once above, before the assignment — PF3.)
-        if (taskGraph != null)
-        {
-            var contextSection = BuildTaskContextSection(_ctx.Plan, taskGraph, assignment.Items.Select(i => i.Id));
-            if (contextSection.Length > 0)
-                prompt = prompt.TrimEnd() + "\n\n" + contextSection;
-        }
-
-        if (kind == SessionKind.Deliver && _ctx.State.ParallelAuditOutcome is { Completed: true, MaxSeverity: not AuditFindingSeverity.High } outcome)
-        {
-            var findings = Trunc(outcome.Findings, 3000);
-            if (!string.IsNullOrWhiteSpace(findings))
-            {
-                prompt = prompt.TrimEnd() + $"\n\n## Parallel audit findings for stage {outcome.StageId}\n" +
-                    "The following audit findings were produced by a read-only audit lane running concurrently with the previous stage. " +
-                    // SC3.3: this line was not interpolated, so every parallel-audit hand-off since
-                    // B12 shipped the agent the literal text "{findings}" and dropped the findings.
-                    $"Address LOW and MEDIUM findings in this session if convenient.\n\n{findings}";
-                _ctx.State.ParallelAuditOutcome = null;
-            }
         }
 
         var rec = new SessionRecord

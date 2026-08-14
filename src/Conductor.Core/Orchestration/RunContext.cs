@@ -89,13 +89,13 @@ public sealed class RunContext
     public string ItemQaFor(StageConfig stage, TrackerSnapshot? preTrack)
     {
         if (Store == null || preTrack == null || stage == null) return "";
-        var itemId = preTrack.ForStage(stage.Id).FirstOrDefault(c => c.IsOpen)?.Id;
-        if (string.IsNullOrEmpty(itemId)) return "";
         try
         {
             var graph = new TaskGraph();
             graph.Fold(Store.ReadAllEvents(State.RunId));
-            return graph.Find(itemId)?.Qa ?? "";
+            // The projection itself is StageSelection.ItemQa — the one copy the kind ladder, the
+            // session runner and preflight's drill all read (KS3.4 round 6).
+            return StageSelection.ItemQa(preTrack, stage, graph);
         }
         catch (InvalidOperationException) { return ""; }
     }

@@ -782,9 +782,12 @@ public sealed class KS3_4PreflightTests : IDisposable
         var bare = new PromptBuilder(plan).Deliver(plan.Stages[0], 2, 1,
             Math.Max(1, plan.Stages[0].Sessions * plan.Limits.StageSlackFactor));
         // The cap covers the section as a whole, plus at most two characters of truncation tail —
-        // and it is taken off the BARE prompt, so a measured battery is never counted twice.
-        Assert.Contains($"at most {bare.TrimEnd().Length + 2 + 2048 + 2} chars", Detail(legs, "compose"),
-            StringComparison.Ordinal);
+        // and it is taken off the BARE prompt, so a measured battery is never counted twice. The
+        // pid-width slack rides on top (round 6): the launch's pid can render wider than the
+        // drill's, and "at most" has to mean at most.
+        Assert.Contains(
+            $"at most {bare.TrimEnd().Length + 2 + 2048 + 2 + PreflightCommand.PidSlack} chars",
+            Detail(legs, "compose"), StringComparison.Ordinal);
         Assert.Contains("batteries.maxBytes 2048", Detail(legs, "compose"), StringComparison.Ordinal);
     }
 
@@ -1362,6 +1365,294 @@ public sealed class KS3_4PreflightTests : IDisposable
             Headline(legs, "compose"));
     }
 
+    // ------------------------------------------------------------------ round 6: the far side of the decision
+
+    /// <summary>Round 6's blocking finding (1), as the agreement fact the suite was missing: a
+    /// persisted <c>parallelAuditOutcome</c> with HIGH findings makes the launch's first turn queue a
+    /// fix (<c>RunLoop</c> consumes the outcome BEFORE any session composes), so the next composed
+    /// session is a Fix — and no dry-run fact can see it, because the dry run returns before that
+    /// branch. This one drives the REAL store-backed loop through an ACTUAL dispatch and compares the
+    /// drill's whole headline against the kind the dispatch recorded and the prompt file it wrote.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task AHighParallelAuditOutcomeAgreesWithTheLiveLoopThroughARealDispatch()
+    {
+        var plan = CleanPlan(p => p.Limits.AuthPreflight = false);
+        SaveState(plan, s =>
+        {
+            s.RunId = "r6pahigh";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 1;
+            s.ParallelAuditOutcome = new ParallelAuditOutcome
+            {
+                StageId = "S1",
+                MaxSeverity = AuditFindingSeverity.High,
+                Findings = "HIGH: the seeded parallel audit found a high severity issue",
+                Completed = true,
+            };
+        });
+        var legs = await RunAsync(plan);
+
+        var (lines, state, prompt) = await LiveSessionAsync(plan);
+
+        Assert.Contains(lines, l => l.Contains("queuing fix session", StringComparison.Ordinal));
+        var rec = state.History[^1];
+        Assert.Equal(SessionKind.Fix, rec.Kind);
+        Assert.Equal("S1", rec.Stage);
+        Assert.Equal(
+            $"next session #2 is {rec.Kind} on stage 'S1', composing to {prompt.Length} chars (nothing spawned)",
+            Headline(legs, "compose"));
+    }
+
+    /// <summary>The same rung at the decision itself: a completed HIGH outcome takes the fix's rung
+    /// of the ladder (resume · audit · verify · fix · workflow), the materialization is the
+    /// decision's flag rather than a loop-private re-decision, and a fix already queued suppresses
+    /// it exactly as the loop's own guard does.</summary>
+    [Fact]
+    public void ACompletedHighAuditOutcomeTakesTheFixRungOfTheLadder()
+    {
+        var plan = CleanPlan();
+        var high = new ParallelAuditOutcome { StageId = "S1", MaxSeverity = AuditFindingSeverity.High, Findings = "HIGH: x", Completed = true };
+
+        var state = new RunState { PlanName = plan.Name, RunId = "r6", CurrentStage = "S1", SessionCounter = 1, ParallelAuditOutcome = high };
+        var next = StageSelection.NextAction(plan, state, Track(plan));
+        Assert.Equal(LaunchStep.Compose, next.Step);
+        Assert.Equal(SessionKind.Fix, next.Kind);
+        Assert.True(next.QueuesParallelAuditFix);
+
+        // A queued verify still outranks the fix — the loop queues the fix and composes the verify.
+        state.PendingVerify = new PendingVerify { FromSession = 1, StageId = "S1" };
+        var verifyFirst = StageSelection.NextAction(plan, state, Track(plan));
+        Assert.Equal(SessionKind.Verify, verifyFirst.Kind);
+        Assert.True(verifyFirst.QueuesParallelAuditFix);
+
+        // A fix already queued suppresses the materialization (the loop's own PendingFix == null guard).
+        state.PendingVerify = null;
+        state.PendingFix = new PendingFix { FromSession = 1 };
+        var already = StageSelection.NextAction(plan, state, Track(plan));
+        Assert.Equal(SessionKind.Fix, already.Kind);
+        Assert.False(already.QueuesParallelAuditFix);
+    }
+
+    /// <summary>And the whole surface chain on the same state: the drill's headline against what
+    /// <c>run --dry-run</c> prints, to the character — the dry run composes through the same
+    /// composer now, so a Deliver masquerade cannot pass on either side.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task TheParallelAuditFixAgreesWithRunDryRunToTheCharacter()
+    {
+        var plan = CleanPlan(p => p.Limits.AuthPreflight = false);
+        SaveState(plan, s =>
+        {
+            s.RunId = "r6padry";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 1;
+            s.ParallelAuditOutcome = new ParallelAuditOutcome
+            {
+                StageId = "S1", MaxSeverity = AuditFindingSeverity.High,
+                Findings = "HIGH: the seeded parallel audit found a high severity issue", Completed = true,
+            };
+        });
+        var legs = await RunAsync(plan);
+        Assert.Contains("queues the fix composed here", Detail(legs, "compose"), StringComparison.Ordinal);
+
+        var lines = await DryRunAsync(plan);
+        var announce = lines.FindIndex(l => l.Contains("DRY RUN: would start session #", StringComparison.Ordinal));
+        Assert.True(announce >= 0, "the dry run never announced a session:\n" + string.Join("\n", lines));
+        Assert.Contains("would start session #2 (Fix, stage S1)", lines[announce], StringComparison.Ordinal);
+
+        var prompt = lines[announce + 1];
+        Assert.Equal(
+            $"next session #2 is Fix on stage 'S1', composing to {prompt.Length} chars (nothing spawned)",
+            Headline(legs, "compose"));
+    }
+
+    /// <summary>Round 6's blocking finding (3): a persisted <c>workflowStepIndices</c> mid-chain —
+    /// the default deliver-verify's recorded step 1 — resolves the next session to a VERIFY, through
+    /// the same <c>ResolveStartKind</c> the runner consults (a recorded index is consumed without
+    /// advancing). Decision, drill, and the real store-backed dispatch, all one answer.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task AMidChainWorkflowIndexAgreesWithTheLiveLoopThroughARealDispatch()
+    {
+        var plan = CleanPlan(p => p.Limits.AuthPreflight = false);
+        SaveState(plan, s =>
+        {
+            s.RunId = "r6wfmid";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 1;
+            s.WorkflowStepIndices["S1"] = 1; // deliver-verify, step 1 = verify
+        });
+        var legs = await RunAsync(plan);
+
+        var (lines, state, prompt) = await LiveSessionAsync(plan);
+
+        var rec = state.History[^1];
+        Assert.Equal(SessionKind.Verify, rec.Kind);
+        Assert.Contains(lines, l => l.Contains("session #2 start — Verify S1", StringComparison.Ordinal));
+        Assert.Equal(
+            $"next session #2 is Verify on stage 'S1', composing to {prompt.Length} chars (nothing spawned)",
+            Headline(legs, "compose"));
+    }
+
+    /// <summary>Round 6's blocking finding (2), the one with NO seeded state at all: a declared
+    /// custom workflow whose step 0 is an audit makes the very FIRST launch of a plainly-authored
+    /// plan an Audit session. The drill and the dry run both said Deliver — the sentence in
+    /// StageSelection claiming "step 0 resolves to Deliver in every shipped workflow" was only true
+    /// of the BUILT-IN workflows, and <c>plan.workflows</c> is a shipped authoring feature.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task ACustomWorkflowsFirstLaunchAgreesWithTheLiveLoopThroughARealDispatch()
+    {
+        var plan = AuditFirstWorkflowFixture();
+        var legs = await RunAsync(plan);
+
+        var lines = await DryRunAsync(plan);
+        var announce = lines.FindIndex(l => l.Contains("DRY RUN: would start session #", StringComparison.Ordinal));
+        Assert.True(announce >= 0, "the dry run never announced a session:\n" + string.Join("\n", lines));
+        Assert.Contains("would start session #1 (Audit, stage S1)", lines[announce], StringComparison.Ordinal);
+        Assert.Equal(
+            $"next session #1 is Audit on stage 'S1', composing to {lines[announce + 1].Length} chars (nothing spawned)",
+            Headline(legs, "compose"));
+
+        var (liveLines, state, prompt) = await LiveSessionAsync(plan);
+        var rec = state.History[^1];
+        Assert.Equal(SessionKind.Audit, rec.Kind);
+        Assert.Contains(liveLines, l => l.Contains("session #1 start — Audit S1", StringComparison.Ordinal));
+        Assert.Equal(lines[announce + 1].Length, prompt.Length);
+    }
+
+    /// <summary>A recorded index belongs to the stage that recorded it: the loop clears it on stage
+    /// ENTRY (a new stage starts its workflow over), and the decision models the same clear on a
+    /// copy — so a stale index on a stage about to be entered does not name a Verify nothing will
+    /// spawn, while the same index on the STANDING stage does.</summary>
+    [Fact]
+    public void AStageEntryDropsTheRecordedWorkflowIndexBeforeTheKindResolves()
+    {
+        var plan = CleanPlan(p =>
+            p.Stages.Add(new StageConfig { Id = "S2", Title = "the next one", Sessions = 1 }));
+        WriteTracker(plan, "nothing pending.", ("S1.1", "DONE"), ("S2.1", "TODO"));
+
+        var entering = new RunState { PlanName = plan.Name, RunId = "r6ix", CurrentStage = "S1", SessionCounter = 2 };
+        entering.WorkflowStepIndices["S2"] = 1;
+        Assert.Equal(SessionKind.Deliver, StageSelection.NextAction(plan, entering, Track(plan)).Kind);
+
+        var standing = new RunState { PlanName = plan.Name, RunId = "r6ix", CurrentStage = "S2", SessionCounter = 2 };
+        standing.WorkflowStepIndices["S2"] = 1;
+        Assert.Equal(SessionKind.Verify, StageSelection.NextAction(plan, standing, Track(plan)).Kind);
+    }
+
+    /// <summary>Round 6's MAJOR: the measured length is the length that spawns — the LOW/MEDIUM
+    /// parallel-audit findings section sits OUTSIDE <c>batteries.maxBytes</c> and was composed but
+    /// never measured (drill 7592, launch 10094). Now the drill, the dry run and the real dispatch
+    /// hand back the same count, and the battery caveat's ceiling actually bounds the spawn.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task AMediumAuditOutcomesFindingsAreMeasuredAndTheLaunchSpawnsThatLength()
+    {
+        var plan = CleanPlan(p => p.Limits.AuthPreflight = false);
+        var findings = "MEDIUM: " + string.Join(" ", Enumerable.Repeat("finding", 300));
+        SaveState(plan, s =>
+        {
+            s.RunId = "r6pamed";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 1;
+            s.ParallelAuditOutcome = new ParallelAuditOutcome
+            {
+                StageId = "S1", MaxSeverity = AuditFindingSeverity.Medium, Findings = findings, Completed = true,
+            };
+        });
+        var legs = await RunAsync(plan);
+        Assert.Contains("LOW/MEDIUM findings", Detail(legs, "compose"), StringComparison.Ordinal);
+
+        var (lines, state, prompt) = await LiveSessionAsync(plan);
+
+        var rec = state.History[^1];
+        Assert.Equal(SessionKind.Deliver, rec.Kind);
+        Assert.Contains("## Parallel audit findings for stage S1", prompt, StringComparison.Ordinal);
+        Assert.Equal(
+            $"next session #2 is Deliver on stage 'S1', composing to {prompt.Length} chars (nothing spawned)",
+            Headline(legs, "compose"));
+        Assert.Null(state.ParallelAuditOutcome); // the launch consumed what the drill said it would
+    }
+
+    /// <summary>Round 6's rider, disclosed: with a persisted <c>pendingParallelAudit</c> the
+    /// launch's FIRST act spawns an audit LANE AGENT — real model spend — before the session the
+    /// headline names. That spend is not a pure function of the saved state, so the drill cannot
+    /// price it; what it CAN do is say that it will happen, at the drill, instead of silently
+    /// prescribing a launch whose first act it never mentioned.</summary>
+    [Fact]
+    public async Task AQueuedParallelAuditLaneIsDisclosedAsLaunchSpend()
+    {
+        var plan = CleanPlan(p => p.Limits.AuthPreflight = false);
+        SaveState(plan, s =>
+        {
+            s.RunId = "r6lane";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 1;
+            s.PendingParallelAudit = new PendingParallelAudit { StageId = "S1", StageStartHead = "" };
+        });
+
+        var next = StageSelection.NextAction(plan, RunState.LoadOrNew(Path.Combine(plan.StateDir, "state.json"), plan.Name), Track(plan));
+        Assert.True(next.SpawnsParallelAuditLane);
+
+        var legs = await RunAsync(plan);
+        Assert.Empty(Failing(legs));
+        Assert.Contains("spawns that read-only audit lane agent", Detail(legs, "compose"), StringComparison.Ordinal);
+        Assert.Contains("cannot model what the lane will spend", Detail(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>The argv guard fires on the length that would ACTUALLY spawn: a plan whose base
+    /// prompt clears the ceiling while the appended findings section walks the composed argv over
+    /// it. Doctor's own matrix check cannot see the tail (it renders templates, not sessions), so
+    /// only the compose leg can fail this launch — and it must.</summary>
+    [Fact]
+    public async Task TheArgvGuardFiresOnTheComposedLengthThatWouldSpawn()
+    {
+        var plan = CleanPlan(p => p.Limits.AuthPreflight = false);
+        var bare = new PromptBuilder(plan).Deliver(plan.Stages[0], 2, 1, 2).Length;
+        // Base within ~1.2k of CreateProcess' 32767 ceiling; the 3k findings tail crosses it.
+        plan.PromptExtra = new string('x', DoctorCommand.CreateProcessCommandLineCeiling - bare - 1200);
+        SaveState(plan, s =>
+        {
+            s.RunId = "r6argv";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 1;
+            s.ParallelAuditOutcome = new ParallelAuditOutcome
+            {
+                StageId = "S1", MaxSeverity = AuditFindingSeverity.Medium,
+                Findings = "MEDIUM: " + new string('y', 2900), Completed = true,
+            };
+        });
+
+        var legs = await RunAsync(plan);
+
+        Assert.Contains("compose", Failing(legs));
+        Assert.Contains("truncated or refused at spawn", Detail(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>A declared custom workflow whose step 0 is an audit — round 6's reproduction (2),
+    /// as a fixture: fresh repo, no saved state, nothing seeded.</summary>
+    private PlanConfig AuditFirstWorkflowFixture()
+        => CleanPlan(p =>
+        {
+            p.Limits.AuthPreflight = false;
+            p.Workflows = new Dictionary<string, WorkflowDefinition>(StringComparer.Ordinal)
+            {
+                ["audit-first"] = new WorkflowDefinition
+                {
+                    Name = "audit-first",
+                    Repeat = true,
+                    Steps =
+                    [
+                        new WorkflowStep { Id = "a", Kind = SessionKind.Audit, Deliver = false },
+                        new WorkflowStep { Id = "d", Kind = SessionKind.Deliver, Deliver = true },
+                    ],
+                },
+            };
+            p.Stages[0].Workflow = "audit-first";
+        });
+
     // ------------------------------------------------------------------ the verb pins
 
     /// <summary>Adding a top-level verb is three edits and two of them are enforced elsewhere
@@ -1595,6 +1886,34 @@ public sealed class KS3_4PreflightTests : IDisposable
         var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token);
         Assert.Equal(0, code);
         return ([.. sink.Lines], state);
+    }
+
+    /// <summary>The REAL store-backed loop driven through an ACTUAL SESSION DISPATCH — <c>Once:
+    /// true</c> and an agent command that exits immediately (<c>git -p &lt;prompt&gt;</c> is not a git
+    /// command), so the dispatch is real — the kind is resolved where the session begins, the prompt
+    /// is written to <c>logs/session-NNN.prompt.md</c>, an argv is spawned — and nothing spends.
+    /// Rounds 1–6's lesson is that completion/park fixtures stop at the decision; this helper exists
+    /// so an agreement fact goes red when the leg and the DISPATCH disagree. Returns the narration,
+    /// the final state (whose last history record carries the dispatched kind) and the prompt the
+    /// session was actually handed.</summary>
+    private static async Task<(List<string> Lines, RunState State, string Prompt)> LiveSessionAsync(PlanConfig plan)
+    {
+        var sink = new RecordingSink();
+        var state = RunState.LoadOrNew(Path.Combine(plan.StateDir, "state.json"), plan.Name);
+        if (state.RunId.Length == 0) state.RunId = Guid.NewGuid().ToString("N");
+        using (var host = ConductorHost.Build(plan, state, sink,
+            new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false))
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            await host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token);
+        }
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        var logsDir = Path.Combine(plan.StateDir, "logs");
+        var promptFile = Directory.Exists(logsDir)
+            ? Directory.EnumerateFiles(logsDir, "session-*.prompt.md").OrderBy(f => f, StringComparer.Ordinal).LastOrDefault()
+            : null;
+        Assert.False(promptFile is null, "the live loop dispatched no session:\n" + string.Join("\n", sink.Lines));
+        return ([.. sink.Lines], state, await File.ReadAllTextAsync(promptFile!));
     }
 
     /// <summary>The REAL loop over the fixture — ConductorHost, Orchestrator, dry run — returning

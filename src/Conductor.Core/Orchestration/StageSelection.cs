@@ -1,4 +1,6 @@
+using Conductor.Core.Events;
 using Conductor.Models;
+using Conductor.Planning;
 
 namespace Conductor.Core.Orchestration;
 
@@ -128,18 +130,34 @@ public static class StageSelection
     /// same functions at rest (<see cref="Planning.WorkSnapshot.ReadAtRest"/> and
     /// <see cref="CrashRecovery.ApplyOrphan"/> over the same <c>run.db</c>, read-only, on the
     /// peeked state).</para>
+    /// <para>Round 6, the far side of the decision: the loop's session KIND was not finished by this
+    /// function either. With no pending state the session runner resolves the kind from the WORKFLOW
+    /// (<c>IWorkflowResolver.ResolveStartKind</c> over <c>state.workflowStepIndices</c> and the QA
+    /// dials — a recorded mid-chain index resolves to Verify; a declared custom workflow's step 0 is
+    /// whatever the author wrote, measured live as an Audit on a first launch this decision called a
+    /// Deliver), and the loop RE-decides after this decision: a persisted completed HIGH-severity
+    /// parallel audit becomes a queued fix before anything composes. Both rungs live here now —
+    /// <paramref name="kinds"/> carries the same workflow resolver and QA policy the runner consults,
+    /// and the ladder carries the parallel-audit fix — so the kind this decision names is the kind
+    /// the dispatch records.</para>
     /// <para>Still deliberately unmodelled, because their outcome is NOT a pure function of the
     /// saved state: the pre-hook (a subprocess whose exit code decides), approval mode (the designed
     /// launch flow — the operator is present, and `conductor approve` is the next keystroke, not a
     /// failure), the DNS preflight (measures the network at spawn time), and the in-process
-    /// backoffs (not persisted, so they cannot exist at launch). One more, stated rather than
-    /// hidden: with NO pending state at all, the session runner may still start a stage mid-workflow
-    /// (<c>IWorkflowResolver.ResolveStartKind</c> over <c>state.workflowStepIndices</c> and the QA
-    /// dials) — this decision names Deliver there, which is what the recorded index resolves to in
-    /// every shipped workflow's step 0.</para></summary>
+    /// backoffs (not persisted, so they cannot exist at launch). And one thing that IS modelled but
+    /// only as a disclosure: a persisted <c>state.pendingParallelAudit</c> makes the launch spawn an
+    /// audit LANE AGENT — real model spend — before the composed session
+    /// (<see cref="LaunchDecision.SpawnsParallelAuditLane"/>); the lane's outcome and cost are not a
+    /// function of the saved state, so a drill can only say that it will happen.</para></summary>
     /// <param name="nowUtc">The clock the <see cref="RunState.BlockedUntilUtc"/> comparison uses.
     /// Null means now; a test states an instant instead.</param>
-    public static LaunchDecision NextAction(PlanConfig plan, RunState state, TrackerSnapshot track, DateTime? nowUtc = null)
+    /// <param name="kinds">The collaborators the workflow rung of the kind ladder consults — the
+    /// SAME resolver and QA policy the session runner will (the loop passes its own; a surface at
+    /// rest constructs the defaults, which are what every host without a custom seam runs). Null
+    /// means the defaults with no work graph, which resolves identically for every plan that does
+    /// not set a per-item QA dial.</param>
+    public static LaunchDecision NextAction(PlanConfig plan, RunState state, TrackerSnapshot track,
+        DateTime? nowUtc = null, LaunchKindInputs? kinds = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(state);
@@ -153,7 +171,7 @@ public static class StageSelection
         if (state.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
             return new LaunchDecision(LaunchStep.ParkedStatus, null, null, SessionKind.Deliver);
 
-        var decision = Decide(plan, state, track);
+        var decision = Decide(plan, state, track, kinds ?? LaunchKindInputs.Default);
 
         // An agent-declared wait (SC5.1) does not change WHAT runs next, only WHEN: the loop sleeps
         // at the session boundary until the window opens, then executes exactly this decision. Said
@@ -164,7 +182,7 @@ public static class StageSelection
             : decision;
     }
 
-    private static LaunchDecision Decide(PlanConfig plan, RunState state, TrackerSnapshot track)
+    private static LaunchDecision Decide(PlanConfig plan, RunState state, TrackerSnapshot track, LaunchKindInputs kinds)
     {
         if (track.Checkpoints.Count == 0)
             return new LaunchDecision(LaunchStep.EmptyTracker, null, null, SessionKind.Deliver);
@@ -208,14 +226,31 @@ public static class StageSelection
         if (plan.Limits.MaxSessions is { } liveCap && liveCap > 0 && state.SessionCounter >= liveCap)
             return new LaunchDecision(LaunchStep.SessionCap, stage, stage.Id, SessionKind.Deliver);
 
+        // Round 6: the loop consumes a completed HIGH-severity parallel audit BEFORE anything
+        // composes (RunLoop's own branch, guarded by the same "no fix already queued") — the outcome
+        // becomes a queued PendingFix and the turn goes around, so the session the launch composes
+        // takes the fix's rung of the ladder. The flag tells the loop to perform that
+        // materialization; the ladder below tells every surface what composes after it.
+        var queuesAuditFix = fix == null
+            && state.ParallelAuditOutcome is { Completed: true, MaxSeverity: AuditFindingSeverity.High };
+
         // The loop's own ladder (SessionRunner.ResolveSessionKind / PendingToKind): resume, audit,
-        // VERIFY, fix, delivery. Verify was missing here — measured live at round 5: a run stopped
-        // with `--once` right after a delivery owes that delivery's verification, and both the drill
-        // and the dry run named a Deliver for a launch that spawned `Verify D2`.
+        // VERIFY, fix, then the WORKFLOW's start kind — not a bare Deliver. Verify was missing here
+        // until round 5; the workflow rung and the parallel-audit fix were missing until round 6,
+        // measured live: a recorded mid-chain index spawned `Verify S1` where the drill said
+        // Deliver, a custom workflow's first launch spawned `Audit S1`, and a persisted HIGH audit
+        // outcome spawned `Fix S1` — wrong kind, wrong prompt, wrong measured argv, three times.
         var kind = state.PendingResume != null ? SessionKind.Resume
             : state.PendingAudit != null ? SessionKind.Audit
             : state.PendingVerify != null ? SessionKind.Verify
-            : fix != null ? SessionKind.Fix : SessionKind.Deliver;
+            : fix != null || queuesAuditFix ? SessionKind.Fix
+            : WorkflowKind(plan, stage, state, track, kinds);
+
+        // Round 6's rider: with a persisted pendingParallelAudit the launch's FIRST act — before the
+        // composed session — is to spawn the audit lane agent, which is real model spend. Pure to
+        // read (the same guard the loop's branch holds), impossible to price at rest; the decision
+        // says THAT it happens so the drill can disclose it.
+        var spawnsLane = state.PendingParallelAudit != null && fix == null && state.PendingResume == null;
 
         // The attempt the composed session announces. The loop resets AttemptsThisStage when it
         // ENTERS a stage — before every compose — so on a stage change the number is 1, whatever the
@@ -223,52 +258,53 @@ public static class StageSelection
         // preflight rendered `attempt {saved+1}` off the un-entered state while the loop rendered
         // `attempt 1`, and the two measured prompts differed by exactly that.
         var attempt = (stage.Id == state.CurrentStage ? state.AttemptsThisStage : 0) + 1;
-        return new LaunchDecision(LaunchStep.Compose, stage, stage.Id, kind, AttemptNumber: attempt);
+        return new LaunchDecision(LaunchStep.Compose, stage, stage.Id, kind, AttemptNumber: attempt,
+            QueuesParallelAuditFix: queuesAuditFix, SpawnsParallelAuditLane: spawnsLane);
+    }
+
+    /// <summary>The kind a session starts as when NOTHING is pending: the workflow's answer, exactly
+    /// as the runner asks it — the QA dial of the item about to be claimed projects first (W4.4),
+    /// the recorded step index is consumed without advancing, and a workflow fix with no failure
+    /// context is honestly a delivery. The decision resolves on a COPY of the recorded indices with
+    /// the stage-entry clear applied (a new stage starts its workflow over — the loop's own entry
+    /// block does the same remove before the runner resolves), so nothing here mutates the state.
+    /// The runner calls this same function with the live dictionary, whose recording side effect
+    /// (a stage's very first resolution advances and records) belongs where the session begins.</summary>
+    public static SessionKind WorkflowStartKind(PlanConfig plan, StageConfig stage, string itemQa,
+        Dictionary<string, int> stepIndices, IWorkflowResolver workflows, IQaPolicy qa)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(stage);
+        ArgumentNullException.ThrowIfNull(stepIndices);
+        ArgumentNullException.ThrowIfNull(workflows);
+        ArgumentNullException.ThrowIfNull(qa);
+        var workflow = workflows.Resolve(plan, stage, qa, itemQa);
+        var kind = workflows.ResolveStartKind(workflow, stepIndices, stage.Id,
+            qa.EffectiveSkipVerification(plan, stage, itemQa));
+        // A fix without failure context is just a delivery attempt; fall back honestly — the
+        // runner's own rule (it has no PendingFix to render a fix prompt from).
+        return kind == SessionKind.Fix ? SessionKind.Deliver : kind;
+    }
+
+    private static SessionKind WorkflowKind(PlanConfig plan, StageConfig stage, RunState state,
+        TrackerSnapshot track, LaunchKindInputs kinds)
+    {
+        var itemQa = ItemQa(track, stage, kinds.Graph?.Invoke());
+        var indices = new Dictionary<string, int>(state.WorkflowStepIndices, StringComparer.Ordinal);
+        if (stage.Id != state.CurrentStage) indices.Remove(stage.Id); // the loop's stage-entry clear
+        return WorkflowStartKind(plan, stage, itemQa, indices, kinds.Workflows, kinds.Qa);
+    }
+
+    /// <summary>W4.4: the QA override of the item a session is about to claim — the first not-done
+    /// checkpoint of the stage, which is exactly the item the assignment policy claims. Empty when
+    /// the card has no override (the common case). One copy: <see cref="RunContext.ItemQaFor"/> and
+    /// the runner both read it, so the drill and the dispatch project the same dial.</summary>
+    public static string ItemQa(TrackerSnapshot? track, StageConfig stage, TaskGraph? graph)
+    {
+        ArgumentNullException.ThrowIfNull(stage);
+        if (track == null || graph == null) return "";
+        var itemId = track.ForStage(stage.Id).FirstOrDefault(c => c.IsOpen)?.Id;
+        if (string.IsNullOrEmpty(itemId)) return "";
+        return graph.Find(itemId)?.Qa ?? "";
     }
 }
-
-/// <summary>Which branch of the run loop's pre-compose sequence fires next, in the order the loop
-/// checks them. Everything before <see cref="Compose"/> means NO session composes on this turn.</summary>
-public enum LaunchStep
-{
-    /// <summary>The saved status is Paused, NeedsHuman or AwaitingOwner — the statuses
-    /// <c>RecoverFromCrash</c> deliberately leaves standing. `conductor run` idles on them at the
-    /// session boundary forever; `conductor resume` is the verb that lifts them.</summary>
-    ParkedStatus,
-    /// <summary>The tracker has no parseable checkpoint rows — the run parks at NeedsHuman.</summary>
-    EmptyTracker,
-    /// <summary>A queued per-phase gate runs before anything else gets a turn.</summary>
-    PhaseGate,
-    /// <summary>Every stage is complete or skipped and nothing is owed — the run confirms completion.</summary>
-    ConfirmCompletion,
-    /// <summary>No stage is runnable (what remains is skipped or blocked) — the run parks at NeedsHuman.</summary>
-    NothingRunnable,
-    /// <summary>The tracker handoff asks for a human — the run parks at NeedsHuman before spawning.</summary>
-    HandoffEscalation,
-    /// <summary>Per-phase gates: the stage's rows all read done but the stage is unconfirmed — the
-    /// loop schedules the audit / full-battery phase gate instead of a session.</summary>
-    ScheduleGateOrAudit,
-    /// <summary>The current stage has used its whole attempt budget
-    /// (<see cref="StageSelection.MaxAttempts"/>) — the loop escalates instead of composing: an
-    /// advisor consult (a model call) when one is configured, a NeedsHuman park when not.
-    /// `conductor retry-stage` resets the counter; `conductor resume` does not.</summary>
-    ExhaustedAttempts,
-    /// <summary>limits.maxSessions is reached — the run parks at the session boundary.</summary>
-    SessionCap,
-    /// <summary>A session composes: <see cref="LaunchDecision.Stage"/> and <see cref="LaunchDecision.Kind"/>.</summary>
-    Compose,
-}
-
-/// <summary>The loop's answer, as data. <paramref name="Stage"/> is the stage the step acts on when
-/// it acts on one (null for <see cref="LaunchStep.PhaseGate"/> when the queued gate names a stage the
-/// plan no longer declares); <paramref name="StageId"/> is always the acted-on stage's id when there
-/// is one. <paramref name="Kind"/> is meaningful only for <see cref="LaunchStep.Compose"/> — the
-/// loop's precedence: resume, then audit, then verify, then fix, then delivery — and so is
-/// <paramref name="AttemptNumber"/>: the attempt the composed session announces, already accounting
-/// for the counter reset the loop performs on stage ENTRY, so every renderer of this decision (the
-/// live session, the dry run, preflight's compose leg) prints the same <c>attempt n/m</c>.
-/// <paramref name="SleepUntilUtc"/> is the agent-declared wait in front of the decision, when one is
-/// saved and still in the future: the loop sleeps at the session boundary until then, and only then
-/// does what the rest of this record says.</summary>
-public sealed record LaunchDecision(LaunchStep Step, StageConfig? Stage, string? StageId, SessionKind Kind,
-    DateTime? SleepUntilUtc = null, int AttemptNumber = 1);

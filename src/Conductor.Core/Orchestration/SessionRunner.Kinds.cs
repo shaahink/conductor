@@ -39,27 +39,26 @@ public sealed partial class SessionRunner
         PendingResume? pendingResume,
         PendingAudit? pendingAudit,
         PendingVerify? pendingVerify,
-        PendingFix? pendingFix, TrackerSnapshot? preTrack)
+        PendingFix? pendingFix, TrackerSnapshot? preTrack, TaskGraph? graph)
     {
-        // Crash recovery: Resume always wins — it carries the agent session id
-        if (pendingResume != null) return SessionKind.Resume;
+        // Crash recovery: Resume always wins — it carries the agent session id.
+        // Explicit pending states from the previous workflow step take priority over the workflow.
+        if (PendingToKind(pendingResume, pendingAudit, pendingVerify, pendingFix) is var pending
+            && pending != SessionKind.Deliver)
+            return pending;
 
-        // Explicit pending states from the previous workflow step take priority
-        if (pendingAudit != null) return SessionKind.Audit;
-        if (pendingVerify != null) return SessionKind.Verify;
-        if (pendingFix != null) return SessionKind.Fix;
-
-        // Workflow-driven: the START-kind decision lives behind the seam (P4). The library consumes
-        // a recorded index WITHOUT advancing (the previous advance resolved and recorded it —
-        // re-resolving here once double-stepped onto a verify no advance had populated PendingVerify
-        // for, an NRE in PromptBuilder.Verify); only a stage's very first resolution advances, and a
-        // verify downgrades to Deliver when the QA dial or per-stage override skips verification.
-        // W4.4: the dial of the item this session is about to claim sits above the stage's — "deliver
-        // these one-by-one, but verify THAT one" is decided here, before the kind is chosen.
-        var itemQa = _ctx.ItemQaFor(stage, preTrack);
-        var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage, _ctx.Qa, itemQa);
-        return _ctx.Workflows.ResolveStartKind(workflow, _ctx.State.WorkflowStepIndices, stage.Id,
-            _ctx.Qa.EffectiveSkipVerification(_ctx.Plan, stage, itemQa));
+        // Workflow-driven: the START-kind decision lives behind the seam (P4), stated once in
+        // StageSelection.WorkflowStartKind — the same rung the launch decision and preflight's
+        // drill read (round 6). The library consumes a recorded index WITHOUT advancing
+        // (re-resolving here once double-stepped onto a verify no advance had populated
+        // PendingVerify for, an NRE in PromptBuilder.Verify); only a stage's very first resolution
+        // advances and RECORDS, which is why this call passes the live dictionary while the
+        // decision resolves on a copy. W4.4: the dial of the item this session is about to claim
+        // sits above the stage's — "deliver these one-by-one, but verify THAT one" is decided here,
+        // before the kind is chosen, off the same folded graph every other read uses.
+        var itemQa = StageSelection.ItemQa(preTrack, stage, graph);
+        return StageSelection.WorkflowStartKind(_ctx.Plan, stage, itemQa,
+            _ctx.State.WorkflowStepIndices, _ctx.Workflows, _ctx.Qa);
     }
 
     public static SessionKind PendingToKind(
@@ -72,22 +71,6 @@ public sealed partial class SessionRunner
         return SessionKind.Deliver;
     }
 
-    private string BuildPrompt(SessionKind kind, StageConfig stage, int sessionNumber, int attempt, int maxAttempts,
-        PendingResume? pendingResume, PendingAudit? pendingAudit, PendingVerify? pendingVerify, PendingFix? pendingFix,
-        bool isReview, string reviewPath, string? personaOverride = null)
-    {
-        return kind switch
-        {
-            SessionKind.Resume => _ctx.Prompts.Resume(stage, sessionNumber, attempt, maxAttempts, pendingResume!),
-            // The diff base rides PendingAudit (P2: a phaseGate dial with auditCoversPriorSessions=false
-            // scopes it to the latest delivery session; classically it equals the stage start head).
-            SessionKind.Audit => _ctx.Prompts.Audit(stage, sessionNumber, pendingAudit!,
-                pendingAudit!.StageStartHead is { Length: > 0 } auditBase ? auditBase : _ctx.State.CurrentStageStartHead ?? "HEAD~1", personaOverride),
-            SessionKind.Verify => _ctx.Prompts.Verify(stage, sessionNumber, pendingVerify!, personaOverride),
-            SessionKind.Fix => _ctx.Prompts.Fix(stage, sessionNumber, attempt, maxAttempts, pendingFix!, personaOverride),
-            _ => isReview
-                ? _ctx.Prompts.Review(stage, sessionNumber, attempt, maxAttempts, reviewPath)
-                : _ctx.Prompts.Deliver(stage, sessionNumber, attempt, maxAttempts, personaOverride),
-        };
-    }
+    // Round 6: the per-kind prompt switch moved to SessionComposer.Compose — one composer for the
+    // dispatch, the dry run and preflight's drill, so a measured prompt is the spawned prompt.
 }
