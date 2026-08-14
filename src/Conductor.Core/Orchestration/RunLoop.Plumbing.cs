@@ -25,19 +25,11 @@ public sealed partial class RunLoop
     private StageConfig CurrentStageConfig()
         => _ctx.Plan.Stages.FirstOrDefault(s => s.Id == _ctx.State.CurrentStage) ?? _ctx.Plan.Stages[^1];
 
-    // KS3.4: the rule itself lives in StageSelection, so `preflight` names the stage this loop would
-    // actually pick rather than a second, drifting opinion of it. These stay as the loop's own vocabulary.
-
-    private StageConfig? SelectStage(TrackerSnapshot track)
-        => StageSelection.Select(_ctx.Plan, _ctx.State, track);
-
-    private bool AllEffectivelyDone(TrackerSnapshot track)
-        => StageSelection.AllEffectivelyDone(_ctx.Plan, _ctx.State, track);
+    // KS3.4: which stage runs next, whether one runs at all, and what kind of session it is are
+    // StageSelection.NextAction's answers now — shared verbatim with `preflight`'s compose leg, so
+    // the loop keeps no private vocabulary for the decision itself.
 
     private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * _ctx.Plan.Limits.StageSlackFactor);
-
-    private bool HandoffWantsHuman(TrackerSnapshot track)
-        => _ctx.Plan.Conventions.MentionsHuman(track.HandoffBlock);
 
     // ── per-stage overrides (M3.2) ──
 

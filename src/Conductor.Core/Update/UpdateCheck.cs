@@ -71,11 +71,17 @@ public sealed record UpdateCheckCache(
         && !string.Equals(v, "0", StringComparison.Ordinal)
         && !string.Equals(v, "false", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary><c>%LOCALAPPDATA%\conductor\update-check.json</c>, or the XDG cache equivalent.</summary>
+    /// <summary><c>%LOCALAPPDATA%\conductor\update-check.json</c>, or the XDG cache equivalent.
+    /// A <see cref="Store.StateHome.HomeEnvVar"/> override moves this memo with the rest of the
+    /// user-level state — that variable is documented as "every derived path moves with it", and a
+    /// rig or a test that probes a stand-in feed must not overwrite the operator's real memo of the
+    /// real feed. With no override the path is exactly what it always was.</summary>
     public static string Path
     {
         get
         {
+            if (Environment.GetEnvironmentVariable(Store.StateHome.HomeEnvVar) is { Length: > 0 } home)
+                return System.IO.Path.Combine(System.IO.Path.GetFullPath(home), "update-check.json");
             var dir = OperatingSystem.IsWindows()
                 ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
                 : Environment.GetEnvironmentVariable("XDG_CACHE_HOME") is { Length: > 0 } xdg

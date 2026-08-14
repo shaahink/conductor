@@ -6,9 +6,13 @@ using Conductor.Core.Orchestration;
 using Conductor.Core.Planning;
 using Conductor.Core.Store;
 using Conductor.Core.Update;
+using Conductor.Hosting;
 using Conductor.Models;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using Spectre.Console.Cli;
 
 namespace Conductor.Tests;
 
@@ -157,6 +161,46 @@ public sealed class KS3_4PreflightTests : IDisposable
         Assert.Equal("ok", leg.State);
     }
 
+    /// <summary>Fixture (d) IN the suite, live path and all: <c>VersionLegAsync</c> with the check ON,
+    /// against a loopback feed serving a GitHub-shaped release document — the exact seam
+    /// <c>CONDUCTOR_UPDATE_FEED</c> documents for this. The probe's six-hour memo lands in the
+    /// suite's isolated state home (<c>UpdateCheckCache.Path</c> follows
+    /// <c>CONDUCTOR_STATE_HOME</c>), never in the operator's real cache — and a memo written against
+    /// an override feed is refused by <c>ReadFresh</c> anyway.</summary>
+    [Fact]
+    public async Task TheLiveVersionLegFailsWhenTheFeedServesANewerRelease()
+    {
+        Assert.StartsWith(TestEnvironmentIsolation.StateHomeRoot, UpdateCheckCache.Path,
+            StringComparison.OrdinalIgnoreCase);
+
+        using var feed = new FakeReleaseFeed(
+            """{"tag_name":"v99.1.0","html_url":"http://127.0.0.1/releases/v99.1.0"}""");
+        var prior = Environment.GetEnvironmentVariable(ReleaseClient.FeedEnvVar);
+        Environment.SetEnvironmentVariable(ReleaseClient.FeedEnvVar, feed.Url);
+        try
+        {
+            var leg = await PreflightCommand.VersionLegAsync(updateCheck: true, DateTimeOffset.UtcNow);
+
+            Assert.Equal("version", leg.Name);
+            Assert.Equal("fail", leg.State);
+            Assert.Contains("v99.1.0", leg.Headline, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(ReleaseClient.FeedEnvVar, prior);
+        }
+    }
+
+    /// <summary>And the live path's other branch: the check switched off consults nothing and says
+    /// so — the leg an offline launch reads.</summary>
+    [Fact]
+    public async Task TheLiveVersionLegStaysQuietWhenTheCheckIsOff()
+    {
+        var leg = await PreflightCommand.VersionLegAsync(updateCheck: false, DateTimeOffset.UtcNow);
+        Assert.Equal("ok", leg.State);
+        Assert.Contains("release feed not consulted", leg.Headline, StringComparison.Ordinal);
+    }
+
     // ------------------------------------------------------------------ (e) a stale engine
 
     [Fact]
@@ -227,6 +271,12 @@ public sealed class KS3_4PreflightTests : IDisposable
 
         Assert.Equal(["escalation"], Failing(legs));
         Assert.Contains("already asks for a human", Headline(legs, "escalation"), StringComparison.Ordinal);
+
+        // The compose leg tells the same truth the loop would enact — a park before any session —
+        // without going red itself, so the seeded failure still names exactly one leg.
+        Assert.Equal(
+            "the next `conductor run` parks at NeedsHuman — the tracker handoff asks for a human — no session composes",
+            Headline(legs, "compose"));
     }
 
     /// <summary>And the drill's own output may never carry the token — a preflight that printed it
@@ -339,23 +389,118 @@ public sealed class KS3_4PreflightTests : IDisposable
         Assert.Contains("stage 'S2'", Headline(legs, "compose"), StringComparison.Ordinal);
     }
 
-    /// <summary>And under <c>perPhaseGates</c> done-ness is CONFIRMED-ness: a stage whose rows all read
-    /// done has not been through its gate yet, so it is still the next session — which the tracker
-    /// alone would have said was finished.</summary>
+    /// <summary>And under <c>perPhaseGates</c> done-ness is CONFIRMED-ness — but a stage whose rows
+    /// all read DONE while it is unconfirmed is not "the next session" either: the loop SCHEDULES THE
+    /// AUDIT / full-battery phase gate for it and composes nothing. The first version of this fact
+    /// blessed the wrong sentence with a substring — <c>Contains("stage 'S1'")</c> matched a
+    /// <c>next session #6 is Deliver on stage 'S1'</c> headline the loop contradicts (round 2's
+    /// blocking finding) — so it now pins the WHOLE headline, and
+    /// <see cref="TheScheduledGateHeadlineAgreesWithWhatRunDryRunPrints"/> pins the same fixture
+    /// against the real loop's own dry-run narration.</summary>
     [Fact]
-    public async Task UnderPerPhaseGatesAStageIsOnlyFinishedOnceItIsConfirmed()
+    public async Task UnderPerPhaseGatesADoneButUnconfirmedStageSchedulesItsGateNotASession()
     {
-        var plan = CleanPlan(p =>
-        {
-            p.GatePolicy = "perPhase";
-            p.Stages.Add(new StageConfig { Id = "S2", Title = "the next one", Sessions = 1 });
-        });
-        WriteTracker(plan, "nothing pending.", ("S1.1", "DONE"), ("S2.1", "TODO"));
-        SaveState(plan, s => s.SessionCounter = 5);
+        var plan = PerPhaseDoneUnconfirmedFixture();
 
         var legs = await RunAsync(plan);
 
-        Assert.Contains("stage 'S1'", Headline(legs, "compose"), StringComparison.Ordinal);
+        Assert.Empty(Failing(legs));
+        Assert.Equal(
+            "stage 'S1' checkpoints all read DONE but the stage is unconfirmed — the next " +
+            "`conductor run` schedules the audit / full-battery phase gate — no session composes",
+            Headline(legs, "compose"));
+    }
+
+    /// <summary>The same fixture through the REAL loop — ConductorHost, Orchestrator, dry run — so
+    /// the agreement is measured against what `conductor run` actually narrates, not against this
+    /// suite's opinion of it.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task TheScheduledGateHeadlineAgreesWithWhatRunDryRunPrints()
+    {
+        var plan = PerPhaseDoneUnconfirmedFixture();
+        var legs = await RunAsync(plan);
+
+        var lines = await DryRunAsync(plan);
+
+        Assert.Contains(lines, l => l.Contains(
+            "DRY RUN: stage S1 checkpoints all DONE — would schedule the audit / full-battery phase gate next",
+            StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, l => l.Contains("would start session #", StringComparison.Ordinal));
+        Assert.DoesNotContain("composing to", Headline(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>Round 2's other live reproduction: a queued <c>pendingPhaseGate</c> runs before
+    /// anything else gets a turn, so the drill names the gate — green, because a queued gate is
+    /// normal operation, and with a whole headline that promises no session and no char count.</summary>
+    [Fact]
+    public async Task AQueuedPhaseGateIsNamedInsteadOfASessionAndTheDrillStaysGreen()
+    {
+        var plan = QueuedPhaseGateFixture();
+
+        var legs = await RunAsync(plan);
+
+        Assert.Empty(Failing(legs));
+        Assert.Equal(
+            "the next `conductor run` runs the queued full-battery phase gate for stage 'S1' — no session composes",
+            Headline(legs, "compose"));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task TheQueuedGateHeadlineAgreesWithWhatRunDryRunPrints()
+    {
+        var plan = QueuedPhaseGateFixture();
+        var legs = await RunAsync(plan);
+
+        var lines = await DryRunAsync(plan);
+
+        Assert.Contains(lines, l => l.Contains(
+            "DRY RUN: would run the FULL-battery phase gate for stage S1", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, l => l.Contains("would start session #", StringComparison.Ordinal));
+        Assert.DoesNotContain("composing to", Headline(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>A run already standing at <c>limits.maxSessions</c> parks at the session boundary
+    /// without composing anything — the old leg promised a numbered session for a prompt the loop
+    /// would never build. A park-on-launch is a launch failure, so this one is red. (No dry-run
+    /// companion: the loop's dry-run mode spins on a capped plan rather than exiting — the park
+    /// branch was written for a live run — which is exactly why only this leg can say it.)</summary>
+    [Fact]
+    public async Task ARunAlreadyAtItsSessionCapFailsTheComposeLeg()
+    {
+        var plan = CleanPlan(p => p.Limits.MaxSessions = 3);
+        SaveState(plan, s => { s.CurrentStage = "S1"; s.SessionCounter = 3; });
+
+        var legs = await RunAsync(plan);
+
+        Assert.Equal(["compose"], Failing(legs));
+        Assert.Equal(
+            "session cap reached (3/3) — the next `conductor run` parks at the session boundary — no session composes",
+            Headline(legs, "compose"));
+        Assert.Contains("limits.maxSessions", Detail(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>The clean fixture's agreement, to the character: the dry-run narrates the session
+    /// number, kind and stage, then prints the composed prompt itself — so the char count in the
+    /// drill's headline must equal the printed prompt's exact length. A substring can bless a wrong
+    /// sentence; an equality on the whole headline cannot.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task TheComposeHeadlineAgreesWithRunDryRunToTheCharacter()
+    {
+        var plan = CleanPlan();
+        var legs = await RunAsync(plan);
+
+        var lines = await DryRunAsync(plan);
+        var announce = lines.FindIndex(l => l.Contains("DRY RUN: would start session #", StringComparison.Ordinal));
+        Assert.True(announce >= 0, "the dry run never announced a session:\n" + string.Join("\n", lines));
+        Assert.Contains("would start session #1 (Deliver, stage S1)", lines[announce], StringComparison.Ordinal);
+
+        var prompt = lines[announce + 1];
+        Assert.Equal(
+            $"next session #1 is Deliver on stage 'S1', composing to {prompt.Length} chars (nothing spawned)",
+            Headline(legs, "compose"));
     }
 
     /// <summary>A plan whose remaining stages are all blocked or skipped does not launch: the loop
@@ -455,10 +600,199 @@ public sealed class KS3_4PreflightTests : IDisposable
         Assert.Contains("preflight", CompletionCommand.GenerateBash(), StringComparison.Ordinal);
     }
 
+    // ------------------------------------------------------------------ the verb's own exit code
+
+    /// <summary>The verdict and the exit code through the REAL freshly-built CLI in its own process —
+    /// Program.cs routing, plan load, six legs, one verdict line. Its own state home and
+    /// <c>CONDUCTOR_PLAN</c> cleared: the drill registers a machine-catalogue row wherever the state
+    /// home points, and a test may not write the operator's.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task ThePreflightVerbExitsZeroAndSaysReadyOnACleanPlan()
+    {
+        var plan = CleanPlan();
+        await WritePlanFileAsync(plan);
+
+        var r = SpawnPreflight(plan);
+
+        Assert.True(r.ExitCode == 0, $"expected READY/0, got {r.ExitCode}:\n{r.Output}\n{r.StdErr}");
+        Assert.Contains("READY", r.Output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task ThePreflightVerbExitsOneAndNamesTheLegOnASeededEscalation()
+    {
+        var plan = CleanPlan();
+        WriteTracker(plan, handoff: plan.Conventions.HumanToken + " decide whether to keep the old ingest path");
+        await WritePlanFileAsync(plan);
+
+        var r = SpawnPreflight(plan);
+
+        Assert.Equal(1, r.ExitCode);
+        Assert.Contains("NOT READY", r.Output, StringComparison.Ordinal);
+        Assert.Contains("escalation", r.Output, StringComparison.Ordinal);
+    }
+
+    /// <summary>And <c>ExecuteAsync</c> in-process for the two paths a spawned drill cannot pin as
+    /// cheaply: a plan that does not load is a finding and exit 1, not a stack trace; a seeded leg
+    /// failure is exit 1 through the verb, not just through <c>RunLegsAsync</c>.</summary>
+    [Fact]
+    public async Task ExecuteAsyncReturnsOneWhenThePlanDoesNotLoad()
+    {
+        var settings = new PreflightSettings
+        {
+            Plan = Path.Combine(_dir, "does-not-exist.plan.json"),
+            NoAuthCheck = true,
+            NoUpdateCheck = true,
+        };
+
+        var exit = await new PreflightCommand().ExecuteAsync(TestContext(), settings);
+
+        Assert.Equal(1, exit);
+    }
+
+    [Fact]
+    public async Task ExecuteAsyncReturnsOneOnASeededEscalation()
+    {
+        var plan = CleanPlan();
+        WriteTracker(plan, handoff: plan.Conventions.HumanToken + " decide whether to keep the old ingest path");
+        await WritePlanFileAsync(plan);
+        var settings = new PreflightSettings { Plan = plan.PlanFilePath, NoAuthCheck = true, NoUpdateCheck = true };
+
+        var exit = await new PreflightCommand().ExecuteAsync(TestContext(), settings);
+
+        Assert.Equal(1, exit);
+    }
+
     // ------------------------------------------------------------------ fixtures
 
     private Task<List<PreflightCommand.Leg>> RunAsync(PlanConfig plan)
         => PreflightCommand.RunLegsAsync(plan, authCheck: false, updateCheck: false, image: FreshImage(_dir));
+
+    /// <summary>Round 2's reproduction (2): perPhase, every S1 row DONE, S1 not confirmed, nothing
+    /// pending — the loop schedules S1's audit / phase gate, it does not compose a session.</summary>
+    private PlanConfig PerPhaseDoneUnconfirmedFixture()
+    {
+        var plan = CleanPlan(p =>
+        {
+            p.GatePolicy = "perPhase";
+            p.Stages.Add(new StageConfig { Id = "S2", Title = "the next one", Sessions = 1 });
+        });
+        WriteTracker(plan, "nothing pending.", ("S1.1", "DONE"), ("S2.1", "TODO"));
+        SaveState(plan, s => s.SessionCounter = 5);
+        return plan;
+    }
+
+    /// <summary>Round 2's reproduction (1): a queued <c>pendingPhaseGate</c> for S1 — the loop's very
+    /// first branch, before completion, before stage selection, before any compose.</summary>
+    private PlanConfig QueuedPhaseGateFixture()
+    {
+        var plan = CleanPlan(p => p.GatePolicy = "perPhase");
+        WriteTracker(plan, "nothing pending.", ("S1.1", "DONE"));
+        SaveState(plan, s =>
+        {
+            s.CurrentStage = "S1";
+            s.SessionCounter = 7;
+            s.PendingPhaseGate = new PendingPhaseGate { StageId = "S1", StageStartHead = "abc1234" };
+        });
+        return plan;
+    }
+
+    /// <summary>The REAL loop over the fixture — ConductorHost, Orchestrator, dry run — returning
+    /// everything it narrated. The other half of every agreement fact: the drill may only say what
+    /// this would do. Run it AFTER the drill; a dry run writes state the drill must not see.</summary>
+    private static async Task<List<string>> DryRunAsync(PlanConfig plan)
+    {
+        var sink = new RecordingSink();
+        var state = RunState.LoadOrNew(Path.Combine(plan.StateDir, "state.json"), plan.Name);
+        if (state.RunId.Length == 0) state.RunId = Guid.NewGuid().ToString("N");
+        using var host = ConductorHost.Build(plan, state, sink,
+            new RunOptions(DryRun: true, Once: false, MaxSessions: 0), consoleSink: false);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token);
+        Assert.Equal(0, code);
+        return [.. sink.Lines];
+    }
+
+    /// <summary>The fixture plan as a loadable FILE — the in-memory object serialised where
+    /// <see cref="CleanPlan"/> left its placeholder — for the drills that go through plan load.</summary>
+    private static async Task WritePlanFileAsync(PlanConfig plan)
+        => await File.WriteAllTextAsync(plan.PlanFilePath,
+            System.Text.Json.JsonSerializer.Serialize(plan, PlanConfig.JsonOpts), Utf8);
+
+    /// <summary>The freshly-built CLI, in its own process, against its own scratch state home.</summary>
+    private ProcResult SpawnPreflight(PlanConfig plan)
+    {
+        var exe = Path.Combine(AppContext.BaseDirectory, "conductor.exe");
+        Assert.True(File.Exists(exe), $"the freshly-built CLI must sit beside the test assembly: {exe}");
+        var home = Path.Combine(_dir, "spawn-home-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(home);
+        return Conductor.Core.ProcessRunner.Run(exe,
+            ["preflight", "-p", plan.PlanFilePath, "--no-auth-check", "--no-update-check"],
+            plan.Repo, TimeSpan.FromMinutes(2), CancellationToken.None,
+            env: new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["CONDUCTOR_STATE_HOME"] = home,
+                ["CONDUCTOR_PLAN"] = "",
+            });
+    }
+
+    private static CommandContext TestContext() => new([], new NoRemaining(), "preflight", null);
+
+    private sealed class NoRemaining : IRemainingArguments
+    {
+        public IReadOnlyList<string> Raw { get; } = [];
+        public ILookup<string, string?> Parsed { get; } =
+            Array.Empty<string>().ToLookup(x => x, x => (string?)null, StringComparer.Ordinal);
+    }
+
+    /// <summary>A loopback release feed serving one GitHub-shaped document — the stand-in
+    /// <c>CONDUCTOR_UPDATE_FEED</c> exists for (see <see cref="ReleaseClient"/>'s own doc).</summary>
+    private sealed class FakeReleaseFeed : IDisposable
+    {
+        private readonly System.Net.HttpListener _listener = new();
+
+        public string Url { get; }
+
+        public FakeReleaseFeed(string body)
+        {
+            var port = FreePort();
+            var root = "http://127.0.0.1:" + port.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            Url = root + "/latest";
+            _listener.Prefixes.Add(root + "/");
+            _listener.Start();
+            _ = Task.Run(async () =>
+            {
+                while (_listener.IsListening)
+                {
+                    System.Net.HttpListenerContext ctx;
+                    try { ctx = await _listener.GetContextAsync().ConfigureAwait(false); }
+                    catch (Exception) { return; }   // listener stopped — the exit condition
+                    var bytes = Encoding.UTF8.GetBytes(body);
+                    ctx.Response.ContentType = "application/json";
+                    ctx.Response.ContentLength64 = bytes.Length;
+                    await ctx.Response.OutputStream.WriteAsync(bytes).ConfigureAwait(false);
+                    ctx.Response.Close();
+                }
+            });
+        }
+
+        private static int FreePort()
+        {
+            using var probe = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+            probe.Start();
+            var port = ((System.Net.IPEndPoint)probe.LocalEndpoint).Port;
+            probe.Stop();
+            return port;
+        }
+
+        public void Dispose()
+        {
+            try { _listener.Stop(); } catch (Exception) { }
+            try { _listener.Close(); } catch (Exception) { }
+        }
+    }
 
     private static string[] Failing(IEnumerable<PreflightCommand.Leg> legs)
         => legs.Where(l => l.State == "fail").Select(l => l.Name).ToArray();

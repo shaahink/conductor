@@ -72,40 +72,79 @@ public sealed partial class PreflightCommand
 
     // ───────────────────────────────────────────────────────────── compose
 
-    /// <summary>The <c>run --dry-run</c> leg: the prompt the NEXT session would be spawned with,
-    /// composed and measured, with nothing spawned and nothing saved. Carries doctor's three
-    /// prompt-side lints (<c>prompt</c>, <c>templates</c>, <c>argv</c>) because they answer the same
-    /// question one stage earlier — will this compose at all, and will it fit in an argv.
-    /// <para>Which session is "next" is not re-decided here, in any of its three parts: the resume peek
-    /// is <see cref="JourneyCommand.PeekResumeAsync"/> (state.json, then the run.db row, read-only), the
-    /// STAGE is <see cref="StageSelection"/> — the run loop's own selector, not a copy of it — and the
-    /// kind is chosen by the same precedence <c>RunLoop</c>'s dry-run branch uses: resume, then audit,
-    /// then fix, then the stage's own delivery kind.</para></summary>
+    /// <summary>The <c>run --dry-run</c> leg: what the next `conductor run`'s FIRST turn does —
+    /// which is not always a session. Carries doctor's three prompt-side lints (<c>prompt</c>,
+    /// <c>templates</c>, <c>argv</c>) because they answer the same question one stage earlier — will
+    /// this compose at all, and will it fit in an argv.
+    /// <para>Nothing is re-decided here. The resume peek is
+    /// <see cref="JourneyCommand.PeekResumeAsync"/> (state.json, then the run.db row, read-only), and
+    /// the whole branch — a queued phase gate, completion, a park, the audit being scheduled, or a
+    /// composed session of a given kind on a given stage — is
+    /// <see cref="StageSelection.NextAction"/>, the run loop's OWN pre-compose sequence, called, not
+    /// copied. The first delivery copied the stage rule and diverged on <c>dependsOn</c>; the second
+    /// copied the branch ORDER and diverged under <c>gatePolicy: "perPhase"</c>, promising a Deliver
+    /// session while the loop would have run the phase gate. There is nothing left here to drift.</para></summary>
     internal static async Task<Leg> ComposeLegAsync(PlanConfig plan, IReadOnlyList<DoctorCommand.Check> checks)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(checks);
         var mine = checks.Where(c => CheckOwner.TryGetValue(c.Name, out var o) && o == ComposeLegName).ToList();
 
+        // Unreachable from a loaded plan (PlanConfig.CollectErrors refuses an empty stages list);
+        // kept for callers that construct a PlanConfig in memory.
         if (plan.Stages.Count == 0)
             return FromChecks(ComposeLegName, mine, "the plan declares no stages, so no session composes");
 
         var state = await JourneyCommand.PeekResumeAsync(plan).ConfigureAwait(false);
         var track = SafeReadWork(plan);
-        var stage = NextStage(plan, state, track);
-        if (stage is null)
-            return StageSelection.AllEffectivelyDone(plan, state, track)
-                ? FromChecks(ComposeLegName, mine,
-                    "every stage reads done — the next `conductor run` confirms completion rather than spawning a session")
-                // RunLoop's own answer to this is NeedsHuman before a session: the run starts, parks and
-                // spends nothing. That is a launch failure, and it is one only this leg can see.
-                : FromChecks(ComposeLegName, mine,
+        var next = StageSelection.NextAction(plan, state, track);
+        switch (next.Step)
+        {
+            case LaunchStep.EmptyTracker:
+                return FromChecks(ComposeLegName, mine,
+                    $"{plan.Tracker} has no parseable checkpoint rows — `conductor run` parks at NeedsHuman before spawning anything",
+                    ["check the table format — the loop reads rows of `| id | title | status | … |`"], "fail");
+
+            case LaunchStep.PhaseGate:
+                return FromChecks(ComposeLegName, mine,
+                    $"the next `conductor run` runs the queued full-battery phase gate for stage '{next.StageId}' — no session composes");
+
+            case LaunchStep.ConfirmCompletion:
+                return FromChecks(ComposeLegName, mine,
+                    "every stage reads done — the next `conductor run` confirms completion rather than spawning a session");
+
+            case LaunchStep.NothingRunnable:
+                // RunLoop's own answer to this is NeedsHuman before a session: the run starts, parks
+                // and spends nothing. That is a launch failure, and only this leg can see it coming.
+                return FromChecks(ComposeLegName, mine,
                     "no stage is runnable — every stage left is skipped, or blocked by a `dependsOn` that is neither done nor skipped",
                     ["`conductor run` would park at NeedsHuman before spawning anything — review the dependsOn chain " +
                      "and state.skippedStages"],
                     "fail");
 
-        var kind = NextKind(state, stage);
+            case LaunchStep.HandoffEscalation:
+                // Truthful, not red: the escalation leg owns this failure and fails on the same
+                // tracker read, so the drill still names exactly one leg.
+                return FromChecks(ComposeLegName, mine,
+                    "the next `conductor run` parks at NeedsHuman — the tracker handoff asks for a human — no session composes",
+                    ["see the escalation leg"]);
+
+            case LaunchStep.ScheduleGateOrAudit:
+                return FromChecks(ComposeLegName, mine,
+                    $"stage '{next.StageId}' checkpoints all read DONE but the stage is unconfirmed — the next " +
+                    "`conductor run` schedules the audit / full-battery phase gate — no session composes");
+
+            case LaunchStep.SessionCap:
+                return FromChecks(ComposeLegName, mine,
+                    $"session cap reached ({state.SessionCounter}/{plan.Limits.MaxSessions}) — the next `conductor run` " +
+                    "parks at the session boundary — no session composes",
+                    ["raise or clear limits.maxSessions (`conductor plan set limits.maxSessions <n>`, or the Plan tab) " +
+                     "before launching, or launch deliberately parked"],
+                    "fail");
+        }
+
+        var stage = next.Stage!;
+        var kind = next.Kind;
         try
         {
             var prompt = Compose(plan, stage, state, kind);
@@ -129,40 +168,6 @@ public sealed partial class PreflightCommand
                 $"the prompt for the next session ({kind} on stage '{stage.Id}') could not be read",
                 [ex.Message], "warn");
         }
-    }
-
-    /// <summary>The stage a launch would land on — <see cref="StageSelection"/>'s answer, which is
-    /// <see cref="RunLoop"/>'s answer, because it is the same code. Null when nothing is runnable:
-    /// either everything is done and owed nothing, or what remains is skipped or blocked.
-    /// <para>It was briefly a second implementation here ("the stage state is in, else the first the
-    /// tracker does not read done") and that copy ignored <c>state.skippedStages</c>, stage
-    /// <c>dependsOn</c> and — under <c>perPhaseGates</c> — <c>state.confirmedStages</c>. It therefore
-    /// named a different stage than <c>run --dry-run</c> named for the same plan, and measured a
-    /// different stage's prompt: different notes, different promptExtra, different templates. On the
-    /// one surface whose entire purpose is truth before launch.</para></summary>
-    internal static StageConfig? NextStage(PlanConfig plan, RunState state, TrackerSnapshot track)
-    {
-        ArgumentNullException.ThrowIfNull(plan);
-        ArgumentNullException.ThrowIfNull(state);
-        ArgumentNullException.ThrowIfNull(track);
-        // The loop's own shape: completion is only confirmed when nothing is still owed; a queued
-        // resume/audit/fix/verify runs on the standing stage even when every row reads done.
-        if (StageSelection.AllEffectivelyDone(plan, state, track))
-            return StageSelection.OwesASession(state) ? StageSelection.Standing(plan, state) : null;
-        return StageSelection.Select(plan, state, track);
-    }
-
-    /// <summary>The session kind the loop would pick, in the loop's own order (RunLoop's dry-run
-    /// branch): a queued resume, then a queued audit, then a queued fix, then delivery — where a
-    /// <c>review</c> stage delivers through the review template.</summary>
-    internal static SessionKind NextKind(RunState state, StageConfig stage)
-    {
-        ArgumentNullException.ThrowIfNull(state);
-        ArgumentNullException.ThrowIfNull(stage);
-        if (state.PendingResume is not null) return SessionKind.Resume;
-        if (state.PendingAudit is not null) return SessionKind.Audit;
-        if (state.PendingFix is not null) return SessionKind.Fix;
-        return SessionKind.Deliver;
     }
 
     /// <summary>Renders through the real <see cref="PromptBuilder"/> — the one the run loop uses —

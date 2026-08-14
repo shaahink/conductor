@@ -207,45 +207,50 @@ public sealed partial class RunLoop
                 // for the life of the run, so scheduling on the declaration re-picked delivered work
                 // and never completed. See Planning.WorkSnapshot.
                 var track = _ctx.ReadWork();
-                if (track.Checkpoints.Count == 0)
+
+                // KS3.4: WHICH branch fires next — phase gate, completion, a park, or a composed
+                // session of a given kind on a given stage — is StageSelection.NextAction's answer,
+                // and `preflight`'s compose leg reads the SAME function. This loop owns only the side
+                // effects of executing that answer; it holds no private copy of the decision.
+                var next = StageSelection.NextAction(_ctx.Plan, _ctx.State, track);
+
+                if (next.Step == LaunchStep.EmptyTracker)
                 {
                     _verdicts.NeedsHuman($"tracker {_ctx.Plan.Tracker} has no parseable checkpoint rows — check the table format");
                     continue;
                 }
 
-                if (_ctx.Plan.PerPhaseGates && _ctx.State.PendingPhaseGate != null)
+                if (next.Step == LaunchStep.PhaseGate)
                 {
                     if (_ctx.Options.DryRun)
                     {
-                        _ctx.Sink.Log($"--- DRY RUN: would run the FULL-battery phase gate for stage {_ctx.State.PendingPhaseGate.StageId} (nothing executed) ---");
+                        _ctx.Sink.Log($"--- DRY RUN: would run the FULL-battery phase gate for stage {_ctx.State.PendingPhaseGate!.StageId} (nothing executed) ---");
                         return 0;
                     }
-                    await _verdicts.RunPhaseGateAsync(_ctx.State.PendingPhaseGate, ct).ConfigureAwait(false);
+                    await _verdicts.RunPhaseGateAsync(_ctx.State.PendingPhaseGate!, ct).ConfigureAwait(false);
                     if (_ctx.Options.Once && _ctx.State.PendingAudit == null && _ctx.State.PendingFix == null) return 0;
                     continue;
                 }
 
-                var allDone = AllEffectivelyDone(track);
                 // W5.1: a queued verification or audit is work this run still owes. The guard only
                 // named fix and resume, which was harmless while done-ness lagged a tracker
                 // regeneration behind the claim — the queued verify always got a turn first. Reading
                 // the graph directly removes that lag, so the LAST checkpoint's verification would be
                 // skipped by completion: the one card in the plan nobody checked. Consume what is
                 // queued, then close.
-                if (allDone && !StageSelection.OwesASession(_ctx.State))
+                if (next.Step == LaunchStep.ConfirmCompletion)
                 {
                     if (await _verdicts.ConfirmCompletionAsync(ct).ConfigureAwait(false)) { _verdicts.CompletePlan(track); return 0; }
                     continue;
                 }
 
-                var stage = allDone
-                    ? StageSelection.Standing(_ctx.Plan, _ctx.State)
-                    : SelectStage(track);
-                if (stage == null)
+                if (next.Step == LaunchStep.NothingRunnable)
                 {
                     _verdicts.NeedsHuman("no runnable stage left (remaining stages are skipped) — review skipped stages");
                     continue;
                 }
+
+                var stage = next.Stage!;
                 if (stage.Id != _ctx.State.CurrentStage)
                 {
                     _ctx.State.CurrentStage = stage.Id;
@@ -272,7 +277,7 @@ public sealed partial class RunLoop
                     if (_ctx.State.Status == RunStatus.NeedsHuman) continue;
                 }
 
-                if (HandoffWantsHuman(track))
+                if (next.Step == LaunchStep.HandoffEscalation)
                 {
                     _verdicts.NeedsHuman("agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`");
                     continue;
@@ -288,10 +293,8 @@ public sealed partial class RunLoop
                 // no delay, no exit. The only outright hang the core run filed against itself.
                 // A stage already confirmed has nothing left to gate either; re-scheduling one is at
                 // best a wasted battery, and it is what made the loop tight rather than merely wrong.
-                if (_ctx.Plan.PerPhaseGates && track.StageDone(stage.Id)
-                    && !_ctx.State.ConfirmedStages.Contains(stage.Id)
-                    && _ctx.State.PendingFix == null && _ctx.State.PendingResume == null
-                    && _ctx.State.PendingVerify == null && _ctx.State.PendingAudit == null)
+                // (The guard itself, PendingVerify included, lives in StageSelection.NextAction.)
+                if (next.Step == LaunchStep.ScheduleGateOrAudit)
                 {
                     if (_ctx.Options.DryRun)
                     {
@@ -320,7 +323,7 @@ public sealed partial class RunLoop
                 // triggers a reload that un-parks it (see ApplyPlanReload). Counts the run's total
                 // sessions (SessionCounter), not this process's, so a cap set below work already done
                 // parks immediately at the boundary.
-                if (_ctx.Plan.Limits.MaxSessions is { } liveCap && liveCap > 0 && _ctx.State.SessionCounter >= liveCap)
+                if (next.Step == LaunchStep.SessionCap && _ctx.Plan.Limits.MaxSessions is { } liveCap)
                 {
                     _ctx.State.Status = RunStatus.Paused;
                     _ctx.State.ParkedBySessionCap = true;
@@ -332,9 +335,7 @@ public sealed partial class RunLoop
 
                 if (_ctx.Options.DryRun)
                 {
-                    var kind = _ctx.State.PendingResume != null ? SessionKind.Resume
-                        : _ctx.State.PendingAudit != null ? SessionKind.Audit
-                        : _ctx.State.PendingFix != null ? SessionKind.Fix : SessionKind.Deliver;
+                    var kind = next.Kind;
                     string prompt;
                     // SC3.3: --dry-run exists to find exactly this before a run spends anything.
                     try { prompt = BuildPrompt(kind, stage, _ctx.State.SessionCounter + 1, _ctx.State.NextAttemptNumber, maxAttempts); }

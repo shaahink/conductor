@@ -87,4 +87,91 @@ public static class StageSelection
         return state.PendingFix != null || state.PendingResume != null
             || state.PendingVerify != null || state.PendingAudit != null;
     }
+
+    /// <summary>The whole pre-compose branch of the loop, in the loop's own order: what the next
+    /// `conductor run` DOES at the top of its first iteration. <see cref="Select"/> answers "which
+    /// stage"; this answers the prior question — whether a session composes at all, or the turn goes
+    /// to a queued phase gate, an audit being scheduled, a park, or completion.
+    /// <para>Second extraction of the same lesson as the class doc above. The first fix moved the
+    /// stage RULE here and preflight's compose leg still re-implemented the branch ORDER by hand —
+    /// so under <c>gatePolicy: "perPhase"</c> (the house default) it promised a Deliver session and a
+    /// char count while the loop would have run the phase gate or scheduled the audit and composed
+    /// nothing. The branches live here now, once, and <see cref="RunLoop"/> executes this function's
+    /// answer rather than holding a private copy of it.</para>
+    /// <para>Only the PURE branches are modelled — the ones that decide WHAT runs next. The loop's
+    /// side-effectful stops that merely pause the same decision (pre-hook failure, exhausted-attempts
+    /// escalation, approval mode, the DNS preflight) park and re-decide; they never pick a different
+    /// session, so a drill that cannot ask an owner anything is not lying by omitting them.</para></summary>
+    public static LaunchDecision NextAction(PlanConfig plan, RunState state, TrackerSnapshot track)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(track);
+
+        if (track.Checkpoints.Count == 0)
+            return new LaunchDecision(LaunchStep.EmptyTracker, null, null, SessionKind.Deliver);
+
+        if (plan.PerPhaseGates && state.PendingPhaseGate is { } gate)
+            return new LaunchDecision(LaunchStep.PhaseGate,
+                plan.Stages.FirstOrDefault(s => s.Id == gate.StageId), gate.StageId, SessionKind.Deliver);
+
+        var allDone = AllEffectivelyDone(plan, state, track);
+        if (allDone && !OwesASession(state))
+            return new LaunchDecision(LaunchStep.ConfirmCompletion, null, null, SessionKind.Deliver);
+
+        var stage = allDone ? Standing(plan, state) : Select(plan, state, track);
+        if (stage is null)
+            return new LaunchDecision(LaunchStep.NothingRunnable, null, null, SessionKind.Deliver);
+
+        if (plan.Conventions.MentionsHuman(track.HandoffBlock))
+            return new LaunchDecision(LaunchStep.HandoffEscalation, stage, stage.Id, SessionKind.Deliver);
+
+        // The loop clears PendingFix when it enters a NEW stage (a fix does not survive the stage it
+        // was queued against), and that happens before every branch below reads it.
+        var fix = stage.Id == state.CurrentStage ? state.PendingFix : null;
+
+        if (plan.PerPhaseGates && track.StageDone(stage.Id)
+            && !state.ConfirmedStages.Contains(stage.Id)
+            && fix == null && state.PendingResume == null
+            && state.PendingVerify == null && state.PendingAudit == null)
+            return new LaunchDecision(LaunchStep.ScheduleGateOrAudit, stage, stage.Id, SessionKind.Deliver);
+
+        if (plan.Limits.MaxSessions is { } liveCap && liveCap > 0 && state.SessionCounter >= liveCap)
+            return new LaunchDecision(LaunchStep.SessionCap, stage, stage.Id, SessionKind.Deliver);
+
+        var kind = state.PendingResume != null ? SessionKind.Resume
+            : state.PendingAudit != null ? SessionKind.Audit
+            : fix != null ? SessionKind.Fix : SessionKind.Deliver;
+        return new LaunchDecision(LaunchStep.Compose, stage, stage.Id, kind);
+    }
 }
+
+/// <summary>Which branch of the run loop's pre-compose sequence fires next, in the order the loop
+/// checks them. Everything before <see cref="Compose"/> means NO session composes on this turn.</summary>
+public enum LaunchStep
+{
+    /// <summary>The tracker has no parseable checkpoint rows — the run parks at NeedsHuman.</summary>
+    EmptyTracker,
+    /// <summary>A queued per-phase gate runs before anything else gets a turn.</summary>
+    PhaseGate,
+    /// <summary>Every stage is complete or skipped and nothing is owed — the run confirms completion.</summary>
+    ConfirmCompletion,
+    /// <summary>No stage is runnable (what remains is skipped or blocked) — the run parks at NeedsHuman.</summary>
+    NothingRunnable,
+    /// <summary>The tracker handoff asks for a human — the run parks at NeedsHuman before spawning.</summary>
+    HandoffEscalation,
+    /// <summary>Per-phase gates: the stage's rows all read done but the stage is unconfirmed — the
+    /// loop schedules the audit / full-battery phase gate instead of a session.</summary>
+    ScheduleGateOrAudit,
+    /// <summary>limits.maxSessions is reached — the run parks at the session boundary.</summary>
+    SessionCap,
+    /// <summary>A session composes: <see cref="LaunchDecision.Stage"/> and <see cref="LaunchDecision.Kind"/>.</summary>
+    Compose,
+}
+
+/// <summary>The loop's answer, as data. <paramref name="Stage"/> is the stage the step acts on when
+/// it acts on one (null for <see cref="LaunchStep.PhaseGate"/> when the queued gate names a stage the
+/// plan no longer declares); <paramref name="StageId"/> is always the acted-on stage's id when there
+/// is one. <paramref name="Kind"/> is meaningful only for <see cref="LaunchStep.Compose"/> — the
+/// dry-run precedence: resume, then audit, then fix, then delivery.</summary>
+public sealed record LaunchDecision(LaunchStep Step, StageConfig? Stage, string? StageId, SessionKind Kind);
