@@ -4,18 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: wave 2 landed the KS2a lane (202405e..e6b80c2): the unplanned inject truncation fix (KS2.0)
-  and KS2.1-KS2.6, each delivered then adversarially verified in worktree lane/ks2a; merged
-  fast-forward, full battery on the merged tree 2343/2343 + face build/vet/test green at e6b80c2.
-  The 2026-08-14 machine restart killed the wave mid-flight; a continuation from session 5ab9932e
-  salvaged the partials (contracts live in that session's scratchpad).
+last: the KS5 lane landed whole (a157e40..2ba91d7): KS5.1-KS5.4 delivered and adversarially
+  verified (KS5.4 through three rounds), rebased onto the KS2a merge, fast-forwarded; battery on
+  the merged tree 2436/2436 + face build/vet/test green. KS2.0-KS2.6 landed just before (e6b80c2).
+gaps for KS10.1's closure ledger: the face tokens-cap row still quotes the plan-file ceiling;
+  approve lost CtlCommand's --yes/--force; one owner-gate-plus-lowered-cap path spends a session
+  before parking.
 measured: concurrent full suites on this machine kill each other's MSBuild nodes: run batteries
   serially with -nodeReuse:false -p:UseSharedCompilation=false, or MSB4166 lies about the tree.
-in flight: lane/ks3 holds KS3.1-KS3.3 verified, KS3.4 refuted twice (the compose leg re-implements
-  the run loop's stage selection; the fix extracts one shared decision), then KS3.5. lane/ks5 holds
-  KS5.1-KS5.3 verified, KS5.4 refuted twice (approve un-parks a run still over the other half's
-  ceiling; a reload converts an operator pause into a budget park) - remediation wave running.
-next: rebase + merge lane/ks3 then lane/ks5, battery per merge; wave 3 = KS9, wave 4 = KS10.1/10.2.
+in flight: lane/ks3 holds KS3.1-KS3.3 verified; KS3.4 refuted seven rounds, each a new face of one
+  defect - the preflight compose leg diverges from the live launch (latest: three "no session
+  composes" headlines that a red gate or audit re-decides into a real session). KS3.5 waits behind
+  it; the lane is paused for an owner decision - fix round 8 or re-scope the clause.
+next: settle KS3.4, KS3.5, merge lane/ks3; wave 3 = KS9, wave 4 = KS10.1/10.2, KS10.3 owner-only.
 
 
 ## Baseline numbers (tracker-counted - the engine is stopped, the tracker is the board)
@@ -23,7 +24,7 @@ next: rebase + merge lane/ks3 then lane/ks5, battery per merge; wave 3 = KS9, wa
 | Metric | Value |
 |---|---|
 | Total checkpoints | 32 |
-| Done | 17 |
+| Done | 21 |
 | Claimed (unconfirmed) | 0 |
 
 ## Checkpoints
@@ -77,10 +78,10 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS5.1 | A machine-wide ledger verb answers what this machine spent this week and month, billed-only, across the catalogue, cross-checked against per-run money with no price table in the diff | TODO | - | - |
-| KS5.2 | Every spawned model process writes a costs row - lanes, advisor, supervisor - caps see them, and an architecture test holds the rule that any process-spawning path taking a model writes a costs row | TODO | - | - |
-| KS5.3 | BudgetAnalyzer prescriptions surface at plan-reload, logging any ceiling that contradicts the measured floor at the boundary | TODO | - | - |
-| KS5.4 | approve on a budget park raises the ceiling explicitly with the amount stated instead of resetting the counter, and the cap check runs after the queued reload applies - the 2026-07-29 replay shows no silent double-spend | TODO | - | - |
+| KS5.1 | A machine-wide ledger verb answers what this machine spent this week and month, billed-only, across the catalogue, cross-checked against per-run money with no price table in the diff | DONE | a157e40 | .conductor/evidence/KS5/ks5-1.md |
+| KS5.2 | Every spawned model process writes a costs row - lanes, advisor, supervisor - caps see them, and an architecture test holds the rule that any process-spawning path taking a model writes a costs row | DONE | 0e7e63a | .conductor/evidence/KS5/ks5-2.md |
+| KS5.3 | BudgetAnalyzer prescriptions surface at plan-reload, logging any ceiling that contradicts the measured floor at the boundary | DONE | 1aa80cb | .conductor/evidence/KS5/ks5-3.md |
+| KS5.4 | approve on a budget park raises the ceiling explicitly with the amount stated instead of resetting the counter, and the cap check runs after the queued reload applies - the 2026-07-29 replay shows no silent double-spend | DONE | f73fd68 | .conductor/evidence/KS5/ks5-4.md |
 
 ### KS9 — The far door - GitHub is the remotest view
 
