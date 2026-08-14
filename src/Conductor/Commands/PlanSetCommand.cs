@@ -157,18 +157,14 @@ public static class PlanSetCommand
 
             // KS3.2: splice only the edited leaf (and the planVersion bump) into the raw file —
             // comments, key order and formatting survive; nothing the file never carried appears.
-            try
+            // WriteEdited self-checks the spliced bytes against the intent and falls back to the
+            // whole-document rewrite when the splice would lie (a duplicated key, a span it cannot
+            // place) — the safety valve, not the path, and it says what that cost.
+            if (!PlanDocumentEditor.WriteEdited(planPath, originalRaw, before, doc))
             {
-                PlanDocumentEditor.WriteEdited(planPath, originalRaw, before, doc);
-            }
-            catch (InvalidOperationException ex)
-            {
-                // The safety valve, not the path: an edit the splicer cannot place falls back to the
-                // validated whole-document rewrite, and says what that costs instead of hiding it.
                 var dropped = PlanDocumentEditor.CountCommentLines(System.Text.Encoding.UTF8.GetString(originalRaw));
                 if (dropped > 0)
-                    AnsiConsole.MarkupLine($"[yellow]Preserving edit failed ({Markup.Escape(ex.Message)}) — rewriting the file whole drops {dropped} comment line(s).[/]");
-                File.WriteAllText(planPath, newJson, System.Text.Encoding.UTF8);
+                    AnsiConsole.MarkupLine($"[yellow]The edit could not be spliced in place — the file was rewritten whole and {dropped} comment line(s) did not survive.[/]");
             }
             AnsiConsole.MarkupLine($"[green]plan set[/] {Markup.Escape(string.Join('.', parts))} = [bold]{Markup.Escape(value)}[/] (was {Markup.Escape(oldValue)})");
 

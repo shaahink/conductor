@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using Conductor.Commands;
 using Conductor.Core;
@@ -261,5 +262,130 @@ public sealed class KS3_2PlanEditPreservesTests : IDisposable
         var node = JsonSerializer.SerializeToNode(plan, PlanConfig.JsonOpts)!;
         var same = JsonSerializer.SerializeToNode(plan, PlanConfig.JsonOpts)!;
         Assert.Equal(text, PlanDocumentEditor.ApplyDiff(text, node, same));
+    }
+
+    // ------------------------------------------------------------------ absent parents (verifier replay, 2026-08-14)
+
+    /// <summary>A hand-written plan with a comment and NO `limits`/`report`/`gates` blocks — the
+    /// fixture the scaffold cannot be, because init always writes `limits`. <paramref name="extra"/>
+    /// is injected verbatim above `stages` so each fact can seed exactly the block it needs.</summary>
+    private string MinimalPlan(string extra = "")
+    {
+        var path = Path.Combine(_dir, $"minimal-{Guid.NewGuid():N}.plan.json");
+        File.WriteAllText(path, $$"""
+            {
+              // the operator's note — this line must survive every edit
+              "name": "ks32-min",
+              "repo": "{{_repo.Replace('\\', '/')}}",
+              "tracker": "TRACKER.md",
+              "agent": { "command": "claude", "args": ["-p", "{prompt}"] },
+              {{extra}}"stages": [
+                { "id": "S1", "title": "the only stage", "sessions": 1 }
+              ]
+            }
+            """);
+        return path;
+    }
+
+    private static JsonNode ParseFile(string text) =>
+        JsonNode.Parse(text, documentOptions: new JsonDocumentOptions
+        {
+            CommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true,
+        })!;
+
+    /// <summary>The scaffold carries no `report` block, and `plan set report.heartbeatMinutes 5` is
+    /// one of the command's own usage examples: the materialised parent must carry ONLY the edited
+    /// leaf. The bug: the whole default block came with it — `commit` and `push` appeared silently
+    /// in a file that never carried them.</summary>
+    [Fact]
+    public void PlanSet_MaterialisesAnAbsentParentWithOnlyTheEditedLeaf()
+    {
+        var path = ScaffoldPlan();
+        var comments = CommentLines(File.ReadAllText(path));
+        Assert.Equal(0, PlanSetCommand.ExecuteSet(path, "report.heartbeatMinutes", "5"));
+
+        var after = File.ReadAllText(path);
+        Assert.Equal(comments, CommentLines(after));
+        var report = Assert.IsType<JsonObject>(ParseFile(after)["report"]);
+        var leaf = Assert.Single(report);
+        Assert.Equal("heartbeatMinutes", leaf.Key);
+        Assert.Equal(5, leaf.Value!.GetValue<int>());
+        Assert.Equal(5, PlanConfig.Load(path).Report.HeartbeatMinutes);
+    }
+
+    /// <summary>The same hole on the deeper block: a plan with no `limits` at all must not come
+    /// back with the 17-key default object — only the leaf that was set.</summary>
+    [Fact]
+    public void PlanSet_OnAPlanWithNoLimitsBlock_WritesNoUnrelatedDefaults()
+    {
+        var path = MinimalPlan();
+        var comments = CommentLines(File.ReadAllText(path));
+        Assert.NotEmpty(comments);
+        Assert.Equal(0, PlanSetCommand.ExecuteSet(path, "limits.maxRunCostUsd", "5"));
+
+        var after = File.ReadAllText(path);
+        Assert.Equal(comments, CommentLines(after));
+        var limits = Assert.IsType<JsonObject>(ParseFile(after)["limits"]);
+        var leaf = Assert.Single(limits);
+        Assert.Equal("maxRunCostUsd", leaf.Key);
+        Assert.Equal(5m, PlanConfig.Load(path).Limits.MaxRunCostUsd);
+    }
+
+    // ------------------------------------------------------------------ duplicated keys
+
+    /// <summary>A duplicated key is edited where the parser actually reads it — the LAST occurrence
+    /// (System.Text.Json keeps the last duplicate). The bug: the edit landed on the first, dead
+    /// occurrence, the command printed success, and the plan kept loading the old value.</summary>
+    [Fact]
+    public void PlanSet_OnADuplicatedKey_LandsWhereTheParserReads()
+    {
+        var path = MinimalPlan("\"limits\": { \"maxRunCostUsd\": 25.0, \"maxRunCostUsd\": 30.0 },\n  ");
+        Assert.Equal(30.0m, PlanConfig.Load(path).Limits.MaxRunCostUsd); // the fixture's effective value
+        var comments = CommentLines(File.ReadAllText(path));
+
+        Assert.Equal(0, PlanSetCommand.ExecuteSet(path, "limits.maxRunCostUsd", "5"));
+
+        Assert.Equal(5m, PlanConfig.Load(path).Limits.MaxRunCostUsd);   // effective, not cosmetic
+        Assert.Equal(comments, CommentLines(File.ReadAllText(path)));   // and still the preserving path
+    }
+
+    /// <summary>The net under the splice: when the edited bytes would LOAD to something other than
+    /// the intent (here: deleting a duplicated key removes only the occurrence the parser reads,
+    /// resurrecting the dead one), <see cref="PlanDocumentEditor.WriteEdited"/> falls back to the
+    /// whole-file writer and says so — never a file that quietly means something else.</summary>
+    [Fact]
+    public void WriteEdited_FallsBackWholeRatherThanPersistALie()
+    {
+        var path = MinimalPlan("\"gatePolicy\": \"perPhase\",\n  \"gatePolicy\": \"perSession\",\n  ");
+        var raw = File.ReadAllBytes(path);
+        var plan = PlanConfig.Load(path);
+        Assert.Equal("perSession", plan.GatePolicy);
+
+        var before = JsonSerializer.SerializeToNode(plan, PlanConfig.JsonOpts)!;
+        var after = JsonSerializer.SerializeToNode(plan, PlanConfig.JsonOpts)!;
+        after.AsObject().Remove("gatePolicy"); // intent: back to the default
+
+        Assert.False(PlanDocumentEditor.WriteEdited(path, raw, before, after));
+        Assert.Equal("perSession", PlanConfig.Load(path).GatePolicy); // the intent, not the resurrected duplicate
+        Assert.DoesNotContain("perPhase", File.ReadAllText(path), StringComparison.Ordinal);
+    }
+
+    // ------------------------------------------------------------------ inline objects
+
+    /// <summary>Inserting into an object written inline on one line stays on that line — the
+    /// formatting-survives promise includes not tearing `{ "name": "build", ... }` across two
+    /// lines re-based onto the wrong indent.</summary>
+    [Fact]
+    public void PlanSet_IntoASingleLineObject_KeepsItOnOneLine()
+    {
+        var path = MinimalPlan("\"gates\": [ { \"name\": \"build\", \"command\": \"git status\" } ],\n  ");
+        Assert.Equal(0, PlanSetCommand.ExecuteSet(path, "gates.0.timeoutMinutes", "30"));
+
+        var lines = File.ReadAllText(path).Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n')
+            .Where(l => l.Contains("\"name\": \"build\"", StringComparison.Ordinal)).ToList();
+        var gateLine = Assert.Single(lines);
+        Assert.Contains("\"command\": \"git status\", \"timeoutMinutes\": 30", gateLine, StringComparison.Ordinal);
+        Assert.Equal(30, PlanConfig.Load(path).Gates[0].TimeoutMinutes);
     }
 }

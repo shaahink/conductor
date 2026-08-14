@@ -109,10 +109,29 @@ public static partial class PlanDocumentEditor
             closer = nl + outer;
         }
 
-        var body = string.Join("," + nl + indent,
-            adds.Select(a => JsonSerializer.Serialize(a.Key) + ": " + RenderText(a.Value, indent, nl)));
+        var rendered = adds.ConvertAll(a => JsonSerializer.Serialize(a.Key) + ": " + RenderText(a.Value, indent, nl));
+
+        // An object written inline on one line keeps its insertion inline: re-basing onto the LINE's
+        // indent would tear `{ "name": "build", ... }` across two oddly-indented lines.
+        if (obj.Props.Count > 0 && IsSingleLine(utf8, obj.Start, obj.End)
+            && rendered.TrueForAll(r => !r.Contains('\n', StringComparison.Ordinal)))
+        {
+            edits.Add(new Edit(at, at, Encoding.UTF8.GetBytes((needLeadingComma ? ", " : " ") + string.Join(", ", rendered))));
+            return;
+        }
+
+        var body = string.Join("," + nl + indent, rendered);
         var text = (needLeadingComma ? "," : "") + nl + indent + body + (closer ?? "");
         edits.Add(new Edit(at, at, Encoding.UTF8.GetBytes(text)));
+    }
+
+    private static bool IsSingleLine(byte[] utf8, int start, int end)
+    {
+        for (var i = start; i < end && i < utf8.Length; i++)
+        {
+            if (utf8[i] == (byte)'\n') return false;
+        }
+        return true;
     }
 
     /// <summary>All appended items of one array as ONE insertion after its last item.</summary>

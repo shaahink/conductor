@@ -75,13 +75,29 @@ public static partial class PlanDocumentEditor
 
     /// <summary>Splice the <paramref name="before"/>→<paramref name="after"/> diff into
     /// <paramref name="path"/>, preserving everything the diff does not name — including the file's
-    /// own BOM state. The caller owns validation; this only writes.</summary>
-    public static void WriteEdited(string path, byte[] originalRaw, JsonNode before, JsonNode after)
+    /// own BOM state. Runs the same post-splice self-check as <see cref="Save"/>: if the edited
+    /// bytes would not LOAD to the intended content (a duplicated key whose live occurrence the
+    /// splice missed, a span it cannot place), the whole-file writer takes over — never a file that
+    /// quietly means something else. Returns false when that fallback fired, so the caller can say
+    /// what it cost. The caller owns validation; this only writes.</summary>
+    public static bool WriteEdited(string path, byte[] originalRaw, JsonNode before, JsonNode after)
     {
         ArgumentNullException.ThrowIfNull(originalRaw);
         var bom = HasUtf8Bom(originalRaw);
         var utf8 = bom ? originalRaw[3..] : originalRaw;
-        WriteBytes(path, ApplyDiff(utf8, before, after), bom);
+        byte[] edited;
+        try
+        {
+            edited = ApplyDiff(utf8, before, after);
+            if (!SelfCheck(edited, after)) { WriteWhole(path, after); return false; }
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or ArgumentException)
+        {
+            WriteWhole(path, after);
+            return false;
+        }
+        WriteBytes(path, edited, bom);
+        return true;
     }
 
     /// <summary>Write the payload with the original file's BOM state restored. A public sync write
@@ -185,7 +201,7 @@ public static partial class PlanDocumentEditor
             }
             else
             {
-                (adds ??= []).Add((key, aVal));
+                (adds ??= []).Add((key, hasB ? ReducedToDiffering(bVal, aVal) : aVal));
             }
         }
         foreach (var (key, _) in before)
@@ -236,6 +252,24 @@ public static partial class PlanDocumentEditor
         for (var i = after.Count; i < before.Count; i++) edits.Add(DeleteMember(utf8, items[i].Start, items[i].End));
     }
 
+    /// <summary>What to write for a property the FILE lacks while the model knew it on both sides:
+    /// only the sub-paths where before != after. Everything else in the pair is serializer defaults
+    /// the file never carried — they re-materialise identically at load, so writing them would
+    /// invent content (the bug: `plan set report.heartbeatMinutes 5` on a report-less plan wrote
+    /// `commit` and `push` beside it, and a missing `limits` block came back 17 keys wide).</summary>
+    private static JsonNode? ReducedToDiffering(JsonNode? before, JsonNode? after)
+    {
+        if (before is not JsonObject bo || after is not JsonObject ao) return after?.DeepClone();
+        var reduced = new JsonObject();
+        foreach (var (key, aVal) in ao)
+        {
+            if (!bo.TryGetPropertyValue(key, out var bVal)) { reduced[key] = aVal?.DeepClone(); continue; }
+            if (NodeEquals(bVal, aVal)) continue;
+            reduced[key] = ReducedToDiffering(bVal, aVal);
+        }
+        return reduced;
+    }
+
     /// <summary>Structural equality with deterministic value comparison: both sides come from the
     /// same serializer, so equal values always render to equal JSON text.</summary>
     internal static bool NodeEquals(JsonNode? x, JsonNode? y)
@@ -265,29 +299,38 @@ public static partial class PlanDocumentEditor
     }
 
     /// <summary>Exact-name match first, then case-insensitive — a file that spells a key in another
-    /// case still gets its edit ON the existing key, never beside it.</summary>
+    /// case still gets its edit ON the existing key, never beside it. Of duplicated occurrences the
+    /// LAST wins, because that is the one the deserialiser honours: editing the first would change
+    /// dead text while the plan kept loading the old value.</summary>
     private static (string Name, int NameStart, SpanNode Value)? FindProp(SpanNode obj, string key)
     {
+        (string Name, int NameStart, SpanNode Value)? found = null;
         foreach (var p in obj.Props!)
         {
-            if (string.Equals(p.Name, key, StringComparison.Ordinal)) return p;
+            if (string.Equals(p.Name, key, StringComparison.Ordinal)) found = p;
         }
+        if (found is not null) return found;
         foreach (var p in obj.Props!)
         {
-            if (string.Equals(p.Name, key, StringComparison.OrdinalIgnoreCase)) return p;
+            if (string.Equals(p.Name, key, StringComparison.OrdinalIgnoreCase)) found = p;
         }
-        return null;
+        return found;
     }
 
-    /// <summary>Whether the edited bytes deserialise back to exactly the intended model content.
-    /// The net under the span arithmetic: if this says no, the caller falls back to the old
-    /// whole-file write rather than persisting a file that quietly means something else.</summary>
+    /// <summary>Whether the edited bytes LOAD to exactly the intended content. Both sides are
+    /// normalised through a <see cref="PlanConfig"/> round-trip, because what matters is what the
+    /// engine will read: a `--create`d key the model does not declare is invisible on both sides,
+    /// and a duplicated key resolves to the occurrence the parser actually honours. The net under
+    /// the span arithmetic — if this says no, the caller falls back to the old whole-file write
+    /// rather than persisting a file that quietly means something else.</summary>
     private static bool SelfCheck(byte[] edited, JsonNode after)
     {
         try
         {
             if (JsonSerializer.Deserialize<PlanConfig>(edited, PlanConfig.JsonOpts) is not { } reparsed) return false;
-            return NodeEquals(JsonSerializer.SerializeToNode(reparsed, PlanConfig.JsonOpts), after);
+            if (JsonSerializer.Deserialize<PlanConfig>(after.ToJsonString(PlanConfig.JsonOpts), PlanConfig.JsonOpts) is not { } intended) return false;
+            return NodeEquals(JsonSerializer.SerializeToNode(reparsed, PlanConfig.JsonOpts),
+                JsonSerializer.SerializeToNode(intended, PlanConfig.JsonOpts));
         }
         catch (JsonException)
         {
