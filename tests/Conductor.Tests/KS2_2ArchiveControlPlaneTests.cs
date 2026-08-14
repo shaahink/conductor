@@ -451,14 +451,14 @@ public sealed class KS2_2ArchiveControlPlaneTests : IDisposable
         File.Delete(broken);
 
         var past = FacePastRuns.Read(_root);
-        Assert.Equal(2, past.Count);
+        Assert.Equal(2, past.Rows.Count);
 
-        var gone = Assert.Single(past, p => !p.Readable);
+        var gone = Assert.Single(past.Rows, p => !p.Readable);
         Assert.Equal("", gone.RunId);                       // nothing could be read to get one
         Assert.NotEqual("", gone.Selector);                 // and the slug is what names it instead
         Assert.Contains(broken, gone.Problem, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("gone", gone.Problem, StringComparison.OrdinalIgnoreCase);
-        var opens = Assert.Single(past, p => p.Readable);
+        var opens = Assert.Single(past.Rows, p => p.Readable);
         Assert.Equal(RunId, opens.RunId);
         Assert.Equal(RunId, opens.Selector);
         Assert.Equal(readable, opens.RunDb, StringComparer.OrdinalIgnoreCase);
@@ -473,7 +473,7 @@ public sealed class KS2_2ArchiveControlPlaneTests : IDisposable
         Assert.Contains("gone", wire.GetProperty("problem").GetString()!, StringComparison.OrdinalIgnoreCase);
 
         // The hub's board prints it, with the reason on the row rather than the row simply absent.
-        var model = Conductor.Commands.HubModel.Compose(_root, _tmp, [], past, [], DateTime.UtcNow);
+        var model = Conductor.Commands.HubModel.Compose(_root, _tmp, [], past.Rows, [], DateTime.UtcNow);
         var board = string.Join("\n", Conductor.Commands.HubView.Board(model));
         Assert.Contains("vanishing", board, StringComparison.Ordinal);
         Assert.Contains("gone", board, StringComparison.OrdinalIgnoreCase);

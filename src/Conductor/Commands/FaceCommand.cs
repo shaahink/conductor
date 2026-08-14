@@ -95,30 +95,43 @@ public sealed partial class FaceCommand : AsyncCommand<FaceCommand.Settings>
                 // is the only chance the user has to notice they are looking at the wrong website.
                 AnsiConsole.MarkupLine($"[grey]attaching to[/] [white]{Markup.Escape(string.IsNullOrWhiteSpace(run.RepoLabel) ? run.PlanName : run.RepoLabel)}[/] [grey]{Markup.Escape(run.StageId)} · {Markup.Escape(run.BaseUrl)}[/]");
                 // The write token goes via env, never argv — it must not show in a process listing.
-                return await AttachAsync(run.BaseUrl, await FleetScan.ReadTokenAsync(run).ConfigureAwait(false))
-                    .ConfigureAwait(false);
+                // KS2.4: the whole fleet travels even though the engine could decide, because the Face
+                // can now SWITCH runs without restarting and the switcher needs a list to switch to. A
+                // Face handed one url and nothing else has no way to reach the other website.
+                return await AttachAsync(run.BaseUrl,
+                    await FleetScan.ReadTokenAsync(run).ConfigureAwait(false),
+                    await EnvelopeAsync(decision.Fleet, localStateDir).ConfigureAwait(false)).ConfigureAwait(false);
 
             case FaceTarget.Kind.Picker:
-                // K3.2: the picker also lists what this machine remembers. Best-effort — a catalogue
-                // that cannot be read must not stop someone attaching to a live run.
-                IReadOnlyList<FacePastRun> past = [];
-                try
-                {
-                    past = FacePastRuns.Read(StateHome.Root, decision.Fleet.Select(r => r.RunId));
-                }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-                {
-                    // no history offered; the live runs still are
-                }
                 psi.Environment[FaceTarget.FleetEnvVar] =
-                    FaceTarget.Serialize(decision.Fleet, await TokensForAsync(decision.Fleet).ConfigureAwait(false),
-                        localStateDir, past);
+                    await EnvelopeAsync(decision.Fleet, localStateDir).ConfigureAwait(false);
                 // KS2.2: the picker can now answer with a FINISHED run, which has no url to attach to.
                 // It writes that run's id here and exits; we open the read-only archive over it.
                 return await LaunchThenMaybeArchiveAsync(psi).ConfigureAwait(false);
 
             default:
                 return await NothingToAttachToAsync(psi, localStateDir, localPlanName).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>The <c>CONDUCTOR_FLEET</c> envelope: every reachable run with its own write token, plus
+    /// the page of remembered ones. Built in one place so the picker branch and the straight attach
+    /// cannot end up handing the Face two different pictures of the same machine.</summary>
+    internal static async Task<string> EnvelopeAsync(IReadOnlyList<FleetRun> fleet, string? localStateDir)
+    {
+        ArgumentNullException.ThrowIfNull(fleet);
+        return FaceTarget.Serialize(fleet, await TokensForAsync(fleet).ConfigureAwait(false),
+            localStateDir, PastPage(fleet));
+    }
+
+    /// <summary>K3.2: what this machine remembers, best-effort. A catalogue that cannot be read must
+    /// not stop someone attaching to a live run.</summary>
+    private static FacePastRunPage PastPage(IReadOnlyList<FleetRun> fleet)
+    {
+        try { return FacePastRuns.Read(StateHome.Root, fleet.Select(r => r.RunId)); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return FacePastRunPage.Empty;   // no history offered; the live runs still are
         }
     }
 
@@ -174,15 +187,27 @@ public sealed partial class FaceCommand : AsyncCommand<FaceCommand.Settings>
 
     /// <summary>KS2.1: the hub attaches through this, so the front door and the verb share one
     /// launcher and one token rule. The token goes via the environment, never argv — a process
-    /// listing is readable by every process on the machine.</summary>
-    internal static async Task<int> AttachAsync(string baseUrl, string? token)
+    /// listing is readable by every process on the machine.
+    /// <para>Two arities rather than an optional parameter because this is passed as a method group
+    /// to <c>HubLaunch.StartFlowAsync</c>, and an optional parameter is not applied in a method-group
+    /// conversion — the delegate would simply stop matching.</para></summary>
+    internal static Task<int> AttachAsync(string baseUrl, string? token) =>
+        AttachAsync(baseUrl, token, fleetJson: null);
+
+    /// <summary>KS2.4: the same attach, with the machine's fleet in the Face's environment so its
+    /// switcher has somewhere to go. Handing the fleet over also means a FINISHED run can be chosen
+    /// from inside a Face that attached straight to a live one — which needs the archive handoff file,
+    /// so this launch waits on it exactly as the picker's does.</summary>
+    internal static async Task<int> AttachAsync(string baseUrl, string? token, string? fleetJson)
     {
         var psi = FaceProcess();
         if (psi is null) return 1;
         psi.ArgumentList.Add("--url");
         psi.ArgumentList.Add(baseUrl);
         if (!string.IsNullOrEmpty(token)) psi.Environment["CONDUCTOR_TOKEN"] = token;
-        return await LaunchAsync(psi).ConfigureAwait(false);
+        if (string.IsNullOrEmpty(fleetJson)) return await LaunchAsync(psi).ConfigureAwait(false);
+        psi.Environment[FaceTarget.FleetEnvVar] = fleetJson;
+        return await LaunchThenMaybeArchiveAsync(psi).ConfigureAwait(false);
     }
 
     /// <summary>The Face binary, or the one sentence that says how to build it. Null means it is not

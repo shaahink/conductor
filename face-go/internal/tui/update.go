@@ -40,6 +40,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// KS2.8: the reader is peeled at the same precedence as the command bar — BEFORE the esc
 		// ladder in handleKey and before `q` can reach the quit arm. Without this, `q` inside a
 		// 2000-line document kills the Face and `esc` drops the user two layers instead of one.
+		// KS2.4: the run switcher is peeled at the same precedence and for the same reason — it is
+		// the whole screen while it is up, and its `esc`/`q` mean "back to the run I am on", not
+		// "quit the Face".
+		if m.switcher.open {
+			return m.handleSwitcherKey(key)
+		}
 		if m.reader.open {
 			return m.handleReaderKey(key)
 		}
@@ -537,7 +543,10 @@ func (m Model) handleMouseWheel(msg tea.MouseWheelMsg) (tea.Model, tea.Cmd) {
 		key = "up"
 	}
 	// The reader floats over whatever tab is under it, so the wheel belongs to it while it is up —
-	// same precedence as the key path.
+	// same precedence as the key path. The switcher covers even the reader.
+	if m.switcher.open {
+		return m.handleSwitcherKey(key)
+	}
 	if m.reader.open {
 		return m.handleReaderKey(key)
 	}

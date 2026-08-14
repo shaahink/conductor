@@ -84,6 +84,15 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
   agent-authored prose either advertises `z` or is enumerated with its route in
   `truncationSites` (reader_test.go) — a truncation site that is not written down is how the
   owner's "cannot read long texts" happened the first time.
+- **The run switcher is a SCREEN, not a fifth float** (KS2.4, `switcher.go`). `:` then `switch` shows
+  the pre-flight picker again — the same `PickerModel`, the same keys, the same `Render` — over a Face
+  that is already attached, and choosing a live row swaps the data source in place instead of
+  restarting the process. It replaces the frame rather than compositing over it precisely so there is
+  one hint line and one run identity on screen at a time. `esc` there means *cancel*, not *quit*: the
+  pre-flight screen's `esc` ends the process, and forwarding that from inside a live dashboard would
+  make the switcher a trapdoor. What survives a switch is written down in `attachTo` — theme, tab,
+  sidebar, window, fleet — and everything else is rebuilt by `New`, so a per-tab field nobody
+  remembered to clear cannot go on describing the run you left.
 - Float with the lipgloss v2 **compositor**, never `lipgloss.Place` (which is opaque):
   `compositeAt / compositeCenter / compositeBottomRight` in `view.go` layer the box over the live
   dashboard so the background stays visible — that is the "transparent modal" the owner asked for.

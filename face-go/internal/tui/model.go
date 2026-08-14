@@ -168,6 +168,14 @@ type Model struct {
 	// tab's state, which is what lets `esc` return to the exact sub-state it was opened from.
 	reader readerModel
 
+	// KS2.4: the runs this machine has, as the engine measured them (CONDUCTOR_FLEET), and the
+	// switcher that shows them again over a Face that is already attached. `handoff` is set only when
+	// the switcher lands on a FINISHED run — the Face cannot serve one, so the choice leaves through
+	// main.go and the engine opens the read-only archive over it.
+	fleet    Fleet
+	switcher switcherModel
+	handoff  *PastRun
+
 	transcript widgets.TranscriptModel
 	sidebar    widgets.SidebarModel
 

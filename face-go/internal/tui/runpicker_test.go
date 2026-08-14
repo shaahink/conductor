@@ -348,7 +348,7 @@ func TestParseFleetReadsPastRuns(t *testing.T) {
 func TestPickerWithoutHistoryIsUnchanged(t *testing.T) {
 	plain := NewPicker(liveFleet())
 	plain.width, plain.height = 100, 24
-	withEmpty := NewPicker(liveFleet()).WithPast(nil)
+	withEmpty := NewPicker(liveFleet()).WithPast(nil, 0)
 	withEmpty.width, withEmpty.height = 100, 24
 	if plain.Render() != withEmpty.Render() {
 		t.Error("an empty history changed the frame")
@@ -356,7 +356,7 @@ func TestPickerWithoutHistoryIsUnchanged(t *testing.T) {
 }
 
 func TestPickerListsPastRunsUnderTheLiveOnes(t *testing.T) {
-	p := NewPicker(liveFleet()).WithPast(pastFleet())
+	p := NewPicker(liveFleet()).WithPast(pastFleet(), len(pastFleet()))
 	p.width, p.height = 100, 30
 	frame := p.Render()
 
@@ -379,7 +379,7 @@ func TestPickerListsPastRunsUnderTheLiveOnes(t *testing.T) {
 // no control plane of its own, so the answer leaves by a different door: ChosenPast, which the engine
 // turns into a read-only archive plane over that run's run.db.
 func TestEnterOnAPastRunOpensTheReadOnlyArchive(t *testing.T) {
-	p := NewPicker(liveFleet()).WithPast(pastFleet())
+	p := NewPicker(liveFleet()).WithPast(pastFleet(), len(pastFleet()))
 	p.width, p.height = 100, 30
 
 	p = pick(t, p, "end")
@@ -426,7 +426,7 @@ func TestAPastRunWhoseDatabaseIsGoneStillListsAndSaysWhy(t *testing.T) {
 		Problem: `that run's database is gone — nothing at C:/home/runs/conductor-vanished-a13f0b28/run.db.`,
 		RunDb:   `C:/home/runs/conductor-vanished-a13f0b28/run.db`,
 	}
-	p := NewPicker(liveFleet()).WithPast(append(pastFleet(), gone))
+	p := NewPicker(liveFleet()).WithPast(append(pastFleet(), gone), len(pastFleet())+1)
 	p.width, p.height = 100, 30
 
 	if gone.Readable() {
@@ -470,7 +470,7 @@ func TestAPastRunWhoseDatabaseIsGoneStillListsAndSaysWhy(t *testing.T) {
 // A live row must never come back through the archive door, and a picker nobody pressed enter on
 // must not claim either kind of choice.
 func TestChosenPastIsEmptyUntilAPastRowIsChosen(t *testing.T) {
-	p := NewPicker(liveFleet()).WithPast(pastFleet())
+	p := NewPicker(liveFleet()).WithPast(pastFleet(), len(pastFleet()))
 	if _, opened := p.ChosenPast(); opened {
 		t.Error("a fresh picker claims to have opened an archive")
 	}
@@ -485,7 +485,7 @@ func TestChosenPastIsEmptyUntilAPastRowIsChosen(t *testing.T) {
 // Number keys are the attach shortcut. They must never land on a row that cannot be attached to,
 // however far down the cursor can walk.
 func TestNumberKeysNeverReachAPastRun(t *testing.T) {
-	p := NewPicker(liveFleet()[:1]).WithPast(pastFleet())
+	p := NewPicker(liveFleet()[:1]).WithPast(pastFleet(), len(pastFleet()))
 	p.width, p.height = 100, 30
 	for _, k := range []string{"2", "3", "9"} {
 		if _, chosen := pick(t, p, k).Chosen(); chosen {
@@ -498,10 +498,108 @@ func TestNumberKeysNeverReachAPastRun(t *testing.T) {
 }
 
 func TestGoldenRunPickerWithHistory(t *testing.T) {
-	p := NewPicker(liveFleet()).WithPast(pastFleet())
+	p := NewPicker(liveFleet()).WithPast(pastFleet(), len(pastFleet()))
 	p.width, p.height = 100, 30
 	checkGolden(t, "run_picker_with_history", p.Render())
 
 	onPast := pick(t, p, "end")
 	checkGolden(t, "run_picker_past_row_selected", onPast.Render())
+}
+
+// ---------------------------------------------------------------------------------------------
+// KS2.4 — the cap is disclosed, and the same screen serves as the run switcher.
+
+// The catalogue holds more than a screenful and the engine sends a page. A heading that says "2 past
+// runs" over a machine with twenty-three is not a short list, it is a wrong one: someone looks for a
+// run, does not find it, and concludes it is not on this machine.
+func TestPastHeadingSaysWhenItIsShowingOnlyAPage(t *testing.T) {
+	full := pastHeading(2, 2, 72)
+	if !strings.Contains(full, "2 past runs on this machine") || strings.Contains(full, " of ") {
+		t.Errorf("an untruncated list should not claim to be a page: %q", full)
+	}
+
+	page := pastHeading(8, 23, 72)
+	for _, want := range []string{"8 of 23", "read-only", "conductor history"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the heading %q does not say %q", page, want)
+		}
+	}
+
+	// Narrow terminals give up the adjectives before they give up the fact and the way out.
+	mid := pastHeading(8, 23, 45)
+	if !strings.Contains(mid, "8 of 23") || !strings.Contains(mid, "conductor history") {
+		t.Errorf("at 45 columns the heading lost the disclosure: %q", mid)
+	}
+	narrow := pastHeading(8, 23, 22)
+	if !strings.Contains(narrow, "8 of 23") {
+		t.Errorf("at 22 columns the heading lost the count: %q", narrow)
+	}
+	for _, w := range []int{72, 45, 22, 10} {
+		if got := lipgloss.Width(pastHeading(8, 23, w)); got > w && w >= 12 {
+			t.Errorf("heading at width %d is %d cols: %q", w, got, pastHeading(8, 23, w))
+		}
+	}
+}
+
+// …and it reaches the frame, at the 80-column floor where the room runs out.
+func TestPickerFrameDisclosesTheCap(t *testing.T) {
+	p := NewPicker(liveFleet()).WithPast(pastFleet(), 23)
+	p.width, p.height = 80, 24
+	frame := p.Render()
+	for _, want := range []string{"2 of 23", "conductor history"} {
+		if !strings.Contains(frame, want) {
+			t.Errorf("the frame does not disclose the cap (%q missing):\n%s", want, frame)
+		}
+	}
+}
+
+// A total the engine did not send (an older envelope) must not read as "showing 2 of 0".
+func TestAMissingTotalNeverReadsAsFewerThanArrived(t *testing.T) {
+	p := NewPicker(liveFleet()).WithPast(pastFleet(), 0)
+	if p.pastTotal != len(pastFleet()) {
+		t.Fatalf("pastTotal = %d, want it floored at what arrived", p.pastTotal)
+	}
+	if strings.Contains(p.Render(), " of ") {
+		t.Error("an absent total was rendered as a truncation")
+	}
+}
+
+// The switcher is the SAME screen, and the two states must not be confusable: one is asking what to
+// attach to and quits on esc, the other is asking what to switch to and cancels.
+func TestTheSwitcherStateChangesWhatTheScreenPromises(t *testing.T) {
+	attach := NewPicker(liveFleet()).WithPast(pastFleet(), len(pastFleet()))
+	attach.width, attach.height = 100, 30
+	switcher := attach.WithAttached("http://127.0.0.1:4318")
+
+	if !strings.Contains(attach.Render(), "attach the face to which run?") {
+		t.Error("the pre-flight screen stopped saying what it is")
+	}
+	if !strings.Contains(attach.Render(), "esc") || !strings.Contains(attach.Render(), "quit") {
+		t.Error("the pre-flight screen no longer says esc quits")
+	}
+
+	frame := switcher.Render()
+	if !strings.Contains(frame, "switch this face to which run?") {
+		t.Errorf("the switcher does not say it is switching:\n%s", frame)
+	}
+	if !strings.Contains(frame, "esc") || !strings.Contains(frame, "cancel") {
+		t.Errorf("the switcher does not say esc cancels:\n%s", frame)
+	}
+	if switcher.cursor != 1 {
+		t.Errorf("the switcher opened on row %d, want the attached run", switcher.cursor)
+	}
+	if !strings.Contains(frame, "attached now") {
+		t.Errorf("the switcher does not name the run it is attached to:\n%s", frame)
+	}
+	// The self marker still means "the run in this directory"; the attached one takes the gutter only
+	// on its own row, so both facts stay readable.
+	if !strings.Contains(frame, "*") {
+		t.Errorf("the self marker disappeared in the switcher:\n%s", frame)
+	}
+}
+
+func TestGoldenRunSwitcher(t *testing.T) {
+	p := NewPicker(liveFleet()).WithPast(pastFleet(), 23).WithAttached("http://127.0.0.1:4318")
+	p.width, p.height = 100, 30
+	checkGolden(t, "run_switcher_100x30", p.Render())
 }

@@ -262,7 +262,7 @@ public sealed class KS2_1HubTests : IDisposable
         SeedRun(repo, "core", "run-killed-ks21");
 
         var past = FacePastRuns.Read(_root);
-        var model = HubModel.Compose(_root, repo, [], past, [], Now);
+        var model = HubModel.Compose(_root, repo, [], past.Rows, [], Now);
 
         var row = Assert.Single(model.PastRuns);
         Assert.Equal(RunLiveness.Orphaned, row.Status);

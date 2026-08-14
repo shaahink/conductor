@@ -64,7 +64,7 @@ public sealed class HubCommand : AsyncCommand<HubCommand.Settings>
         var fleet = await FleetAsync(settings, plans).ConfigureAwait(false);
         var root = StateHome.Root;
         var past = Past(root, fleet);
-        var model = HubModel.Compose(root, cwd, fleet, past, plans, DateTime.UtcNow);
+        var model = HubModel.Compose(root, cwd, fleet, past.Rows, plans, DateTime.UtcNow);
 
         foreach (var line in HubView.Board(model)) Console.WriteLine(line);
 
@@ -99,12 +99,12 @@ public sealed class HubCommand : AsyncCommand<HubCommand.Settings>
 
     /// <summary>The catalogue's half, best effort. A history that cannot be read must never stop
     /// someone attaching to a run that is right there.</summary>
-    private static IReadOnlyList<FacePastRun> Past(string root, IReadOnlyList<FleetRun> fleet)
+    private static FacePastRunPage Past(string root, IReadOnlyList<FleetRun> fleet)
     {
         try { return FacePastRuns.Read(root, fleet.Select(r => r.RunId)); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         {
-            return [];
+            return FacePastRunPage.Empty;
         }
     }
 
@@ -176,7 +176,10 @@ public sealed class HubCommand : AsyncCommand<HubCommand.Settings>
 
         var run = fleet.FirstOrDefault(f => f.Port == row.Port && FleetScan.SameDir(f.StateDir, row.StateDir));
         var token = run is null ? null : await FleetScan.ReadTokenAsync(run).ConfigureAwait(false);
-        return await FaceCommand.AttachAsync(row.BaseUrl, token).ConfigureAwait(false);
+        // KS2.4: the fleet travels with the attach, so a Face opened from the front door can switch to
+        // another run — or open a finished one read-only — without coming back out through the hub.
+        return await FaceCommand.AttachAsync(row.BaseUrl, token,
+            await FaceCommand.EnvelopeAsync(fleet, localStateDir: null).ConfigureAwait(false)).ConfigureAwait(false);
     }
 
     /// <summary>Start a run from a plan here. KS2.3: the itinerary first — <c>journey</c> writes no

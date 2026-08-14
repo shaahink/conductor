@@ -43,6 +43,13 @@ dashboard: ↑↓ or 1-9 to choose, enter to attach, esc to quit. That envelope
 carries each run's write token, which is why it is an env var and not a flag.
 The picker also lists the runs this machine remembers; enter on one of those
 opens it READ-ONLY, served from its run.db with no engine and no write token.
+When there are more remembered runs than fit, the heading says so and names
+'conductor history' for the rest, rather than showing a page as the whole.
+
+Once attached, ':' then 'switch' shows that same list again and moves this Face
+to another run WITHOUT restarting it — the theme, the open tab and the sidebar
+survive, and the write token becomes the new run's or none at all. Choosing a
+finished run there leaves by the archive door, exactly as the picker's does.
 
 --theme overrides the scheme for this launch only. To CHANGE the saved choice,
 switch live from the palette (':' then 'theme') — that writes it to
@@ -77,11 +84,7 @@ func main() {
 	if !term.IsTerminal(os.Stdout.Fd()) && os.Getenv("FACE_FORCE_TTY") == "" {
 		fmt.Fprintln(os.Stderr, "conductor-face needs an interactive terminal (stdout is not a TTY).")
 		if fleetErr == nil {
-			fmt.Fprintf(os.Stderr, "The run picker had %d runs to offer:\n", len(fleet.Runs))
-			for i, r := range fleet.Runs {
-				fmt.Fprintf(os.Stderr, "  %d) %-16s %-10s %-24s %s  pid %d  %s\n",
-					i+1, r.RepoLabel(), stageOrDash(r), r.StatusText(), r.BaseURL, r.Pid, writeMode(r))
-			}
+			listFleet(fleet)
 		}
 		fmt.Fprintln(os.Stderr, "Try:  conductor-face --demo   (or run inside a real terminal)")
 		os.Exit(1)
@@ -122,7 +125,14 @@ func main() {
 	}
 	defer source.Close()
 
+	// KS2.4: the fleet travels INTO the dashboard, not only into the pre-flight picker. It is what
+	// the run switcher (`:` then `switch`) offers, and the engine now hands it over even when it
+	// could pick for us — a Face given one url and nothing else can only be restarted to reach the
+	// other website, and a restart is how a session loses its theme and its place.
 	model := tui.New(source, *demo, baseURL)
+	if fleetErr == nil {
+		model = model.WithFleet(fleet)
+	}
 	if !*demo {
 		// SF2.1: find this run's state dir on disk BEFORE anything is polled, so a Face opened after
 		// the engine exited can still say what the run did. Demo mode is excluded because it has no
@@ -134,9 +144,18 @@ func main() {
 		model = model.WithStateDir(firstNonEmpty(stateDir, discoverStateDir()))
 	}
 
-	if _, err := tea.NewProgram(model).Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "conductor-face: %v\n", err)
+	final, runErr := tea.NewProgram(model).Run()
+	if runErr != nil {
+		fmt.Fprintf(os.Stderr, "conductor-face: %v\n", runErr)
 		os.Exit(1)
+	}
+	// KS2.4: the switcher can land on a FINISHED run, which has no plane for this process to point
+	// at. The dashboard records the choice and quits; the handoff is answered here, by the same file
+	// protocol the pre-flight picker uses, because that protocol belongs to main and not to the TUI.
+	if m, ok := final.(tui.Model); ok {
+		if past, isPast := m.Handoff(); isPast {
+			handOffArchive(past)
+		}
 	}
 }
 
@@ -153,7 +172,7 @@ const fleetEnv = "CONDUCTOR_FLEET"
 // run to attach to, and a finished run for the engine to serve read-only — and collapsing them into
 // one value would make the caller guess which it got.
 func runPicker(fleet tui.Fleet) (tui.PickerModel, bool) {
-	final, err := tea.NewProgram(tui.NewPicker(fleet.Runs).WithPast(fleet.Past)).Run()
+	final, err := tea.NewProgram(tui.NewPicker(fleet.Runs).WithPast(fleet.Past, fleet.PastTotal)).Run()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "conductor-face: %v\n", err)
 		os.Exit(1)
@@ -189,6 +208,37 @@ func handOffArchive(past tui.PastRun) {
 	if err := os.WriteFile(path, []byte(name), 0o600); err != nil {
 		fmt.Fprintf(os.Stderr, "conductor-face: could not hand run %s back to the engine: %v\n",
 			name, err)
+	}
+}
+
+// listFleet is the picker for a caller that cannot be shown one — a log capture, a wrapper script, a
+// Face launched with its stdout redirected. KS2.4 gave it the picker's OTHER half: the runs this
+// machine remembers, and the sentence the heading carries when there were more than fit. A listing
+// that named only what is answering on a port would say "two runs" about a machine with twenty-five,
+// which is the same silent page the screen version was fixed for.
+func listFleet(fleet tui.Fleet) {
+	fmt.Fprintf(os.Stderr, "The run picker had %d live run(s) to offer:\n", len(fleet.Runs))
+	for i, r := range fleet.Runs {
+		fmt.Fprintf(os.Stderr, "  %d) %-16s %-10s %-24s %s  pid %d  %s\n",
+			i+1, r.RepoLabel(), stageOrDash(r), r.StatusText(), r.BaseURL, r.Pid, writeMode(r))
+	}
+	if len(fleet.Past) == 0 {
+		return
+	}
+	total := fleet.PastTotal
+	if total < len(fleet.Past) {
+		total = len(fleet.Past)
+	}
+	fmt.Fprintf(os.Stderr, "and %d of %d remembered run(s), read-only:\n", len(fleet.Past), total)
+	for _, r := range fleet.Past {
+		note := fmt.Sprintf("%d/%d", r.Done, r.Total)
+		if !r.Readable() {
+			note = r.Problem
+		}
+		fmt.Fprintf(os.Stderr, "  -  %-16s %-10s %-24s %s\n", r.RepoLabel(), note, r.Status, r.OpenWith())
+	}
+	if total > len(fleet.Past) {
+		fmt.Fprintln(os.Stderr, "  (conductor history lists the rest)")
 	}
 }
 

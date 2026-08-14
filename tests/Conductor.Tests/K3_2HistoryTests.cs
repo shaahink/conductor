@@ -326,7 +326,7 @@ public sealed class K3_2HistoryTests : IDisposable
 
         var past = FacePastRuns.Read(_root, ["run-live-000001"]);
 
-        var one = Assert.Single(past);
+        var one = Assert.Single(past.Rows);
         Assert.Equal("run-finished-01", one.RunId);
         Assert.Equal(1, one.Done);
         Assert.Equal(2, one.Total);
@@ -349,7 +349,12 @@ public sealed class K3_2HistoryTests : IDisposable
             SeedRun(RepoPath("r" + i), "core", $"run-many-{i:D6}",
                 new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(i), sessions: 1);
 
-        Assert.Equal(FacePastRuns.DefaultMax, FacePastRuns.Read(_root).Count);
+        var page = FacePastRuns.Read(_root);
+        Assert.Equal(FacePastRuns.DefaultMax, page.Rows.Count);
+        // KS2.4: and the cap says so. A page of eight that reports "8 past runs" is describing itself,
+        // not the machine — the reader cannot tell it from a machine that has had exactly eight.
+        Assert.Equal(FacePastRuns.DefaultMax + 3, page.Total);
+        Assert.True(page.Truncated);
     }
 
     [Fact]

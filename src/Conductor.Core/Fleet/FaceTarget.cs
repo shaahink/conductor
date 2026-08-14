@@ -68,18 +68,20 @@ public static class FaceTarget
     /// hiding a run the user can see in <c>ps</c>.</summary>
     public static string Serialize(
         IReadOnlyList<FleetRun> runs, IReadOnlyDictionary<string, string> tokens, string? localStateDir,
-        IReadOnlyList<FacePastRun>? past = null)
+        FacePastRunPage? past = null)
     {
         ArgumentNullException.ThrowIfNull(runs);
         ArgumentNullException.ThrowIfNull(tokens);
 
+        var page = past ?? FacePastRunPage.Empty;
         var envelope = new FaceFleet(runs.Select(r => new FaceFleetRun(
             r.Repo, r.PlanName, r.RunId, r.Status, r.Port, r.Pid, r.StageId, r.StageTitle,
             r.AttentionReason, r.Done, r.Total, r.CostUsd, r.BaseUrl, r.StateDir,
             LookupToken(tokens, r.StateDir),
             FleetScan.SameDir(r.StateDir, localStateDir))).ToArray())
         {
-            Past = past ?? [],
+            Past = page.Rows,
+            PastTotal = page.Total,
         };
 
         return JsonSerializer.Serialize(envelope, FaceFleetJsonContext.Default.FaceFleet);

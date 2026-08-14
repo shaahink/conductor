@@ -258,6 +258,27 @@ public sealed class SF5_4FleetTests
         finally { TestTemp.DeleteTree(repo); }
     }
 
+    /// <summary>KS2.4 — the envelope repeats the status the SCAN measured, never a prettier one. The
+    /// picker's rows are read as facts about what is happening on this machine, and a row saying
+    /// <c>Running</c> for an engine nobody can talk to is the one lie this screen must not tell: it is
+    /// read as "that is fine, leave it" and as "do not start another one", and neither is true.</summary>
+    [Fact]
+    public void The_face_envelope_repeats_the_status_the_scan_measured()
+    {
+        var unattached = new FleetRun(0, "", "headless plan", "", "C:/code/headless",
+            "C:/code/headless/.conductor", "no control plane", "", "", null, 0, 0, 0m);
+
+        var back = JsonSerializer.Deserialize<FaceFleet>(
+            FaceTarget.Serialize([Row(), unattached], new Dictionary<string, string>(StringComparer.Ordinal), null),
+            new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+
+        Assert.Equal("Running", back.Runs[0].Status);
+        Assert.Equal("no control plane", back.Runs[1].Status);
+        // And nothing about a row the Face cannot reach pretends otherwise.
+        Assert.Equal("", back.Runs[1].BaseUrl);
+        Assert.Null(back.Runs[1].Token);
+    }
+
     // ── The verb's own small decisions ──────────────────────────────────────────────────────────
 
     [Fact]

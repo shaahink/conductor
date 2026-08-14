@@ -149,15 +149,27 @@ func TestPaletteThemeVerbSwitchesAndPersists(t *testing.T) {
 // do nothing at all in --demo, which is where most people will try it.
 func TestThemeVerbNeverReachesTheControlPlane(t *testing.T) {
 	for _, v := range allVerbs {
-		if strings.HasPrefix(v.Key, themeVerbPrefix) != (v.Group == groupFace) {
-			t.Errorf("verb %q: theme-prefixed and Face-grouped disagree", v.Key)
+		if strings.HasPrefix(v.Key, themeVerbPrefix) && v.Group != groupFace {
+			t.Errorf("verb %q is a theme row outside the Face group", v.Key)
 		}
 		if v.Group == groupFace && !v.Local {
 			t.Errorf("verb %q is in the Face group but not Local — it would be POSTed to the engine", v.Key)
 		}
+		if v.Local && v.Group != groupFace {
+			t.Errorf("verb %q is Local but not in the Face group — the group is what tells a reader "+
+				"of the palette that it never reaches the engine", v.Key)
+		}
 		if v.Local && !v.Safe {
 			t.Errorf("verb %q is Local and unsafe; the confirm path posts a control verb and would "+
 				"drop the local action", v.Key)
+		}
+		// KS2.4 put a second kind of verb in the Face group (the run switcher), so "Face group" no
+		// longer means "theme row". What must still hold — and is the claim this test was written for
+		// — is that every Local verb is ANSWERED locally: a Local key nobody dispatches falls through
+		// runLocalVerb's CutPrefix into "unknown command", silently, in the one group where nothing
+		// reaches an engine that could complain.
+		if v.Local && v.Key != switchVerb && !strings.HasPrefix(v.Key, themeVerbPrefix) {
+			t.Errorf("verb %q is Local but no local dispatch answers it", v.Key)
 		}
 	}
 }

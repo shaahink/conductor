@@ -59,9 +59,27 @@ func rebuildStyles() {
 // key styles a keycap for hint lines.
 func key(s string) string { return keyStyle.Render(s) }
 
+// faceView wraps a painted screen in the terminal settings every frame of this Face carries. It
+// exists so the run switcher, which replaces the whole screen rather than floating over it, cannot
+// come out of a different door with the alt screen or the background colour missing.
+func faceView(screen string) tea.View {
+	v := tea.NewView(screen)
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	v.BackgroundColor = widgets.Base()
+	return v
+}
+
 func (m Model) View() tea.View {
 	if m.width < 20 || m.height < 8 {
 		return tea.NewView("Terminal too small — resize to at least 20×8")
+	}
+
+	// KS2.4: the switcher is the pre-flight picker SHOWN AGAIN, so it is a screen and not a float —
+	// the same frame the Face opens with, painted by the same Render, clamped to the window by it.
+	// Compositing it over the dashboard would put two hint lines and two run identities on one frame.
+	if m.switcher.open {
+		return faceView(m.switcherPicker().Render())
 	}
 
 	layout := ComputeLayout(m.width, m.height, m.sidebarCollapsed)
@@ -109,11 +127,7 @@ func (m Model) View() tea.View {
 	// a clipped pane — not to the bottom bar and the live tail sliding below the fold.
 	screen = lipgloss.NewStyle().MaxWidth(m.width).MaxHeight(m.height).Render(screen)
 
-	v := tea.NewView(screen)
-	v.AltScreen = true
-	v.MouseMode = tea.MouseModeCellMotion
-	v.BackgroundColor = widgets.Base()
-	return v
+	return faceView(screen)
 }
 
 // --- tab strip ---------------------------------------------------------------

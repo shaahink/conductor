@@ -175,7 +175,7 @@ public sealed class KS1_3LivenessReconciliationTests : IDisposable
         var repo = RepoPath("picker");
         SeedRun(repo, "core", "run-picker-0001");
 
-        var past = Assert.Single(FacePastRuns.Read(_root));
+        var past = Assert.Single(FacePastRuns.Read(_root).Rows);
 
         Assert.Equal("run-picker-0001", past.RunId);
         Assert.Equal(RunLiveness.Orphaned, past.Status);

@@ -82,6 +82,14 @@ var allVerbs = []paletteVerb{
 		Consequence: "kill session + stop conductor"},
 	{Key: "rollback", Desc: "Git reset --hard to stage start", Group: groupDanger,
 		Consequence: "git reset --hard to stage start; uncommitted work lost"},
+	// Face — this Face, never the engine. KS2.4's switcher is the first non-theme member: it changes
+	// which run this process is looking at, which is as local as a colour scheme and just as wrong
+	// to send down a control plane. The theme rows are appended after it by init().
+	// The description is kept inside the widest existing one ("Jump to a different stage (requires
+	// stage ID)"): the palette box is sized to its longest row, and a wider box at the 80-column
+	// floor is a box that starts clipping against the window edge.
+	{Key: switchVerb, Desc: "Switch to another run on this machine", Safe: true,
+		Group: groupFace, Local: true},
 }
 
 // themeVerbPrefix is the palette key's first word: `theme mocha`, `theme latte`, … Typing `:theme`
@@ -207,6 +215,11 @@ func (m *Model) handlePaletteKey(key string) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.cmd = CmdNone
+			if verb.Key == switchVerb {
+				// The one Local verb that changes a SCREEN rather than a setting, so it answers with
+				// a model of its own rather than a command (KS2.4).
+				return m.openSwitcher()
+			}
 			if verb.Local {
 				return m, m.runLocalVerb(verb.Key)
 			}
@@ -465,11 +478,21 @@ func verbGroupLegend(g verbGroup) string {
 	return subtleStyle.Render(fmt.Sprintf("%-7s", string(g))) + strings.Join(keys, subtleStyle.Render(" · "))
 }
 
-// themeLegend renders the help card's Face row. Like verbGroupLegend it is DERIVED — here from the
-// theme registry, the same source the palette's Face rows come from — so help and palette cannot
-// drift. It collapses the `theme ` prefix those rows carry (four rows reading "theme X" are, in
-// prose, one verb and a list of names) and paints the live scheme in accent.
-func themeLegend() string {
+// faceLegend renders the help card's Face row. Like verbGroupLegend it is DERIVED — from allVerbs
+// and the theme registry, the same sources the palette's Face rows come from — so help and palette
+// cannot drift. It collapses the `theme ` prefix those rows carry (four rows reading "theme X" are,
+// in prose, one verb and a list of names) and paints the live scheme in accent.
+//
+// KS2.4: the group's non-theme verbs are listed first, from allVerbs, so the run switcher reaches
+// the help card the way a rebound tab mnemonic does — without a second edit here.
+func faceLegend() string {
+	out := subtleStyle.Render(fmt.Sprintf("%-7s", string(groupFace)))
+	for _, v := range allVerbs {
+		if v.Group == groupFace && !strings.HasPrefix(v.Key, themeVerbPrefix) {
+			out += key(v.Key) + subtleStyle.Render(" · ")
+		}
+	}
+
 	names := widgets.ThemeNames()
 	styled := make([]string, 0, len(names))
 	for _, n := range names {
@@ -479,8 +502,7 @@ func themeLegend() string {
 		}
 		styled = append(styled, st.Render(n))
 	}
-	return subtleStyle.Render(fmt.Sprintf("%-7s", string(groupFace))) + key("theme") + " " +
-		strings.Join(styled, subtleStyle.Render(" · "))
+	return out + key("theme") + " " + strings.Join(styled, subtleStyle.Render(" · "))
 }
 
 func (m Model) renderHelpOverlay() string {
@@ -497,7 +519,7 @@ func (m Model) renderHelpOverlay() string {
 		"  " + verbGroupLegend(groupRun) + "\n" +
 		"  " + verbGroupLegend(groupStage) + "\n" +
 		"  " + verbGroupLegend(groupDanger) + "\n" +
-		"  " + themeLegend() + "\n\n" +
+		"  " + faceLegend() + "\n\n" +
 		accentStyle.Render("Actions") + "\n" +
 		"  " + key("i") + " inject context    " + key("/") + " search transcript · " + key("f") +
 		" fold tools · " + key("T") + " fold thinking\n" +

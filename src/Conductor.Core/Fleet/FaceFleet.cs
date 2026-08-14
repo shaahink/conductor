@@ -12,6 +12,12 @@ public sealed record FaceFleet(IReadOnlyList<FaceFleetRun> Runs)
     /// than a second positional parameter so every existing caller keeps compiling with an empty
     /// history, which is the correct answer on a machine that has never had one.</summary>
     public IReadOnlyList<FacePastRun> Past { get; init; } = [];
+
+    /// <summary>KS2.4: how many past runs the catalogue holds for this question, not how many fit.
+    /// Equal to <c>Past.Count</c> when nothing was cut. The picker renders "showing N of M" from the
+    /// pair, because "across repos" and a silent cap of eight cannot both be true and only one of
+    /// them is visible from the screen.</summary>
+    public int PastTotal { get; init; }
 }
 
 /// <summary>One attachable run as the Face sees it. Identical to <see cref="FleetRunDto"/> plus

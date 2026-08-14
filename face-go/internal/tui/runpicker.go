@@ -94,9 +94,16 @@ func (r PastRun) OpenWith() string {
 }
 
 // Fleet is the CONDUCTOR_FLEET envelope.
+//
+// PastTotal is how many remembered runs the engine's catalogue holds, which is not always how many
+// it sent: the list is capped at a screenful (FacePastRuns.DefaultMax). The picker renders the pair
+// as "showing N of M", because a screen claiming to list this machine's runs while quietly showing
+// its first page is the one way this list can lie — someone looks for a run, does not see it, and
+// concludes it is not here.
 type Fleet struct {
-	Runs []FleetRun `json:"runs"`
-	Past []PastRun  `json:"past"`
+	Runs      []FleetRun `json:"runs"`
+	Past      []PastRun  `json:"past"`
+	PastTotal int        `json:"pastTotal"`
 }
 
 // RepoLabel and ShortRunID mirror FleetRun's, so a past row is built exactly like a live one.
@@ -180,6 +187,14 @@ type PickerModel struct {
 	// run.db and points a fresh Face at it. Two fields rather than one signed index because the two
 	// choices are answered by different code on the other side and must not be told apart by sign.
 	chosenPast int
+	// KS2.4: how many remembered runs the catalogue holds, against however many arrived. The heading
+	// discloses the difference; see Fleet.PastTotal.
+	pastTotal int
+	// KS2.4: the base url this Face is ALREADY attached to, when the picker is being shown as the
+	// run switcher rather than as the pre-flight screen. Empty at startup — nothing is attached yet —
+	// and the two states differ in exactly the things that would otherwise mislead: the title asks to
+	// switch rather than to attach, the current run is marked, and `esc` cancels instead of quitting.
+	attached string
 }
 
 // NewPicker builds the picker over a fleet. The cursor starts on the run in this directory when there
@@ -196,9 +211,29 @@ func NewPicker(runs []FleetRun) PickerModel {
 }
 
 // WithPast adds the runs this machine remembers but is not serving (K3.2). Chained rather than a
-// second NewPicker parameter so a caller with no history — and every existing test — is unchanged.
-func (p PickerModel) WithPast(past []PastRun) PickerModel {
+// second NewPicker parameter so a caller with no history is unchanged.
+//
+// KS2.4 made `total` a required argument rather than a second chained setter: it is the number the
+// heading has to disclose, and a caller that could forget it would silently present a page as the
+// whole machine — which is exactly the failure the disclosure exists to prevent. A total smaller
+// than what arrived is nonsense (an older engine sends none at all), so it floors at len(past).
+func (p PickerModel) WithPast(past []PastRun, total int) PickerModel {
 	p.past = past
+	p.pastTotal = max(total, len(past))
+	return p
+}
+
+// WithAttached turns the pre-flight screen into the run SWITCHER (KS2.4): same list, same keys, but
+// shown by a Face that is already attached to `baseURL`. Empty means the startup screen, which is
+// what every existing caller passes by not calling this.
+func (p PickerModel) WithAttached(baseURL string) PickerModel {
+	p.attached = baseURL
+	for i, r := range p.runs {
+		if r.BaseURL == baseURL {
+			p.cursor = i // start on the run you are on, not on the one this directory happens to hold
+			break
+		}
+	}
 	return p
 }
 
@@ -294,7 +329,11 @@ func (p PickerModel) Render() string {
 		inner = 30
 	}
 
-	title := accentStyle.Render("conductor") + subtleStyle.Render(" · attach the face to which run?")
+	question := " · attach the face to which run?"
+	if p.attached != "" {
+		question = " · switch this face to which run?"
+	}
+	title := accentStyle.Render("conductor") + subtleStyle.Render(question)
 	count := fmt.Sprintf("%d runs answering on this machine", len(p.runs))
 	if len(p.runs) == 1 {
 		count = "1 run answering on this machine"
@@ -305,7 +344,7 @@ func (p PickerModel) Render() string {
 		lines = append(lines, p.renderRow(i, r, inner))
 	}
 	if len(p.past) > 0 {
-		lines = append(lines, "", subtleStyle.Render(truncate(pastHeading(len(p.past)), inner)))
+		lines = append(lines, "", subtleStyle.Render(truncate(pastHeading(len(p.past), p.pastTotal, inner), inner)))
 		for i, r := range p.past {
 			lines = append(lines, p.renderPastRow(len(p.runs)+i, r, inner))
 		}
@@ -318,11 +357,17 @@ func (p PickerModel) Render() string {
 		Padding(1, 2).
 		Render(strings.Join(lines, "\n"))
 
+	// The way out differs by which screen this is, and it is the one hint that must not be wrong: esc
+	// on the pre-flight screen ends the Face, esc in the switcher returns to the run it is showing.
+	out := " quit"
+	if p.attached != "" {
+		out = " cancel"
+	}
 	hint := strings.Join([]string{
 		key("↑↓") + subtleStyle.Render(" move"),
 		key("1-9") + subtleStyle.Render(" attach"),
 		key("enter") + subtleStyle.Render(" attach"),
-		key("esc") + subtleStyle.Render(" quit"),
+		key("esc") + subtleStyle.Render(out),
 	}, subtleStyle.Render(" · "))
 
 	return lipgloss.NewStyle().MaxWidth(p.width).MaxHeight(p.height).
@@ -340,6 +385,12 @@ func (p PickerModel) renderRow(i int, r FleetRun, width int) string {
 	marker := "  "
 	if r.Self {
 		marker = "* "
+	}
+	// In the switcher the run you are LOOKING AT outranks the run this directory holds: `*` answers
+	// "which one is here", and while a Face is attached the more pressing question is "which one am
+	// I on". Same gutter, so no column moves.
+	if p.attached != "" && r.BaseURL == p.attached {
+		marker = "● "
 	}
 	port := fmt.Sprintf("%d", r.Port)
 	if r.Port <= 0 {
@@ -363,11 +414,29 @@ func (p PickerModel) renderRow(i int, r FleetRun, width int) string {
 
 // pastHeading labels the history section. It says read-only in the heading, not only in the detail
 // row, because that is the fact which decides whether pressing enter will do anything.
-func pastHeading(n int) string {
-	if n == 1 {
-		return "— 1 past run on this machine (read-only)"
+//
+// KS2.4: when the engine had more than it sent, the heading says so and says where the rest is. The
+// forms are tried longest-first against the width the section actually has, because a heading that
+// fits by dropping "conductor history for the rest" has kept its layout and thrown away the only
+// sentence in it that helps — and a list silently showing its first page is indistinguishable from a
+// machine that has had exactly eight runs.
+func pastHeading(shown, total, width int) string {
+	if total <= shown {
+		if shown == 1 {
+			return "— 1 past run on this machine (read-only)"
+		}
+		return fmt.Sprintf("— %d past runs on this machine (read-only)", shown)
 	}
-	return fmt.Sprintf("— %d past runs on this machine (read-only)", n)
+	for _, form := range []string{
+		fmt.Sprintf("— %d of %d past runs (read-only) · conductor history for the rest", shown, total),
+		fmt.Sprintf("— %d of %d past runs · conductor history", shown, total),
+		fmt.Sprintf("— %d of %d past runs", shown, total),
+	} {
+		if lipgloss.Width(form) <= width {
+			return form
+		}
+	}
+	return fmt.Sprintf("— %d of %d", shown, total)
 }
 
 // renderPastRow is a live row's twin: same widths, same plain-then-style discipline, no port and no
@@ -434,6 +503,9 @@ func (p PickerModel) renderDetail(width int) string {
 	// Identity and reachability lead; the plan name and the path are the long, clippable half. Put
 	// them first and an 80-column terminal loses "read-only" — which is the fact that decides whether
 	// this Face can do anything once it attaches.
+	if p.attached != "" && r.BaseURL == p.attached {
+		write += "  ·  attached now"
+	}
 	head := fmt.Sprintf("run %s  ·  pid %d  ·  %s%s", r.ShortRunID(), r.Pid, write, progress)
 	tail := r.PlanName
 	if r.Repo != "" {

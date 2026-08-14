@@ -212,6 +212,32 @@ public sealed class SF5_4FacePickerTests
         Assert.Equal("tok", run.GetProperty("token").GetString());
     }
 
+    /// <summary>KS2.4 — the same contract for the half of the envelope the picker lists UNDER the live
+    /// runs, plus the count the heading discloses. <c>pastTotal</c> is the field that lets the Face say
+    /// "showing 8 of 23" instead of presenting its first page as the machine; a rename here turns that
+    /// sentence back into the silent cap it replaced, and Go's decoder would report nothing at all.</summary>
+    [Fact]
+    public void The_past_half_of_the_envelope_is_a_contract_too()
+    {
+        var past = new FacePastRunPage(
+        [
+            new FacePastRun("C:/code/conductor", "core", "e9e21d10aedf", "Completed",
+                26, 26, 360.14m, "2026-07-31T17:20:11Z", "C:/home/runs/x/run.db") { Selector = "e9e21d10aedf" },
+        ], Total: 23);
+
+        var json = FaceTarget.Serialize([], new Dictionary<string, string>(StringComparer.Ordinal), null, past);
+
+        using var doc = JsonDocument.Parse(json);
+        Assert.Equal(23, doc.RootElement.GetProperty("pastTotal").GetInt32());
+        var row = doc.RootElement.GetProperty("past")[0];
+        foreach (var field in new[]
+        {
+            "repo", "planName", "runId", "status", "done", "total", "costUsd",
+            "lastActivityUtc", "runDb", "selector", "problem",
+        })
+            Assert.True(row.TryGetProperty(field, out _), $"CONDUCTOR_FLEET lost the past '{field}' field face-go decodes");
+    }
+
     /// <summary><c>ps --json</c> goes to stdout, where anyone may read it and a model may quote it. It
     /// has no token field and must never acquire one by someone reusing the Face's record.</summary>
     [Fact]
