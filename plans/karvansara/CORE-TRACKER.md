@@ -4,22 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS0.3 landed COMPLETE (a8fa298, eb9778e) - four bugs, each red-then-green by a script under
-  tools/ks0/, pinned by tests/Conductor.Tests/KS0_3*.cs; bugs #16, #20, #27 closed. Evidence:
-  .conductor/evidence/KS0/ks0-3-sharp-small-batch.md. KS0 is finished.
-measured: FULL suite 2156/2156 green in 6m51s on eb9778e - the whole tree, no filter. The red battery
-  that queued session #5 was no defect: session #4 died mid-work and left sound work uncommitted.
-worth reusing: `conductor gate -p <plan>` runs the battery with NO agent session - the cheap way to
-  exercise GateRunner live. A lock rig must TOUCH a source first or MSBuild skips the copy and the
-  lock never fires; an empty Directory.Build.props stops a %TEMP% csproj inheriting analyzers as
-  errors. Shadow build is a proven no-op for THIS run's gates - engine installed outside the tree.
-KS0.1 closed by the owner-run repair (evidence ks0-1-catalogue-repair.md): catalogue 26/25 to 25/25
-  (backup repair-20260813T200231Z), six blank-id rig debris entries dropped from catalogue.json
-  (backup catalogue-json-20260813T200511Z), payesh evidence check GREEN on the deduped store -
-  corpus refreshed on branch ks01/harvest-dedup-refresh (6e5f395), nothing pushed to the live site.
-carried forward into KS1.3: ks0-3 rigs registered scratch stores in the REAL catalogue.json
-  (state-home isolation), and history --json emits unreadable stores as blank-id run rows.
-next: KS1.1 - plan reload updates the run row, limits provenance labelled at-launch versus now.
+last: wave 1 landed KS1 complete (6666431..4798173) and KS2.7+KS2.8 (ebd929c..4e53d2d), every
+  checkpoint delivered then adversarially verified; KS0 closed earlier (KS0.1 by the owner-run
+  repair, evidence ks0-1-catalogue-repair.md). Delivery runs as Claude workflow lanes in worktrees
+  since the conductor run was aborted 2026-08-13 - the engine is stopped, the tracker is the board.
+measured: FULL suite 2228/2228 green in 6m10s at 4798173; face go build/vet/test green at 4e53d2d.
+  Concurrent full suites on this machine kill each other's MSBuild nodes (the DevContext runs issue
+  dotnet build-server shutdown): run batteries serially with -nodeReuse:false and
+  -p:UseSharedCompilation=false, or MSB4166 and test-host crashes lie to you about the tree.
+in flight: lane/ks5 (worktree conductor-lane-ks5) holds KS5.1 verified and KS5.2 red on clause 8 -
+  ArchivedSession.CapTokens falls back to the all-category sum when a session has no agent cost
+  row; rebase onto feat/karvansara, fix, re-verify, then KS5.3 and KS5.4.
+new bug, unplanned: conductor inject truncates a multi-line instruction to its first line
+  (FIELD-NOTES-2026-07-29-devcontext.md section 23) - queued ahead of KS2.1 in wave 2.
+next: KS2.1-KS2.6 and KS3.1-KS3.5 in parallel lanes, plus the KS5 continuation.
 
 
 ## Baseline numbers (from run.db)
@@ -47,12 +45,12 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS1.1 | A plan reload updates the run row, and limits provenance is labeled at-launch versus now - a mid-run limits edit shows both at the same boundary in history, with a test asserting the UPDATE | TODO | - | - |
-| KS1.2 | Stage rows derive from the event fold and stages side-table reads are retired, derived status matching the status surface for all archived runs, with an architecture test forbidding readers of stages.session_count | TODO | - | - |
-| KS1.3 | history, the fleet list and json output reconcile liveness at render time - a killed engine's run never lists as running, and the json carries the reconciled status for the evidence pipeline to quote | TODO | - | - |
-| KS1.4 | Doctor gains the plan-semantics lints - gate-command path probe, checkpoint-id versus tracker cross-check, hook dry-run, plan drift, composed-prompt argv-length, brace sweep, escalation-token sweep - and goes red on each of seven seeded trap plans | TODO | - | - |
-| KS1.5 | The ARCHITECTURE.md rollback paragraph matches ControlDispatcher's actual reset and force semantics, covered by a docs-match-reality test | TODO | - | - |
-| KS1.6 | The invariant is an architecture test: readers outside the engine may not consume mutable snapshot columns that have a fold-derived equivalent - green on the tree, red on a seeded violation | TODO | - | - |
+| KS1.1 | A plan reload updates the run row, and limits provenance is labeled at-launch versus now - a mid-run limits edit shows both at the same boundary in history, with a test asserting the UPDATE | DONE | 6666431 | .conductor/evidence/KS1/ks1-1.md |
+| KS1.2 | Stage rows derive from the event fold and stages side-table reads are retired, derived status matching the status surface for all archived runs, with an architecture test forbidding readers of stages.session_count | DONE | 98f8ba9 | .conductor/evidence/KS1/ks1-2.md |
+| KS1.3 | history, the fleet list and json output reconcile liveness at render time - a killed engine's run never lists as running, and the json carries the reconciled status for the evidence pipeline to quote | DONE | f0d50ff | .conductor/evidence/KS1/ks1-3.md |
+| KS1.4 | Doctor gains the plan-semantics lints - gate-command path probe, checkpoint-id versus tracker cross-check, hook dry-run, plan drift, composed-prompt argv-length, brace sweep, escalation-token sweep - and goes red on each of seven seeded trap plans | DONE | ff3bd86 | .conductor/evidence/KS1/ks1-4.md |
+| KS1.5 | The ARCHITECTURE.md rollback paragraph matches ControlDispatcher's actual reset and force semantics, covered by a docs-match-reality test | DONE | d156895 | .conductor/evidence/KS1/ks1-5.md |
+| KS1.6 | The invariant is an architecture test: readers outside the engine may not consume mutable snapshot columns that have a fold-derived equivalent - green on the tree, red on a seeded violation | DONE | 4798173 | .conductor/evidence/KS1/ks1-6.md |
 
 ### KS2 — The open door - bare conductor is the app, and every section reads
 
@@ -64,8 +62,8 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | KS2.4 | One picker merges fleet probe and catalogue - live runs attach, past runs open read-only, across repos, write tokens never crossing runs | TODO | - | - |
 | KS2.5 | conductor status with no resolvable plan prints a machine-level board - the multiple-plan-files error is unreachable | TODO | - | - |
 | KS2.6 | A park emits once: notifier rate-limited with a max per incident, dry-run never notifies, a monitor listing verb exists, and the 2026-08-02 incident replay produces exactly one notification | TODO | - | - |
-| KS2.7 | Long text scrolls everywhere: Agent console and transcript, Kanban detail, History, Telegram and Processes each own a pane viewport, the last hand-rolled scroll integers are deleted, and glitch-sweep proves a 500-line body scrolls to its end in every tab | TODO | - | - |
-| KS2.8 | The reader: one full-screen overlay opens any truncated cell or row with soft wrap, pager keys, percent readout and themed markdown - a 2000-line report and a 300-char kanban note both readable to the last line at 80x24 | TODO | - | - |
+| KS2.7 | Long text scrolls everywhere: Agent console and transcript, Kanban detail, History, Telegram and Processes each own a pane viewport, the last hand-rolled scroll integers are deleted, and glitch-sweep proves a 500-line body scrolls to its end in every tab | DONE | 82e597f | .conductor/evidence/KS2/ks2-7.md |
+| KS2.8 | The reader: one full-screen overlay opens any truncated cell or row with soft wrap, pager keys, percent readout and themed markdown - a 2000-line report and a 300-char kanban note both readable to the last line at 80x24 | DONE | d13184a | .conductor/evidence/KS2/ks2-8.md |
 
 ### KS3 — Authoring - no human writes JSON
 
