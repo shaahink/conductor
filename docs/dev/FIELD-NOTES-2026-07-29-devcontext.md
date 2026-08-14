@@ -733,6 +733,50 @@ more expensive, and how to set both numbers for a new repo — is in
 
 ---
 
+## 23. `conductor inject` silently truncates an instruction to its first line
+
+**Severity:** high — `inject` is the one channel a human has to steer a live run, and it fails
+silently in the direction that looks like success.
+
+Measured 2026-08-13 while watching the two DevContext2 pre-release runs. A 2,919-character gate
+instruction, passed as a single PowerShell here-string, produced a **343-byte** queue file whose
+`text` ended at the first newline. The CLI still printed
+`queued 001-… — injected into the next session prompt`, the JSON was well-formed, and `status`
+showed nothing amiss.
+
+Probe, to find the cut point exactly:
+
+```
+$m = "PROBE-alpha line one`nPROBE-beta line two no blank before`n`nPROBE-gamma line four after a blank"
+conductor inject $m
+→ {"text":"PROBE-alpha line one", …}
+```
+
+The cut is at the **first newline**, not at the first blank line.
+
+**It is the CLI, not the shell.** A second positional argument is rejected
+(`error: Could not match 'PROBE-two-args-second' with an argument`), so PowerShell did not split the
+string into three args that Spectre then dropped — the command received one argument containing
+newlines and stored only its first line. The queue filename is slugged from that same first line
+(`001-gateharness-chore-from-the-owner.json`), which is the likely mechanism: one first-line value
+feeding both the slug and the payload.
+
+**Why this is worse than losing text.** What survives is the *preamble* — the authority, the
+urgency, the ordering ("do this FIRST, in its own commit, before resuming N2 work") — while every
+instruction it introduces is gone. The agent receives a peremptory order it cannot satisfy but which
+reads as complete, and nothing in the log, the queue file, or `status` says otherwise. An operator
+who does not hand-read the queue file will believe the run was steered.
+
+**Suggested fix.** Store the whole argument; derive the slug from the first line only. Failing that,
+reject a multi-line instruction outright, or echo the stored character count in the success line —
+`queued 001-… (2,919 chars)` would have exposed this on the first try.
+
+**Workaround until then.** Pass the instruction as one physical line (use separators, not newlines)
+and verify with `python -c "import json;print(len(json.load(open(PATH))['text']))"` against the
+queue file before trusting it.
+
+---
+
 ## What worked well (worth protecting in refactors)
 
 - **The verdict line is excellent.** `verdict inputs: gates green · commits 2 · newly DONE [G1.1] ·
