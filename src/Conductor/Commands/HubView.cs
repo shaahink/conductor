@@ -103,7 +103,12 @@ public static class HubView
                     r.When + why).TrimEnd());
             }
 
-            lines.Add("  conductor history — the rest of what this machine remembers");
+            // KS2.5: a page is not a machine. When the cap bit, the board says which of the two it is
+            // doing — "showing 8 of 23" is the difference between "that run is not on this machine" and
+            // "that run is on the second page".
+            lines.Add(model.PastTruncated
+                ? $"  showing {past.Count.ToString(CultureInfo.InvariantCulture)} of {model.PastTotal.ToString(CultureInfo.InvariantCulture)} — conductor history has the rest"
+                : "  conductor history — the rest of what this machine remembers");
         }
 
         lines.Add("");

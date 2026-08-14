@@ -119,7 +119,7 @@ command palette, and from Telegram.
 
 | Verb | What it does |
 |---|---|
-| `status` | Plan, tracker, and session status from the database, in under a second. `--deep` adds an LLM narrative (slower, opt-in). |
+| `status` | Plan, tracker, and session status from the database, in under a second. `--deep` adds an LLM narrative (slower, opt-in). In a directory that names no plan — none here, or several and nothing choosing between them — it widens instead of failing: the machine's board (live runs from the port probe, what the catalogue remembers, the plans found here), a note on stderr saying why, and exit 0. `-p <plan>` narrows it back to one run from anywhere. |
 | `watch` | Block silently on a live run and return only when something needs judgment: a park, a churn loop, a phase gate red twice, the engine gone, the run ended. `--json` for the brief, `--timeout` for a heartbeat, `--hook` to hand it to a supervisor. |
 | `gate` | Re-run the gate battery at HEAD, no agent spawned. `--full` for the full battery (default: fast tier). |
 | `report` | Regenerate `.conductor/REPORT.md` from current state. |

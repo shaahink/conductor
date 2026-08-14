@@ -99,6 +99,16 @@ public sealed record HubModel(
     public IReadOnlyList<HubRunRow> Attachable =>
         Runs.Where(r => r.Live && r.BaseUrl.Length > 0).ToArray();
 
+    /// <summary>KS2.5: how many remembered runs the catalogue holds for this question, which is not
+    /// always how many are listed — <see cref="FacePastRuns.DefaultMax"/> is a screenful. A board that
+    /// shows eight of twenty-three and says only "past runs" is describing its own first page while
+    /// looking like it is describing the machine, and "that run is not here" is exactly the wrong
+    /// conclusion to hand someone looking for a run.</summary>
+    public int PastTotal { get; init; }
+
+    /// <summary>Did the cap bite?</summary>
+    public bool PastTruncated => PastTotal > PastRuns.Count;
+
     /// <summary>
     /// Arranges what the machine knows. Pure: every input is passed in, including the clock.
     /// </summary>
@@ -107,13 +117,17 @@ public sealed record HubModel(
     /// <param name="live">Rows from the fleet probe (and any engine holding a lock with no plane).</param>
     /// <param name="past">Rows from the catalogue, already reconciled and already excluding live ids.</param>
     /// <param name="plans">What <see cref="PlanDiscovery"/> found here. Zero and many are both fine.</param>
+    /// <param name="pastTotal">How many remembered runs there were before the page cap took its bite;
+    /// zero (the default) means "as many as were passed in", the honest answer for a caller that did
+    /// not page.</param>
     public static HubModel Compose(
         string stateHomeRoot,
         string cwd,
         IReadOnlyList<FleetRun> live,
         IReadOnlyList<FacePastRun> past,
         IReadOnlyList<PlanDiscovery.Candidate> plans,
-        DateTime nowUtc)
+        DateTime nowUtc,
+        int pastTotal = 0)
     {
         ArgumentNullException.ThrowIfNull(live);
         ArgumentNullException.ThrowIfNull(past);
@@ -150,7 +164,10 @@ public sealed record HubModel(
         }
 
         return new HubModel(stateHomeRoot, cwd, rows,
-            plans.Select(c => new HubPlanRow(c.Name, c.Path)).ToArray());
+            plans.Select(c => new HubPlanRow(c.Name, c.Path)).ToArray())
+        {
+            PastTotal = Math.Max(pastTotal, past.Count),
+        };
     }
 
     /// <summary>A past run's date, to the day. The hour it stopped is <c>conductor history</c>'s

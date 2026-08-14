@@ -17,8 +17,16 @@ namespace Conductor.Commands;
 /// <see cref="StatusReportBuilder"/> and prints "where are we, how did it go, what hurt". It never reads
 /// <c>state.json</c> or the hand-edited tracker markdown. The optional <c>--deep</c> flag adds an LLM
 /// narrative on top (the slow path); the default answer is pure DB and fast.
+///
+/// <para>KS2.5 — <b>and when the directory names no plan, the subject widens instead of failing.</b>
+/// "Status of what?" used to be answered with an exception: <i>No plan found</i> in an empty directory,
+/// <i>Multiple plan files found and output is not interactive to prompt</i> in one with several. Both
+/// refuse the reader at exactly the moment they admitted they do not know what is going on. There is
+/// still an answer — the machine — and <see cref="StatusBoard"/> gives it. Everything about the branch
+/// where a plan DOES resolve is untouched, down to the note the resolver prints: the fallback is chosen
+/// before <see cref="PlanSettings.ResolvePlanPath"/> is called, never by catching what it threw.</para>
 /// </summary>
-public sealed class StatusCommand : Command<StatusCommand.Settings>
+public sealed class StatusCommand : AsyncCommand<StatusCommand.Settings>
 {
     public sealed class Settings : PlanSettings
     {
@@ -33,8 +41,22 @@ public sealed class StatusCommand : Command<StatusCommand.Settings>
 
     private const string InvocationsFile = "status-invocations.jsonl";
 
-    public override int Execute(CommandContext context, Settings settings)
+    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        // The widening branch, decided BEFORE the resolver runs — it prompts on an ambiguous directory
+        // and throws on an empty one, and a question deserves neither. Pure and console-blind, so a
+        // terminal and a pipe take the same branch and only the resolver's prompt would have differed.
+        var cwd = Directory.GetCurrentDirectory();
+        var plans = MachineBoard.Discover(cwd);
+        if (StatusBoard.PlanForStatus(settings.Plan, Environment.GetEnvironmentVariable("CONDUCTOR_PLAN"),
+                plans, File.Exists) is null)
+            return await StatusBoard.RenderAsync(cwd, plans, StatusBoard.ProbeTimeout).ConfigureAwait(false);
+
+        // ...and from here down, byte for byte what it always was. The resolver is called, not
+        // second-guessed: its KS0.3 precedence, its override warning and its note are the same ones
+        // every other verb gets, and this one having its own copy is how the two would drift.
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
         var runDbPath = plan.RunDbPath;
         if (!File.Exists(runDbPath))

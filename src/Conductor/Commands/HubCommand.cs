@@ -1,11 +1,8 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Text.Json;
 
 using Conductor.Core.Fleet;
 using Conductor.Core.Planning;
-using Conductor.Core.Store;
-using Conductor.Models;
 
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -37,6 +34,10 @@ namespace Conductor.Commands;
 /// <para><b>Redirected output is a different question.</b> A pipe is not a person: it gets the board on
 /// stdout and exit 0, never a picker and never a prompt, so <c>conductor | cat</c> in a script cannot
 /// hang waiting for a keystroke nobody is there to press.</para>
+///
+/// <para><b>The board itself is not this file's</b> (KS2.5). Gathering lives in
+/// <see cref="MachineBoard"/> and drawing in <see cref="HubView"/>, because <c>status</c> in a
+/// directory that names no plan answers the same question and must not answer it differently.</para>
 /// </summary>
 public sealed class HubCommand : AsyncCommand<HubCommand.Settings>
 {
@@ -60,11 +61,10 @@ public sealed class HubCommand : AsyncCommand<HubCommand.Settings>
         ArgumentNullException.ThrowIfNull(settings);
 
         var cwd = Directory.GetCurrentDirectory();
-        var plans = Discover(cwd);
-        var fleet = await FleetAsync(settings, plans).ConfigureAwait(false);
-        var root = StateHome.Root;
-        var past = Past(root, fleet);
-        var model = HubModel.Compose(root, cwd, fleet, past.Rows, plans, DateTime.UtcNow);
+        var timeout = TimeSpan.FromMilliseconds(
+            settings.TimeoutMs is > 0 ? settings.TimeoutMs.Value : FleetScan.DefaultProbeTimeout.TotalMilliseconds);
+        var (model, fleet) = await MachineBoard
+            .GatherAsync(cwd, MachineBoard.Discover(cwd), timeout, DateTime.UtcNow).ConfigureAwait(false);
 
         foreach (var line in HubView.Board(model)) Console.WriteLine(line);
 
@@ -72,69 +72,6 @@ public sealed class HubCommand : AsyncCommand<HubCommand.Settings>
 
         var chosen = Ask();
         return chosen is null ? 0 : await ActAsync(chosen.Value, model, fleet).ConfigureAwait(false);
-    }
-
-    // ── gathering ────────────────────────────────────────────────────────────────────────────────
-
-    /// <summary>What is answering, plus any engine holding one of this directory's plans with no
-    /// control plane — "nothing here" and "something here I cannot talk to" are different facts.</summary>
-    private static async Task<IReadOnlyList<FleetRun>> FleetAsync(
-        Settings settings, IReadOnlyList<PlanDiscovery.Candidate> plans)
-    {
-        var timeout = TimeSpan.FromMilliseconds(
-            settings.TimeoutMs is > 0 ? settings.TimeoutMs.Value : FleetScan.DefaultProbeTimeout.TotalMilliseconds);
-        using var http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };   // the per-probe CTS owns the clock
-        var answered = await FleetScan.ScanAsync(FleetScan.HttpProbe(http, timeout), FleetScan.DefaultPorts)
-            .ConfigureAwait(false);
-
-        var runs = new List<FleetRun>();
-        foreach (var r in answered) runs.Add(await FleetScan.EnrichFromDiskAsync(r).ConfigureAwait(false));
-
-        foreach (var (name, stateDir) in StateDirs(plans))
-            if (await FleetScan.UnattachedRunAsync(stateDir, name, runs).ConfigureAwait(false) is { } orphan)
-                runs.Add(orphan);
-
-        return runs;
-    }
-
-    /// <summary>The catalogue's half, best effort. A history that cannot be read must never stop
-    /// someone attaching to a run that is right there.</summary>
-    private static FacePastRunPage Past(string root, IReadOnlyList<FleetRun> fleet)
-    {
-        try { return FacePastRuns.Read(root, fleet.Select(r => r.RunId)); }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
-        {
-            return FacePastRunPage.Empty;
-        }
-    }
-
-    private static IReadOnlyList<PlanDiscovery.Candidate> Discover(string cwd)
-    {
-        try { return PlanDiscovery.Discover(cwd); }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return []; }
-    }
-
-    /// <summary>Each discovered plan's state dir, quietly. A plan that will not load is skipped, not
-    /// reported: the hub is a board, and a malformed plan file is <c>doctor</c>'s subject.</summary>
-    private static IEnumerable<(string Name, string StateDir)> StateDirs(IReadOnlyList<PlanDiscovery.Candidate> plans)
-    {
-        foreach (var c in plans)
-        {
-            string? dir = null;
-            var name = c.Name;
-            try
-            {
-                var plan = PlanConfig.Load(c.Path);
-                name = plan.Name;
-                dir = plan.StateDir;
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException
-                                          or InvalidOperationException or ArgumentException)
-            {
-                dir = null;
-            }
-            if (!string.IsNullOrWhiteSpace(dir)) yield return (name, dir);
-        }
     }
 
     // ── the four ─────────────────────────────────────────────────────────────────────────────────
