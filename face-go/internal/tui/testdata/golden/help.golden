@@ -17,7 +17,7 @@
               │     Run    pause · resume · stop-after · approve · heartbeat · reload-plan     │           
  ── TASKS ──  │     Stage  goto · retry-stage · skip · pause-after-stage                       │           
    ✓ Add truth│     Danger kill · abort · rollback                                             │           
-   ● Wire RunD│     Face   theme mocha · latte · nord · gruvbox                                │           
+   ● Wire RunD│     Face   switch · theme mocha · latte · nord · gruvbox                       │           
    ○ Cache gat│                                                                                │           
               │   Actions                                                                      │           
               │     i inject context    / search transcript · f fold tools · T fold thinking   │           
