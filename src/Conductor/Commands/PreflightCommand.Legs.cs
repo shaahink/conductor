@@ -76,10 +76,11 @@ public sealed partial class PreflightCommand
     /// composed and measured, with nothing spawned and nothing saved. Carries doctor's three
     /// prompt-side lints (<c>prompt</c>, <c>templates</c>, <c>argv</c>) because they answer the same
     /// question one stage earlier — will this compose at all, and will it fit in an argv.
-    /// <para>Which session is "next" is not re-decided here: the resume peek is
-    /// <see cref="JourneyCommand.PeekResumeAsync"/> (state.json, then the run.db row, read-only), and
-    /// the kind is chosen by the same precedence <c>RunLoop</c>'s dry-run branch uses — resume, then
-    /// audit, then fix, then the stage's own delivery kind.</para></summary>
+    /// <para>Which session is "next" is not re-decided here, in any of its three parts: the resume peek
+    /// is <see cref="JourneyCommand.PeekResumeAsync"/> (state.json, then the run.db row, read-only), the
+    /// STAGE is <see cref="StageSelection"/> — the run loop's own selector, not a copy of it — and the
+    /// kind is chosen by the same precedence <c>RunLoop</c>'s dry-run branch uses: resume, then audit,
+    /// then fix, then the stage's own delivery kind.</para></summary>
     internal static async Task<Leg> ComposeLegAsync(PlanConfig plan, IReadOnlyList<DoctorCommand.Check> checks)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -93,8 +94,16 @@ public sealed partial class PreflightCommand
         var track = SafeReadWork(plan);
         var stage = NextStage(plan, state, track);
         if (stage is null)
-            return FromChecks(ComposeLegName, mine,
-                "every stage reads done — the next `conductor run` confirms completion rather than spawning a session");
+            return StageSelection.AllEffectivelyDone(plan, state, track)
+                ? FromChecks(ComposeLegName, mine,
+                    "every stage reads done — the next `conductor run` confirms completion rather than spawning a session")
+                // RunLoop's own answer to this is NeedsHuman before a session: the run starts, parks and
+                // spends nothing. That is a launch failure, and it is one only this leg can see.
+                : FromChecks(ComposeLegName, mine,
+                    "no stage is runnable — every stage left is skipped, or blocked by a `dependsOn` that is neither done nor skipped",
+                    ["`conductor run` would park at NeedsHuman before spawning anything — review the dependsOn chain " +
+                     "and state.skippedStages"],
+                    "fail");
 
         var kind = NextKind(state, stage);
         try
@@ -102,7 +111,8 @@ public sealed partial class PreflightCommand
             var prompt = Compose(plan, stage, state, kind);
             return FromChecks(ComposeLegName, mine,
                 $"next session #{state.SessionCounter + 1} is {kind} on stage '{stage.Id}', " +
-                $"composing to {prompt.Length} chars (nothing spawned)");
+                $"composing to {prompt.Text.Length} chars (nothing spawned)",
+                KnowledgeBatteryCaveat(plan, state, prompt));
         }
         catch (PromptCompositionException ex)
         {
@@ -121,19 +131,25 @@ public sealed partial class PreflightCommand
         }
     }
 
-    /// <summary>The stage a launch would land on: the one the saved state is already in when it is
-    /// still unfinished, else the first stage the tracker does not read done. Null when there is no
-    /// work left at all.</summary>
+    /// <summary>The stage a launch would land on — <see cref="StageSelection"/>'s answer, which is
+    /// <see cref="RunLoop"/>'s answer, because it is the same code. Null when nothing is runnable:
+    /// either everything is done and owed nothing, or what remains is skipped or blocked.
+    /// <para>It was briefly a second implementation here ("the stage state is in, else the first the
+    /// tracker does not read done") and that copy ignored <c>state.skippedStages</c>, stage
+    /// <c>dependsOn</c> and — under <c>perPhaseGates</c> — <c>state.confirmedStages</c>. It therefore
+    /// named a different stage than <c>run --dry-run</c> named for the same plan, and measured a
+    /// different stage's prompt: different notes, different promptExtra, different templates. On the
+    /// one surface whose entire purpose is truth before launch.</para></summary>
     internal static StageConfig? NextStage(PlanConfig plan, RunState state, TrackerSnapshot track)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(track);
-        if (state.CurrentStage is { Length: > 0 } current
-            && plan.Stages.FirstOrDefault(s => string.Equals(s.Id, current, StringComparison.OrdinalIgnoreCase)) is { } named
-            && !track.StageDone(named.Id))
-            return named;
-        return plan.Stages.FirstOrDefault(s => !track.StageDone(s.Id));
+        // The loop's own shape: completion is only confirmed when nothing is still owed; a queued
+        // resume/audit/fix/verify runs on the standing stage even when every row reads done.
+        if (StageSelection.AllEffectivelyDone(plan, state, track))
+            return StageSelection.OwesASession(state) ? StageSelection.Standing(plan, state) : null;
+        return StageSelection.Select(plan, state, track);
     }
 
     /// <summary>The session kind the loop would pick, in the loop's own order (RunLoop's dry-run
@@ -150,16 +166,25 @@ public sealed partial class PreflightCommand
     }
 
     /// <summary>Renders through the real <see cref="PromptBuilder"/> — the one the run loop uses —
-    /// with the run's own session/attempt numbers, so the length measured here is the length the
-    /// agent would be spawned with.</summary>
-    private static string Compose(PlanConfig plan, StageConfig stage, RunState state, SessionKind kind)
+    /// with the run's own session/attempt numbers, and then appends the battery section exactly as
+    /// <c>RunLoop</c>'s dry-run branch and <c>SessionRunner</c> do. The batteries are not decoration:
+    /// a recorded gate failure comes back as a whole section, and this leg carries doctor's
+    /// <c>argv</c> check precisely because prompt length is the 8191-char trap — a measurement taken
+    /// before the batteries were added would understate the number that matters.
+    /// <para>One honest gap, and it is stated in the leg's detail rather than hidden: the M7 knowledge
+    /// batteries (the ledger, the run's open bugs) are read from <c>run.db</c>, and the store opens
+    /// read-write — it migrates the schema and drops a WAL sidecar. Preflight promises to write
+    /// nothing, so it passes no store and reports the BOUND instead, which is exact because the whole
+    /// battery section is capped at <c>batteries.maxBytes</c> — see
+    /// <see cref="KnowledgeBatteryCaveat"/>.</para></summary>
+    private static ComposedPrompt Compose(PlanConfig plan, StageConfig stage, RunState state, SessionKind kind)
     {
         var prompts = new PromptBuilder(plan);
         var session = state.SessionCounter + 1;
         var attempt = state.NextAttemptNumber;
         var maxAttempts = Math.Max(1, stage.Sessions * plan.Limits.StageSlackFactor);
         var isReview = stage.Kind.Equals("review", StringComparison.OrdinalIgnoreCase);
-        return kind switch
+        var prompt = kind switch
         {
             SessionKind.Resume => prompts.Resume(stage, session, attempt, maxAttempts, state.PendingResume!),
             SessionKind.Audit => prompts.Audit(stage, session, state.PendingAudit!, state.CurrentStageStartHead ?? "HEAD~1"),
@@ -169,6 +194,42 @@ public sealed partial class PreflightCommand
                     Path.Combine(plan.StateDir, "reviews", $"{stage.Id}.md"))
                 : prompts.Deliver(stage, session, attempt, maxAttempts),
         };
+        // store: null — everything the state itself carries (the recent-failure digest, lessons, lane
+        // artifacts) is measured; the two store-backed batteries are bounded in the detail line.
+        var battery = prompts.BatterySection(state, store: null);
+        return new ComposedPrompt(prompt, battery.Length > 0 ? prompt.TrimEnd() + "\n\n" + battery : prompt);
+    }
+
+    /// <summary>The prompt as the loop builds it, in two pieces: the template render on its own
+    /// (<paramref name="Core"/>) and the same thing with the battery section appended
+    /// (<paramref name="Text"/>). The pair exists because the reported length is the second and the
+    /// unmeasured-battery ceiling is derived from the FIRST — a ceiling measured from a string that
+    /// already contains batteries would double-count them.</summary>
+    private sealed record ComposedPrompt(string Core, string Text);
+
+    /// <summary>What the measured length does NOT include, said as a number rather than as a hedge.
+    /// The WHOLE battery section — knowledge batteries included — is capped at <c>batteries.maxBytes</c>
+    /// (2048 by default) by <c>BatteryGroup.Render</c>, plus at most two characters for whichever
+    /// truncation tail it appends. So the argv the agent actually sees is at most the bare prompt plus
+    /// that cap: a ceiling, which is the direction that matters when the risk is 8191.
+    /// <para>Derived from the prompt WITHOUT batteries, because the cap covers the section as a whole —
+    /// adding it to a string that already carries the measured batteries would count them twice.</para>
+    /// <para>Silent on a fresh run, on a plan whose store does not exist yet, and when both knowledge
+    /// batteries are switched off: there is nothing unmeasured to warn about.</para></summary>
+    private static IReadOnlyList<string> KnowledgeBatteryCaveat(PlanConfig plan, RunState state, ComposedPrompt composed)
+    {
+        var cfg = plan.Batteries;
+        var knowledgeOn = (cfg?.Ledger ?? true) || (cfg?.Bugs ?? true);
+        if (!knowledgeOn || state.RunId.Length == 0 || !File.Exists(plan.RunDbPath)) return [];
+
+        var maxBytes = cfg?.MaxBytes ?? 2048;
+        var ceiling = composed.Core.TrimEnd().Length + 2 + maxBytes + 2;
+        return
+        [
+            $"the ledger and open-bug batteries are read from run.db when the session spawns; this drill does not " +
+            $"open that store (the store opens read-write — schema migration and a WAL sidecar — and preflight " +
+            $"writes nothing), so the composed argv is at most {ceiling} chars (batteries.maxBytes {maxBytes})",
+        ];
     }
 
     private static TrackerSnapshot SafeReadWork(PlanConfig plan)

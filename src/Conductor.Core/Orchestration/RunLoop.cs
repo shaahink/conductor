@@ -232,15 +232,14 @@ public sealed partial class RunLoop
                 // the graph directly removes that lag, so the LAST checkpoint's verification would be
                 // skipped by completion: the one card in the plan nobody checked. Consume what is
                 // queued, then close.
-                if (allDone && _ctx.State.PendingFix == null && _ctx.State.PendingResume == null
-                    && _ctx.State.PendingVerify == null && _ctx.State.PendingAudit == null)
+                if (allDone && !StageSelection.OwesASession(_ctx.State))
                 {
                     if (await _verdicts.ConfirmCompletionAsync(ct).ConfigureAwait(false)) { _verdicts.CompletePlan(track); return 0; }
                     continue;
                 }
 
                 var stage = allDone
-                    ? _ctx.Plan.Stages.FirstOrDefault(s => s.Id == _ctx.State.CurrentStage) ?? _ctx.Plan.Stages[^1]
+                    ? StageSelection.Standing(_ctx.Plan, _ctx.State)
                     : SelectStage(track);
                 if (stage == null)
                 {

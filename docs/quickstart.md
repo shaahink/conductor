@@ -452,7 +452,8 @@ conductor preflight [options]
   -p, --plan <PATH>          Path to plan JSON (or CONDUCTOR_PLAN env var)
   --no-auth-check            Skip the one-token auth ping (the only leg that spends anything)
   --no-update-check          Do not consult the release feed
-                             Six legs, one verdict, one exit code. Read-only.
+                             Six legs, one verdict, one exit code. No agent
+                             spawns; nothing is written under .conductor/
 
 conductor journey [options]
   -p, --plan <PATH>          Path to plan JSON (or CONDUCTOR_PLAN env var)

@@ -98,8 +98,13 @@ names the legs that failed:
 
 ```powershell
 $exe = "src\Conductor\bin\Debug\net10.0\conductor.exe"
-& $exe preflight -p <plan> --no-auth-check     # exit 0 = READY. Read-only: no agent, no state written.
+& $exe preflight -p <plan> --no-auth-check     # exit 0 = READY. No agent, no run: nothing is written
+                                               # under the plan's .conductor/ and no session spawns.
 ```
+
+The one thing it does touch is the machine-level state home: resolving where a plan's `run.db` lives
+registers the (repo, plan) pair in `catalogue.json`, exactly as plain `conductor doctor` does. That is
+the same row `conductor history` reads; nothing in the working tree changes.
 
 The six legs are `doctor` (0 fail), `journey` (workflow + model resolve per stage), `compose` (the
 next session's prompt, composed and measured, nothing spawned), `version` (running engine versus the

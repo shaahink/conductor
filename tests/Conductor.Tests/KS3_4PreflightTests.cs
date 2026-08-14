@@ -2,8 +2,13 @@ using System.Text;
 
 using Conductor.Commands;
 using Conductor.Core;
+using Conductor.Core.Orchestration;
+using Conductor.Core.Planning;
+using Conductor.Core.Store;
 using Conductor.Core.Update;
 using Conductor.Models;
+
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Conductor.Tests;
 
@@ -288,6 +293,156 @@ public sealed class KS3_4PreflightTests : IDisposable
         Assert.Contains("stage 'S1'", compose.Headline, StringComparison.Ordinal);
     }
 
+    // ------------------------------------------------------------------ the leg and the loop agree
+
+    /// <summary>The first delivery of this checkpoint answered "which stage runs next" with a rule of
+    /// its own — the state's current stage, else the first the tracker does not read done. That rule
+    /// cannot see a <c>dependsOn</c>, so preflight named S1 while <c>run --dry-run</c> on the same plan
+    /// named S2, and the char count then measured a different stage's prompt. The rule is
+    /// <see cref="StageSelection"/> now, so the leg and the loop cannot disagree; this fact is the
+    /// disagreement, pinned.</summary>
+    [Fact]
+    public async Task ADeclaredDependencyMovesTheNextSessionToTheStageTheLoopWouldPick()
+    {
+        var plan = CleanPlan(p =>
+        {
+            p.Stages[0].DependsOn = ["S2"];
+            p.Stages.Add(new StageConfig { Id = "S2", Title = "the one that has to land first", Sessions = 1 });
+        });
+        WriteTracker(plan, "nothing pending.", ("S1.1", "TODO"), ("S2.1", "TODO"));
+
+        var legs = await RunAsync(plan);
+
+        Assert.Contains("stage 'S2'", Headline(legs, "compose"), StringComparison.Ordinal);
+        Assert.DoesNotContain("stage 'S1'", Headline(legs, "compose"), StringComparison.Ordinal);
+        Assert.Equal("S2", StageSelection.Select(plan, new RunState(), Track(plan))?.Id);
+    }
+
+    /// <summary>The second half of the same finding: a stage the owner skipped is not the next
+    /// session, even when the saved state is still standing in it.</summary>
+    [Fact]
+    public async Task ASkippedStageIsNeverTheNextSession()
+    {
+        var plan = CleanPlan(p =>
+            p.Stages.Add(new StageConfig { Id = "S2", Title = "the one still open", Sessions = 1 }));
+        WriteTracker(plan, "nothing pending.", ("S1.1", "TODO"), ("S2.1", "TODO"));
+        SaveState(plan, s =>
+        {
+            s.CurrentStage = "S1";
+            s.SessionCounter = 3;
+            s.SkippedStages.Add("S1");
+        });
+
+        var legs = await RunAsync(plan);
+
+        Assert.Contains("next session #4", Headline(legs, "compose"), StringComparison.Ordinal);
+        Assert.Contains("stage 'S2'", Headline(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>And under <c>perPhaseGates</c> done-ness is CONFIRMED-ness: a stage whose rows all read
+    /// done has not been through its gate yet, so it is still the next session — which the tracker
+    /// alone would have said was finished.</summary>
+    [Fact]
+    public async Task UnderPerPhaseGatesAStageIsOnlyFinishedOnceItIsConfirmed()
+    {
+        var plan = CleanPlan(p =>
+        {
+            p.GatePolicy = "perPhase";
+            p.Stages.Add(new StageConfig { Id = "S2", Title = "the next one", Sessions = 1 });
+        });
+        WriteTracker(plan, "nothing pending.", ("S1.1", "DONE"), ("S2.1", "TODO"));
+        SaveState(plan, s => s.SessionCounter = 5);
+
+        var legs = await RunAsync(plan);
+
+        Assert.Contains("stage 'S1'", Headline(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>A plan whose remaining stages are all blocked or skipped does not launch: the loop
+    /// parks at NeedsHuman before spawning anything, having spent nothing and looking started. That is
+    /// a launch failure and this is the only surface that can see it before it happens.</summary>
+    [Fact]
+    public async Task AStageGraphWithNothingRunnableFailsTheComposeLeg()
+    {
+        var plan = CleanPlan(p =>
+        {
+            p.Stages[0].DependsOn = ["S2"];
+            p.Stages.Add(new StageConfig { Id = "S2", Title = "waits on the first", Sessions = 1, DependsOn = ["S1"] });
+        });
+        WriteTracker(plan, "nothing pending.", ("S1.1", "TODO"), ("S2.1", "TODO"));
+
+        var legs = await RunAsync(plan);
+
+        Assert.Equal(["compose"], Failing(legs));
+        Assert.Contains("no stage is runnable", Headline(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>The length reported is the length that goes into the argv: <c>RunLoop</c>'s dry-run
+    /// branch appends <c>BatterySection</c> after building the prompt, and a leg that carries doctor's
+    /// 8191-char <c>argv</c> check must measure the same string. It did not, and on a resumed run with
+    /// a recorded gate failure the count understated the real prompt by a whole section.</summary>
+    [Fact]
+    public async Task TheMeasuredLengthIncludesTheBatterySectionTheLoopAppends()
+    {
+        var plan = CleanPlan();
+        plan.Batteries = new BatteriesConfig { Lessons = false, RecentFailure = true, Ledger = false, Bugs = false };
+        var state = SaveState(plan, s =>
+        {
+            s.SessionCounter = 2;
+            s.CurrentStage = "S1";
+            s.History.Add(new SessionRecord
+            {
+                Number = 2,
+                Stage = "S1",
+                Outcome = SessionOutcome.GatesRed,
+                GateSummary = "engine-fast:OK engine-full:FAIL",
+                ResultSummary = "two tests red in the store migration",
+            });
+        });
+
+        var prompts = new PromptBuilder(plan);
+        var battery = prompts.BatterySection(state, store: null);
+        Assert.NotEqual("", battery);
+        var bare = prompts.Deliver(plan.Stages[0], 3, 1, Math.Max(1, plan.Stages[0].Sessions * plan.Limits.StageSlackFactor));
+        var expected = bare.TrimEnd().Length + 2 + battery.Length;
+
+        var legs = await RunAsync(plan);
+
+        Assert.Contains($"composing to {expected} chars", Headline(legs, "compose"), StringComparison.Ordinal);
+        Assert.True(expected > bare.Length, "the seeded battery must actually lengthen the prompt");
+    }
+
+    /// <summary>The one part of the real prompt this drill will not open: the ledger and open-bug
+    /// batteries live in <c>run.db</c>, and opening that store creates and migrates it. Rather than
+    /// break the read-only promise or quietly understate the number, the leg states the ceiling.</summary>
+    [Fact]
+    public async Task TheUnopenedKnowledgeBatteriesAreReportedAsACeiling()
+    {
+        var plan = CleanPlan();
+        // A real store, made by the TEST — a run that has history is the only run whose ledger and
+        // open bugs could add anything the drill did not measure.
+        using (new SqliteRunStore(plan.RunDbPath, NullLogger<SqliteRunStore>.Instance)) { }
+        SaveState(plan, s => { s.RunId = "run-abc"; s.SessionCounter = 1; s.CurrentStage = "S1"; });
+
+        var legs = await RunAsync(plan);
+
+        var bare = new PromptBuilder(plan).Deliver(plan.Stages[0], 2, 1,
+            Math.Max(1, plan.Stages[0].Sessions * plan.Limits.StageSlackFactor));
+        // The cap covers the section as a whole, plus at most two characters of truncation tail —
+        // and it is taken off the BARE prompt, so a measured battery is never counted twice.
+        Assert.Contains($"at most {bare.TrimEnd().Length + 2 + 2048 + 2} chars", Detail(legs, "compose"),
+            StringComparison.Ordinal);
+        Assert.Contains("batteries.maxBytes 2048", Detail(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>Silent on a fresh run — there is no store and no run to have learned anything.</summary>
+    [Fact]
+    public async Task AFreshRunGetsNoBatteryCaveat()
+    {
+        var legs = await RunAsync(CleanPlan());
+        Assert.DoesNotContain("batteries.maxBytes", Detail(legs, "compose"), StringComparison.Ordinal);
+    }
+
     // ------------------------------------------------------------------ the verb pins
 
     /// <summary>Adding a top-level verb is three edits and two of them are enforced elsewhere
@@ -354,12 +509,35 @@ public sealed class KS3_4PreflightTests : IDisposable
         return plan;
     }
 
-    private static void WriteTracker(PlanConfig plan, string handoff)
-        => File.WriteAllText(plan.TrackerPath,
-            "# fixture\n\n" + plan.Conventions.HandoffMarker + "\n\n" + handoff + "\n\n## Checkpoints\n\n" +
-            "| # | Checkpoint | Status | Commit | Evidence |\n" +
-            "|---|---|---|---|---|\n" +
-            "| S1.1 | the only row | TODO | - | - |\n", Utf8);
+    /// <summary>A tracker with a handoff block and one row per named checkpoint. The rows default to a
+    /// single open S1.1, which is what every leg except the stage-selection ones needs.</summary>
+    private static void WriteTracker(PlanConfig plan, string handoff, params (string Id, string Status)[] rows)
+    {
+        if (rows.Length == 0) rows = [("S1.1", "TODO")];
+        var table = new StringBuilder()
+            .Append("# fixture\n\n").Append(plan.Conventions.HandoffMarker).Append("\n\n")
+            .Append(handoff).Append("\n\n## Checkpoints\n\n")
+            .Append("| # | Checkpoint | Status | Commit | Evidence |\n")
+            .Append("|---|---|---|---|---|\n");
+        foreach (var (id, status) in rows)
+            table.Append("| ").Append(id).Append(" | the ").Append(id).Append(" row | ")
+                 .Append(status).Append(" | - | - |\n");
+        File.WriteAllText(plan.TrackerPath, table.ToString(), Utf8);
+    }
+
+    /// <summary>Seeds the run's saved state — written by the TEST, never by the drill, which is the
+    /// point of <see cref="AFullDrillCreatesNothingUnderTheStateDir"/>.</summary>
+    private static RunState SaveState(PlanConfig plan, Action<RunState> seed)
+    {
+        var state = new RunState { PlanName = plan.Name };
+        seed(state);
+        state.Save(Path.Combine(plan.StateDir, "state.json"));
+        return state;
+    }
+
+    /// <summary>The tracker as the engine reads it — the same provider the compose leg uses.</summary>
+    private static TrackerSnapshot Track(PlanConfig plan)
+        => ProgressProviderFactory.Create(plan).Read(plan, CancellationToken.None);
 
     /// <summary>A directory shaped like the engine's own repository — the solution at the root and
     /// the engine project under <c>src/</c> — holding one source file written when asked.</summary>
