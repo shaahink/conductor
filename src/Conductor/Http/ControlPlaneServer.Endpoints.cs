@@ -384,8 +384,15 @@ public sealed partial class ControlPlaneServer
 
     /// <summary>KS2.2: the fold itself is <see cref="TimelineProjection"/> in core now, because the
     /// archive plane serves the same rows from the same rules — a second copy here would be a second
-    /// timeline the moment an event type is added to one of them. The <c>TokenDelta</c> skip and the
-    /// wording of every row are unchanged; this endpoint just names the reader.</summary>
+    /// timeline the moment an event type is added to one of them. The wording of every row is unchanged.
+    /// <para><b>One thing about this payload did change, deliberately.</b> The switch that used to live
+    /// here opened with <c>kind = "unknown", desc = ""</c> and answered a <c>TokenDelta</c> with a bare
+    /// <c>break</c> — which leaves the switch and falls into <c>entries.Add</c>, so every token delta
+    /// shipped a row with kind <c>unknown</c> and an empty description. Measured on a live engine before
+    /// the change: 2262 entries, 2147 of them those blank rows. The projection drops them (it
+    /// <c>continue</c>s), so this endpoint now answers ~5% as many entries and every one of them says
+    /// something. The Face's spine renders entries unfiltered, so the History view of a live run visibly
+    /// loses those blank lines. <c>KS2_2TimelineProjectionTests</c> pins it here and on the archive.</para></summary>
     private async Task WriteTimelineAsync(HttpListenerContext ctx)
     {
         await WriteJsonAsync(ctx, TimelineProjection.From(ReadEvents()),

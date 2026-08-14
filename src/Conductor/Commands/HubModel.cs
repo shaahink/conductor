@@ -43,6 +43,12 @@ public sealed record HubRunRow(bool Live, string Repo, string PlanName, string R
     /// composer owns the clock so the view stays a pure function of the model.</summary>
     public string When { get; init; } = "";
 
+    /// <summary>KS2.2: empty unless this is a catalogued run whose database this engine could not open,
+    /// in which case it is the sentence saying which kind of broken it is. Such a row is still listed —
+    /// the board's job is to say what is on the machine, and "this run's file is gone" is a fact about
+    /// the machine, not a reason to pretend the run was never here.</summary>
+    public string Problem { get; init; } = "";
+
     /// <summary>First eight of the run id, the form every other surface prints.</summary>
     public string ShortRunId => RunId.Length >= 8 ? RunId[..8] : RunId;
 
@@ -139,6 +145,7 @@ public sealed record HubModel(
                 Total = p.Total,
                 CostUsd = p.CostUsd,
                 When = Day(p.LastActivityUtc),
+                Problem = p.Problem,
             });
         }
 

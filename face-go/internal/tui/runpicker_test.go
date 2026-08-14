@@ -415,6 +415,58 @@ func TestEnterOnAPastRunOpensTheReadOnlyArchive(t *testing.T) {
 	}
 }
 
+// KS2.2 — a run this machine remembers and can no longer READ is still a row. The engine used to drop
+// those before the envelope was built, so a deleted run.db looked exactly like a run that had never
+// existed, and the precise refusal ("that run's database is gone — nothing at <path>") was reachable
+// only by typing the slug by hand. The row lists, says what is wrong, and hands its SLUG back.
+func TestAPastRunWhoseDatabaseIsGoneStillListsAndSaysWhy(t *testing.T) {
+	gone := PastRun{
+		Repo: "C:/code/vanished", PlanName: "a plan whose store went away",
+		RunID: "", Status: "gone", Selector: "conductor-vanished-a13f0b28",
+		Problem: `that run's database is gone — nothing at C:/home/runs/conductor-vanished-a13f0b28/run.db.`,
+		RunDb:   `C:/home/runs/conductor-vanished-a13f0b28/run.db`,
+	}
+	p := NewPicker(liveFleet()).WithPast(append(pastFleet(), gone))
+	p.width, p.height = 100, 30
+
+	if gone.Readable() {
+		t.Error("a row with a problem claims to be readable")
+	}
+	if gone.OpenWith() != gone.Selector {
+		t.Errorf("OpenWith() = %q, want the slug %q", gone.OpenWith(), gone.Selector)
+	}
+
+	frame := p.Render()
+	if !strings.Contains(frame, "3 past runs on this machine (read-only)") {
+		t.Errorf("the unreadable row is not listed:\n%s", frame)
+	}
+	if !strings.Contains(frame, "vanished") {
+		t.Errorf("the unreadable row has no label:\n%s", frame)
+	}
+
+	p = pick(t, p, "end")
+	detail := p.Render()
+	if !strings.Contains(detail, "cannot be opened") {
+		t.Errorf("the detail row does not say the run cannot be opened:\n%s", detail)
+	}
+	if strings.Contains(detail, "read-only archive (served from run.db)") {
+		t.Errorf("the detail row promises an archive it cannot serve:\n%s", detail)
+	}
+
+	after, cmd := p.handleKey("enter")
+	if cmd == nil {
+		t.Error("enter on an unreadable row did not end the picker")
+	}
+	next := after.(PickerModel)
+	chosen, opened := next.ChosenPast()
+	if !opened {
+		t.Fatal("enter on an unreadable row chose nothing — the refusal is unreachable again")
+	}
+	if chosen.OpenWith() != gone.Selector {
+		t.Errorf("handed back %q, want the slug %q", chosen.OpenWith(), gone.Selector)
+	}
+}
+
 // A live row must never come back through the archive door, and a picker nobody pressed enter on
 // must not claim either kind of choice.
 func TestChosenPastIsEmptyUntilAPastRowIsChosen(t *testing.T) {

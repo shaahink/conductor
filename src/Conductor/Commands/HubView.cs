@@ -88,6 +88,11 @@ public static class HubView
         {
             foreach (var r in past)
             {
+                // KS2.2: a row whose database this engine could not open is listed like any other, and
+                // the reason rides on the END of the line — after the last column, where a long path
+                // cannot push anything sideways. Dropping the row instead would make a deleted database
+                // indistinguishable from a run this machine never had.
+                var why = r.Problem.Length > 0 ? "  " + r.Problem : "";
                 lines.Add("  " + string.Join("  ",
                     Pad(r.Label, wLabel),
                     Pad(r.PlanName, wPlan),
@@ -95,7 +100,7 @@ public static class HubView
                     Pad(Status(r), wStatus),
                     Pad(Progress(r), 7),
                     Pad(Money(r.CostUsd), 8),
-                    r.When).TrimEnd());
+                    r.When + why).TrimEnd());
             }
 
             lines.Add("  conductor history — the rest of what this machine remembers");

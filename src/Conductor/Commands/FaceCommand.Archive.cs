@@ -42,6 +42,17 @@ public sealed partial class FaceCommand
     /// </summary>
     internal static async Task<int> ArchiveAsync(string selector, bool serveOnly, int? port)
     {
+        // Before anything is opened: a port inside the fleet window is refused, not warned about and
+        // not quietly moved. `--port 4320` used to be accepted and the archive DID then answer the
+        // FleetScan probe — measured, `conductor ps` listed it as a run of its own, which is exactly the
+        // lie the port choice exists to prevent. Refusing beats relocating because an operator who named
+        // a port and silently got another would be handed a url they did not ask for.
+        if (port is { } chosen && ArchiveControlPlane.InsideFleetWindow(chosen))
+        {
+            AnsiConsole.MarkupLine($"[red]error:[/] {Markup.Escape(ArchiveControlPlane.FleetWindowRefusal(chosen))}");
+            return 1;
+        }
+
         var view = ArchiveView.Open(StateHome.Root, selector, out var refusal);
         if (view is null)
         {

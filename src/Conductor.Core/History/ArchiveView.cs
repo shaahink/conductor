@@ -110,7 +110,7 @@ public sealed partial class ArchiveView
             var archive = RunArchive.TryOpen(found.RunDbPath, out var problem);
             if (archive is null)
             {
-                refusal = Refusal(found.RunDbPath, problem);
+                refusal = Describe(found.RunDbPath, problem);
                 return null;
             }
             return new ArchiveView(archive, run, found.Repo, found.StoreLooksLive);
@@ -130,7 +130,7 @@ public sealed partial class ArchiveView
         var broken = rows.FirstOrDefault(r => !r.Readable && MatchesBroken(r, selector.Trim()));
         refusal = broken is null
             ? $"nothing in this machine's history matches '{selector}'. Try `conductor history`."
-            : Refusal(broken.RunDbPath, broken.Problem);
+            : Describe(broken.RunDbPath, broken.Problem);
         return null;
     }
 
@@ -142,7 +142,7 @@ public sealed partial class ArchiveView
         var archive = RunArchive.TryOpen(dbPath, out var problem);
         if (archive is null)
         {
-            refusal = Refusal(dbPath, problem);
+            refusal = Describe(dbPath, problem);
             return null;
         }
         var runs = archive.Runs();
@@ -161,8 +161,11 @@ public sealed partial class ArchiveView
 
     /// <summary>One sentence per way a catalogued store fails to open. The distinction is the whole
     /// point of <see cref="RunDbProblem"/>: "that run's file has been deleted" and "that path is not a
-    /// run database" send an operator to two different places.</summary>
-    private static string Refusal(string dbPath, RunDbProblem problem) => problem switch
+    /// run database" send an operator to two different places.
+    /// <para>Public because the LISTINGS say it too — <c>Conductor.Core.Fleet.FacePastRuns</c> labels an
+    /// unreadable row with this exact sentence, so what the picker shows and what the attach refuses
+    /// with cannot drift into two accounts of the same broken file.</para></summary>
+    public static string Describe(string dbPath, RunDbProblem problem) => problem switch
     {
         RunDbProblem.Missing => $"that run's database is gone — nothing at {dbPath}.",
         RunDbProblem.NotARunDatabase => $"{dbPath} is not a conductor run database this engine can read.",

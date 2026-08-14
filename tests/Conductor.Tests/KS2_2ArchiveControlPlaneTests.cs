@@ -388,6 +388,37 @@ public sealed class KS2_2ArchiveControlPlaneTests : IDisposable
             "an archive plane wrote a discovery file — FleetScan would list a finished run as live");
     }
 
+    /// <summary>
+    /// The constant above is a default; this is the RULE. `--port 4320` was accepted before this, the
+    /// plane bound it, and `conductor ps` then listed the archive as a run of its own — the exact lie
+    /// the port choice exists to prevent. Every port the probe scans is refused now, by the plane and by
+    /// the verb, whoever asked for it.
+    /// </summary>
+    [Fact]
+    public async Task A_port_inside_the_fleet_window_is_refused_by_the_plane_and_by_the_verb()
+    {
+        SeedRun();
+        var view = ArchiveView.Open(_root, RunId, out _)!;
+
+        for (var port = FleetScan.FirstPort; port < FleetScan.FirstPort + FleetScan.PortSpan; port++)
+            Assert.True(ArchiveControlPlane.InsideFleetWindow(port), $"{port} is a port `ps` probes");
+        Assert.False(ArchiveControlPlane.InsideFleetWindow(ArchiveControlPlane.FirstPort));
+
+        // The plane refuses to bind it at all — nothing listens, so nothing can be discovered.
+        using var plane = new ArchiveControlPlane(view, NullLogger.Instance, FleetScan.FirstPort + 3);
+        Assert.False(plane.Start(), "an archive plane bound a port inside the fleet window");
+        Assert.False(plane.IsRunning);
+
+        // And the door says so before it opens anything: no catalogue read, no plane, exit 1.
+        var exit = await Conductor.Commands.FaceCommand.ArchiveAsync(RunId, serveOnly: true, port: FleetScan.FirstPort + 3);
+        Assert.Equal(1, exit);
+
+        // A forward scan that starts below the window steps over it rather than wandering in.
+        var below = FleetScan.FirstPort - 2;
+        using var scanning = new ArchiveControlPlane(view, NullLogger.Instance, below);
+        if (scanning.Start()) Assert.False(ArchiveControlPlane.InsideFleetWindow(scanning.Port));
+    }
+
     // ── failing soft ─────────────────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -404,6 +435,52 @@ public sealed class KS2_2ArchiveControlPlaneTests : IDisposable
         Assert.Null(view);
         Assert.Contains("gone", refusal, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(db, refusal, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// The other half of the same clause, and the half that was missing: the PICKER and the HUB must
+    /// list such a row, not just <c>conductor history</c>. They read <see cref="FacePastRuns"/>, which
+    /// dropped every row whose store would not open — which is precisely the row this refusal exists
+    /// for. The precise sentence was therefore only reachable by typing the slug by hand.
+    /// </summary>
+    [Fact]
+    public void The_picker_and_the_hub_list_a_run_whose_database_is_gone_and_can_still_open_it()
+    {
+        var readable = SeedRun(plan: "still-here");
+        var broken = SeedRun(plan: "vanishing");
+        File.Delete(broken);
+
+        var past = FacePastRuns.Read(_root);
+        Assert.Equal(2, past.Count);
+
+        var gone = Assert.Single(past, p => !p.Readable);
+        Assert.Equal("", gone.RunId);                       // nothing could be read to get one
+        Assert.NotEqual("", gone.Selector);                 // and the slug is what names it instead
+        Assert.Contains(broken, gone.Problem, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("gone", gone.Problem, StringComparison.OrdinalIgnoreCase);
+        var opens = Assert.Single(past, p => p.Readable);
+        Assert.Equal(RunId, opens.RunId);
+        Assert.Equal(RunId, opens.Selector);
+        Assert.Equal(readable, opens.RunDb, StringComparer.OrdinalIgnoreCase);
+
+        // The picker's envelope carries it, selector and all — that is the id the Face hands back.
+        var json = FaceTarget.Serialize([], new Dictionary<string, string>(StringComparer.Ordinal), null, past);
+        using var doc = JsonDocument.Parse(json);
+        var rows = doc.RootElement.GetProperty("past").EnumerateArray().ToList();
+        Assert.Equal(2, rows.Count);
+        var wire = rows.Single(r => r.GetProperty("runId").GetString() == "");
+        Assert.Equal(gone.Selector, wire.GetProperty("selector").GetString());
+        Assert.Contains("gone", wire.GetProperty("problem").GetString()!, StringComparison.OrdinalIgnoreCase);
+
+        // The hub's board prints it, with the reason on the row rather than the row simply absent.
+        var model = Conductor.Commands.HubModel.Compose(_root, _tmp, [], past, [], DateTime.UtcNow);
+        var board = string.Join("\n", Conductor.Commands.HubView.Board(model));
+        Assert.Contains("vanishing", board, StringComparison.Ordinal);
+        Assert.Contains("gone", board, StringComparison.OrdinalIgnoreCase);
+
+        // And what the picker hands back reaches the refusal this checkpoint built.
+        Assert.Null(ArchiveView.Open(_root, gone.Selector, out var refusal));
+        Assert.Equal(gone.Problem, refusal, StringComparer.Ordinal);
     }
 
     [Fact]

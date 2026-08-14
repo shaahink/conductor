@@ -4,6 +4,7 @@ using System.Text.Json;
 
 using Conductor.Core;
 using Conductor.Core.Events;
+using Conductor.Core.Fleet;
 using Conductor.Core.History;
 using Conductor.Core.Http;
 
@@ -28,11 +29,14 @@ namespace Conductor.Http;
 /// plane's 401 token hint — a 401 says "find the token and try again", which for a finished run is an
 /// instruction that cannot be carried out.</para>
 ///
-/// <para><b>The port is outside the fleet window on purpose.</b> <see cref="Conductor.Core.Fleet.FleetScan"/>
-/// probes 4317-4336 and identifies a run by what answers <c>/state</c> there; an archive plane inside
-/// that window would appear in <c>conductor ps</c> and in the hub as a live run, which is the precise
-/// lie KS1 spent a stage removing. So archive planes bind 4400 upward and write NO discovery file:
-/// nothing discovers them, and the only way to one is to have asked for it.</para>
+/// <para><b>The port is outside the fleet window, and that is ENFORCED.</b>
+/// <see cref="Conductor.Core.Fleet.FleetScan"/> probes 4317-4336 and identifies a run by what answers
+/// <c>/state</c> there; an archive plane inside that window appears in <c>conductor ps</c> and in the hub
+/// as a live run, which is the precise lie KS1 spent a stage removing — measured, when <c>--port 4320</c>
+/// was still accepted: <c>ps</c> listed the archive as a run of its own. So archive planes bind 4400
+/// upward, <see cref="InsideFleetWindow"/> is refused rather than warned about, the forward scan steps
+/// over the window rather than wandering into it, and NO discovery file is written: nothing discovers
+/// them, and the only way to one is to have asked for it.</para>
 ///
 /// <para><b>Nothing here writes to the database.</b> Reads go through <see cref="ArchiveView"/> and
 /// therefore through <see cref="RunArchive"/>'s <c>Mode=ReadOnly;Cache=Private</c> connection —
@@ -81,12 +85,38 @@ public sealed class ArchiveControlPlane : IDisposable
     /// <summary>The run being served.</summary>
     public ArchiveView View => _view;
 
+    /// <summary>Whether a port is one <see cref="FleetScan"/> probes — 4317-4336. An archive answering
+    /// there is listed by <c>conductor ps</c> and by the hub as a live run, so no archive plane may bind
+    /// one, whoever asked for it.</summary>
+    public static bool InsideFleetWindow(int port) =>
+        port >= FleetScan.FirstPort && port < FleetScan.FirstPort + FleetScan.PortSpan;
+
+    /// <summary>The refusal for a port inside the fleet window, in the shape a caller prints.</summary>
+    public static string FleetWindowRefusal(int port) =>
+        $"port {N(port)} is inside the {N(FleetScan.FirstPort)}-{N(FleetScan.FirstPort + FleetScan.PortSpan - 1)} "
+        + "fleet window — an archive answering there would be listed as a live run by `conductor ps` and by "
+        + $"the hub. Pick a port at {N(FirstPort)} or above.";
+
+    private static string N(int n) => n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
     /// <summary>Binds and starts the accept loop, scanning forward from the preferred port. Returns
-    /// false (never throws) when nothing in the range binds.</summary>
+    /// false (never throws) when nothing in the range binds — or when the port asked for is one
+    /// <c>ps</c> probes, which is refused outright rather than quietly moved: an operator who named a
+    /// port and got a different one would be reading a url that is not the one they typed.</summary>
     public bool Start()
     {
-        for (var port = _preferredPort; port < _preferredPort + PortScanRange; port++)
+        if (InsideFleetWindow(_preferredPort))
         {
+            _logger.LogWarning("archive plane: refusing {Port} — {Reason}", _preferredPort, FleetWindowRefusal(_preferredPort));
+            return false;
+        }
+
+        var bound = false;
+        for (var port = _preferredPort; port < _preferredPort + PortScanRange && !bound; port++)
+        {
+            // The forward scan can walk into the window from below (a preferred port a few short of
+            // 4317). Stepping over it keeps the guarantee a property of every bind, not just the first.
+            if (InsideFleetWindow(port)) continue;
             var listener = new HttpListener();
             listener.Prefixes.Add($"http://127.0.0.1:{port.ToString(System.Globalization.CultureInfo.InvariantCulture)}/");
             try
@@ -96,18 +126,22 @@ public sealed class ArchiveControlPlane : IDisposable
             catch (Exception ex) when (ex is HttpListenerException or ObjectDisposedException)
             {
                 listener.Close();
-                if (port == _preferredPort + PortScanRange - 1)
-                {
-                    _logger.LogWarning(ex, "archive plane: no free port in {Start}-{End}",
-                        _preferredPort, _preferredPort + PortScanRange - 1);
-                    return false;
-                }
                 continue;
             }
 
             _listener = listener;
             Port = port;
-            break;
+            bound = true;
+        }
+
+        // One exit for "nothing bound", whether the range was full or every port in it was skipped —
+        // the old shape only reported the first of those and started an accept loop on a listener that
+        // had never been started for the second.
+        if (!bound)
+        {
+            _logger.LogWarning("archive plane: no free port in {Start}-{End}",
+                _preferredPort, _preferredPort + PortScanRange - 1);
+            return false;
         }
 
         _running = true;

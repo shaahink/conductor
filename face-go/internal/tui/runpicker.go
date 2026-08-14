@@ -59,6 +59,13 @@ type FleetRun struct {
 // open: choosing one hands RunID back to the engine, which serves that run's run.db through a
 // read-only archive plane and points a Face at it. Read-only is then structural, not a convention:
 // the archive carries no write token, so every write affordance in the Face hides itself.
+//
+// A row can also be one this machine remembers and can no longer READ: a catalogue entry whose run.db
+// was deleted or replaced by something that is not a run database. Those are listed too — "that run is
+// gone" and "that run was never here" are different answers, and hiding the first leaves only the
+// second. Such a row has no RunID (nothing could be read to get one), is named by its Slug, and
+// carries the one sentence saying what is wrong in Problem; choosing it hands the slug back and the
+// engine answers with that same sentence instead of opening anything.
 type PastRun struct {
 	Repo            string  `json:"repo"`
 	PlanName        string  `json:"planName"`
@@ -69,6 +76,21 @@ type PastRun struct {
 	CostUsd         float64 `json:"costUsd"`
 	LastActivityUtc string  `json:"lastActivityUtc"`
 	RunDb           string  `json:"runDb"`
+	Selector        string  `json:"selector"`
+	Problem         string  `json:"problem"`
+}
+
+// Readable reports whether the engine could open this run's database. A false row still lists.
+func (r PastRun) Readable() bool { return r.Problem == "" }
+
+// OpenWith is what the engine is handed to open this row: the run id normally, the catalogue slug for
+// a row whose database could not be read and which therefore has no id. Falls back to the run id so an
+// envelope written by an older engine (no selector field) still opens.
+func (r PastRun) OpenWith() string {
+	if r.Selector != "" {
+		return r.Selector
+	}
+	return r.RunID
 }
 
 // Fleet is the CONDUCTOR_FLEET envelope.
@@ -386,6 +408,13 @@ func (p PickerModel) renderDetail(width int) string {
 		tail := r.PlanName
 		if r.RunDb != "" {
 			tail += "  ·  " + r.RunDb
+		}
+		// A row the engine could not read says so HERE, where the reader is looking before they press
+		// enter — and the sentence is the engine's own refusal, not a second wording of it. Pressing
+		// enter anyway is fine: the engine answers with this same line and opens nothing.
+		if !r.Readable() {
+			head = fmt.Sprintf("run %s  ·  cannot be opened", r.OpenWith())
+			tail = r.Problem
 		}
 		return subtleStyle.Render(truncate(head, width)) + "\n" +
 			subtleStyle.Render(truncate(tail, width))

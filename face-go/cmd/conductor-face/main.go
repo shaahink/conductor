@@ -172,17 +172,23 @@ const pickEnv = "CONDUCTOR_PICK"
 // handOffArchive tells the engine which finished run to serve. When nobody is listening (a bare
 // `conductor-face` with a hand-made CONDUCTOR_FLEET), it says what would have opened it — that is a
 // real case, and silently doing nothing is what KS2.2 exists to stop.
+//
+// What travels is the row's SELECTOR, not its run id: a row whose database this machine can no longer
+// read has no run id, and it is named by its catalogue slug. Handing that back is how the engine's
+// precise refusal ("that run's database is gone — nothing at <path>") reaches someone who chose the
+// row rather than only someone who typed the slug by hand.
 func handOffArchive(past tui.PastRun) {
+	name := past.OpenWith()
 	path := os.Getenv(pickEnv)
 	if path == "" {
 		fmt.Fprintf(os.Stderr,
 			"conductor-face: nothing is waiting to open run %s. Try:  conductor face --archive %s\n",
-			past.ShortRunID(), past.ShortRunID())
+			name, name)
 		return
 	}
-	if err := os.WriteFile(path, []byte(past.RunID), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(name), 0o600); err != nil {
 		fmt.Fprintf(os.Stderr, "conductor-face: could not hand run %s back to the engine: %v\n",
-			past.ShortRunID(), err)
+			name, err)
 	}
 }
 
