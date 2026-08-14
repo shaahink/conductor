@@ -40,10 +40,22 @@ public static class SpendCategory
     /// <summary>The one-token credential probe at run start (W3.2).</summary>
     public const string AuthProbe = "auth-probe";
 
-    /// <summary>Every category the engine can write. Used by the tests that assert the vocabulary is
-    /// distinct — a duplicate constant would silently merge two spenders into one row.</summary>
+    /// <summary>The full agent invocation behind <c>audit --replay</c>. STATED, never recorded: the
+    /// replay is an operator's question about a finished stage, keyed to no session and accruing
+    /// against no live cap — see the <c>AuditCommand</c> exemption in <c>ArchitectureBoundaryTests</c>.
+    /// In the vocabulary so its receipt speaks the same closed language as the recorded rows.</summary>
+    public const string AuditReplay = "audit-replay";
+
+    /// <summary>The <c>status --agent</c> reporter. Stated to the operator who asked, never written —
+    /// a CLI verb must not be a second writer against a live run's database; see the
+    /// <c>StatusAgent</c> exemption in <c>ArchitectureBoundaryTests</c>.</summary>
+    public const string Status = "status";
+
+    /// <summary>Every category a receipt can carry — recorded in <c>costs</c> or stated to an
+    /// operator. Used by the tests that assert the vocabulary is distinct — a duplicate constant
+    /// would silently merge two spenders into one row.</summary>
     public static IReadOnlyList<string> All { get; } =
-        [Agent, Gate, Advisor, Lane, FixLane, Audit, Supervisor, AuthProbe];
+        [Agent, Gate, Advisor, Lane, FixLane, Audit, Supervisor, AuthProbe, AuditReplay, Status];
 
     /// <summary>True when this category's dollars came off a provider's wire. False for
     /// <see cref="Gate"/> alone, and a surface that mixes the two should say which is which.</summary>

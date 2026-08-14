@@ -150,8 +150,8 @@ public static class StatusAgent
         {
             var args = ResolveArgs(cfg, prompt);
             var r = ProcessRunner.Run(cfg.Command, args, scratch, TimeSpan.FromMinutes(cfg.TimeoutMinutes), ct);
-            onSpend?.Invoke(Accounting.BilledSpend.ReadFromCommand(cfg.Command, "status", r.Output,
-                (long)r.Duration.TotalMilliseconds));
+            onSpend?.Invoke(Accounting.BilledSpend.ReadFromCommand(cfg.Command, Accounting.SpendCategory.Status,
+                r.Output, (long)r.Duration.TotalMilliseconds));
             var text = r.Output.Trim();
             return string.IsNullOrWhiteSpace(text)
                 ? $"(status agent produced no output — exit {r.ExitCode}{(r.TimedOut ? ", timed out" : "")})"

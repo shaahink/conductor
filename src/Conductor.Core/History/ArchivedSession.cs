@@ -16,10 +16,15 @@ public sealed record ArchivedSession(
         ? []
         : NewlyDone.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-    /// <summary>K4.2: the tokens the session ceiling actually governs. <see cref="Tokens"/> is every
-    /// category; the rail in <c>SessionRunner.Mcp.cs:76</c> counts the AGENT stream alone, so a floor
-    /// measured off the total would sit above the number the cap is compared against.</summary>
-    public long CapTokens => AgentTokens > 0 ? AgentTokens : Tokens;
+    /// <summary>K4.2/KS5.2: the tokens the session ceiling actually governs. <see cref="Tokens"/> is
+    /// every category; the rail in <c>SessionRunner.Mcp.cs:76</c> counts the AGENT stream alone, so a
+    /// floor measured off the total would sit above the number the cap is compared against. A session
+    /// with NO agent row — the agent's row is only written when its provider reported a figure — reads
+    /// 0 here, not the all-category sum: falling back to <see cref="Tokens"/> would let lane, advisor
+    /// and gate rows move the floor KS5.3 measures against a ceiling they are never compared to. Zero
+    /// is the honest answer ("no agent stream measured"), and <c>BudgetAnalyzer</c> already treats a
+    /// zero as unmeasured rather than as a cheap session.</summary>
+    public long CapTokens => AgentTokens;
 
     /// <summary>The limits that governed THIS session — the answer to "the cap was raised at session
     /// 9", which before K3.3 had to be inferred from the shape of a token curve.</summary>

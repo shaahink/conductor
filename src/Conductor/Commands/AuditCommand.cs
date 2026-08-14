@@ -189,7 +189,7 @@ public sealed class AuditCommand : Command<AuditCommand.Settings>
             // KS5.2: the replay is a full agent invocation and it says what it cost. Stated, not
             // recorded: `audit --replay` is an operator's question about a FINISHED stage, keyed to no
             // session and accruing against no live cap. See the exemption in ArchitectureBoundaryTests.
-            var spend = BilledSpend.Read(cfg, "audit-replay", r.Output, (long)r.Duration.TotalMilliseconds);
+            var spend = BilledSpend.Read(cfg, SpendCategory.AuditReplay, r.Output, (long)r.Duration.TotalMilliseconds);
             AnsiConsole.MarkupLine(spend is null
                 ? "[grey]audit agent: the provider reported no billed figure (unknown, not zero)[/]"
                 : $"[grey]audit agent: ${spend.CostUsd:0.0000} billed, {spend.Tokens} tokens — not recorded against the run[/]");

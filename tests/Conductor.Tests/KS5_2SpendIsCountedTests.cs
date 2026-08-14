@@ -251,6 +251,34 @@ public sealed class KS5_2SpendIsCountedTests : IDisposable
         Assert.Equal(905_600, session.Tokens);
     }
 
+    /// <summary>The other half of the floor's honesty, and the re-verification catch: a session with
+    /// NO agent row at all — the agent's row is only written when its provider reported a figure
+    /// (<c>RunLoop.Plumbing</c>), so this is any session whose only spend is lanes, advisors or gates.
+    /// <c>CapTokens</c> used to fall back to the ALL-category sum for it, which handed 900k of lane
+    /// tokens to a floor the session ceiling never governs. The honest value is 0: no agent stream was
+    /// measured, and <c>BudgetAnalyzer</c> reads a zero as "unmeasured", not as a cheap session.</summary>
+    [Fact]
+    public void ASessionWithOnlyNonAgentRowsMeasuresZeroCapTokens()
+    {
+        var db = Path.Combine(_tmp, "noagentrow", "run.db");
+        using (var store = new SqliteRunStore(db, NullLogger<SqliteRunStore>.Instance))
+        {
+            store.InitializeRun("r1", "NoAgentRow", _tmp, "main", EngineStamp.Parse("0.4.0+ks52"));
+            store.InitializeStage("r1", "S1", "First");
+            store.RecordSession("r1", "S1", 1, "work", DateTime.UtcNow.AddHours(-1), DateTime.UtcNow,
+                "advance", null, 0, 1, "ok", "unbilled agent, busy lanes", 1, "C1");
+            store.RecordCost("r1", 1, SpendCategory.Lane, 900_000, 100, 0, 0, 0.20m, 1_000);
+            store.RecordCost("r1", 1, SpendCategory.Advisor, 4_000, 400, 0, 0, 0.05m, 700);
+            store.RecordCost("r1", 1, SpendCategory.Gate, 0, 0, 0, 0, 0.02m, 0);
+        }
+        SqliteConnection.ClearAllPools();
+
+        var session = RunArchive.TryOpen(db)!.Sessions("r1").Single();
+
+        Assert.Equal(0, session.CapTokens);
+        Assert.Equal(904_500, session.Tokens);
+    }
+
     // ------------------------------------------------------------------ what `money` renders
 
     /// <summary>The money verb groups by whatever category it finds, so the new lanes render without

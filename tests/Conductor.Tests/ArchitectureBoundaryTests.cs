@@ -215,9 +215,16 @@ public class ArchitectureBoundaryTests
     /// <c>ProcessRunner.Run(plan.Agent.Command, ["--model", plan.Agent.Model], …)</c> with no accounting
     /// passed, because the string "AgentConfig" never appears in it — while the clause's own wording
     /// (<c>agent.Command</c> / <c>cfg.Model</c>) was right there on the line. A bare <c>.Model</c> on any
-    /// receiver counts too: nothing in this engine names a model except to run one.</para></summary>
+    /// receiver counts too: nothing in this engine names a model except to run one.</para>
+    /// <para>Re-verification then walked through the receiver-name half the same way: grab the config
+    /// into a neutrally named local — <c>var lease = plan.Agent;</c> — and the spawn reads
+    /// <c>lease.Command</c>, with no agent-ish word near any dot. So the GRAB is matched too:
+    /// <c>.Agent</c> / <c>.Advisor</c> / <c>.Supervisor</c> / <c>.StatusAgent</c> on any receiver,
+    /// because nothing reaches for a model config except to run what it holds. An alias can rename the
+    /// variable; it cannot avoid the property that handed the config over.</para></summary>
     private static readonly Regex ModelBearingMember = new(
-        @"\b\w*(?:[Aa]gent|[Aa]dvisor|[Ss]upervisor|cfg)\w*\s*\??\.\s*(?:Command|Model)\b|\b\w+\s*\??\.\s*Model\b",
+        @"\b\w*(?:[Aa]gent|[Aa]dvisor|[Ss]upervisor|cfg)\w*\s*\??\.\s*(?:Command|Model)\b" +
+        @"|\b\w+\s*\??\.\s*(?:Model|Agent|Advisor|Supervisor|StatusAgent)\b",
         RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(5));
 
     /// <summary>How a process gets started here. <c>WatchHook</c> is named because it is the one spawn
@@ -303,11 +310,7 @@ public class ArchitectureBoundaryTests
         foreach (var file in sources)
         {
             var text = code[file.FullName];
-            var spawnsAModel = SpawnCalls.Any(s => text.Contains(s, StringComparison.Ordinal))
-                            && (ModelConfigTypes.Any(t => text.Contains(t, StringComparison.Ordinal))
-                                || ModelBearingMember.IsMatch(text));
-            var callsAModelHelper = ModelHelpers.Any(h => text.Contains(h, StringComparison.Ordinal));
-            if (!spawnsAModel && !callsAModelHelper) continue;
+            if (!SpendsOnAModel(text)) continue;
 
             reached.Add(file.Name);
             if (UncountedSpendExemptions.ContainsKey(file.Name)) continue;
@@ -343,6 +346,42 @@ public class ArchitectureBoundaryTests
 
         Assert.True(stale.Count == 0,
             "KS5.2 — the spend rule's lists have gone stale:\n" + string.Join("\n", stale));
+    }
+
+    /// <summary>The per-file decision, one function so the scan above and the seeded-violation test
+    /// below cannot drift: does this source text spend money on a model — spawn one itself, or ask a
+    /// helper to spawn one on its behalf?</summary>
+    private static bool SpendsOnAModel(string text)
+        => (SpawnCalls.Any(s => text.Contains(s, StringComparison.Ordinal))
+                && (ModelConfigTypes.Any(t => text.Contains(t, StringComparison.Ordinal))
+                    || ModelBearingMember.IsMatch(text)))
+           || ModelHelpers.Any(h => text.Contains(h, StringComparison.Ordinal));
+
+    /// <summary>The rule, red-teamed with the exact shape that walked through its first version. The
+    /// receiver-name regex passed a file that grabbed the config into a neutral local and spawned off
+    /// the alias — ZzSeedB.cs in the re-verification transcript — so the escape is pinned here as a
+    /// permanent seeded case, alongside the direct forms that were already caught and the negative
+    /// cases that keep gate hooks and plain git spawns out of the net.</summary>
+    [Fact]
+    public void TheSpendRuleSeesAConfigGrabbedThroughALocalAlias()
+    {
+        // ZzSeedB.cs's shape: no config TYPE named (var), no model arg, no agent-ish variable name,
+        // no accounting. The grab — plan.Agent — is the only tell left, and it is enough.
+        const string aliasedSpawn = """
+            var lease = plan.Agent;
+            var r = ProcessRunner.Run(lease.Command, lease.Args, repo, timeout);
+            """;
+        Assert.True(SpendsOnAModel(aliasedSpawn),
+            "a spawn through a locally-aliased config must be seen as model spend");
+
+        // The direct forms the first regex already caught stay caught.
+        Assert.True(SpendsOnAModel("""ProcessRunner.Run(plan.Agent.Command, args, repo, t);"""));
+        Assert.True(SpendsOnAModel("""var m = cfg.Model; Process.Start(psi);"""));
+
+        // And the spawns that take no model stay out: gates, plain git, a bare shell.
+        Assert.False(SpendsOnAModel("""ProcessRunner.Run(gate.Command, gateArgs, repo, t);"""));
+        Assert.False(SpendsOnAModel("""var r = ProcessRunner.Run("git", ["status"], repo, t);"""));
+        Assert.False(SpendsOnAModel("""var p = Process.Start(new ProcessStartInfo("cmd.exe"));"""));
     }
 
     /// <summary>The reference direction, read off the csproj files themselves. The link-level rules above
