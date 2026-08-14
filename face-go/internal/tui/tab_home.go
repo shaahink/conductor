@@ -614,6 +614,12 @@ func (m Model) homeBudget(s *api.StateDto) budgetSpend {
 	if b.lifetime < b.spent { // an engine that serves spend but not lifetime must not read as cheaper
 		b.lifetime = b.spent
 	}
+	// KS5.4: the window is spend SINCE the last approval, so it is a part of the run's spend and can
+	// never exceed it. The engine already guarantees that; the clamp is here because this row and the
+	// one above it are read as one sentence, and "$14 since you approved, of $12 spent" is not one.
+	if b.window > b.spent {
+		b.window = b.spent
+	}
 	if b.cap > 0 && b.spent > b.cap {
 		over := b.spent - b.cap
 		b.over = &over
@@ -623,8 +629,9 @@ func (m Model) homeBudget(s *api.StateDto) budgetSpend {
 
 // homeBudgets renders the run's caps with remaining headroom, one row per cap that is actually set
 // (the wire's costCap / limits.maxRunTokens). No cap set = no row. A run that has been approved past
-// a budget park gets a second row naming the lifetime, because from that instant on the budget row
-// is answering a narrower question than "what has this run cost".
+// a budget park gets a second row naming what it has spent SINCE that approval — the budget row above
+// it answers "what has this run cost, against the ceiling in force" for the whole run, so the narrower
+// question is the one that needs its own row (KS5.4; before that the roles were the other way round).
 func (m Model) homeBudgets(s *api.StateDto) []homeLine {
 	var rows []homeLine
 	// K4.4: the token ceiling goes FIRST of the cap rows, because it is the limit that actually

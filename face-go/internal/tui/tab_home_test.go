@@ -250,6 +250,23 @@ func TestHomeBudgetRendersTheRaisedCeilingAndTheSpendSinceTheApproval(t *testing
 	}
 }
 
+// The two rows are read as one sentence, so the second can never claim more than the first. An
+// engine that served a window bigger than the run's own spend would produce "$99 since you approved,
+// of $12 spent", which is not a sentence — the Face clamps rather than rendering it.
+func TestHomeBudgetNeverRendersAWindowBiggerThanTheRunsOwnSpend(t *testing.T) {
+	m := newTestModel()
+	m.plan.doc = &api.PlanDto{Limits: api.PlanLimitsDto{}}
+	cap50, rem := 50.0, 38.0
+	b := m.homeBudget(&api.StateDto{
+		TotalCostUsd: 12.0, LifetimeCostUsd: 12.0,
+		CostSpent: 12.0, WindowCostUsd: 99.0, CostCap: &cap50, CostRemaining: &rem,
+		BudgetApprovals: 1,
+	})
+	if b.window != b.spent {
+		t.Errorf("a window over the run's spend is clamped to it, got window %v spent %v", b.window, b.spent)
+	}
+}
+
 // Genuinely over the cap — no approval in sight — is the other half: OVER, in dollars, and no
 // lifetime row, because with no approval the window IS the lifetime and a second row would say
 // the same number twice.
