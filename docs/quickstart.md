@@ -53,6 +53,11 @@ conductor plan new --advisor claude --from-idea "port the ingest pipeline off th
 # Then the check that matters. `0 fail` is the bar the scaffold is built to:
 conductor doctor
 
+# Or the whole launch drill in one verb, one verdict, one exit code — doctor plus the five checks
+# people used to run (or forget) by hand: journey resolution, the next session's prompt, running
+# engine versus latest release, a stale-engine check, and the tracker handoff block:
+conductor preflight
+
 # The older scaffold, still shipped and unchanged:
 conductor init
 
@@ -443,6 +448,12 @@ conductor doctor -p conductor.plan.json
 ## 16. CLI option reference
 
 ```
+conductor preflight [options]
+  -p, --plan <PATH>          Path to plan JSON (or CONDUCTOR_PLAN env var)
+  --no-auth-check            Skip the one-token auth ping (the only leg that spends anything)
+  --no-update-check          Do not consult the release feed
+                             Six legs, one verdict, one exit code. Read-only.
+
 conductor journey [options]
   -p, --plan <PATH>          Path to plan JSON (or CONDUCTOR_PLAN env var)
                              Pre-flight itinerary — no state written, no agent spawned

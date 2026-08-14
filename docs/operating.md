@@ -13,6 +13,7 @@ Companion docs: `README.md` (what it is), `docs/troubleshooting.md` (diagnose a 
 ## 0. TL;DR — the commands you will actually type
 
 ```powershell
+conductor preflight -p <plan>         # the whole launch drill: doctor + five more legs, one verdict
 conductor doctor -p <plan>            # is the environment ready? (<2s, says what's missing)
 conductor run    -p <plan>            # start the run (engine + control plane + TUI, one process tree)
 conductor status -p <plan>            # where are we, from the database, in <1s
@@ -69,6 +70,7 @@ Where to look when something's off (full table in `DOGFOOD-RUNBOOK.md`):
 | `init [-o <dir>] [--name N] [--repo P]` | Scaffold a runnable plan + editable `templates/` + `TRACKER.md`, gates chosen from the detected repo type (dotnet/go/rust/node/python). Self-checks it loads. |
 | `new-plan [-o <dir>]` | Minimal scaffold (plan + tracker only), no templates/gates. `init` supersedes it. |
 | `doctor` | <2s health check: agent CLI, git, face-go binary, DNS/disk/API, budget, Telegram. Exit 1 if any `fail`. |
+| `preflight [--no-auth-check] [--no-update-check]` | The launch drill as one verb: doctor (0 fail), journey resolution (workflow + model per stage), the next session's prompt composed and measured, running engine versus the latest release, a stale-engine check, and the tracker handoff block. One verdict, one exit code, and the verdict line names the legs that failed. Read-only — no agent, nothing written under `.conductor/`. |
 | `run [--dry-run] [--once] [--max-sessions N] [--headless] [--no-face] [--no-control-plane] [--port P] [--paused]` | Drive the plan. `--dry-run` = print the first prompt, spawn nothing. `--once` = one session. `--headless` = plain line output, no TUI (use this when driving from a non-interactive shell). `--no-face` = control plane up, no TUI. `--paused` = come up idle (author the plan / pre-seed the kanban first); `resume` starts session 1. |
 | `face [--demo]` | Attach a TUI to an already-running engine (`--demo` = offline synthetic data). |
 
@@ -118,7 +120,8 @@ going. Destructive ones need `--yes`.
 
 ## 3. Common operator workflows
 
-**Start a supervised run.** `conductor doctor -p <plan>` → fix any `fail` → `conductor run --once -p
+**Start a supervised run.** `conductor preflight -p <plan>` (the whole drill; `conductor doctor -p
+<plan>` is the health leg alone) → fix every leg the verdict names → `conductor run --once -p
 <plan>` (watch one session) → if healthy, `conductor run -p <plan>` for the whole plan. From a
 non-interactive shell add `--headless`.
 

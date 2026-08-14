@@ -88,6 +88,26 @@ To inspect the artifacts after a run:
 powershell -NoProfile -ExecutionPolicy Bypass -File .claude\skills\run-conductor\driver.ps1 -Keep
 ```
 
+### The launch drill is one verb now (KS3.4)
+
+**Superseded.** The hand-typed pre-launch checklist — `doctor`, then `journey`, then
+`run --dry-run`, then remember to ask whether this binary is the one the source tree would build,
+then remember that a tracker handoff still asking for a human parks session one — is
+`conductor preflight`. One invocation, six legs, one verdict, one exit code, and the verdict line
+names the legs that failed:
+
+```powershell
+$exe = "src\Conductor\bin\Debug\net10.0\conductor.exe"
+& $exe preflight -p <plan> --no-auth-check     # exit 0 = READY. Read-only: no agent, no state written.
+```
+
+The six legs are `doctor` (0 fail), `journey` (workflow + model resolve per stage), `compose` (the
+next session's prompt, composed and measured, nothing spawned), `version` (running engine versus the
+latest release), `rebuild` (are the sources that build this binary newer than the binary?) and
+`escalation` (the tracker handoff block). Drop `--no-auth-check` when you want the one-token auth
+ping too; it is the only leg that spends anything (~$0.001). `--no-update-check` skips the release
+feed. Run the three old commands individually only when a leg fails and you want its full output.
+
 ### Driving individual verbs directly
 
 Against any plan (`-p`). Verified this session:

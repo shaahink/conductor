@@ -62,6 +62,25 @@ public sealed class JourneyCommand : AsyncCommand<PlanSettings>
     /// as <see cref="Conductor.Core.Planning.PlanDiscovery"/>.</summary>
     internal static async Task<string> DescribeResumeAsync(PlanConfig plan)
     {
+        var state = await PeekResumeAsync(plan).ConfigureAwait(false);
+        return string.IsNullOrEmpty(state.RunId)
+            ? "fresh run — no saved state found"
+            : $"resumes session #{state.SessionCounter + 1}, stage {state.CurrentStage ?? "?"} (run {Short(state.RunId)}, status {state.Status})";
+    }
+
+    /// <summary>The read-only half of the resume detection, as STATE rather than as a sentence: the
+    /// legacy <c>state.json</c> first, the latest run.db row when that is empty — exactly
+    /// <c>RunCommand</c>'s order. Nothing here writes for ANY caller: state.json is read by
+    /// <see cref="PeekStateAsync"/> (no archiving, no .corrupt copy — KS2.3), the database is named
+    /// by <see cref="StateHome.Peek"/> (no import, no catalogue upsert) and
+    /// <see cref="RunStateResume"/> opens it read-only.
+    /// <para>Split out at KS3.4 so <c>preflight</c> can compose the prompt of the session that would
+    /// actually run next — which kind, on which stage — without a second, drifting copy of "what is
+    /// this run resuming". Archiving somebody else's legacy state stays <c>conductor run</c>'s job:
+    /// a preview reports what <c>run</c> would conclude and moves nothing.</para></summary>
+    internal static async Task<RunState> PeekResumeAsync(PlanConfig plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
         var state = await PeekStateAsync(Path.Combine(plan.StateDir, "state.json"), plan.Name).ConfigureAwait(false);
         if (string.IsNullOrEmpty(state.RunId) && state.SessionCounter == 0)
         {
@@ -70,9 +89,7 @@ public sealed class JourneyCommand : AsyncCommand<PlanSettings>
                 .ConfigureAwait(false);
             if (resumed != null) state = resumed;
         }
-        return string.IsNullOrEmpty(state.RunId)
-            ? "fresh run — no saved state found"
-            : $"resumes session #{state.SessionCounter + 1}, stage {state.CurrentStage ?? "?"} (run {Short(state.RunId)}, status {state.Status})";
+        return state;
     }
 
     /// <summary><see cref="RunState.LoadOrNew"/>'s DECISION without its housekeeping. LoadOrNew

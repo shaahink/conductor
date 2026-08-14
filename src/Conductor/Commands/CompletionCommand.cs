@@ -39,7 +39,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
     /// new verb is one edit — and <c>Completion_ContainsAllRegisteredVerbs_Exhaustive</c>, which scans
     /// <c>Program.cs</c> for the truth, is what catches you forgetting it.</summary>
     private const string Verbs =
-        "run journey face status watch watches gate log report pause resume approve kill skip inject abort " +
+        "run journey preflight face status watch watches gate log report pause resume approve kill skip inject abort " +
         "retry-stage rollback pause-after-stage goto rollover heartbeat plan tasks task new-plan note " +
         "bug init doctor audit mcp-serve completion chat bg ps history catalogue budget money spend " +
         "version update demo";
@@ -47,7 +47,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
     internal static string GeneratePowerShell()
     {
         var verbs = Verbs;
-        var opts = "-p --plan --yes --force --dry-run --once --max-sessions --paused --headless --deep --full -o --output --name --repo -q --query --since --tail";
+        var opts = "-p --plan --yes --force --dry-run --once --max-sessions --paused --headless --deep --full -o --output --name --repo -q --query --since --tail --no-auth-check --no-update-check";
         var auditOpts = "-p --plan --replay";
         var newPlanOpts = "-o --output --name --repo";
         var updateOpts = "-p --plan --check -y --yes";
@@ -110,7 +110,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)
                     }
                 }
-                elseif ($tokens[1] -in @('run','journey','face','status','gate','log','report','pause','resume',
+                elseif ($tokens[1] -in @('run','journey','preflight','face','status','gate','log','report','pause','resume',
                         'approve','kill','skip','inject','abort','retry-stage','rollback','pause-after-stage',
                         'goto','rollover','heartbeat','tasks','task','note','bug','init','doctor')) {
                     $opts | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
@@ -145,8 +145,8 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                     return
                 fi
                 case "${COMP_WORDS[1]}" in
-                    run|journey|face|status|gate|log|report|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|rollover|heartbeat|tasks|task|note|bug|init|doctor|mcp-serve|chat|bg)
-                        COMPREPLY=($(compgen -W "-p --plan --yes --force --dry-run --once --max-sessions --paused --headless --deep --full -o --output --name --repo" -- "$cur"))
+                    run|journey|preflight|face|status|gate|log|report|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|rollover|heartbeat|tasks|task|note|bug|init|doctor|mcp-serve|chat|bg)
+                        COMPREPLY=($(compgen -W "-p --plan --yes --force --dry-run --once --max-sessions --paused --headless --deep --full -o --output --name --repo --no-auth-check --no-update-check" -- "$cur"))
                         ;;
                     watch)
                         COMPREPLY=($(compgen -W "-p --plan --json --timeout --hook --hook-timeout --notify --poll" -- "$cur"))

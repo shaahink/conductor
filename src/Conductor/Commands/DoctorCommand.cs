@@ -83,7 +83,10 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
         return failed > 0 ? 1 : 0;
     }
 
-    private static async Task<List<Check>> RunChecksAsync(PlanConfig plan, bool authCheck = false, bool updateCheck = true)
+    /// <summary>The whole check list, as data. Internal since KS3.4: <c>preflight</c> runs the same
+    /// list rather than a second one that could disagree with it, and sorts the results into its own
+    /// legs — so "doctor is green" means exactly what doctor means by it.</summary>
+    internal static async Task<List<Check>> RunChecksAsync(PlanConfig plan, bool authCheck = false, bool updateCheck = true)
     {
         var checks = new List<Check>
         {
@@ -207,7 +210,10 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
         || cmd.Contains(Path.AltDirectorySeparatorChar, StringComparison.Ordinal)
         || Path.IsPathRooted(cmd);
 
-    private static string? ResolveOnPath(string command)
+    /// <summary>The first file PATH would spawn for a bare command name, PATHEXT included. Internal
+    /// since KS3.4 so <c>preflight</c>'s rebuild leg can name the <c>conductor</c> a hand-typed
+    /// launch would actually run, without a second copy of this walk.</summary>
+    internal static string? ResolveOnPath(string command)
     {
         var dirs = (Environment.GetEnvironmentVariable("PATH") ?? "")
             .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);

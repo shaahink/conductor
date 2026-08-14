@@ -27,15 +27,24 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
     private static readonly TimeSpan UpdateProbeTimeout = TimeSpan.FromSeconds(4);
 
     internal static async Task<Check> CheckUpdateAsync(DateTimeOffset now)
+        => (await UpdateStatusAsync(now).ConfigureAwait(false)).Check;
+
+    /// <summary>The same probe with its VERDICT still attached. Doctor only needs the line; KS3.4's
+    /// preflight needs to know whether a newer release actually exists, because "could not reach the
+    /// feed" and "you are two releases behind" are one <c>warn</c> to doctor and two different
+    /// answers to a launch drill. One probe, one cache entry, two readings — never two round trips.
+    /// <para><see cref="UpdateStatus"/> is null when nothing was compared at all (checks switched off,
+    /// or a running version that is not a semantic version).</para></summary>
+    internal static async Task<(Check Check, UpdateStatus? Status)> UpdateStatusAsync(DateTimeOffset now)
     {
         var running = BuildInfo.Current.Full;
         if (UpdateCheckCache.Disabled)
-            return new Check("update", "ok", $"{running} — release checks are off ({UpdateCheckCache.DisableEnvVar})");
+            return (new Check("update", "ok", $"{running} — release checks are off ({UpdateCheckCache.DisableEnvVar})"), null);
 
         if (!SemVer.TryParse(BuildInfo.Current.Version, out var current))
-            return new Check("update", "warn",
+            return (new Check("update", "warn",
                 $"this binary reports '{BuildInfo.Current.Version}', which is not a semantic version — " +
-                "nothing can be compared against a release");
+                "nothing can be compared against a release"), null);
 
         var cached = UpdateCheckCache.ReadFresh(now);
         GithubRelease? release;
@@ -59,11 +68,11 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
         // An unanswerable question is reported as unanswered, never as "up to date": a laptop on a
         // plane must not be told its engine is current when nothing checked.
         if (!status.Known)
-            return new Check("update", "ok", $"{running} — could not check for a newer release ({status.Detail}){feed}");
+            return (new Check("update", "ok", $"{running} — could not check for a newer release ({status.Detail}){feed}"), status);
 
         return status.Available
-            ? new Check("update", "warn",
-                $"{running} — {status.Detail}; install it with `conductor update`{feed} (checked {age})")
-            : new Check("update", "ok", $"{running} — {status.Detail} {status.Tag}{feed} (checked {age})");
+            ? (new Check("update", "warn",
+                $"{running} — {status.Detail}; install it with `conductor update`{feed} (checked {age})"), status)
+            : (new Check("update", "ok", $"{running} — {status.Detail} {status.Tag}{feed} (checked {age})"), status);
     }
 }

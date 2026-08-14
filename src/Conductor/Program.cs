@@ -47,6 +47,8 @@ app.Configure(c =>
         .WithDescription("Run the plan: engine + control plane + Face TUI, one command. Resumes from saved state; Ctrl+C is safe.");
     c.AddCommand<JourneyCommand>("journey")
         .WithDescription("Pre-flight itinerary: identity, stages, gates, and every human moment — no state written, no agent spawned. Run this before `conductor run [[--paused]]`.");
+    c.AddCommand<PreflightCommand>("preflight")
+        .WithDescription("The whole launch drill in one verb, one verdict, one exit code: doctor, journey resolution, the next session's prompt, running-versus-released engine, a stale-engine check, and the tracker handoff. Read-only — no state written, no agent spawned.");
     c.AddCommand<FaceCommand>("face")
         .WithDescription("Attach a Face TUI to a run that is already going (or --demo for offline synthetic data).");
     c.AddCommand<StatusCommand>("status")
