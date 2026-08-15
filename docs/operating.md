@@ -85,6 +85,7 @@ Where to look when something's off (full table in `DOGFOOD-RUNBOOK.md`):
 | `gate [--full]` | Re-run the gate battery at HEAD (no agent). `--full` = whole battery, else fast tier. Clears `pendingFix` if green. |
 | `chat "<question>"` | Ask a model about the run; it has MCP access to `run.db`, the ledger, control verbs. |
 | `watch [--json] [--timeout M] [--hook "<cmd>"] [--notify <url>]` | Block silently until the run needs judgment, then emit a ~30-line brief (exit 0) — or exit 10 on the `--timeout` heartbeat. Runs the plan's `supervisor` command with the brief on stdin, and POSTs it to the `supervisor.remote` webhook / phone. See §3 "Unattended supervision". |
+| `watches [--json] [--ports <a-b>]` | The other half of `watch`: what is **armed** on this machine right now — every live run beside the supervisor block watching it, how much of its hourly fuse is burnt, where a remote wake travels, and the park-push cap in force (`limits.maxPushesPerIncident`). A run nothing would wake anybody for is called out as such. Read-only: a loopback `GET /state` and two file reads, no token and no POST. |
 
 ### Control a LIVE run (queue an intent the engine picks up at the next boundary)
 These write `.conductor/control.json` (or POST `/control`) — they work from any terminal while a run is
@@ -109,7 +110,27 @@ going. Destructive ones need `--yes`.
 |---|---|
 | `note "<text>" [-k kind] [-s stage]` | Write to the knowledge ledger (`run.db`); injected into later prompts. |
 | `bug new "<title>" [-d detail] [-s severity] [--stage S]` · `bug list [--all]` · `bug fix <id> [--wontfix]` | Tracked bugs that outlive the session that found them; open ones feed later prompts. |
+| `plan new [--from-idea "<prose\|path>"] [--advisor M] [-o <dir>]` | Author from nothing: one command from an empty repo to a plan, a tracker and the editable templates, **doctor-clean by construction** — the agent block names a CLI this machine actually has, and no scaffolded template spells the escalation token. `--from-idea` takes free prose, a PRD path or an existing tracker; a structured document is parsed with no model call, prose needs the advisor you name. The JSON never has to be opened. |
 | `plan set <key> <value> [--create]` · `plan reload` · `plan add-stage <json>` · `plan import <file> [--model M] [-y]` | Edit the plan from the CLI. `set` refuses a key the plan schema does not declare (suggesting the dotted path it thinks you meant — `--create` overrides), and queues the reload itself when a live engine holds the plan. Every edit is spliced into the raw file (KS3.2): `//` comments, key order and formatting survive, and nothing changes but the edited values and `planVersion`. `import` parses a markdown mega-plan into stages and DIFFS against the current plan (never clobbers). `reload` validates the file and queues a live `reload-plan` — a running loop swaps the plan at its next session boundary. |
+
+### Across runs, and this whole machine (read-only unless it says otherwise)
+
+State outlives the repo it was produced in: every run this machine has driven is in a machine-level
+catalogue keyed by repo and plan, and these verbs read *that* rather than the run you are standing in.
+They answer after a run has ended, and from any directory.
+
+| Command | Purpose |
+|---|---|
+| `ps [--json]` | Every conductor run on this machine — repo, plan, run id, stage, status, port, pid, uptime. The run in the current directory is marked `*`. |
+| `history [<selector>] [--repo R] [--plan P] [--since D] [--limit N] [--json]` | Browse past runs from the catalogue. No argument lists them; a run id, prefix, slug, repo name or a path to a `run.db` opens one and replays its spine. Liveness is **reconciled at render time** — a run whose engine was killed never lists as `running`, in the table or in the JSON. |
+| `face --archive <selector> [--serve] [--port N]` | Open a **finished** run in the TUI: the engine serves that run's `run.db` through a read-only control plane, so every write affordance hides itself and every POST is refused. A port inside the 4317-4336 fleet window is refused — an archive must never show up in `ps` as a live run. |
+| `catalogue` · `catalogue repair [--apply]` | Every run store this machine has, and whether any of them hold the same run twice. `repair` says what it would collapse and writes nothing; `--apply` collapses it after backing up every store it touches, never writes a store a live engine is using, and identifies a run by its run id rather than by which store it sits in. |
+| `run close <id> [--status S] [--ended T] [--reason "<why>"] [--dry-run]` | Close the record of a run whose engine never got to close it — killed, rebooted, or reaped with its shell. Writes a terminal status (`closed`, the default, or `completed`/`aborted`) and stamps when the run *actually* stopped, taken from its last recorded activity unless you pass `--ended`. The reason is journalled into the run's event spine. **This is the supported way to clear a stale `running` row; hand-editing SQL is not.** |
+| `run adopt <id> --reason "<why>"` | Annotate a run record without touching its lifecycle — for a record you mean to keep rather than close. |
+| `budget [--repo R] [--plan P] [--since D] [--json]` | Measure a repo's token budget **from its own runs** and prescribe the next one: session floor, wrap-up spend, cap, nudge-versus-floor, nudge-versus-median-closer, rollover rate, and a `limits` block to paste. |
+| `money [--run R] [--project P] [--plan P] [--since D] [--json]` | Price a run or a project from its own ledger: sessions, tokens, cache-read share, cost, and tokens and dollars per checkpoint, with the windows either side of a cap change. |
+| `spend [--since D] [--runs] [--home H] [--json]` | What this **whole machine** spent — today, this week, this month — across every catalogued store, with no repo and no plan argument. Billed rows only, each real run counted once even when the catalogue holds it twice, and rows whose session has no start time reported as `undated` rather than silently dropped. |
+| `github sync --backfill <selector> [--repo owner/name] [--dry-run] [--no-diary] [--project N]` | Push a finished run's board to GitHub issues: one issue per checkpoint (`status:*` / `source:*` labels, `confirmed` only when the engine confirmed the claim, the stage as a milestone) plus a run issue with a comment per finished session. **One way out, off by default** — nothing is ever read back from GitHub into the run. Identity is a marker in the issue body, so re-running mints zero duplicates. The token comes from `$CONDUCTOR_GITHUB_TOKEN` or `githubToken` in `<stateDir>/secrets.local.json`; with neither it refuses before dialling anything. `--project` refuses by design — see [cli.md](cli.md). |
 
 ### Infra
 `bg start\|status\|logs\|stop` (long-running commands, so they don't look like a stall) ·
@@ -355,10 +376,12 @@ caching, and NEEDS-HUMAN escalation. Full detail: `docs/history/maestro/M9-FINAL
 
 ---
 
-## 7. Known gaps & missing features (as of 2026-08-01, end of the Sarban era)
+## 7. Known gaps & missing features (as of 2026-08-15, end of the Karvansara era)
 
-Re-measured at the close of the Sarban era, not carried forward. Four of the ten items on the
-2026-07-15 list are gone — closed by the two eras that ran since — and what is left is stated with
+Re-measured at the close of the Sarban era and re-checked at the close of Karvansara, not carried
+forward. Four of the ten items on the 2026-07-15 list were gone by Sarban's close; item 6 went with
+Karvansara's `plan new`, and item 3 was re-read against the tree rather than assumed —
+`src/Conductor.Core/PersonaRegistry.cs` is still there, so the row stays. What is left is stated with
 what still owns it. The open engineering rows also live in
 [`docs/dev/NEXT-FEATURES.md`](dev/NEXT-FEATURES.md), which is where new ones should be filed.
 
@@ -389,8 +412,11 @@ what still owns it. The open engineering rows also live in
    (W3.3, `c8f9b56`; `docs/dev/workgraph/W3-WINDOW-CLOSE.md`).
 
 **Ergonomics / polish (minor):**
-6. **`plan import` needs an existing valid plan to diff against** — there's no clean from-scratch
-   bootstrap. Workaround: `conductor init` first, then `plan import`.
+6. ~~**`plan import` needs an existing valid plan to diff against**~~ — **CLOSED by KS3.1.**
+   `conductor plan new` is the from-scratch bootstrap: one command from an empty repo to a plan, a
+   tracker and the templates, doctor-clean by construction, with `--from-idea` taking prose, a PRD or
+   an existing tracker. `plan import` still diffs against a plan, which is now the point rather than
+   the gap.
 7. **A fully-done stage in a `perPhase` plan renders `gating` indefinitely** (`SnapshotBuilder`), which
    can read as "stuck" long after the phase gate passed. By-design, but easy to misread.
 8. **`status` can show `sessions 0` against a re-seeded `run.db`** — the checkpoint count (seeded from

@@ -20,6 +20,89 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ## [Unreleased]
 
+**The Karvansara era — the open door.** 0.4.0 made a run accountable; this era makes it *approachable*
+without giving any of that up. Typing `conductor` used to answer with a wall of help text, which is the
+one moment a tool has to say what it can do for you. It now opens a **hub**: the runs live on this
+machine, the runs it remembers, the plans it can see from where you are standing, and something to do
+about any of them. Everything behind that door got the same treatment — a finished run opens in the
+dashboard instead of being a database, a plan can be authored from an idea instead of from JSON, the
+launch drill is one verb instead of six, and what a run cost is a question you can ask about the whole
+machine rather than one repo at a time. Built the way the last three were: conductor driving itself
+against this repository, unattended, every checkpoint confirmed by an independent gate battery rather
+than by the agent that claimed it.
+
+Its own budget, measured at the close by the tool this project ships (`conductor budget`, against this
+run's own ledger): **a 32M-token session ceiling with the wrap-up nudge at 0.85** — 27.2M, clearing the
+25.6M largest session that ever closed a checkpoint, with 4.8M of headroom against a measured 2.28M
+wrap-up cost, and zero rollovers. The per-checkpoint figure this run reports is *not* comparable with
+0.4.0's: most of its checkpoints were confirmed in a single wave-lane session, which is a scheduling
+artefact rather than a cost improvement.
+
+### Added
+
+- **`conductor` with no arguments is the hub, not the help.** This machine's state home, the runs
+  answering on the fleet ports, the runs the catalogue remembers, the plans discoverable from here —
+  and four things to do about any of it: **attach** a Face to a run already going, **start** one from
+  a plan here, **plan new**, or **history**. Starting from the hub is the whole launch drill in one
+  flow: the plan's itinerary previewed read-only, a yes/no, then a *detached* engine you can close
+  your terminal on, with the Face attached to it. Zero plans here is a normal answer and so is eleven
+  — the front door of a CLI never interrogates the person who just typed its name. Redirected output
+  (`conductor | cat`) prints the same board and exits 0, so a script cannot hang on a keystroke.
+  `conductor --help` still lists exactly what it listed before, and an unknown verb is still an error.
+- **The archive — a finished run opens in the dashboard.** `conductor face --archive <run>` serves any
+  past run's database through a read-only control plane: sessions, money, timeline, report, every live
+  tab, with no engine process and no write token, so every write affordance hides itself and every POST
+  is refused by name. One run picker now covers the machine — the live runs and, under them, the ones
+  the catalogue remembers — and `:switch` moves a Face between runs without restarting it.
+- **`conductor preflight` — the launch drill as one verb, one verdict, one exit code.** Six legs:
+  `doctor`, journey resolution, the next session's prompt actually composed and measured, the running
+  engine versus the latest release, a stale-build check, and the tracker handoff block (an escalation
+  request left sitting in it parks session one before anything spawns). It decides from the same inputs
+  the run loop schedules on, prepared the same way, and it writes nothing under the plan's `.conductor/`.
+- **`conductor plan new` — authoring from nothing.** One command from an empty repo to a plan, a tracker
+  and the editable templates, **doctor-clean by construction**: the agent block names a CLI this machine
+  actually has, and no scaffolded template spells the escalation token into existence. `--from-idea`
+  takes free prose, a PRD path, or an existing tracker. The JSON never has to be opened.
+- **Import bridges — bring the board you already have.** A spec-kit `tasks.md`, a Task-Master
+  `tasks.json` and a plain markdown checklist each convert to a plan deterministically, detected by
+  content rather than filename, with **no model call**; only a shape none of them recognises falls
+  through to the advisor. `conductor demo --from <file>` drives *your* board against the fake agent, so
+  "will it drive mine?" is answered before you point it at a real one.
+- **`conductor spend` — what this whole machine cost.** Today, this week, this month, across every
+  catalogued store, with no repo and no plan argument. Billed rows only; each real run counted once even
+  when two stores hold it; sessions with no start time reported as `undated` rather than dropped. It
+  windows at session granularity, so a run straddling a boundary contributes only the sessions inside it.
+- **`conductor github sync --backfill <run>` — the board, on GitHub.** One issue per checkpoint (status
+  and source labels, a `confirmed` label only when the engine confirmed the claim, the stage as a
+  milestone), plus a run issue carrying plan, repo, branch and engine with one comment per finished
+  session — and, under `github.enabled`, a live mirror that reconciles as the run goes and resumes from
+  a cursor after a network outage. **One way out, off by default, nothing ever read back**: drag a card
+  on GitHub and the run does not notice, which is correct rather than a gap. Identity is a marker in the
+  issue body, so re-running a backfill mints zero duplicates and a reworded checkpoint updates its issue.
+  The Projects v2 half **refuses and says why** — it needs a `project` scope conductor will not grant
+  itself — rather than falling silent, which from outside would look exactly like a board being mirrored.
+- **`conductor run close` and `run adopt` — a stale run record has a supported fix.** A run whose engine
+  was killed, rebooted or reaped with its shell never got to close itself. `run close` writes a terminal
+  status and stamps when it *actually* stopped, taken from its last recorded activity, with the reason
+  journalled into the run's event spine; `run adopt` annotates a record you mean to keep. Hand-edited SQL
+  was the previous answer and is no longer needed.
+- **`conductor catalogue` — and `catalogue repair` for stores that hold a run twice.** `repair` says what
+  it would collapse and writes nothing; `--apply` collapses it after backing up every store it touches,
+  never writes a store a live engine is using, and identifies a run by its run id rather than by which
+  store it happens to sit in.
+- **`conductor watches` — what is armed on this machine.** Every live run beside the supervisor block
+  watching it, how much of its hourly fuse is burnt, where a remote wake travels, and the park-push cap
+  in force. Rows nothing would wake anybody for are called out. Read-only: no token, no POST.
+- **The reader, and scrolling everywhere.** Every long surface in the dashboard owns a scrolling pane,
+  and `enter` on any clipped cell or row opens a full-screen overlay with soft wrap, pager keys, a
+  percent readout and themed markdown — so a 2000-line report and a 300-character kanban note are both
+  readable in place instead of ending in an ellipsis.
+- **`conductor doctor` gains plan-semantics lints.** Beyond "is the environment ready": does every gate
+  command resolve to something that exists, do the tracker's checkpoint ids match the plan's, does the
+  hook survive a dry run, has the plan drifted from the run it is driving, will the composed prompt fit
+  in an argv, does any template carry an unresolved brace, and is the escalation token sitting in a
+  handoff block where it will park session one.
+
 ### Changed
 
 - **Licence is MIT.** Conductor is now plain MIT — free for any use, commercial included. The
@@ -28,6 +111,46 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 - **The one-line description says what Conductor is.** It is an engineering tool that turns a plan
   into verified, committed work; running unattended is a consequence of the verification, not the
   pitch. README badge, tagline and licence section updated to match.
+- **`approve` on a budget park raises the ceiling, and says by how much.** It used to reset the counter,
+  which forgave the spend silently. It now raises the run's ceiling by `--amount <usd>` / `--tokens <n>`,
+  or by one more of the plan's own cap when you give neither, and states the ceiling before and after.
+  A raise that would leave either half of the ceiling still at or under the spend is refused whole,
+  naming the number to type; an amount on a non-budget park is refused rather than ignored.
+- **A run's status is derived from its event spine, not read off a column.** Stage status folds from the
+  events, so what `status`, `history`, the JSON and the dashboard say about an archived run is the same
+  answer computed the same way — including for runs recorded before this release.
+- **The plan editor stops destroying the file it edits.** `plan set`, `plan add-stage` and `plan import`
+  splice into the raw JSON: the `//` comment header survives, key order and formatting survive, and
+  nothing changes but the values you edited. Adding a stage no longer silently rewrites the progress kind
+  or a gate timeout on its way past.
+- **The plan schema is honest about itself.** Eight keys that were settable and undocumented are
+  documented, a key that was read by nothing is gone, and `doctor` warns when a plan sets something inert
+  instead of leaving you to wonder why it had no effect.
+- **Every model process the engine spawns is billed.** Lanes, the advisor and the supervisor each write a
+  cost row now, so the caps see the spend they are supposed to cap and `money` prices what actually ran.
+- **A prescription that contradicts your plan says so at the boundary.** When a plan reloads, a
+  `limits` ceiling that disagrees with the floor measured from that repo's own sessions is logged where
+  the decision is being made, rather than waiting for someone to run `budget` and notice.
+- **`conductor status` in a directory that names no plan widens instead of failing.** It prints the
+  machine's board — live runs, what the catalogue remembers, the plans found here — with the reason on
+  stderr and exit 0. The "several plan files and nothing choosing between them" error is unreachable.
+
+### Fixed
+
+- **The working directory beats `CONDUCTOR_PLAN`.** A session inherits the environment of the run that
+  spawned it, so a plan launched from inside another run used to drive *that* run's plan instead of its
+  own. A directory naming exactly one plan now wins, and the override is never silent.
+- **The catalogue stops minting duplicate runs.** Importing a legacy `run.db` keyed on the plan slug, so a
+  run could be added again under a new name; it keys on the run id and consults its own import record
+  first. Existing duplicates collapse with `catalogue repair --apply`, which backs up every store it
+  touches.
+- **A killed engine's run never lists as `running`.** Liveness is reconciled at render time — in
+  `history`, in the fleet list and in the JSON that feeds downstream tooling — so a run whose engine
+  vanished reads as orphaned rather than as work in progress.
+- **A park notifies once.** A parked run could re-emit the same push in a loop; notifications are now
+  rate-limited per incident with a cap you can set, and a dry run never notifies at all.
+- **The gate battery no longer rebuilds the running engine.** A gate that published over the binary
+  driving the run could pull the floor out from under it mid-session; gates build to a shadow path.
 
 ## [0.4.0] - 2026-08-05
 

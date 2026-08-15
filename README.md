@@ -53,11 +53,28 @@ against a built-in fake agent in a throwaway directory:
 conductor demo
 ```
 
+`conductor demo --from <file>` drives *your* board instead of the built-in one — a spec-kit
+`tasks.md`, a Task-Master `tasks.json`, a plain markdown checklist — converted with no model call, so
+"will it drive mine?" is answered before you point it at a real agent.
+
+**Type its name** — `conductor` with no arguments is the **hub**, not a wall of help text: the runs
+answering on this machine, the ones the catalogue remembers, the plans discoverable from where you
+are standing, and four things to do about any of it — attach, start, `plan new`, `history`.
+
+```
+conductor
+```
+
+Redirected output (`conductor > board.txt`) prints the same board and exits 0 — no picker, no
+prompt, nothing for a script to hang on.
+
 **Drive a real plan** — in any repo, with an agent CLI you have already authenticated:
 
 ```
 conductor init          # scaffold a plan + tracker, gates detected from the repo type
 conductor doctor        # <2s health check — says exactly what's missing
+conductor preflight     # the whole launch drill, one verdict: doctor, journey, the composed
+                        # prompt, engine-versus-release, stale build, handoff escalation check
 conductor run --once    # run ONE session and stop (the right first supervised run)
 conductor run           # run the whole plan; Ctrl+C is always safe
 ```
@@ -124,10 +141,16 @@ it opens on; History is the old Sessions and Timeline as a single surface; the o
 raw-stream mode. The live keybinding and layout reference is
 [`face-go/STYLE.md`](face-go/STYLE.md).
 
+Nothing is truncated with no way back: every long surface owns a scrolling pane, and `enter` on any
+clipped cell or row opens the **reader** — a full-screen overlay with soft wrap, pager keys and a
+percent readout, so a 2000-line report and a 300-character kanban note are both readable in place.
+
 ```
 conductor run --headless     # no Face — plain line output (CI / redirected output)
 conductor run --no-face      # control plane runs, but nothing is spawned to view it
 conductor face               # attach another Face to an already-running conductor
+conductor face --pick        # the run picker: everything on this machine, live and past
+conductor face --archive <run>   # open a FINISHED run read-only — no engine, no write token
 ```
 
 ## Why it can be left alone
@@ -149,7 +172,9 @@ embeds the actual failing gate output.
 **It knows what it cost.** `conductor money` prices a run or a whole project from its own ledger:
 sessions, tokens, cache-read share, dollars, and what one checkpoint cost. `conductor budget` reads
 the same catalogue and prescribes the next run's session ceiling *and* the wrap-up nudge — measured
-from the sessions this repo actually ran, not guessed.
+from the sessions this repo actually ran, not guessed. `conductor spend` answers the question one
+level up: what this whole **machine** spent today, this week and this month, across every store it
+knows, with each real run counted once.
 
 ### What it does when a session ends
 
@@ -183,6 +208,11 @@ Optional **Telegram** integration adds push notifications and two-way control (`
 `/pause`, `/resume`, `/approve`, `/skip`) via inline keyboard. **Webhooks** (generic HTTP POST,
 Discord, Slack) fire on NeedsHuman and completion.
 
+`conductor github sync --backfill <run>` mirrors a run's board into GitHub issues — one issue per
+checkpoint with status labels and the stage as a milestone, plus a run issue with a comment per
+session. It is **one way out and off by default**: conductor pushes, and never reads GitHub state
+back into the run. Drag a card there and the run does not notice; the tracker stays the contract.
+
 ## Design decisions
 
 - **The tracker is the progress database.** No parallel bookkeeping to drift.
@@ -215,12 +245,12 @@ Discord, Slack) fire on NeedsHuman and completion.
 Contributors: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/). Closed eras and their
 gate transcripts: [`docs/history/`](docs/history/).
 
-> Conductor drives itself. [`plans/karvan/CORE-TRACKER.md`](plans/karvan/CORE-TRACKER.md) is the
-> **live tracker** for the era in flight — the same checkpoint-table format described in
-> [`docs/tracker.md`](docs/tracker.md), being used on this repo by the tool in this repo.
-> `SARBAN-CORE-TRACKER.md` and `SARBAN-FACE-TRACKER.md` are the same thing for the two plans that
-> built the Sarban era — each is the `tracker` path a [`plans/`](plans/) plan file points at, so they
-> stay at the repo root by convention rather than under `docs/`.
+> Conductor drives itself. [`plans/karvansara/CORE-TRACKER.md`](plans/karvansara/CORE-TRACKER.md) is
+> the **live tracker** for the era in flight — the same checkpoint-table format described in
+> [`docs/tracker.md`](docs/tracker.md), being used on this repo by the tool in this repo. Each closed
+> era's tracker is kept beside its gate transcripts in
+> [`docs/history/archive/trackers/`](docs/history/archive/trackers/); every one of them is the
+> `tracker` path some [`plans/`](plans/) plan file pointed at while its era was in flight.
 
 ## Testing without spending anything
 
