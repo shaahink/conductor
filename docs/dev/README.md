@@ -10,8 +10,9 @@ what a good change looks like. The material here is what sits behind that page.
 | Doc | What it is |
 |---|---|
 | [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) | The map: the three assemblies and which way they point, one session's lifecycle end to end, the seams, the two surfaces, and where to add a new thing. Start here. |
-| [`../history/CONDUCTOR-KARVAN.md`](../history/CONDUCTOR-KARVAN.md) | The K-series design brief — the ledger, the architecture split, machine-level state, token truth, the result contract, the surfaces. **The design authority for current work.** |
-| [`../../plans/karvan/CORE-TRACKER.md`](../../plans/karvan/CORE-TRACKER.md) | The live **tracker** — checkpoint table + handoff block, beside its plan in `plans/karvan/`. Conductor drives itself with it. |
+| [`KARVANSARA-PLAN-2026-08-13.md`](KARVANSARA-PLAN-2026-08-13.md) | The KS-series plan — the open door: one command over every run the machine ever ran, plan authoring without hand-written config, budget truth, GitHub sync. **The design authority for current work.** Its per-checkpoint contracts are in [`../../plans/karvansara/contracts/`](../../plans/karvansara/contracts/). |
+| [`../../plans/karvansara/CORE-TRACKER.md`](../../plans/karvansara/CORE-TRACKER.md) | The live **tracker** — checkpoint table + handoff block, beside its plan in `plans/karvansara/`. Conductor drives itself with it. A generated view: the checkpoint rows are overwritten from the database, and the handoff block is the part a session writes. |
+| [`../history/CONDUCTOR-KARVAN.md`](../history/CONDUCTOR-KARVAN.md) | The **closed** K-series brief. Moved to `history/` when Karvan tagged, per the convention below; it is the design authority for nothing current. |
 | [`GAP-ANALYSIS.md`](GAP-ANALYSIS.md) | The owner-commissioned analysis that produced the W-series: why the loop broke and the road back. Still the reference for why the rails exist. |
 
 An era's brief and tracker live together while the era is open, and both move to
@@ -21,6 +22,13 @@ its brief is [`../history/CONDUCTOR-WORKGRAPH.md`](../history/CONDUCTOR-WORKGRAP
 is [`../history/archive/trackers/WORKGRAPH-TRACKER.md`](../history/archive/trackers/WORKGRAPH-TRACKER.md).
 The W-series write-ups below stay here because `plans/conductor-w52.plan.json` and
 `tools/w5/start-w52.ps1` still address them by path.
+
+**Karvan's tracker is the exception, and this is the reason** (recorded at KS10.1, 2026-08-15): the
+brief moved to `history/` as the convention says, but `plans/karvan/CORE-TRACKER.md` stays where it is
+because `plans/karvan/core.plan.json:32` names it as its `tracker`, and `plans/karvan/lanes.plan.json`
+— authored, 0/23, launching after karvansara-edge — sits in the same directory. Moving the file would
+break a plan that has not run yet, which is the same trap the W-series paragraph above describes. It
+moves when the lanes plan does.
 
 ## Findings and write-ups
 

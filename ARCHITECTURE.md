@@ -113,12 +113,14 @@ the only path that turns `DONE` into `DONE ✓`. Red increments the stage attemp
 
 `rollback` is not bookkeeping — it is **`git reset --hard`** onto `state.CurrentStageStartHead`, the
 commit the repo sat on when the stage began
-(`src/Conductor.Core/Commands/ControlDispatcher.cs:189`). It **destroys uncommitted work and drops
+(`src/Conductor.Core/Commands/ControlDispatcher.cs:197`). It **destroys uncommitted work and drops
 every commit made since that head**. It is refused when no stage-start head has been recorded
-(`:175-180`), and refused on a dirty working tree unless `--force` — which does not stash the tree, it
-**discards** it (`:181-188`). It applies only outside a session; arriving mid-session it is logged as
-taking effect after the session ends (`:231-232`). A rollback that ran emits
-`RollbackExecuted { StageId, FromSha, ToSha, Forced }` (`:190`) and leaves the run `Idle`.
+(`:183-188`), and refused on a dirty working tree unless `--force` — which does not stash the tree, it
+**discards** it (`:189-194`). It applies only outside a session — the case itself is guarded
+`when !inSession` (`:181`); arriving mid-session it is logged as taking effect after the session ends
+(`:239`). A rollback that ran emits `RollbackExecuted { StageId, FromSha, ToSha, Forced }` (`:198`)
+and leaves the run `Idle` (`:199`). *(Citations re-measured at KS10.1, 2026-08-15; they had drifted
+by 6-8 lines. The semantics had not moved at all.)*
 
 ### 6. The claim, and the tracker
 
@@ -164,11 +166,19 @@ abstraction count is small on purpose.
 | `IPromptBattery` `PromptBattery.cs:10` | Contribute one optional block of context to the next prompt | `LedgerBattery`, `BugsBattery`, `LessonsBattery`, `RecentFailureBattery`, `LaneArtifactBattery` |
 | `IEventSink` `Events/EventLog.cs:8` | Append one `ConductorEvent` | `EventLog`, `SqliteRunStore`, `NullEventSink` (dry run) |
 | `IProgressSink` `Progress.cs:67` | Push snapshots/logs out to an operator, poll control commands back in | `PlainSink`; test doubles record |
-| `ITelegramService` `Integrations/TelegramService.cs:21` | The notify + remote-control channel | `TelegramService`, `NoOpTelegramService` (null object when the plan has no telegram block) |
+| `ITelegramService` `Integrations/TelegramService.cs:22` | The notify + remote-control channel | `TelegramService`, `NoOpTelegramService` (null object when the plan has no telegram block) |
 | `IPlanner` `IPlanner.cs:7` | Decide the next checkpoint | `CheckpointPlanner` |
 | `IReportsStartOutcome` `IReportsStartOutcome.cs:17` | Let a hosted service say it declined to start on purpose | `TelegramService` |
 
-**Four things you would expect to be seams are not**, and knowing this saves an afternoon:
+**KS9's GitHub sync did not add a tenth.** Counted again at KS10.1 (2026-08-15) after the era that
+added `Integrations/Github/` — thirteen files, a client, a mirror, a board sync and a v14 migration —
+and the list above is still the whole list. That is deliberate and it is the same trick `ReleaseClient`
+uses: `GithubClient` takes an `HttpMessageHandler`, so the test double is
+`tests/Conductor.Tests/FakeGithub.cs` (a handler that records requests and can park one mid-flight),
+not an `IGithubClient` nobody else would ever implement. **The rule this era learned:** if the only
+other implementation would be a fake, the seam belongs at the transport, not at the type.
+
+**Five things you would expect to be seams are not**, and knowing this saves an afternoon:
 
 - **Clock** — the BCL `TimeProvider`, passed as an optional constructor argument, not a custom interface.
   Two hot paths (`SessionWatchdog`, `StallDetector`) take a bare `Func<DateTime>` instead.
@@ -177,6 +187,12 @@ abstraction count is small on purpose.
 - **Git** — `public static class Git` (`Git.cs:3`), shelling straight to `git -C <repo>`. Not mockable.
 - **Gate execution** — `public static class GateRunner` (`GateRunner.cs:25`). Its seams are *parameters*
   (`onProgress`, `onGates`, an optional `IRunStore` for the per-SHA cache), not types.
+- **GitHub sync** — `GithubClient` + `GithubMirror` (`Integrations/Github/`). Push-only by design
+  (ADR-0005): nothing is ever read back from GitHub into the run, so there is nothing for a seam to
+  invert. The mirror is attached to the run rather than registered on the event path, and
+  `ArchitectureBoundaryTests.TheGithubMirrorIsNeverRegisteredOnTheEventPath` holds that line by
+  **file name** — only `RunContext.cs`, `RunContext.Mirror.cs` and `RunLoop.Plumbing.cs` may name it
+  under `Orchestration/`. Splitting a file that names it will go red; that is the point.
 
 ## The two surfaces
 
@@ -233,6 +249,16 @@ push-only and **not** poll-only:
 One rule, four cases. It exists because "no file over 500 lines" was already true when
 `ControlPlaneDto` was **thirty files** and `ConductorEvent` was eleven: file size said healthy, and
 finding anything still needed a grep.
+
+**The numbers are enforced, not aspirational, and they are these** (`tests/Conductor.Tests/architecture-baseline.json`,
+read at KS10.1): `lineCeiling` **500**, `maxTypesPerFile` **3**, and both debt maps —
+`filesOverLineCeiling`, `filesOverTypeCeiling` — are **`{}`**. An empty baseline is the whole point:
+it records debt that *exists*, may only shrink, and stage M1's definition of done was driving it to
+`{}`. It got there, so a file that crosses 500 lines has **no legal home** in this file — the only
+move left is to split it, which is what KS9's `RunContext` (514 lines) did into
+`RunContext.Mirror.cs`. `tools/gates/ratchet.ps1:173` fails the gate if either ceiling is raised, and
+`ratchet-baseline.json` carries the other two floors: `minTests` **1932** (only ever rises),
+`maxPragmas` **38** (only ever falls, and is red at 43 today — bug #44, an owner decision).
 
 ### 1. A file is named after what it declares - always
 
@@ -302,7 +328,9 @@ The second column is where the thing lives. The third is what silently lies if y
 | **a plan config key** | the record in `Core/Models/` (`PlanConfig.cs:9`, `LimitsConfig.cs:5`) | `docs/plan-config.md`; give it a default, or every existing plan stops loading |
 | **a tab or panel in the Face** | `face-go/internal/tui/tab_<name>.go` | the `tabKey` mnemonic map at `model.go:59` **and** the hand-maintained help legend in `cmdbar.go` — both, or the help lies. Read `face-go/STYLE.md` first |
 | **a control verb** | `ControlAction` in `Core/Progress.Control.cs` and the `/control` handler | the Face's verb table at `cmdbar.go:66` — the strings do not map by name |
-| **an architecture rule** | `tests/Conductor.Tests/ArchitectureBoundaryTests.cs` (8 rules today) | make the failure message name the offending type; a rule that says only "boundary violated" costs the next session an hour |
+| **a GitHub-synced surface** | `Core/Integrations/Github/` — a request shape in `GithubRequests.cs`, its wire record in `GithubDtos.cs`, and the call on `GithubClient` | register the DTO in `GithubJsonContext` or it will not serialise; if a run-loop file has to *name* `GithubMirror`, `TheGithubMirrorIsNeverRegisteredOnTheEventPath` fails — go through `RunContext.MirrorBoard` / `MirrorFinalPass` instead |
+| **a store column or table** | a new `Core/Store/Migrations/vNN_<what>.sql`, embedded as a resource | **`MigrationRunner.CurrentVersion`** (`MigrationRunner.cs:11`) — and the tests that pin it by literal (`RunDbTests`, `K3_3ProvenanceTests`, `K4_1ContextWindowTests`). Those literals exist so the bump is *decided*; KS9.2 shipped v14 and left all three behind. Note the store migrates on **every** open (`MigrationRunner.cs:21`), so a newer build run against a live store locks an older engine out of it (bug #45) |
+| **an architecture rule** | `tests/Conductor.Tests/ArchitectureBoundaryTests.cs` (**12** `[Fact]` rules today, counted at KS10.1) | make the failure message name the offending type; a rule that says only "boundary violated" costs the next session an hour |
 | **anything in Core needing Spectre, `HttpListener` or `Console`** | it does not go in Core | `CoreDoesNotLinkTheCliOrAnyUiAssembly`, `CoreDoesNotHostHttp`, `CoreSourceNeverNamesTheShell` and `TheStoreDoesNotWriteToTheConsole` will each say so by name |
 
 ## What K2.3 split, and what it left
