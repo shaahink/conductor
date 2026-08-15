@@ -21,7 +21,11 @@ namespace Conductor.Tests;
 /// </summary>
 public class KS9_1GithubBackfillTests
 {
-    private static ArchivedRun Run(string status = "completed") => new(
+    /// <summary>The default status is spelled the way the ARCHIVE spells it — <c>Completed</c>, the
+    /// RunStatus enum's own casing — not the way the task graph spells its lower-case statuses. The
+    /// first live backfill left a finished run's diary issue OPEN because an ordinal comparison here
+    /// was written in the wrong half's vocabulary, and the fixture agreed with the bug.</summary>
+    private static ArchivedRun Run(string status = "Completed") => new(
         RunId: "run-abc123456789", PlanName: "karvansara", Repo: "C:/code/conductor", Branch: "feat/karvansara",
         EngineVersion: "0.4.1", Status: status, StartedUtc: "2026-08-01T00:00:00Z", EndedUtc: "2026-08-02T00:00:00Z",
         LastActivityUtc: null, Sessions: 2, CostUsd: 12.5m, Tokens: 1000);
@@ -172,6 +176,21 @@ public class KS9_1GithubBackfillTests
             && r.Path == "/repos/owner/scratch/issues/" + fake.NumberOfTask("KS9.2"));
         Assert.Contains("needs-discussion", patch.Body, StringComparison.Ordinal);
         Assert.Contains("conductor:status:in_progress", patch.Body, StringComparison.Ordinal);
+    }
+
+    /// <summary>A finished run's diary issue is CLOSED, whatever case the archive stored the status
+    /// in. Both spellings are asserted because the two halves of this codebase genuinely use two
+    /// vocabularies, and the mirror sits across the seam.</summary>
+    [Theory]
+    [InlineData("Completed", true)]
+    [InlineData("completed", true)]
+    [InlineData("Aborted", true)]
+    [InlineData("running", false)]
+    public void TheDiaryIssueClosesWithTheRun(string status, bool shouldClose)
+    {
+        var run = Run(status);
+        var diary = GithubBoardPlan.Diary(Log(), run, "0.4.1+abc");
+        Assert.Equal(shouldClose, diary.Closed);
     }
 
     /// <summary>A dry run reconciles and reports, and puts nothing on the wire that writes.</summary>

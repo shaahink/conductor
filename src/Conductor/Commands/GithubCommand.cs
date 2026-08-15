@@ -38,7 +38,11 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         [Description("Push this run's whole board and diary. Run id, prefix, slug, repo name, or a path to a run.db.")]
         public string? Backfill { get; init; }
 
-        [CommandOption("--repo <OWNER/NAME>")]
+        // The value name is a bare word on purpose. Spectre parses the template at model-build time
+        // and rejects '/' in a value name — and it builds the model for EVERY command at startup, so
+        // `--repo <OWNER/NAME>` did not break this verb, it took the whole CLI down with a
+        // CommandTemplateException before any verb ran. Found by running it, not by reading it.
+        [CommandOption("--repo <REPO>")]
         [Description("Mirror INTO this repository, overriding the plan's github.repo. Use a scratch repo to try it.")]
         public string? Repo { get; init; }
 

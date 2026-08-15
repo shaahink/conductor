@@ -169,6 +169,51 @@ public class B11_2DoctorAndCompletionTests
         return verbs;
     }
 
+    /// <summary>
+    /// KS9.1 — every CLI option template must PARSE. Spectre builds the model for the whole
+    /// application at configure time, so one malformed template on one verb is not a broken verb: it
+    /// is a <c>CommandTemplateException</c> thrown before any argv is read, and <c>status</c>,
+    /// <c>task</c> and <c>run</c> all die with it.
+    ///
+    /// <para>This was not hypothetical. <c>[CommandOption("--repo &lt;OWNER/NAME&gt;")]</c> — a value
+    /// name that reads perfectly in help text — took the entire CLI down, through a green build and
+    /// a green suite, because a slash is illegal in a value name. The template is parsed by the
+    /// ATTRIBUTE CONSTRUCTOR, which is why simply reading the attributes back reproduces the
+    /// failure: this test goes red in the same way the binary did.</para>
+    /// </summary>
+    [Fact]
+    public void EveryCommandOptionTemplateParses()
+    {
+        var shell = typeof(Conductor.Hosting.ConductorHost).Assembly;
+        var settings = shell.GetTypes()
+            .Where(t => !t.IsAbstract && typeof(Spectre.Console.Cli.CommandSettings).IsAssignableFrom(t))
+            .ToList();
+        Assert.True(settings.Count > 20, $"only {settings.Count} settings types found — the scan is broken, not the CLI");
+
+        var failures = new List<string>();
+        foreach (var type in settings)
+        {
+            foreach (var property in type.GetProperties())
+            {
+                try
+                {
+                    // Constructing the attribute IS the parse. A bad template throws here, exactly
+                    // as it throws inside CommandModelBuilder.Build at startup.
+                    property.GetCustomAttributes(typeof(Spectre.Console.Cli.CommandOptionAttribute), inherit: true);
+                    property.GetCustomAttributes(typeof(Spectre.Console.Cli.CommandArgumentAttribute), inherit: true);
+                }
+                catch (Exception ex)
+                {
+                    failures.Add($"  {type.Name}.{property.Name}: {ex.InnerException?.Message ?? ex.Message}");
+                }
+            }
+        }
+
+        Assert.True(failures.Count == 0,
+            "a CLI option/argument template does not parse — this takes down EVERY verb at startup, " +
+            "not just the one it is on:\n" + string.Join("\n", failures));
+    }
+
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

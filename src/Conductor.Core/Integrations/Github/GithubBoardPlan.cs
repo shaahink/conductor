@@ -97,9 +97,18 @@ public static class GithubBoardPlan
             RunId: run.RunId,
             Title: $"run: {run.PlanName} — {run.ShortRunId}",
             Body: body,
-            Closed: run.Status is "completed" or "aborted" or "failed" or "closed",
+            // MEASURED, on the first live backfill: the archive spells this "Completed", not
+            // "completed" — `runs.status` carries the RunStatus enum's own casing, while the task
+            // graph's statuses are lower-case strings. An ordinal match left the diary issue OPEN for
+            // a run that had finished, and the unit fixture did not catch it because the fixture was
+            // written in the vocabulary of the OTHER half.
+            Closed: Terminal.Contains(run.Status, StringComparer.OrdinalIgnoreCase),
             Comments: comments);
     }
+
+    /// <summary>The run statuses that mean "this is over". Compared case-INSENSITIVELY: see the note
+    /// at the call site.</summary>
+    private static readonly string[] Terminal = ["completed", "aborted", "failed", "closed", "stopped"];
 
     private static string CommentFor(string runId, SessionFinished e)
     {
