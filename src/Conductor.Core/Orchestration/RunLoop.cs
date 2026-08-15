@@ -110,7 +110,7 @@ public sealed partial class RunLoop
             });
             WarnOnDirtyEngine();
             NotifyRunStart();
-            AttachGithubMirror();
+            AttachBoardMirror();
             // SF5.4: two engines on one machine are two identical entries in a task manager until one of
             // them says which run it is. Set once here, refreshed on every stage entry below.
             Core.Fleet.ProcessTitle.Set(_ctx.Plan.Repo, _ctx.Plan.Name, _ctx.State.RunId, _ctx.State.CurrentStage);

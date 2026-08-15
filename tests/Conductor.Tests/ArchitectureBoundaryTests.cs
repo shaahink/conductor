@@ -447,4 +447,37 @@ public class ArchitectureBoundaryTests
         Assert.True(violations.Count == 0,
             "KS9.1 — nothing inbound, and nothing in the event path:\n" + string.Join("\n", violations));
     }
+
+    /// <summary>KS9.2 — the live mirror is a RECONCILER, and the proof that it stayed one is that the
+    /// composition root never hands it to the event pipeline. The type-level rule above says no
+    /// GitHub type IMPLEMENTS <c>IEventSink</c>; this says the shell never REGISTERS one, which is
+    /// the other half and the half a wrapper class could slip through. A mirror on the emit path
+    /// would put a network call on the writer's thread — the back-pressure the cursor design exists
+    /// to avoid — and would lose an event outright when the push failed.</summary>
+    [Fact]
+    public void TheGithubMirrorIsNeverRegisteredOnTheEventPath()
+    {
+        var violations = new List<string>();
+        foreach (var file in SourcesUnder("src", "Conductor", "Hosting"))
+        {
+            var code = CodeOnly(file);
+            if (code.Contains("GithubMirror", StringComparison.Ordinal))
+                violations.Add($"  {file.Name} names GithubMirror — the mirror is attached by RunLoop at " +
+                    "run start and reconciles from a persisted cursor; the host must not wire it as a sink " +
+                    "or a hosted service.");
+        }
+
+        // And the boundary calls stay where the design put them: RunContext is the only door.
+        foreach (var file in SourcesUnder("src", "Conductor.Core", "Orchestration"))
+        {
+            var code = CodeOnly(file);
+            if (!code.Contains("GithubMirror", StringComparison.Ordinal)) continue;
+            if (file.Name is "RunContext.cs" or "RunLoop.Plumbing.cs") continue;
+            violations.Add($"  {file.Name} names GithubMirror directly — boundaries poke it through " +
+                "RunContext.MirrorBoard / MirrorFinalPass, which are null-safe and cannot throw.");
+        }
+
+        Assert.True(violations.Count == 0,
+            "KS9.2 — the mirror left its lane:\n" + string.Join("\n", violations));
+    }
 }

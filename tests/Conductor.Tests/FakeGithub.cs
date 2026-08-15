@@ -54,6 +54,25 @@ internal sealed class FakeGithub : HttpMessageHandler
     /// <summary>A label a human added, which conductor must carry through rather than strip.</summary>
     public void AddLabel(int issueNumber, string label) => _issues[issueNumber].Labels.Add(label);
 
+    /// <summary>KS9.2 — the human's hand on the board: close a card, read its labels back, find the
+    /// diary issue. The mirror must survive all three without any of them reaching the run.</summary>
+    public void Close(int issueNumber) => _issues[issueNumber].State = "closed";
+
+    public IReadOnlyList<string> LabelsOf(int issueNumber) => _issues[issueNumber].Labels;
+
+    /// <summary>The run diary's issue number, found the way the mirror finds it — by the marker in
+    /// the body, never by assuming what the fake numbered it.</summary>
+    public int RunIssueNumber =>
+        _issues.Values.Single(i => i.Body.Contains("<!-- conductor:run ", StringComparison.Ordinal)).Number;
+
+    /// <summary>KS9.2 — the outage switch. While this is set, every request fails the way a dead
+    /// endpoint fails: an <see cref="HttpRequestException"/> out of the handler, which is what the
+    /// client's transport catch turns into an error string. Requests are still RECORDED, because
+    /// "how many requests did the mirror waste while GitHub was down" is a question the batching bar
+    /// asks. Flip it back to null and the same fake serves the same issues — which is what makes
+    /// "converges on reconnect" a real round trip rather than two unrelated fixtures.</summary>
+    public string? Outage { get; set; }
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
         var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
@@ -62,6 +81,8 @@ internal sealed class FakeGithub : HttpMessageHandler
             request.Method.Method, path, body,
             request.Headers.UserAgent.ToString(), request.Headers.Accept.ToString(),
             request.Headers.Authorization?.ToString()));
+
+        if (Outage is { } why) throw new HttpRequestException(why);
 
         var json = Route(request.Method.Method, path, request.RequestUri.Query, body);
         return new HttpResponseMessage(HttpStatusCode.OK)

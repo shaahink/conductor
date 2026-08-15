@@ -253,7 +253,7 @@ public sealed partial class RunLoop
     /// <summary>Attach the run's GitHub mirror, once, at run start — and push immediately, so a run
     /// that is resumed after a process died with an unpushed tail catches up before its first session
     /// rather than at the end of it. Null when the plan has not opted in, which is the default.</summary>
-    private void AttachGithubMirror()
+    private void AttachBoardMirror()
     {
         if (_ctx.Store is not { } db) return;
         // The dance is CA2000's own prescription for a transfer of dispose ownership: create into a
