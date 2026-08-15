@@ -1,8 +1,21 @@
 # GitHub as the visible board and the durable history — design assessment
 
 *2026-08-13. Research pass over the tree at `1632b9f` (feat/karvan, v0.4.0 tagged), the karvan
-plans, and the NEXT-ERA record. Nothing here is implemented; this document exists so the
-implementation starts from the decisions already taken instead of re-deriving them.*
+plans, and the NEXT-ERA record. Written when nothing here was implemented, so that the
+implementation would start from the decisions already taken instead of re-deriving them.*
+
+> **⚠ Status at KS10.1, 2026-08-15 — this is no longer a design-only document.** It became core
+> stage KS9 (decision ND-9) and **shipped**, so read the sections below as the reasoning behind code
+> that exists rather than as a proposal. **§A and §B are built** — `Core/Integrations/Github/`
+> (thirteen files: `GithubClient`, `GithubMirror`, `GithubBoardSync`, `GithubMap`, `GithubIdentity`,
+> the DTOs and the request shapes), the `github` verb at `Commands/GithubCommand.cs`, the token in
+> `SecretsStore`, and migration `v14_github_cursor.sql` behind `SqliteRunStore.Github.cs`. **§C's
+> reconciler is built** and reconciles over `ReadEventsAfter` from a persisted cursor, batched and
+> network-failure-proof. **The Projects v2 half of §A is NOT built and is SKIPPED, not deferred** —
+> the token on this machine carries no `project` scope, and KS9.3's answer was to report the precise
+> refusal rather than half-build it. **Nothing inbound was built and nothing ever should be**
+> (ADR-0005). Off by default. The first real backfill against a live repository is the owner's, at
+> KS10.3 — every proof to date ran against a scratch repo.
 
 ## What the owner asked for
 
@@ -16,7 +29,9 @@ Three things, in the owner's framing:
 3. **Session history should show too** — not just which cards moved, but the sessions that moved
    them, with their outcomes and costs.
 
-## What already exists — the decisions are taken, only the code is missing
+## What already existed — the decisions were taken, only the code was missing
+
+*(KS9 wrote that code. This section is the record of what it started from.)*
 
 This is not a new idea in this repo. The trail:
 

@@ -103,6 +103,10 @@ Do not re-plan these. Each names the thing in the tree that answers it.
   acceptance from the doc. Both fit the shipped `IPromptBattery` seam — this is implementation, not
   design.
 - **Plan import still needs an existing plan to diff against.** There is no from-scratch import path.
+  *(Re-checked at KS10.1, 2026-08-15: still true — `PlanImportCommand.ExecuteImport` takes a
+  `planPath` and diffs into it. What KS3.5 changed is the other half: `PlanImportService.ParseKnown`
+  now reads three foreign formats as well as this project's own, selected by content, still with no
+  model call. The gap is the missing plan, not the missing parser.)*
 - **Gate on unacknowledged handover gaps.** Phase-confirm could fail when the handover lists a
   critical gap nobody acknowledged. The parse exists; the gate does not.
 

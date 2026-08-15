@@ -2,26 +2,26 @@
 
 **Plan:** Karvansara core - the open door | **Branch:** `feat/karvansara` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, ≤ 12 lines, no history)
 
-last: FIX session #21. The battery's four reds are down and the tree is GREEN. Stage KS9 stays closed
-  (9.1/9.2 DONE, 9.3 SKIPPED); no checkpoint changed status, KS9.2 got an --amend recording that it
-  claimed DONE on a red tree. Evidence .conductor/evidence/KS9/ks9-fix-battery-green.md.
-three schema pins moved 13 -> 14 because KS9.2's own v14_github_cursor.sql took CurrentVersion to 14
-  and left them behind (RunDbTests, renamed to Schema_version_is_fourteen; K3_3ProvenanceTests:321;
-  K4_1ContextWindowTests:285). Those literals exist to force the bump to be DECIDED - that decision
-  is made, out loud, with the migration in hand. Nothing relaxed: still exact literals.
-ratchet: RunContext.cs 514 -> 459 by moving the mirror surface into a new partial
-  RunContext.Mirror.cs. architecture-baseline.json is still {} and lineCeiling is still 500 - the
-  baseline is EMPTY, so a split was the only legal fix and a debt entry was never an option.
-TRAP, and it cost a whole extra run: TWO architecture tests key on FILE NAME. The ratchet's per-file
-  ceiling, and ArchitectureBoundaryTests' GithubMirror allowlist (only RunContext.cs and
-  RunLoop.Plumbing.cs may name it under Orchestration). A split satisfies one and breaks the other.
-  Check both. A targeted filter went 10/10 and missed it; only the full suite found it.
-numbers: full suite 2645/2646 (the one red was the boundary test, fixed after), then 19/19
-  architecture green. Bug #44 (43 pragmas vs ceiling 38) is untouched, still open, owner decision.
-then: KS10.1, then KS10.2.
-
+last: KS10.1 DONE (evidence .conductor/evidence/KS10/ks10-1-closure-ledger.md). Five commits:
+  b961c07 s#22's leftover FakeGithub fix, 6348921 budget, 52408d1 ledger, ee06740 arch docs, b21ddcc pins.
+READ THIS FIRST OR YOU LOSE AN HOUR: the PATH conductor CANNOT WRITE any more. KS10.1's own required
+  re-measure (budget through the fresh build) migrated the live store 13 -> 14, and the driving
+  snapshot supports 13, so note/task/bug/bg start all refuse at MigrationRunner.cs:29. Use
+  `dotnet run --project src/Conductor -- VERB -p plans/karvansara/core.plan.json` for ALL of them,
+  claims included. The run survives only because IRunStore is a singleton (ConductorHost.cs:160);
+  restarting the engine before the owner reinstalls cannot reopen the store. Bug #45, high.
+budget: prescription is 32M / 0.85, not 0.70 - the nudge fires at 22.42M against a 22.08M median
+  closer (1.02x). Plan doc corrected in place; TOKEN-BUDGET-TUNING gains section 10. Ignore this run's
+  5.54M/ckpt: 22 of its 28 checkpoints closed in session #6 alone, the wave-lane confirmation.
+ledger found four bugs that never arrived - karvan's #24/#27/#31/#35 live in karvan's store only, so
+  no prompt here ever saw them, and #35 was in no ledger at all. Bug #46. Ledger rows carry them now.
+trap for KS10.2, which extends the same test family: a doc pin written as Contains() over a whole file
+  is worthless. Mine PASSED against a doc whose prescription bullet still said 0.70. Scope the
+  assertion to the line that gives the instruction, and seed the staleness to prove it bites.
+then: KS10.2 (published surface: README first, docs user set, .github templates, CHANGELOG Unreleased
+  as the release body, extend SF7_1DocsMatchRealityTests, then the payesh harvest on a branch + PR).
 
 ## Baseline numbers (from run.db)
 
