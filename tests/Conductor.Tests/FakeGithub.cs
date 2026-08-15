@@ -1,0 +1,175 @@
+using System.Globalization;
+using System.Net;
+using System.Text;
+using System.Text.Json;
+
+namespace Conductor.Tests;
+
+/// <summary>
+/// KS9.1 — a recording, STATEFUL fake of the slice of the GitHub issues API the mirror uses.
+///
+/// <para>Stateful on purpose. A handler that only records and answers <c>200 {}</c> can prove the
+/// first pass's request bodies and nothing else; the claim that matters here is about the SECOND
+/// pass — "re-running the backfill mints zero duplicates" — and that claim is only meaningful
+/// against a server that serves back the issues it was asked to create, the way the real one does.
+/// So this keeps issues, labels, milestones and comments, and answers <c>GET</c> from them.</para>
+///
+/// <para>It deliberately mimics two of GitHub's own behaviours that a naive fake would smooth over:
+/// bodies come back with CRLF line endings, and an issue is always created <c>open</c> whatever the
+/// request said. Both are exactly the kind of difference that makes a reconciler that passed its
+/// tests re-PATCH every card forever against the real API.</para>
+/// </summary>
+internal sealed class FakeGithub : HttpMessageHandler
+{
+    internal sealed record Recorded(string Method, string Path, string Body, string UserAgent, string Accept, string? Authorization);
+
+    public List<Recorded> Requests { get; } = [];
+
+    private readonly Dictionary<int, Issue> _issues = [];
+    private readonly Dictionary<int, List<string>> _comments = [];
+    private readonly Dictionary<string, int> _milestones = new(StringComparer.Ordinal);
+    private int _nextIssue = 100;
+    private int _nextMilestone = 1;
+
+    private sealed class Issue
+    {
+        public int Number { get; init; }
+        public string Title { get; set; } = "";
+        public string Body { get; set; } = "";
+        public string State { get; set; } = "open";
+        public List<string> Labels { get; set; } = [];
+        public int? Milestone { get; set; }
+    }
+
+    /// <summary>Every request body POSTed to one path, in order — what an acceptance clause about
+    /// "what GitHub receives" is asserted against.</summary>
+    public List<string> Posted(string path) =>
+        [.. Requests.Where(r => r.Method == "POST" && r.Path == path).Select(r => r.Body)];
+
+    public int NumberOfTask(string taskId) =>
+        _issues.Values.First(i => i.Body.Contains($"<!-- conductor:task {taskId} -->", StringComparison.Ordinal)).Number;
+
+    public int MilestoneNumberFor(string stage) => _milestones[stage];
+
+    /// <summary>A label a human added, which conductor must carry through rather than strip.</summary>
+    public void AddLabel(int issueNumber, string label) => _issues[issueNumber].Labels.Add(label);
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    {
+        var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        var path = request.RequestUri!.AbsolutePath;
+        Requests.Add(new Recorded(
+            request.Method.Method, path, body,
+            request.Headers.UserAgent.ToString(), request.Headers.Accept.ToString(),
+            request.Headers.Authorization?.ToString()));
+
+        var json = Route(request.Method.Method, path, request.RequestUri.Query, body);
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json"),
+        };
+    }
+
+    private string Route(string method, string path, string query, string body)
+    {
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        // /repos/{owner}/{repo}/...
+        var tail = segments.Length > 3 ? segments[3..] : [];
+
+        if (tail is ["issues"]) return method == "POST" ? CreateIssue(body) : ListIssues(query);
+        if (tail is ["milestones"]) return method == "POST" ? CreateMilestone(body) : ListMilestones(query);
+        if (tail is ["issues", var n] && int.TryParse(n, CultureInfo.InvariantCulture, out var number))
+            return PatchIssue(number, body);
+        if (tail is ["issues", var m, "comments"] && int.TryParse(m, CultureInfo.InvariantCulture, out var owner))
+            return method == "POST" ? AddComment(owner, body) : ListComments(owner, query);
+        return "{}";
+    }
+
+    // GitHub pages from 1; a page past the end is an empty array, which is what stops the walk.
+    private static bool PastFirstPage(string query) =>
+        query.Contains("page=", StringComparison.Ordinal) && !query.Contains("page=1", StringComparison.Ordinal);
+
+    private string ListIssues(string query) =>
+        PastFirstPage(query) ? "[]" : "[" + string.Join(",", _issues.Values.Select(Serialize)) + "]";
+
+    private string ListMilestones(string query) =>
+        PastFirstPage(query)
+            ? "[]"
+            : "[" + string.Join(",", _milestones.Select(kv =>
+                $"{{\"number\":{Num(kv.Value)},\"title\":{Str(kv.Key)},\"state\":\"open\"}}")) + "]";
+
+    private string ListComments(int issue, string query) =>
+        PastFirstPage(query)
+            ? "[]"
+            : "[" + string.Join(",", (_comments.TryGetValue(issue, out var list) ? list : [])
+                .Select((b, i) => $"{{\"id\":{Num(i + 1)},\"body\":{Str(b)}}}")) + "]";
+
+    private string CreateIssue(string body)
+    {
+        var doc = JsonDocument.Parse(body).RootElement;
+        var issue = new Issue
+        {
+            Number = _nextIssue++,
+            Title = Get(doc, "title"),
+            Body = Get(doc, "body"),
+            // The real API creates every issue open — `state` is ignored on POST. A fake that
+            // honoured it would hide the mirror's follow-up close.
+            State = "open",
+            Labels = doc.TryGetProperty("labels", out var l)
+                ? [.. l.EnumerateArray().Select(e => e.GetString() ?? "")] : [],
+            Milestone = doc.TryGetProperty("milestone", out var m) && m.ValueKind == JsonValueKind.Number
+                ? m.GetInt32() : null,
+        };
+        _issues[issue.Number] = issue;
+        return Serialize(issue);
+    }
+
+    private string PatchIssue(int number, string body)
+    {
+        if (!_issues.TryGetValue(number, out var issue)) return "{}";
+        var doc = JsonDocument.Parse(body).RootElement;
+        if (doc.TryGetProperty("title", out var t)) issue.Title = t.GetString() ?? issue.Title;
+        if (doc.TryGetProperty("body", out var b)) issue.Body = b.GetString() ?? issue.Body;
+        if (doc.TryGetProperty("state", out var s)) issue.State = s.GetString() ?? issue.State;
+        if (doc.TryGetProperty("milestone", out var m) && m.ValueKind == JsonValueKind.Number)
+            issue.Milestone = m.GetInt32();
+        if (doc.TryGetProperty("labels", out var l))
+            issue.Labels = [.. l.EnumerateArray().Select(e => e.GetString() ?? "")];
+        return Serialize(issue);
+    }
+
+    private string CreateMilestone(string body)
+    {
+        var title = Get(JsonDocument.Parse(body).RootElement, "title");
+        if (!_milestones.TryGetValue(title, out var number))
+        {
+            number = _nextMilestone++;
+            _milestones[title] = number;
+        }
+        return $"{{\"number\":{Num(number)},\"title\":{Str(title)},\"state\":\"open\"}}";
+    }
+
+    private string AddComment(int issue, string body)
+    {
+        var text = Get(JsonDocument.Parse(body).RootElement, "body");
+        if (!_comments.TryGetValue(issue, out var list)) _comments[issue] = list = [];
+        list.Add(text);
+        return $"{{\"id\":{Num(list.Count)},\"body\":{Str(text)}}}";
+    }
+
+    /// <summary>Issue bodies come back with CRLF, exactly as GitHub stores them. This is what proves
+    /// the reconciler's "is it already what we would write" comparison normalises line endings — a
+    /// comparison that did not would report every card as changed on every pass.</summary>
+    private static string Serialize(Issue i) =>
+        $"{{\"number\":{Num(i.Number)},\"title\":{Str(i.Title)},\"body\":{Str(i.Body.ReplaceLineEndings("\r\n"))}," +
+        $"\"state\":{Str(i.State)},\"html_url\":\"https://github.test/i/{Num(i.Number)}\"," +
+        $"\"labels\":[{string.Join(",", i.Labels.Select(l => $"{{\"name\":{Str(l)}}}"))}]," +
+        (i.Milestone is { } ms ? $"\"milestone\":{{\"number\":{Num(ms)},\"title\":\"\",\"state\":\"open\"}}" : "\"milestone\":null") +
+        "}";
+
+    private static string Get(JsonElement doc, string name) =>
+        doc.TryGetProperty(name, out var v) ? v.GetString() ?? "" : "";
+
+    private static string Num(int n) => n.ToString(CultureInfo.InvariantCulture);
+    private static string Str(string s) => JsonSerializer.Serialize(s);
+}

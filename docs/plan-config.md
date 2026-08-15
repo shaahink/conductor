@@ -398,6 +398,42 @@ genuinely needs a restart is an engine process that holds no Telegram service at
 build — and there `GET /telegram/status` answers `restartRequired: true` and the token endpoint says
 so instead of reporting a silent success.
 
+## `github` — Push the board to GitHub issues (KS9.1)
+
+Absent by default, and absent means the mirror does not exist: a plan without this block behaves
+exactly as it did before the block existed. Present with `enabled: false` is the same thing said out
+loud.
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `enabled` | bool | `false` | The master switch. False means the mirror never runs, even with a token present and a repo named. |
+| `repo` | string | `""` | `owner/name` to mirror **into**. Empty and `enabled: true` derives it from the plan repo's `origin`; a scratch mirror does not have to live in the repo being worked on. |
+| `board` | string | `"issues"` | `issues`, or `issues+project` for a Projects v2 board as well (needs `projectNumber` and a token with the `project` scope). |
+| `projectNumber` | int | `0` | The Projects v2 board number from the project URL. `0` with `board: "issues+project"` is refused by name, never a silent no-op. |
+| `runHistoryIssue` | bool | `true` | Mirror the run's diary as one issue with one comment per finished session. |
+| `reportAsPrComment` | bool | `false` | Post the run report as a PR comment when the run's branch has one open. Off by default — a comment on someone's PR is the loudest thing this integration can do. |
+| `labelPrefix` | string | `"conductor"` | Prefix for every label conductor owns, so the mirror never fights the repository's own labels. `conductor` yields `conductor:status:done`. Labels *outside* this prefix are never removed. |
+
+```jsonc
+"github": {
+  "enabled": true,
+  "repo": "shaahink/conductor-board",
+  "labelPrefix": "conductor"
+}
+```
+
+The token is **not** in the plan. It comes from `$CONDUCTOR_GITHUB_TOKEN`, or from `githubToken` in
+`<stateDir>/secrets.local.json` — the same file, and the same precedence, as the Telegram token.
+
+### One way only
+
+There is no inbound half and there will not be one. Nothing reads GitHub state back into run state,
+the tracker, or the task graph; `Events/TaskWrites.cs` remains the only writer of task state, and an
+architecture test fails the build if anything under the mirror names it. Moving a card on GitHub
+therefore changes nothing in the run — documented behaviour, not a missing feature. Two-way sync was
+considered and rejected (L6.3, D-7, ADR 0005): the tracker is the verified contract, and a board that
+could write back would be a second one.
+
 ## `progress` — Tracker provider
 
 | Field | Type | Description |

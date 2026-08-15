@@ -26,11 +26,29 @@ public static class SecretsStore
     }
 
     public static void WriteTelegramToken(string stateDir, string token)
+        => Write(stateDir, (file, t) => file.TelegramToken = t, token);
+
+    /// <summary>KS9.1: the GitHub personal access token, in the SAME file beside the Telegram one —
+    /// one place the operator's local credentials live, one blanket .gitignore covering it.
+    /// <c>CONDUCTOR_GITHUB_TOKEN</c> still wins; see <c>GithubTokens.Resolve</c>.</summary>
+    public static string? TryReadGithubToken(string stateDir)
+    {
+        var token = TryReadFile(PathFor(stateDir))?.GithubToken?.Trim();
+        return token is { Length: > 0 } ? token : null;
+    }
+
+    public static void WriteGithubToken(string stateDir, string token)
+        => Write(stateDir, (file, t) => file.GithubToken = t, token);
+
+    /// <summary>Read-modify-write of the one file. Shared so a second credential cannot be added by
+    /// a path that CLOBBERS the first — serializing a fresh <c>SecretsFile</c> would drop the other
+    /// token, and the failure would only show up the next time Telegram was used.</summary>
+    private static void Write(string stateDir, Action<SecretsFile, string> set, string token)
     {
         Directory.CreateDirectory(stateDir);
         var path = PathFor(stateDir);
         var file = TryReadFile(path) ?? new SecretsFile();
-        file.TelegramToken = token.Trim();
+        set(file, token.Trim());
         File.WriteAllText(path, JsonSerializer.Serialize(file, JsonOpts));
     }
 
@@ -44,5 +62,6 @@ public static class SecretsStore
     private sealed class SecretsFile
     {
         public string? TelegramToken { get; set; }
+        public string? GithubToken { get; set; }
     }
 }

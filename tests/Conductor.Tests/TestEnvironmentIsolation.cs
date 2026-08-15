@@ -27,6 +27,12 @@ internal static class TestEnvironmentIsolation
     {
         // Process-scoped only: this never touches the user or machine environment.
         Environment.SetEnvironmentVariable("CONDUCTOR_TELEGRAM_TOKEN", null);
+        // KS9.1: the same argument for the GitHub token, and it is sharper here — a suite that
+        // picked up the developer's real PAT would not just fail, it would have the credential
+        // needed to CREATE ISSUES on whatever repository a fixture happened to name. The API base is
+        // cleared with it so no outer environment can redirect a test's writes somewhere real.
+        Environment.SetEnvironmentVariable("CONDUCTOR_GITHUB_TOKEN", null);
+        Environment.SetEnvironmentVariable("CONDUCTOR_GITHUB_API", null);
     }
 
     /// <summary>

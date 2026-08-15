@@ -475,19 +475,13 @@ public static class Reporter
         {
             var result = Git.Exec(repo, "remote", "get-url", "origin");
             if (result.ExitCode != 0) return null;
-            var url = result.Output.Trim();
-            if (url.StartsWith("git@", StringComparison.Ordinal))
-            {
-                var parts = url.Split('@', ':');
-                if (parts.Length >= 3)
-                {
-                    url = $"https://{parts[1]}/{parts[2].Replace(".git", "", StringComparison.Ordinal)}";
-                }
-            }
-            else
-            {
-                url = url.Replace(".git", "", StringComparison.Ordinal);
-            }
+            var raw = result.Output.Trim();
+            // KS9.1: the git@/https normalisation moved to GithubIdentity so the mirror derives
+            // owner/repo from the SAME rule this link uses, without a second `git remote get-url`
+            // and without a second opinion about what a remote URL means. The shelling-out and the
+            // cache stay here. A URL it cannot normalise (a local path remote) falls back to the raw
+            // string, which is what this method has always returned for one.
+            var url = Integrations.Github.GithubIdentity.NormaliseRemoteUrl(raw) ?? raw;
             lock (_remoteUrlLock)
             {
                 _cachedRemoteUrl = url;

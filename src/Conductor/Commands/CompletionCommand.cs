@@ -42,7 +42,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
         "run journey preflight face status watch watches gate log report pause resume approve kill skip inject abort " +
         "retry-stage rollback pause-after-stage goto rollover heartbeat plan tasks task new-plan note " +
         "bug init doctor audit mcp-serve completion chat bg ps history catalogue budget money spend " +
-        "version update demo";
+        "version update demo github";
 
     internal static string GeneratePowerShell()
     {

@@ -184,6 +184,33 @@ numbers behind it: [`docs/dev/TOKEN-BUDGET-TUNING.md`](dev/TOKEN-BUDGET-TUNING.m
 | `run close <id>` | Close the record of a run whose engine never got to close it — killed, rebooted, or reaped with the shell that started it. Writes a terminal status (`--status closed`, the default, or `completed`/`aborted`) and stamps the instant the run *actually* stopped, taken from its last recorded activity unless you pass `--ended`. `--reason` goes into the run's event spine, so the change says who made it and why. `--dry-run` shows what would change. |
 | `run adopt <id>` | Annotate a run record without touching its lifecycle: `--reason` is journalled against the run, the status is left exactly where it was. For a record you mean to keep rather than close. |
 
+## The board, on GitHub
+
+One way out, off by default, nothing ever read back. Conductor **pushes** a run's board to GitHub
+issues; it never reads GitHub state into the run. Drag a card on GitHub and the run does not notice —
+that is correct, not a gap. The tracker and the event log stay the contract.
+
+| Verb | What it does |
+|---|---|
+| `github sync --backfill <run>` | Push a finished run's whole board: one issue per checkpoint (title `<id> — <title>`, `status:*` and `source:*` labels, a `confirmed` label only when the engine confirmed the claim, and the stage as a milestone), plus a run issue carrying plan/repo/branch/engine with one comment per finished session. Takes the same selector `history`, `budget` and `money` take — a run id, a prefix, a catalogue slug, a repo name, or a path to a `run.db`. The run is opened **read-only**. |
+| `github sync --backfill <run> --repo owner/name` | Mirror into a repository other than the plan's. Point it at a scratch repo the first time; a backfill will *not* derive its destination from your working repo's `origin` unless the plan opted in with `github.enabled`. |
+| `github sync --backfill <run> --dry-run` | Reconcile and report what would change, writing nothing. |
+| `github sync --backfill <run> --no-diary` | Board only — skip the run issue and its per-session comments. |
+
+Identity is a marker in the issue body (`<!-- conductor:task KS9.1 -->`), not the title, so re-running
+a backfill mints **zero** duplicates and a reworded checkpoint updates its issue instead of growing a
+second one. A patch carries only the fields that differ, labels outside the plan's `labelPrefix` are
+left alone, and a checkpoint that leaves the plan is closed and labelled `retired` — never deleted.
+
+The token comes from `$CONDUCTOR_GITHUB_TOKEN`, or from `githubToken` in
+`<stateDir>/secrets.local.json` — the same file and the same precedence as the Telegram token. With
+neither, the verb refuses **before dialling anything** and names both places it looked. A classic or
+fine-grained token with `repo` scope is enough for issues; `project` is only needed for a Projects v2
+board. `CONDUCTOR_GITHUB_API` repoints the API root (for a loopback fake, or an enterprise host) and
+every surface that writes announces the override — a destination that writes issues is never
+redirected silently. Plan-side configuration lives in the `github` block: see
+[plan-config.md](plan-config.md).
+
 ## Overriding the defaults
 
 Conductor tries to need no configuration and then get out of the way. When you do want to steer:

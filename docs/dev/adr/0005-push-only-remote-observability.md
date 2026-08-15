@@ -49,3 +49,22 @@ What the owner gets instead:
   or reads the linked report.
 - If this is ever revisited, the work is an authentication story first and a transport second —
   exposing the current server as it stands is not a smaller version of that work.
+
+## Addendum — the GitHub mirror is the same decision (KS9.1, 2026-08-15)
+
+`conductor github sync` puts a run's board on GitHub issues. It is worth naming here because it looks
+like an exception and is not one.
+
+The mirror is **push-only in exactly this ADR's sense**: conductor writes issues, comments, labels and
+milestones, and no code path reads GitHub state back into run state, the tracker, or the task graph.
+`Events/TaskWrites.cs` remains the only writer of task state; `ArchitectureBoundaryTests.TheGithubMirror
+NeverWritesRunState` fails the build if anything under `Integrations/Github` names it, implements
+`IEventSink`, or touches the store.
+
+GitHub *is* read — a full issue list per pass — but only to answer one question: **which issue is
+already ours**. That is identity resolution against a marker in the issue body, not ingress. Nothing
+observed there can change what the mirror decides to push, which is a pure function of the fold.
+
+The consequence is the one this ADR already accepts: dragging a card on GitHub changes nothing in the
+run. That is correct behaviour, not a gap. Two-way sync was considered and rejected at L6.3 (D-7); a
+board that could write back would be a second contract competing with the tracker.

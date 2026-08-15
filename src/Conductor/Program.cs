@@ -135,6 +135,8 @@ app.Configure(c =>
     // in — the way in is typing nothing — and because a visible entry would move `--help`'s verb list,
     // which every script and every doc line reads. docs/cli.md documents it under the front door.
     c.AddCommand<HubCommand>("hub").IsHidden();
+    c.AddCommand<GithubCommand>("github")
+        .WithDescription("KS9.1: push a finished run's board and diary to GitHub issues — one issue per checkpoint, one run issue with a comment per session. One way, off by default, nothing ever read back. `github sync --backfill <run> [[--repo owner/name]] [[--dry-run]]`.");
     c.AddCommand<CompletionCommand>("completion")
         .WithDescription("Generate shell completion scripts (powershell or bash).");
     c.AddCommand<BgCommand>("bg")

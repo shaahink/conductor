@@ -56,6 +56,10 @@ public sealed class PlanConfig
     public ReportConfig Report { get; set; } = new();
     public NotifyConfig? Notify { get; set; }
     public TelegramConfig? Telegram { get; set; }
+    /// <summary>KS9.1: push-only GitHub mirror of the board and the diary. null (the default, and what
+    /// every existing plan carries) → the mirror does not exist. Nothing inbound, ever — see
+    /// <see cref="GithubConfig"/>.</summary>
+    public GithubConfig? Github { get; set; }
     /// <summary>SF5.2: the babysitter <c>conductor watch</c> invokes on wake, with the brief on stdin.
     /// null → nothing runs on wake unless <c>--hook</c> says so.</summary>
     public SupervisorConfig? Supervisor { get; set; }

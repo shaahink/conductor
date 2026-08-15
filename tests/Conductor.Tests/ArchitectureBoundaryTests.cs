@@ -409,4 +409,42 @@ public class ArchitectureBoundaryTests
         Assert.Contains(Includes(shell, "ProjectReference"),
             p => p.EndsWith("Conductor.Core.csproj", StringComparison.Ordinal));
     }
+
+    /// <summary>
+    /// KS9.1 — the GitHub mirror pushes and NEVER ingests. L6.3 rejected two-way sync, D-7 and ADR
+    /// 0005 wrote it down, and this is the rule that keeps it true once someone finds it convenient
+    /// to "just read the issue state back".
+    ///
+    /// <para>Two halves, both source-scanned because both are about what a future edit would add.
+    /// First: nothing under <c>Integrations/Github</c> may write task state — <c>Events/TaskWrites.cs</c>
+    /// stays the only writer, so a GitHub label can never become a checkpoint status. Second: no
+    /// GitHub type raises events or implements <c>IEventSink</c>, which is also the shape KS9.2's
+    /// reconciler must keep (a hot sink in the run's event path is a network call on the loop).</para>
+    /// </summary>
+    [Fact]
+    public void TheGithubMirrorNeverWritesRunState()
+    {
+        var forbidden = new[] { "TaskWrites", "IEventSink", "EventLog", "SqliteRunStore" };
+        var violations = new List<string>();
+
+        foreach (var file in SourcesUnder("src", "Conductor.Core", "Integrations", "Github"))
+        {
+            var code = CodeOnly(file);
+            foreach (var name in forbidden)
+            {
+                if (Regex.IsMatch(code, $@"\b{name}\b", RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(2)))
+                    violations.Add($"  {file.Name} names {name} — the GitHub mirror is push-only " +
+                        "(L6.3/D-7/ADR 0005): it may READ the fold, never write run state and never sit in the event path.");
+            }
+        }
+
+        var sinks = Core.GetTypes()
+            .Where(t => t.Namespace?.Contains("Integrations.Github", StringComparison.Ordinal) == true
+                     && t.GetInterfaces().Any(i => i.Name == "IEventSink"))
+            .Select(t => $"  {t.FullName} implements IEventSink — the mirror reconciles from a cursor, it is not a hot sink.");
+        violations.AddRange(sinks);
+
+        Assert.True(violations.Count == 0,
+            "KS9.1 — nothing inbound, and nothing in the event path:\n" + string.Join("\n", violations));
+    }
 }
