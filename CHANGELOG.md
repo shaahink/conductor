@@ -18,7 +18,7 @@ Between releases, `conductor version` answers with a tag-height prerelease such 
 `0.1.1-alpha.0.54+1c2330f5a47e` — patch bumped, `alpha.0.<commits since the tag>`, plus the commit
 it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique per commit.
 
-## [Unreleased]
+## [0.4.1] - 2026-08-15
 
 **The Karvansara era — the open door.** 0.4.0 made a run accountable; this era makes it *approachable*
 without giving any of that up. Typing `conductor` used to answer with a wall of help text, which is the
