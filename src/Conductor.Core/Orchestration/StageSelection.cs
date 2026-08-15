@@ -140,8 +140,20 @@ public static class StageSelection
     /// <paramref name="kinds"/> carries the same workflow resolver and QA policy the runner consults,
     /// and the ladder carries the parallel-audit fix — so the kind this decision names is the kind
     /// the dispatch records.</para>
+    /// <para>Round 8, the branches that SCHEDULE: the loop does not stop where this decision used to.
+    /// It performs the scheduling and RE-DECIDES inside the same run, so three "no session composes"
+    /// answers were answering a different launch. The scheduling itself is a pure function of the
+    /// plan and the saved state (<see cref="GateScheduling"/> — the one copy
+    /// <see cref="GateOrchestrator.ScheduleGateOrAudit"/> executes), and one of its three outcomes,
+    /// the auto-fix audit, is followed by that re-decision with NO subprocess in between: so the
+    /// decision falls through the rungs below with the audit pending and carries
+    /// <see cref="LaunchStep.ScheduleGateOrAudit"/> together with the Audit session it produces. The
+    /// other two queue a FULL GATE BATTERY, and so does the completion branch — there the decision
+    /// genuinely ends, because a battery's exit codes are subprocesses.</para>
     /// <para>Still deliberately unmodelled, because their outcome is NOT a pure function of the
-    /// saved state: the pre-hook (a subprocess whose exit code decides), approval mode (the designed
+    /// saved state: the gate batteries just named (a red REQUIRED gate queues a fix and the same run
+    /// composes a Fix session — <see cref="LaunchDecision.Schedules"/> and the step tell a surface to
+    /// say so), the pre-hook (a subprocess whose exit code decides), approval mode (the designed
     /// launch flow — the operator is present, and `conductor approve` is the next keystroke, not a
     /// failure), the DNS preflight (measures the network at spawn time), and the in-process
     /// backoffs (not persisted, so they cannot exist at launch). And one thing that IS modelled but
@@ -206,11 +218,29 @@ public static class StageSelection
         // was queued against), and that happens before every branch below reads it.
         var fix = stage.Id == state.CurrentStage ? state.PendingFix : null;
 
+        // Round 8: this branch SCHEDULES and then the loop RE-DECIDES inside the same run, so
+        // stopping here answered a different launch than the one that happens. What gets scheduled is
+        // GateScheduling's pure branch over the plan and the saved state — the same function the loop
+        // executes — and two of its three outcomes queue a FULL BATTERY, whose exit codes are
+        // subprocesses: there the decision genuinely ends and the surfaces disclose the battery. The
+        // third queues an auto-fix audit, and the very next decision (no subprocess in between)
+        // composes that Audit session — so this one falls THROUGH the rungs below with the audit
+        // pending, and the step keeps carrying the scheduling that produces it.
+        var schedules = ScheduledWork.None;
         if (plan.PerPhaseGates && track.StageDone(stage.Id)
             && !state.ConfirmedStages.Contains(stage.Id)
             && fix == null && state.PendingResume == null
             && state.PendingVerify == null && state.PendingAudit == null)
-            return new LaunchDecision(LaunchStep.ScheduleGateOrAudit, stage, stage.Id, SessionKind.Deliver);
+        {
+            schedules = GateScheduling.Classify(plan, state, stage.Id);
+            if (schedules != ScheduledWork.AutoFixAudit)
+                return new LaunchDecision(LaunchStep.ScheduleGateOrAudit, stage, stage.Id, SessionKind.Deliver,
+                    Schedules: schedules);
+        }
+
+        // A queued audit — persisted, or about to be by the scheduling above — gets its turn
+        // regardless of the attempt budget and takes the audit rung of the kind ladder.
+        var audits = state.PendingAudit != null || schedules == ScheduledWork.AutoFixAudit;
 
         // The attempt budget. The loop resets the counter when it ENTERS a stage, so exhaustion is
         // only real on the stage the state is already standing in; a queued audit gets its turn
@@ -219,12 +249,13 @@ public static class StageSelection
         // NeedsHuman — which is exactly why a launch drill must model that the branch FIRES: the
         // session it would otherwise promise never composes, and `conductor resume` does not reset
         // the counter (only `conductor retry-stage` and `goto` do).
-        if (stage.Id == state.CurrentStage && state.PendingAudit == null
+        if (stage.Id == state.CurrentStage && !audits
             && state.AttemptsThisStage >= MaxAttempts(plan, stage))
             return new LaunchDecision(LaunchStep.ExhaustedAttempts, stage, stage.Id, SessionKind.Deliver);
 
         if (plan.Limits.MaxSessions is { } liveCap && liveCap > 0 && state.SessionCounter >= liveCap)
-            return new LaunchDecision(LaunchStep.SessionCap, stage, stage.Id, SessionKind.Deliver);
+            return new LaunchDecision(LaunchStep.SessionCap, stage, stage.Id, SessionKind.Deliver,
+                Schedules: schedules);
 
         // Round 6: the loop consumes a completed HIGH-severity parallel audit BEFORE anything
         // composes (RunLoop's own branch, guarded by the same "no fix already queued") — the outcome
@@ -241,7 +272,7 @@ public static class StageSelection
         // Deliver, a custom workflow's first launch spawned `Audit S1`, and a persisted HIGH audit
         // outcome spawned `Fix S1` — wrong kind, wrong prompt, wrong measured argv, three times.
         var kind = state.PendingResume != null ? SessionKind.Resume
-            : state.PendingAudit != null ? SessionKind.Audit
+            : audits ? SessionKind.Audit
             : state.PendingVerify != null ? SessionKind.Verify
             : fix != null || queuesAuditFix ? SessionKind.Fix
             : WorkflowKind(plan, stage, state, track, kinds);
@@ -258,8 +289,11 @@ public static class StageSelection
         // preflight rendered `attempt {saved+1}` off the un-entered state while the loop rendered
         // `attempt 1`, and the two measured prompts differed by exactly that.
         var attempt = (stage.Id == state.CurrentStage ? state.AttemptsThisStage : 0) + 1;
-        return new LaunchDecision(LaunchStep.Compose, stage, stage.Id, kind, AttemptNumber: attempt,
-            QueuesParallelAuditFix: queuesAuditFix, SpawnsParallelAuditLane: spawnsLane);
+        return new LaunchDecision(
+            schedules == ScheduledWork.AutoFixAudit ? LaunchStep.ScheduleGateOrAudit : LaunchStep.Compose,
+            stage, stage.Id, kind, AttemptNumber: attempt,
+            QueuesParallelAuditFix: queuesAuditFix, SpawnsParallelAuditLane: spawnsLane,
+            Schedules: schedules);
     }
 
     /// <summary>The kind a session starts as when NOTHING is pending: the workflow's answer, exactly

@@ -101,27 +101,16 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
     public bool IsStageComplete(string stageId, bool isPerPhase, Func<string, bool> trackStageDone)
         => isPerPhase ? state.ConfirmedStages.Contains(stageId) : trackStageDone(stageId);
 
-    /// <summary>Schedule the audit or confirming battery for a stage whose checkpoints are all DONE.</summary>
-    public void ScheduleGateOrAudit(string stageId, string startHead, Action<string> log, Func<string, bool> hasNextUnconfirmed)
+    /// <summary>Schedule the audit or confirming battery for a stage whose checkpoints are all DONE.
+    /// KS3.4 round 8: the branch itself is <see cref="GateScheduling"/>'s — a pure function of the
+    /// plan and the saved state — so <see cref="StageSelection.NextAction"/> can carry the decision
+    /// THROUGH this scheduling to the session the same run composes after it, instead of stopping
+    /// here and letting the loop re-decide behind every surface's back.</summary>
+    public ScheduledWork ScheduleGateOrAudit(string stageId, string startHead, Action<string> log)
     {
-        state.StageStartHeads[stageId] = startHead;
-        if (_plan.Audit is { Enabled: true, EnableParallel: true } && !state.AuditedStages.Contains(stageId)
-            && hasNextUnconfirmed(stageId))
-        {
-            state.PendingPhaseGate = new PendingPhaseGate { StageId = stageId, StageStartHead = startHead };
-            state.PendingAudit = null;
-            log($"stage {stageId} checkpoints all DONE — scheduling full-battery phase gate (parallel audit will follow)");
-        }
-        else if (_plan.Audit is { Enabled: true } && !state.AuditedStages.Contains(stageId))
-        {
-            state.PendingAudit = new PendingAudit { StageId = stageId, StageStartHead = startHead };
-            state.PendingPhaseGate = null;
-            log($"stage {stageId} checkpoints all DONE — scheduling auto-fix audit (single confirming battery runs after it)");
-        }
-        else
-        {
-            state.PendingPhaseGate = new PendingPhaseGate { StageId = stageId, StageStartHead = startHead };
-            log($"stage {stageId} checkpoints all DONE — scheduling full-battery phase gate");
-        }
+        ArgumentNullException.ThrowIfNull(log);
+        var work = GateScheduling.Project(_plan, state, stageId, startHead);
+        log(GateScheduling.Narrate(work, stageId));
+        return work;
     }
 }

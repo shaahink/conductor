@@ -137,13 +137,37 @@ public sealed partial class PreflightCommand
                     $"{plan.Tracker} has no parseable checkpoint rows — `conductor run` parks at NeedsHuman before spawning anything",
                     ["check the table format — the loop reads rows of `| id | title | status | … |`"], "fail");
 
+            // Round 7's blocking findings (2) and (3), and the same lesson twice: the launch's next
+            // act on both of these branches is a FULL GATE BATTERY, and the loop RE-DECIDES on its
+            // result — a red required gate queues a fix and the same run composes a Fix session. The
+            // battery is subprocesses, so the drill genuinely cannot say which way it goes; what it
+            // must not do is assert the negative ("no session composes", "rather than spawning a
+            // session") for a launch whose next turn can spawn one. The headline names what runs
+            // first; the detail names both outcomes.
+            case LaunchStep.PhaseGate when EmptyBattery(plan):
+                return FromChecks(ComposeLegName, mine,
+                    $"the next `conductor run` runs the queued full-battery phase gate for stage '{next.StageId}' " +
+                    "— the plan declares no gates, so that battery is empty and confirms the stage",
+                    [EmptyBatteryNote, AfterAConfirmation]);
+
             case LaunchStep.PhaseGate:
                 return FromChecks(ComposeLegName, mine,
-                    $"the next `conductor run` runs the queued full-battery phase gate for stage '{next.StageId}' — no session composes");
+                    $"the next `conductor run` runs the queued full-battery phase gate for stage '{next.StageId}' " +
+                    "BEFORE anything composes — what follows depends on the gates",
+                    BatteryOutcomes(next.StageId ?? state.CurrentStage, "phase gate",
+                        "green confirms the stage, and " + AfterAConfirmation));
+
+            case LaunchStep.ConfirmCompletion when EmptyBattery(plan):
+                return FromChecks(ComposeLegName, mine,
+                    "every stage reads done — the next `conductor run` confirms completion rather than spawning a session",
+                    [EmptyBatteryNote]);
 
             case LaunchStep.ConfirmCompletion:
                 return FromChecks(ComposeLegName, mine,
-                    "every stage reads done — the next `conductor run` confirms completion rather than spawning a session");
+                    "every stage reads done — the next `conductor run` runs the completion battery BEFORE closing " +
+                    "the plan; what follows depends on the gates",
+                    BatteryOutcomes(state.CurrentStage, "completion battery",
+                        "green closes the plan and spawns nothing"));
 
             case LaunchStep.NothingRunnable:
                 // RunLoop's own answer to this is NeedsHuman before a session: the run starts, parks
@@ -161,10 +185,30 @@ public sealed partial class PreflightCommand
                     "the next `conductor run` parks at NeedsHuman — the tracker handoff asks for a human — no session composes",
                     ["see the escalation leg"]);
 
-            case LaunchStep.ScheduleGateOrAudit:
+            // Round 7's blocking finding (1): the third scheduling outcome — the auto-fix audit — is
+            // NOT a stopping point. The loop queues it and re-decides in the same run with no
+            // subprocess in between, and that decision composes an Audit session. It is a pure
+            // function of the saved state, so it is modelled rather than disclosed: the guard sends
+            // that branch past this switch into the compose path below, which projects the same
+            // scheduling onto the peeked state and composes the session the launch will spawn.
+            case LaunchStep.ScheduleGateOrAudit when next.Schedules != ScheduledWork.AutoFixAudit && EmptyBattery(plan):
                 return FromChecks(ComposeLegName, mine,
                     $"stage '{next.StageId}' checkpoints all read DONE but the stage is unconfirmed — the next " +
-                    "`conductor run` schedules the audit / full-battery phase gate — no session composes");
+                    $"`conductor run` schedules {GateScheduling.Describe(next.Schedules)} — the plan declares no " +
+                    "gates, so that battery is empty and confirms the stage",
+                    [EmptyBatteryNote, AfterAConfirmation]);
+
+            case LaunchStep.ScheduleGateOrAudit when next.Schedules != ScheduledWork.AutoFixAudit:
+                return FromChecks(ComposeLegName, mine,
+                    $"stage '{next.StageId}' checkpoints all read DONE but the stage is unconfirmed — the next " +
+                    $"`conductor run` schedules {GateScheduling.Describe(next.Schedules)} and runs that battery " +
+                    "BEFORE anything composes — what follows depends on the gates",
+                    BatteryOutcomes(next.StageId, "phase gate",
+                        "green confirms the stage" +
+                        (next.Schedules == ScheduledWork.PhaseGateThenParallelAudit
+                            ? " and hands its audit to a parallel lane agent (real model spend) beside the next stage's session"
+                            : "") +
+                        ", and " + AfterAConfirmation));
 
             case LaunchStep.ExhaustedAttempts:
             {
@@ -201,11 +245,21 @@ public sealed partial class PreflightCommand
             // index), applied to the PEEKED copy — never written back. Round 6: an audit composed
             // at rest rendered "HEAD~1" where the launch rendered the entry head.
             SessionComposer.ProjectStageEntry(state, next.Stage!, Git.Head(plan.Repo));
+            // Round 8: and the OTHER mutation the loop performs before this compose — on the
+            // scheduling branch its first act is to queue the auto-fix audit, then re-decide, and
+            // that decision (the one this leg is rendering) composes the Audit session from the
+            // pending it just queued. Same order the loop uses: stage entry, then the scheduling.
+            if (next.Step == LaunchStep.ScheduleGateOrAudit)
+                GateScheduling.Project(plan, state, next.Stage!.Id, state.CurrentStageStartHead ?? Git.Head(plan.Repo));
             var composed = SessionComposer.Compose(plan, new PromptBuilder(plan), new DefaultAssignmentPolicy(),
                 state, track, graph, store: null,
                 kind, next.Stage!, state.SessionCounter + 1, next.AttemptNumber,
                 state.PendingResume, state.PendingAudit, state.PendingVerify, state.PendingFix);
             var detail = new List<string>();
+            if (next.Schedules == ScheduledWork.AutoFixAudit)
+                detail.Add($"stage '{next.Stage!.Id}' checkpoints all read DONE but the stage is unconfirmed — the " +
+                           "launch's first turn schedules the auto-fix audit (a single confirming battery runs " +
+                           "after it), and the session named above is the one that scheduling composes");
             if (next.QueuesParallelAuditFix)
                 detail.Add("state.parallelAuditOutcome holds completed HIGH-severity findings — the launch's first " +
                            "turn queues the fix composed here before anything spawns");
@@ -249,6 +303,39 @@ public sealed partial class PreflightCommand
                 [ex.Message], "warn");
         }
     }
+
+    /// <summary>Both ways a gate battery the drill may not run can go — round 7's finding (2) and (3),
+    /// which is the one shape of dishonesty this leg can still commit: asserting a definite negative
+    /// about a launch whose next act is a battery. A red REQUIRED gate queues a fix and the SAME run
+    /// re-decides into a Fix session (<c>VerdictEngine.ConfirmCompletionAsync</c>,
+    /// <c>RunPhaseGateAsync</c>, then <c>RunLoop</c>'s <c>continue</c>), so a drill that promised "no
+    /// session composes" was measurably wrong. Exit codes are subprocesses — not a function of the
+    /// saved state — so the honest answer names both outcomes and picks neither.</summary>
+    /// <summary>Whether the battery on this branch can go red AT ALL. A plan that declares no gates
+    /// and no setup/teardown hook has an EMPTY battery, and <c>GateRunner.AllRequiredPassed([])</c> is
+    /// true — a pure function of the plan, so the drill states the outcome instead of naming both.
+    /// (The hooks are in the guard because <c>RunBatteryAsync</c> runs them around the gates, so a
+    /// declared hook is execution this drill has not measured either.)</summary>
+    private static bool EmptyBattery(PlanConfig plan)
+        => plan.Gates.Count == 0 && plan.Setup is null && plan.Teardown is null;
+
+    private const string EmptyBatteryNote =
+        "the plan declares no gates and no setup/teardown hook, so this battery has nothing to run and passes by " +
+        "construction — the red branch (a queued fix, a Fix session in this same run) cannot fire";
+
+    private const string AfterAConfirmation =
+        "the same `conductor run` carries straight on after a confirmation — the next stage's session, or the " +
+        "completion battery when there is no next stage — unless it was launched with --once";
+
+    private static IReadOnlyList<string> BatteryOutcomes(string? stageId, string what, string green)
+        =>
+        [
+            $"a red REQUIRED gate queues a fix and the SAME `conductor run` composes a Fix session on stage " +
+            $"'{stageId}' — no second launch, no second drill",
+            green,
+            $"the {what}'s exit codes are subprocesses, so this drill can name both outcomes but not pick one; " +
+            "`conductor gate --full` runs the battery itself if you want the answer before launching",
+        ];
 
     /// <summary>What the measured length does NOT include, said as a number rather than as a hedge.
     /// Everything else IS measured now — template, batteries at rest, the claimed-items list, the

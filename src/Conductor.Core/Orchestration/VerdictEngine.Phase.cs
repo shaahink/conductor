@@ -126,7 +126,7 @@ public sealed partial class VerdictEngine
 
     internal void ScheduleGateOrAudit(string stageId, string startHead)
     {
-        _gates.ScheduleGateOrAudit(stageId, startHead, _ctx.Log, HasNextUnconfirmedStage);
+        _gates.ScheduleGateOrAudit(stageId, startHead, _ctx.Log);
     }
 
     /// <param name="basis">SC2.2: what this confirmation rests on, in <see cref="GateRunner.ConfirmationBasis"/>'s
@@ -192,17 +192,7 @@ public sealed partial class VerdictEngine
     }
 
     internal bool HasNextUnconfirmedStage(string stageId)
-    {
-        var idx = _ctx.Plan.Stages.FindIndex(s => s.Id == stageId);
-        if (idx < 0) return false;
-        for (var i = idx + 1; i < _ctx.Plan.Stages.Count; i++)
-        {
-            var sid = _ctx.Plan.Stages[i].Id;
-            if (!_ctx.State.SkippedStages.Contains(sid) && !_ctx.State.ConfirmedStages.Contains(sid))
-                return true;
-        }
-        return false;
-    }
+        => GateScheduling.HasNextUnconfirmedStage(_ctx.Plan, _ctx.State, stageId);
 
     // KS5.4: the owner-approval path lives in VerdictEngine.Approval.cs — one file, one job, and this
     // one was four lines under the architecture ratchet's ceiling.

@@ -23,7 +23,10 @@ public enum LaunchStep
     /// <summary>The tracker handoff asks for a human — the run parks at NeedsHuman before spawning.</summary>
     HandoffEscalation,
     /// <summary>Per-phase gates: the stage's rows all read done but the stage is unconfirmed — the
-    /// loop schedules the audit / full-battery phase gate instead of a session.</summary>
+    /// loop schedules the audit / full-battery phase gate. <see cref="LaunchDecision.Schedules"/>
+    /// says WHICH, and on <see cref="ScheduledWork.AutoFixAudit"/> this step is NOT a stopping point:
+    /// the same run re-decides straight afterwards and composes the Audit session this decision's
+    /// <see cref="LaunchDecision.Kind"/>, stage and attempt already describe.</summary>
     ScheduleGateOrAudit,
     /// <summary>The current stage has used its whole attempt budget
     /// (<see cref="StageSelection.MaxAttempts"/>) — the loop escalates instead of composing: an
@@ -52,10 +55,19 @@ public enum LaunchStep
 /// HIGH-severity parallel audit into the queued fix (<see cref="SessionComposer.FixFromParallelAudit"/>)
 /// and goes around, so <paramref name="Kind"/> already accounts for it;
 /// <paramref name="SpawnsParallelAuditLane"/> — the launch spawns the queued parallel-audit LANE
-/// AGENT (real model spend) before the composed session, which a drill can disclose but not price.</para></summary>
+/// AGENT (real model spend) before the composed session, which a drill can disclose but not price.</para>
+/// <para>Round 8's field, <paramref name="Schedules"/>: what the
+/// <see cref="LaunchStep.ScheduleGateOrAudit"/> step queues, decided by <see cref="GateScheduling"/>
+/// — the same function the loop executes. On <see cref="ScheduledWork.AutoFixAudit"/> the decision
+/// does NOT stop at the scheduling: the loop queues the audit and re-decides in the same run with no
+/// subprocess in between, so <paramref name="Kind"/>, <paramref name="Stage"/> and
+/// <paramref name="AttemptNumber"/> describe the Audit session that scheduling produces. On the two
+/// phase-gate branches a FULL gate battery runs next, and what follows a battery is not a function
+/// of the saved state — the decision stops, and every surface must say the battery runs first.</para></summary>
 public sealed record LaunchDecision(LaunchStep Step, StageConfig? Stage, string? StageId, SessionKind Kind,
     DateTime? SleepUntilUtc = null, int AttemptNumber = 1,
-    bool QueuesParallelAuditFix = false, bool SpawnsParallelAuditLane = false);
+    bool QueuesParallelAuditFix = false, bool SpawnsParallelAuditLane = false,
+    ScheduledWork Schedules = ScheduledWork.None);
 
 /// <summary>The collaborators <see cref="StageSelection.NextAction"/>'s workflow rung consults —
 /// stated as inputs because the kind is only shared if the INPUTS are shared (rounds 4 and 5's

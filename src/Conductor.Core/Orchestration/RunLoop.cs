@@ -262,12 +262,21 @@ public sealed partial class RunLoop
                 // (The guard itself, PendingVerify included, lives in StageSelection.NextAction.)
                 if (next.Step == LaunchStep.ScheduleGateOrAudit)
                 {
+                    var scheduleHead = _ctx.State.CurrentStageStartHead ?? Git.Head(_ctx.Plan.Repo);
                     if (_ctx.Options.DryRun)
                     {
-                        _ctx.Sink.Log($"--- DRY RUN: stage {stage.Id} checkpoints all DONE — would schedule the audit / full-battery phase gate next (nothing executed) ---");
-                        return 0;
+                        _ctx.Sink.Log($"--- DRY RUN: stage {stage.Id} checkpoints all DONE — would schedule {GateScheduling.Describe(next.Schedules)} (nothing executed) ---");
+                        // KS3.4 round 8: an auto-fix audit is not where this run stops — the next
+                        // decision composes that Audit session, in the same run, with no subprocess in
+                        // between. So the preview projects the scheduling (in memory; nothing is
+                        // saved) and goes around to narrate the session it produces, exactly as the
+                        // live loop does. The two phase-gate branches DO stop here: a full battery is
+                        // real execution a preview promises not to perform.
+                        if (next.Schedules != ScheduledWork.AutoFixAudit) return 0;
+                        GateScheduling.Project(_ctx.Plan, _ctx.State, stage.Id, scheduleHead);
+                        continue;
                     }
-                    _verdicts.ScheduleGateOrAudit(stage.Id, _ctx.State.CurrentStageStartHead ?? Git.Head(_ctx.Plan.Repo));
+                    _verdicts.ScheduleGateOrAudit(stage.Id, scheduleHead);
                     _ctx.Save();
                     continue;
                 }
@@ -303,6 +312,16 @@ public sealed partial class RunLoop
                 // parks immediately at the boundary.
                 if (next.Step == LaunchStep.SessionCap && _ctx.Plan.Limits.MaxSessions is { } liveCap)
                 {
+                    // Round 8: the decision now carries the scheduling THROUGH to the session it
+                    // produces, which means a capped run reaches this branch on the turn that used to
+                    // schedule first and park second. The side effect is still owed — the audit this
+                    // stage earned is queued before the park, exactly as it was — so the run resumes
+                    // into the same state when the cap is raised.
+                    if (next.Schedules != ScheduledWork.None && next.StageId is { } scheduledStage)
+                    {
+                        _verdicts.ScheduleGateOrAudit(scheduledStage, _ctx.State.CurrentStageStartHead ?? Git.Head(_ctx.Plan.Repo));
+                        _ctx.Save();
+                    }
                     _ctx.State.Status = RunStatus.Paused;
                     _ctx.State.ParkedBySessionCap = true;
                     _ctx.State.SetAttention($"session cap reached ({_ctx.State.SessionCounter}/{liveCap}) — raise or clear limits.maxSessions (Plan tab → Settings) to continue");

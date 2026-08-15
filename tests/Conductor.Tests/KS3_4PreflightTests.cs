@@ -407,8 +407,14 @@ public sealed class KS3_4PreflightTests : IDisposable
         Assert.Empty(Failing(legs));
         Assert.Equal(
             "stage 'S1' checkpoints all read DONE but the stage is unconfirmed — the next " +
-            "`conductor run` schedules the audit / full-battery phase gate — no session composes",
+            "`conductor run` schedules the full-battery phase gate — the plan declares no gates, so that " +
+            "battery is empty and confirms the stage",
             Headline(legs, "compose"));
+        // Round 8: and never the definite negative again. This fixture declares no gates, so the
+        // battery cannot go red — but the sentence no longer claims the launch composes nothing,
+        // because after the confirmation this same run carries on to S2's session.
+        Assert.DoesNotContain("no session composes", Headline(legs, "compose"), StringComparison.Ordinal);
+        Assert.Contains("carries straight on after a confirmation", Detail(legs, "compose"), StringComparison.Ordinal);
     }
 
     /// <summary>The same fixture through the REAL loop — ConductorHost, Orchestrator, dry run — so
@@ -424,7 +430,7 @@ public sealed class KS3_4PreflightTests : IDisposable
         var lines = await DryRunAsync(plan);
 
         Assert.Contains(lines, l => l.Contains(
-            "DRY RUN: stage S1 checkpoints all DONE — would schedule the audit / full-battery phase gate next",
+            "DRY RUN: stage S1 checkpoints all DONE — would schedule the full-battery phase gate",
             StringComparison.Ordinal));
         Assert.DoesNotContain(lines, l => l.Contains("would start session #", StringComparison.Ordinal));
         Assert.DoesNotContain("composing to", Headline(legs, "compose"), StringComparison.Ordinal);
@@ -442,8 +448,10 @@ public sealed class KS3_4PreflightTests : IDisposable
 
         Assert.Empty(Failing(legs));
         Assert.Equal(
-            "the next `conductor run` runs the queued full-battery phase gate for stage 'S1' — no session composes",
+            "the next `conductor run` runs the queued full-battery phase gate for stage 'S1' — the plan declares " +
+            "no gates, so that battery is empty and confirms the stage",
             Headline(legs, "compose"));
+        Assert.DoesNotContain("no session composes", Headline(legs, "compose"), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -459,6 +467,101 @@ public sealed class KS3_4PreflightTests : IDisposable
             "DRY RUN: would run the FULL-battery phase gate for stage S1", StringComparison.Ordinal));
         Assert.DoesNotContain(lines, l => l.Contains("would start session #", StringComparison.Ordinal));
         Assert.DoesNotContain("composing to", Headline(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>Round 7's blocking finding (1), as the fact this suite was structurally blind to.
+    /// Under <c>perPhaseGates</c> with a non-parallel audit enabled, a done-but-unconfirmed stage
+    /// does not merely "schedule something": the loop queues the auto-fix AUDIT and re-decides inside
+    /// the SAME run — no subprocess in between — and composes an <c>Audit</c> session. The drill said
+    /// "no session composes" and answered READY while the launch spawned <c>Audit S1</c> with a
+    /// 7114-char prompt. Every prior fact for this branch drove only the dry run, which RETURNS at
+    /// the branch (<c>RunLoop</c>) and so can never see the re-decision — this one drives the real
+    /// store-backed dispatch and compares the drill's whole headline against the kind the dispatch
+    /// recorded and the prompt file it wrote.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task AScheduledAutoFixAuditComposesTheAuditSessionTheLaunchSpawns()
+    {
+        var plan = ScheduledAutoFixAuditFixture();
+
+        var legs = await RunAsync(plan);
+
+        var (lines, state, prompt) = await LiveSessionAsync(plan);
+        Assert.Contains(lines, l => l.Contains("scheduling auto-fix audit", StringComparison.Ordinal));
+        var rec = state.History[^1];
+        Assert.Equal(SessionKind.Audit, rec.Kind);
+        Assert.Equal("S1", rec.Stage);
+        Assert.Equal(
+            $"next session #2 is Audit on stage 'S1', composing to {prompt.Length} chars (nothing spawned)",
+            Headline(legs, "compose"));
+        Assert.Contains("schedules the auto-fix audit", Detail(legs, "compose"), StringComparison.Ordinal);
+        Assert.Empty(Failing(legs));
+    }
+
+    /// <summary>The same branch at the decision itself: the scheduling is a pure function of the plan
+    /// and the saved state (<see cref="GateScheduling"/>, the one copy the loop executes), so the
+    /// decision carries it THROUGH to the session it produces — the step still names the scheduling
+    /// the loop must perform, and the kind, stage and attempt are the audit session's.</summary>
+    [Fact]
+    public void TheAutoFixAuditSchedulingIsCarriedThroughToTheSessionItProduces()
+    {
+        var plan = ScheduledAutoFixAuditFixture();
+        var state = new RunState { PlanName = plan.Name, RunId = "r8", CurrentStage = "S1", SessionCounter = 1 };
+
+        var next = StageSelection.NextAction(plan, state, Track(plan));
+
+        Assert.Equal(LaunchStep.ScheduleGateOrAudit, next.Step);
+        Assert.Equal(ScheduledWork.AutoFixAudit, next.Schedules);
+        Assert.Equal(SessionKind.Audit, next.Kind);
+        Assert.Equal("S1", next.StageId);
+        Assert.Equal(1, next.AttemptNumber);
+        Assert.Null(state.PendingAudit); // the decision decided; it did not mutate the caller's state
+    }
+
+    /// <summary>Round 7's blocking finding (2): "confirms completion rather than spawning a session"
+    /// was a definite negative about a launch whose very next act is a gate battery. A red REQUIRED
+    /// gate makes <c>ConfirmCompletionAsync</c> queue a fix and return false, and the loop re-decides
+    /// into a <c>Fix</c> session in the SAME run. The battery is subprocesses, so the drill may not
+    /// pick an outcome — it must name both, and it must not promise silence.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task ARedCompletionBatteryComposesAFixSessionAndTheDrillSaysSo()
+    {
+        var plan = RedBatteryFixture("r8complete");
+
+        var legs = await RunAsync(plan);
+
+        Assert.Equal(
+            "every stage reads done — the next `conductor run` runs the completion battery BEFORE closing " +
+            "the plan; what follows depends on the gates",
+            Headline(legs, "compose"));
+        Assert.Contains("composes a Fix session on stage 'S1'", Detail(legs, "compose"), StringComparison.Ordinal);
+
+        var (lines, state, _) = await LiveSessionAsync(plan);
+        Assert.Contains(lines, l => l.Contains("completion NOT confirmed — gates red; queuing a fix session", StringComparison.Ordinal));
+        Assert.Equal(SessionKind.Fix, state.History[^1].Kind);
+    }
+
+    /// <summary>Round 7's blocking finding (3), same class at the queued phase gate: the battery runs
+    /// first, and a red required gate queues a fix that this same run composes as a <c>Fix</c>
+    /// session.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task ARedQueuedPhaseGateComposesAFixSessionAndTheDrillSaysSo()
+    {
+        var plan = RedBatteryFixture("r8phasered", perPhase: true);
+
+        var legs = await RunAsync(plan);
+
+        Assert.Equal(
+            "the next `conductor run` runs the queued full-battery phase gate for stage 'S1' BEFORE anything " +
+            "composes — what follows depends on the gates",
+            Headline(legs, "compose"));
+        Assert.Contains("composes a Fix session on stage 'S1'", Detail(legs, "compose"), StringComparison.Ordinal);
+
+        var (lines, state, _) = await LiveSessionAsync(plan);
+        Assert.Contains(lines, l => l.Contains("queuing fix session", StringComparison.Ordinal));
+        Assert.Equal(SessionKind.Fix, state.History[^1].Kind);
     }
 
     /// <summary>A run already standing at <c>limits.maxSessions</c> parks at the session boundary
@@ -1746,6 +1849,51 @@ public sealed class KS3_4PreflightTests : IDisposable
         });
         WriteTracker(plan, "nothing pending.", ("S1.1", "DONE"), ("S2.1", "TODO"));
         SaveState(plan, s => s.SessionCounter = 5);
+        return plan;
+    }
+
+    /// <summary>Round 7's reproduction (1): perPhase, audit ENABLED and not parallel, S1's only row
+    /// DONE, S1 unconfirmed — so the scheduling branch queues an auto-fix audit and the same run
+    /// composes that Audit session. No gates and no auth preflight, so the live dispatch is
+    /// deterministic.</summary>
+    private PlanConfig ScheduledAutoFixAuditFixture()
+    {
+        var plan = CleanPlan(p =>
+        {
+            p.GatePolicy = "perPhase";
+            p.Limits.AuthPreflight = false;
+            p.Audit = new AuditConfig { Enabled = true, EnableParallel = false };
+        });
+        WriteTracker(plan, "nothing pending.", ("S1.1", "DONE"));
+        SaveState(plan, s => { s.RunId = "r8audit"; s.CurrentStage = "S1"; s.SessionCounter = 1; });
+        return plan;
+    }
+
+    /// <summary>Round 7's reproductions (2) and (3): every row DONE and ONE required gate that always
+    /// fails (<c>git rev-parse --verify</c> on a branch that does not exist — exit 128), so the
+    /// battery the launch runs before anything composes is red by construction. With
+    /// <paramref name="perPhase"/> the red battery is the queued phase gate's; without it, the
+    /// completion battery's. Both end in a Fix session in the same run.</summary>
+    private PlanConfig RedBatteryFixture(string runId, bool perPhase = false)
+    {
+        var plan = CleanPlan(p =>
+        {
+            p.Limits.AuthPreflight = false;
+            if (perPhase) p.GatePolicy = "perPhase";
+            p.Gates.Add(new GateConfig
+            {
+                Name = "red-gate",
+                Command = "git rev-parse --verify refs/heads/definitely-not-a-branch",
+            });
+        });
+        WriteTracker(plan, "nothing pending.", ("S1.1", "DONE"));
+        SaveState(plan, s =>
+        {
+            s.RunId = runId;
+            s.CurrentStage = "S1";
+            s.SessionCounter = 1;
+            if (perPhase) s.PendingPhaseGate = new PendingPhaseGate { StageId = "S1", StageStartHead = "abc1234" };
+        });
         return plan;
     }
 
