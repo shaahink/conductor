@@ -1,0 +1,18 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Conductor.Planning -> C:\Code\conductor\src\Conductor.Planning\bin\Debug\net10.0\Conductor.Planning.dll
+  Conductor.Core -> C:\Code\conductor\src\Conductor.Core\bin\Debug\net10.0\Conductor.Core.dll
+  Conductor -> C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.dll
+  Conductor.Tests -> C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+Test run for C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.85]     Conductor.Tests.SF7_1DocsMatchRealityTests.TheCurrentEraBudgetSectionAgreesWithTheRawOutputItQuotes [FAIL]
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.TheCurrentEraBudgetSectionAgreesWithTheRawOutputItQuotes [11 ms]
+  Error Message:
+   the plan doc prescribes 32M / 0.70 and `budget` measured 32M / 0.85 (ks10-1-budget-remeasure.json). KS10.1's rule is that the prescription wins - correct the doc in place, striking the old value rather than deleting it.
+  Stack Trace:
+     at Conductor.Tests.SF7_1DocsMatchRealityTests.TheCurrentEraBudgetSectionAgreesWithTheRawOutputItQuotes() in C:\Code\conductor\tests\Conductor.Tests\SF7_1DocsMatchRealityTests.Karvansara.cs:line 92
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 11 ms - Conductor.Tests.dll (net10.0)
