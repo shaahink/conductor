@@ -26,16 +26,27 @@ public enum ImportFormat
 /// task lines; checkbox items). The order matters — JSON first because it cannot be mistaken for
 /// markdown, then spec-kit's stricter shape, then the loose checklist, and this project's own
 /// structured plan documents ahead of all of them so an existing import keeps its existing reader.
-/// <para>Every id these bridges mint has to satisfy the engine's readers: a stage id matches
-/// <c>[A-Za-z]{1,4}\d+</c>, a checkpoint id <c>[A-Za-z]{1,4}\d+\.[A-Za-z0-9]+</c>, and a checkpoint
-/// hangs off its stage by that dotted prefix. Titles are stripped of braces because
-/// <c>PlanConfig.CollectErrors</c> refuses an unresolved <c>{token}</c>, and a converter that passed
-/// prose through verbatim could write a plan that will not load.</para></summary>
+/// <para>Every id these bridges mint has to satisfy the engine's readers, and the binding one is
+/// NOT the one that is easy to find. <c>FakeAgentCommand</c> would accept <c>P31.T001</c>
+/// (<c>[A-Za-z]{1,4}\d+\.[A-Za-z0-9]+</c>) and so would <see cref="MarkdownPlanParser"/> — but the
+/// markdown-table progress provider that feeds <see cref="WorkGraphSync"/> assembles its row regex
+/// from <c>ProgressConventions.StageIdPattern</c> (Models/ProgressConventions.cs:24,
+/// <c>(?&lt;stage&gt;[A-Za-z]+\d+)(?:\.\d+)?[a-z]?</c>), whose checkpoint suffix must be DIGITS. A
+/// row it cannot read is skipped in silence: measured on a live <c>demo --from</c>, a spec-kit board
+/// with <c>P31.T001</c> ids synced as "0 added · 3 scaffolded" — every converted task thrown away and
+/// replaced by one placeholder per stage, and the run still went green. So the shape these bridges
+/// mint is the INTERSECTION of the readers, <c>[A-Za-z]{1,4}\d+\.\d+</c>, and a source's own task id
+/// (spec-kit's <c>T001</c>) is preserved in the TITLE, where nothing parses it.</para>
+/// <para>Titles are stripped of braces because <c>PlanConfig.CollectErrors</c> refuses an unresolved
+/// <c>{token}</c>, and a converter that passed prose through verbatim could write a plan that will
+/// not load.</para></summary>
 public static class ImportBridge
 {
     private static readonly Regex BraceRegex = new(@"[{}]", RegexOptions.None, ProgressConventions.RegexTimeout);
     private static readonly Regex StageIdRegex = new(@"^[A-Za-z]{1,4}\d+$", RegexOptions.None, ProgressConventions.RegexTimeout);
-    private static readonly Regex CheckpointIdRegex = new(@"^[A-Za-z]{1,4}\d+\.[A-Za-z0-9]+$", RegexOptions.None, ProgressConventions.RegexTimeout);
+    // The intersection, not the loosest reader: the digits after the dot are what the markdown-table
+    // provider's row regex requires, and a row it cannot read is dropped without a word.
+    private static readonly Regex CheckpointIdRegex = new(@"^[A-Za-z]{1,4}\d+\.\d+$", RegexOptions.None, ProgressConventions.RegexTimeout);
 
     /// <summary>The deterministic path, in one call: this project's own structured shape first, then
     /// the three foreign bridges. Returns <see cref="ImportFormat.None"/> and a null result when
@@ -108,7 +119,7 @@ public static class ImportBridge
     }
 
     /// <summary>The shapes the engine's readers require, asserted where the ids are minted rather
-    /// than discovered when a demo silently claims nothing.</summary>
+    /// than discovered when a run drops the whole board and goes green anyway.</summary>
     public static bool IsDrivableStageId(string id) => StageIdRegex.IsMatch(id ?? "");
 
     /// <summary>As <see cref="IsDrivableStageId"/>, for a checkpoint row.</summary>

@@ -4,19 +4,21 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS3.4 round 8 CLAIMED (2de11fe) - the compose leg's decision now reaches the session a
-  launch spawns. GateScheduling is ONE classifier for the loop and the drill; the auto-fix-audit
-  branch carries Kind=Audit through the scheduling (rig: drill 7047 chars = launch 7047), and the
-  completion / phase-gate headlines say the battery runs FIRST and a red required gate composes a
-  Fix session in the same run. Evidence .conductor/evidence/KS3/ks3-4-round8.md; re-runnable rigs
-  plans/karvansara/contracts/ks3-4-v8-rigs/run-round8.ps1. Pre-fix 7/89 red, fixed 89/89 green.
-open: KS3.5 per contracts/KS3.json - spec-kit tasks.md, Task-Master tasks.json and a plain
-  markdown checklist to plan; the spec-kit sample must convert AND drive `conductor demo` to done.
+last: KS3.5 CLAIMED - stage KS3 is complete. Three bridges behind ImportBridge.Read (spec-kit,
+  Task-Master, checklist), reached from `plan import` and the new `demo --from`, content-detected,
+  zero spend. Evidence .conductor/evidence/KS3/ks3-5.md; rig ks3-5-rigs/run-demo-speckit.ps1.
+  Live: 5 added / 0 scaffolded, status Completed, exit 0, all 5 converted tasks engine-confirmed.
+measured, and it cost a live run: the contract's id bar (FakeAgentCommand's two regexes) is
+  NECESSARY BUT NOT SUFFICIENT. `P31.T001` passes both AND MarkdownPlanParser, and the first run
+  still synced "0 added, 3 scaffolded" - the board thrown away, placeholders driven to DONE, green.
+  The binding reader is ProgressConventions.cs:24 (row regex :64-72): the suffix must be DIGITS,
+  and an unreadable row is skipped in SILENCE. Drivable = the intersection, [A-Za-z]{1,4}\d+\.\d+.
+  Any future id minting must be proven through ProgressProviderFactory, not a regex assertion.
 then: KS9 (scratch repo only; KS9.3 expects precise-refusal SKIPPED), KS10.1-10.2 per
   contracts/KS9-10.json; KS10.3 owner-only. KS10.2 is one command in payesh (`npm run harvest &&
   npm run evidence`), then branch, commit corpus.json, open the PR - main is stale by 3 runs.
-measured: full batteries run serially with -nodeReuse:false -p:UseSharedCompilation=false. No
-  preflight leg runs gates. `conductor bg start` rejects -nodeReuse:false and a --filter with a pipe.
+measured: batteries run serially with -nodeReuse:false -p:UseSharedCompilation=false. A demo rig
+  MUST clear CONDUCTOR_PLAN - its fake agent calls `task --done` and would claim on the live run.
 
 
 ## Baseline numbers (from run.db)
@@ -24,8 +26,8 @@ measured: full batteries run serially with -nodeReuse:false -p:UseSharedCompilat
 | Metric | Value |
 |---|---|
 | Total checkpoints | 32 |
-| Done | 0 |
-| Claimed (unconfirmed) | 24 |
+| Done | 24 |
+| Claimed (unconfirmed) | 1 |
 
 ## Checkpoints
 
@@ -36,52 +38,52 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS0.1 | Legacy-db import dedups by run id - never plan slug - consults imported.json before importing, and a repair pass with a backup collapses the existing duplicates, leaving one row per real run and the payesh evidence path green on the deduped store | DONE | 883dda0 | .conductor/evidence/KS0/ks0-1-payesh-green-on-deduped-store.md |
-| KS0.2 | conductor run close and adopt verbs close or annotate a run record with provenance through the store, an honest status writer covers non-terminal parks, and the four phantom running rows are closed via the verb - the WATCH-HANDOFF hand-SQL procedure retired | DONE | 15627b9 | .conductor/evidence/KS0/ks0-2-run-close.md |
-| KS0.3 | The sharp-small batch goes red to green by reproduction script: the gate battery builds to a shadow path and never rebuilds the running engine, CWD beats the CONDUCTOR_PLAN env var with a warning on override, the fresh-run.db first-write FK error dies, and lessons.md stops duplicate-appending with a pinned test | DONE | eb9778e | .conductor/evidence/KS0/ks0-3-sharp-small-batch.md |
+| KS0.1 | Legacy-db import dedups by run id - never plan slug - consults imported.json before importing, and a repair pass with a backup collapses the existing duplicates, leaving one row per real run and the payesh evidence path green on the deduped store | DONE ✓ | 883dda0 | .conductor/evidence/KS0/ks0-1-payesh-green-on-deduped-store.md |
+| KS0.2 | conductor run close and adopt verbs close or annotate a run record with provenance through the store, an honest status writer covers non-terminal parks, and the four phantom running rows are closed via the verb - the WATCH-HANDOFF hand-SQL procedure retired | DONE ✓ | 15627b9 | .conductor/evidence/KS0/ks0-2-run-close.md |
+| KS0.3 | The sharp-small batch goes red to green by reproduction script: the gate battery builds to a shadow path and never rebuilds the running engine, CWD beats the CONDUCTOR_PLAN env var with a warning on override, the fresh-run.db first-write FK error dies, and lessons.md stops duplicate-appending with a pinned test | DONE ✓ | eb9778e | .conductor/evidence/KS0/ks0-3-sharp-small-batch.md |
 
 ### KS1 — Truth - every read surface reconciles
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS1.1 | A plan reload updates the run row, and limits provenance is labeled at-launch versus now - a mid-run limits edit shows both at the same boundary in history, with a test asserting the UPDATE | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS1.2 | Stage rows derive from the event fold and stages side-table reads are retired, derived status matching the status surface for all archived runs, with an architecture test forbidding readers of stages.session_count | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS1.3 | history, the fleet list and json output reconcile liveness at render time - a killed engine's run never lists as running, and the json carries the reconciled status for the evidence pipeline to quote | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS1.4 | Doctor gains the plan-semantics lints - gate-command path probe, checkpoint-id versus tracker cross-check, hook dry-run, plan drift, composed-prompt argv-length, brace sweep, escalation-token sweep - and goes red on each of seven seeded trap plans | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS1.5 | The ARCHITECTURE.md rollback paragraph matches ControlDispatcher's actual reset and force semantics, covered by a docs-match-reality test | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS1.6 | The invariant is an architecture test: readers outside the engine may not consume mutable snapshot columns that have a fold-derived equivalent - green on the tree, red on a seeded violation | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS1.1 | A plan reload updates the run row, and limits provenance is labeled at-launch versus now - a mid-run limits edit shows both at the same boundary in history, with a test asserting the UPDATE | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS1.2 | Stage rows derive from the event fold and stages side-table reads are retired, derived status matching the status surface for all archived runs, with an architecture test forbidding readers of stages.session_count | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS1.3 | history, the fleet list and json output reconcile liveness at render time - a killed engine's run never lists as running, and the json carries the reconciled status for the evidence pipeline to quote | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS1.4 | Doctor gains the plan-semantics lints - gate-command path probe, checkpoint-id versus tracker cross-check, hook dry-run, plan drift, composed-prompt argv-length, brace sweep, escalation-token sweep - and goes red on each of seven seeded trap plans | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS1.5 | The ARCHITECTURE.md rollback paragraph matches ControlDispatcher's actual reset and force semantics, covered by a docs-match-reality test | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS1.6 | The invariant is an architecture test: readers outside the engine may not consume mutable snapshot columns that have a fold-derived equivalent - green on the tree, red on a seeded violation | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
 
 ### KS2 — The open door - bare conductor is the app, and every section reads
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS2.1 | Bare conductor on a TTY opens the hub - recent runs reconciled, plans discovered, attach start plan-new history - non-TTY prints a status board with exit 0, and every existing verb is unchanged | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS2.2 | The archive serves: the Face attaches to finished runs read-only - sessions, money, timeline and report render with no engine process for that run | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS2.3 | A run starts from the hub: choose plan, journey preview, detached engine launch with stderr redirected, then attach - killing the Face leaves the engine alive | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS2.4 | One picker merges fleet probe and catalogue - live runs attach, past runs open read-only, across repos, write tokens never crossing runs | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS2.5 | conductor status with no resolvable plan prints a machine-level board - the multiple-plan-files error is unreachable | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS2.6 | A park emits once: notifier rate-limited with a max per incident, dry-run never notifies, a monitor listing verb exists, and the 2026-08-02 incident replay produces exactly one notification | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS2.7 | Long text scrolls everywhere: Agent console and transcript, Kanban detail, History, Telegram and Processes each own a pane viewport, the last hand-rolled scroll integers are deleted, and glitch-sweep proves a 500-line body scrolls to its end in every tab | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS2.8 | The reader: one full-screen overlay opens any truncated cell or row with soft wrap, pager keys, percent readout and themed markdown - a 2000-line report and a 300-char kanban note both readable to the last line at 80x24 | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS2.1 | Bare conductor on a TTY opens the hub - recent runs reconciled, plans discovered, attach start plan-new history - non-TTY prints a status board with exit 0, and every existing verb is unchanged | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS2.2 | The archive serves: the Face attaches to finished runs read-only - sessions, money, timeline and report render with no engine process for that run | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS2.3 | A run starts from the hub: choose plan, journey preview, detached engine launch with stderr redirected, then attach - killing the Face leaves the engine alive | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS2.4 | One picker merges fleet probe and catalogue - live runs attach, past runs open read-only, across repos, write tokens never crossing runs | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS2.5 | conductor status with no resolvable plan prints a machine-level board - the multiple-plan-files error is unreachable | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS2.6 | A park emits once: notifier rate-limited with a max per incident, dry-run never notifies, a monitor listing verb exists, and the 2026-08-02 incident replay produces exactly one notification | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS2.7 | Long text scrolls everywhere: Agent console and transcript, Kanban detail, History, Telegram and Processes each own a pane viewport, the last hand-rolled scroll integers are deleted, and glitch-sweep proves a 500-line body scrolls to its end in every tab | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS2.8 | The reader: one full-screen overlay opens any truncated cell or row with soft wrap, pager keys, percent readout and themed markdown - a 2000-line report and a 300-char kanban note both readable to the last line at 80x24 | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
 
 ### KS3 — Authoring - no human writes JSON
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS3.1 | conductor plan new interviews from an idea, PRD or tracker and emits plan JSON, tracker and templates doctor-clean by construction - from an empty repo, one command, zero-fail, the JSON never opened in an editor | DONE | 883dda0 | .conductor/evidence/KS3/ks3-1.md |
-| KS3.2 | The editor stops destroying: comment header preserved across plan set, add-stage and import, no silent progress-kind or gate-timeout rewrites - the add-a-stage replay diffs to only the stage | DONE | 883dda0 | .conductor/evidence/KS3/ks3-2.md |
-| KS3.3 | Schema honesty: the eight undocumented keys documented, mutatingLanes removed or wired, doctor warns on inert keys, and plan-config.md matches PlanConfig under the docs-match-reality pin | DONE | 883dda0 | .conductor/evidence/KS3/ks3-3.md |
-| KS3.4 | conductor preflight runs the launch drill as one verb - doctor, journey, dry-run compose, version-versus-release, rebuild check, escalation-block check - one verdict, each seeded drill failure caught | TODO | - | - |
-| KS3.5 | Import bridges: a spec-kit tasks.md, a Task-Master tasks.json and a plain markdown checklist each convert to a plan, and the spec-kit sample drives conductor demo to completion | TODO | - | - |
+| KS3.1 | conductor plan new interviews from an idea, PRD or tracker and emits plan JSON, tracker and templates doctor-clean by construction - from an empty repo, one command, zero-fail, the JSON never opened in an editor | DONE ✓ | 883dda0 | .conductor/evidence/KS3/ks3-1.md |
+| KS3.2 | The editor stops destroying: comment header preserved across plan set, add-stage and import, no silent progress-kind or gate-timeout rewrites - the add-a-stage replay diffs to only the stage | DONE ✓ | 883dda0 | .conductor/evidence/KS3/ks3-2.md |
+| KS3.3 | Schema honesty: the eight undocumented keys documented, mutatingLanes removed or wired, doctor warns on inert keys, and plan-config.md matches PlanConfig under the docs-match-reality pin | DONE ✓ | 883dda0 | .conductor/evidence/KS3/ks3-3.md |
+| KS3.4 | conductor preflight runs the launch drill as one verb - doctor, journey, dry-run compose, version-versus-release, rebuild check, escalation-block check - one verdict, each seeded drill failure caught | DONE | 2de11fe | .conductor/evidence/KS3/ks3-4-round8.md |
+| KS3.5 | Import bridges: a spec-kit tasks.md, a Task-Master tasks.json and a plain markdown checklist each convert to a plan, and the spec-kit sample drives conductor demo to completion | IN PROGRESS | - | - |
 
 ### KS5 — Spend - every dollar the tool can spend is governed
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS5.1 | A machine-wide ledger verb answers what this machine spent this week and month, billed-only, across the catalogue, cross-checked against per-run money with no price table in the diff | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS5.2 | Every spawned model process writes a costs row - lanes, advisor, supervisor - caps see them, and an architecture test holds the rule that any process-spawning path taking a model writes a costs row | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS5.3 | BudgetAnalyzer prescriptions surface at plan-reload, logging any ceiling that contradicts the measured floor at the boundary | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
-| KS5.4 | approve on a budget park raises the ceiling explicitly with the amount stated instead of resetting the counter, and the cap check runs after the queued reload applies - the 2026-07-29 replay shows no silent double-spend | DONE | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS5.1 | A machine-wide ledger verb answers what this machine spent this week and month, billed-only, across the catalogue, cross-checked against per-run money with no price table in the diff | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS5.2 | Every spawned model process writes a costs row - lanes, advisor, supervisor - caps see them, and an architecture test holds the rule that any process-spawning path taking a model writes a costs row | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS5.3 | BudgetAnalyzer prescriptions surface at plan-reload, logging any ceiling that contradicts the measured floor at the boundary | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
+| KS5.4 | approve on a budget park raises the ceiling explicitly with the amount stated instead of resetting the counter, and the cap check runs after the queued reload applies - the 2026-07-29 replay shows no silent double-spend | DONE ✓ | 883dda0 | engine-fast:OK · face-fast:OK |
 
 ### KS9 — The far door - GitHub is the remotest view
 

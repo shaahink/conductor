@@ -8,11 +8,15 @@ namespace Conductor.Core.Planning;
 /// <c>- [x] T004 [P] Contract test …</c>); this turns one into stages and checkpoints with NO model
 /// call, which is the whole point — a plan you already wrote should not cost a model round trip to
 /// import.
-/// <para>The ids it mints are not cosmetic. A phase becomes <c>P31</c> and a task becomes
-/// <c>P31.T001</c> because those are the shapes the engine's own readers require: stage ids match
-/// <c>[A-Za-z]{1,4}\d+</c> and checkpoint ids <c>[A-Za-z]{1,4}\d+\.[A-Za-z0-9]+</c> (the tracker
-/// table regex, the work graph's prefix link, and <c>FakeAgentCommand</c>'s row picker). A verbatim
-/// <c>T001</c> checkpoint id has no stage prefix, so nothing would ever claim it.</para></summary>
+/// <para>The ids it mints are not cosmetic. A phase becomes <c>P31</c> and its tasks become
+/// <c>P31.1</c>, <c>P31.2</c>, … with the source's own <c>T001</c> carried in the title. Two
+/// separate readers force that. A verbatim <c>T001</c> checkpoint id has no stage prefix, so
+/// <c>FakeAgentCommand</c> could never claim it — and the obvious repair, <c>P31.T001</c>, still
+/// fails the one that matters: the markdown-table provider feeding <see cref="WorkGraphSync"/>
+/// takes DIGITS after the dot (<c>ProgressConventions.StageIdPattern</c>, Models/ProgressConventions.cs:24)
+/// and silently skips any row it cannot read. Measured on a live <c>demo --from</c>: a P31.T001
+/// board synced "0 added · 3 scaffolded", so the run drove three invented placeholders to DONE and
+/// reported success while every converted task had been thrown away.</para></summary>
 public static class SpecKitImporter
 {
     // "- [ ] T001 Create project structure" / "- [x] T004 [P] Contract test POST /api/users"
@@ -63,12 +67,19 @@ public static class SpecKitImporter
             }
             var stage = stages.First(s => string.Equals(s.Id, id, StringComparison.Ordinal));
             var done = !string.IsNullOrWhiteSpace(t.Groups["done"].Value);
-            var rowId = $"{id}.{t.Groups["id"].Value}";
-            if (stage.Rows.Exists(r => string.Equals(r.Id, rowId, StringComparison.OrdinalIgnoreCase))) continue;
+            // The source's own T001 goes in the TITLE, not the id: the markdown-table provider's row
+            // regex takes only digits after the dot (ProgressConventions.cs:24), and it drops a row it
+            // cannot read WITHOUT SAYING SO — measured live, a P31.T001 board synced as "0 added,
+            // 3 scaffolded" and the run went green having driven placeholders. So the id is the
+            // position within its phase, and the task number stays where a human reads it.
+            var sourceId = t.Groups["id"].Value;
+            var rowId = $"{id}.{stage.Rows.Count + 1}";
+            if (stage.Rows.Exists(r => r.Title.StartsWith(sourceId + " ", StringComparison.OrdinalIgnoreCase))) continue;
+            var taskTitle = ImportBridge.CleanTitle(t.Groups["title"].Value);
             stage.Rows.Add(new ImportedCheckpoint
             {
                 Id = rowId,
-                Title = ImportBridge.CleanTitle(t.Groups["title"].Value),
+                Title = taskTitle.Length > 0 ? $"{sourceId} {taskTitle}" : sourceId,
                 Status = done ? "DONE" : null,
             });
         }

@@ -48,9 +48,14 @@ public sealed class KS3_5ImportBridgeTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(["P31", "P32", "P33"], result.Stages.Select(s => s.Id));
         Assert.Equal(["Setup", "Tests First (TDD)", "Core Implementation"], result.Stages.Select(s => s.Title));
+        // Position within the phase, NOT the source's T001 — see
+        // ConvertedRowsSurviveTheProviderThatActuallyFeedsTheGraph for why that is not cosmetic.
         Assert.Equal(
-            ["P31.T001", "P31.T002", "P32.T003", "P33.T004", "P33.T005"],
+            ["P31.1", "P31.2", "P32.1", "P33.1", "P33.2"],
             result.Checkpoints.Select(c => c.Id));
+        // The source's task number is not lost — it rides in the title, where nothing parses it.
+        Assert.Equal("T001 Create the project skeleton per implementation plan", result.Checkpoints[0].Title);
+        Assert.Equal("T005 GreetingService in src/services/greeting_service.py", result.Checkpoints[4].Title);
 
         // The document states no ordering of its own, so the linear chain the document IMPLIES is
         // what it gets — not an invented one, and not none at all.
@@ -59,7 +64,7 @@ public sealed class KS3_5ImportBridgeTests : IDisposable
         Assert.Equal(["P32"], result.Stages[2].DependsOn!);
 
         // "[P]" is spec-kit's parallel marker, not part of the task's name.
-        Assert.Equal("Configure linting and formatting", result.Checkpoints[1].Title);
+        Assert.Equal("T002 Configure linting and formatting", result.Checkpoints[1].Title);
     }
 
     /// <summary>Task-Master: a top-level task becomes a stage, its subtasks its checkpoints, and a
@@ -179,6 +184,54 @@ public sealed class KS3_5ImportBridgeTests : IDisposable
         // The raw spec-kit id is the thing that would NOT work — the reason the conversion exists.
         Assert.False(ImportBridge.IsDrivableCheckpointId("T001"));
         Assert.Null(FakeAgentCommand.FirstOpenRow("| T001 | Create the project skeleton | TODO |  |  |", "P31"));
+        // And neither does the obvious repair: the fake agent WOULD claim `P31.T001`, which is
+        // exactly why passing this reader is not enough. See the provider fact below.
+        Assert.Equal("P31.T001", FakeAgentCommand.FirstOpenRow("| P31.T001 | x | TODO |  |  |", "P31"));
+        Assert.False(ImportBridge.IsDrivableCheckpointId("P31.T001"));
+    }
+
+    /// <summary>
+    /// The fact that cost a whole live run to learn, and the only one here that could have caught it.
+    /// <para>A converted board reaches the engine's schedule through the markdown-table progress
+    /// provider, which builds its row regex from <c>ProgressConventions.StageIdPattern</c>
+    /// (Models/ProgressConventions.cs:24) — and that pattern takes only DIGITS after the dot. A row
+    /// it cannot read is skipped in silence, so ids that satisfy every regex named in this
+    /// checkpoint's contract still produced <c>work-graph sync: 0 added · 3 scaffolded</c> on a real
+    /// <c>demo --from</c>: the five converted tasks were thrown away, one placeholder per stage was
+    /// invented in their place, and the run drove those to DONE and reported success.</para>
+    /// <para>So this asserts the round trip that matters — convert, write the tracker the scaffold
+    /// writes, and read it back through the REAL provider — and counts the rows. Asserting the fake
+    /// agent's regexes cannot see this failure; nothing else in this file can either.</para>
+    /// </summary>
+    [Theory]
+    [InlineData("speckit", "tasks.md", 5)]
+    [InlineData("taskmaster", "tasks.json", 4)]
+    [InlineData("checklist", "checklist.md", 5)]
+    public void ConvertedRowsSurviveTheProviderThatActuallyFeedsTheGraph(string kind, string name, int expected)
+    {
+        var imported = DemoCommand.LoadImport(Fixture(kind, name));
+        Assert.NotNull(imported);
+        Assert.Equal(expected, imported.Checkpoints);
+
+        var dir = Path.Combine(_dir, kind);
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "TRACKER.md"), imported.Tracker);
+        var planPath = Path.Combine(dir, "conductor.plan.json");
+        File.WriteAllText(planPath, DemoCommand.PlanJson(dir, "/usr/local/bin/conductor", imported.StagesJson));
+        var plan = PlanConfig.Load(planPath);
+
+        var declared = ProgressProviderFactory.Create(plan).Read(plan);
+
+        // Every converted row, read back — not "some", and not the placeholders a zero-row sync
+        // would scaffold (which would be one per stage, and would still look like a healthy board).
+        Assert.Equal(expected, declared.Checkpoints.Count);
+        var ids = ImportBridge.Read(Read(kind, name)).Result!.Checkpoints.Select(c => c.Id).ToList();
+        Assert.Equal(ids, declared.Checkpoints.Select(c => c.Id));
+
+        // And each row lands under the stage the plan declares, by the provider's OWN derivation —
+        // a row that parses but hangs off no stage is scheduled by nothing.
+        var stageIds = plan.Stages.Select(s => s.Id).ToHashSet(StringComparer.Ordinal);
+        Assert.All(declared.Checkpoints, c => Assert.Contains(c.StageId, stageIds));
     }
 
     /// <summary>Every bridge's output, not just spec-kit's: an id shape that only holds for the

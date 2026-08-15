@@ -17,6 +17,11 @@ Windows-only. Paths below use Windows separators; substitute yours.
 credentials and no spend. Do that first — it answers "does this work here" in seconds, and the rest
 of this guide is about pointing it at *your* work.
 
+**Already have a board?** `conductor demo --from <file>` drives *yours* instead of the built-in
+one — a spec-kit `tasks.md`, a Task-Master `tasks.json`, or a plain markdown checklist — converted
+with no model call, still in a throwaway directory with no credentials. The same three bridges are
+what `conductor plan import` uses, so what you see driven is what you would get.
+
 ## 1. Build conductor
 
 ```bash
@@ -494,7 +499,11 @@ conductor plan <verb> [options]
   set <key> <value>          Hot-update a plan field (limits.stallMinutes 15)
   reload                     Re-read + validate plan JSON
   add-stage <json>           Append a new stage
-  import <file|"text">       Turn a document or prose into stages and declared work
+  import <file|"text">       Turn a document or prose into stages and declared work.
+                             Read with no model call, by content not filename: a
+                             conductor plan/tracker, a spec-kit tasks.md, a
+                             Task-Master tasks.json, a markdown checklist. Anything
+                             else falls through to the advisor (which does spend).
 
 conductor audit <STAGE> [options]
   -p, --plan <PATH>
