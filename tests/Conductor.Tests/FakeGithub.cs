@@ -73,6 +73,16 @@ internal sealed class FakeGithub : HttpMessageHandler
     /// "converges on reconnect" a real round trip rather than two unrelated fixtures.</summary>
     public string? Outage { get; set; }
 
+    /// <summary>KS9.2 — per-request latency. A fake that answers instantly cannot tell a mirror that
+    /// WAITS for its in-flight pass at shutdown from one that races it and usually wins.</summary>
+    public TimeSpan Latency { get; set; }
+
+    /// <summary>KS9.2 — GitHub's own eventual consistency, reproduced. MEASURED live: a pass created
+    /// four issues and a list two seconds later showed none of them, so the next pass created four
+    /// more. With this set the LIST endpoints answer empty while the by-number GET still reads
+    /// through, which is exactly the shape that produced two copies of one board.</summary>
+    public bool ListsAreStale { get; set; }
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
         var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
@@ -82,6 +92,7 @@ internal sealed class FakeGithub : HttpMessageHandler
             request.Headers.UserAgent.ToString(), request.Headers.Accept.ToString(),
             request.Headers.Authorization?.ToString()));
 
+        if (Latency > TimeSpan.Zero) await Task.Delay(Latency, ct).ConfigureAwait(false);
         if (Outage is { } why) throw new HttpRequestException(why);
 
         var json = Route(request.Method.Method, path, request.RequestUri.Query, body);
@@ -100,7 +111,9 @@ internal sealed class FakeGithub : HttpMessageHandler
         if (tail is ["issues"]) return method == "POST" ? CreateIssue(body) : ListIssues(query);
         if (tail is ["milestones"]) return method == "POST" ? CreateMilestone(body) : ListMilestones(query);
         if (tail is ["issues", var n] && int.TryParse(n, CultureInfo.InvariantCulture, out var number))
-            return PatchIssue(number, body);
+            // The by-number read is NOT stale even when the listing is — that asymmetry is the real
+            // API's, and it is what makes reconciling against the actual document possible at all.
+            return method == "GET" ? Serialize(_issues[number]) : PatchIssue(number, body);
         if (tail is ["issues", var m, "comments"] && int.TryParse(m, CultureInfo.InvariantCulture, out var owner))
             return method == "POST" ? AddComment(owner, body) : ListComments(owner, query);
         return "{}";
@@ -111,7 +124,7 @@ internal sealed class FakeGithub : HttpMessageHandler
         query.Contains("page=", StringComparison.Ordinal) && !query.Contains("page=1", StringComparison.Ordinal);
 
     private string ListIssues(string query) =>
-        PastFirstPage(query) ? "[]" : "[" + string.Join(",", _issues.Values.Select(Serialize)) + "]";
+        PastFirstPage(query) || ListsAreStale ? "[]" : "[" + string.Join(",", _issues.Values.Select(Serialize)) + "]";
 
     private string ListMilestones(string query) =>
         PastFirstPage(query)
@@ -120,7 +133,7 @@ internal sealed class FakeGithub : HttpMessageHandler
                 $"{{\"number\":{Num(kv.Value)},\"title\":{Str(kv.Key)},\"state\":\"open\"}}")) + "]";
 
     private string ListComments(int issue, string query) =>
-        PastFirstPage(query)
+        PastFirstPage(query) || ListsAreStale
             ? "[]"
             : "[" + string.Join(",", (_comments.TryGetValue(issue, out var list) ? list : [])
                 .Select((b, i) => $"{{\"id\":{Num(i + 1)},\"body\":{Str(b)}}}")) + "]";

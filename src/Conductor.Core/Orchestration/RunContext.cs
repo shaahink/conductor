@@ -69,6 +69,18 @@ public sealed class RunContext
     /// this whole design exists to avoid.</remarks>
     public void MirrorBoard(string reason, string? runStatus = null) => _ = Mirror?.Fire(reason, runStatus);
 
+    /// <summary>Shutdown: wait for whatever pass is in flight, then release the mirror. MEASURED on
+    /// the live rig — a run in once-mode returns from the loop the instant its session ends, and
+    /// releasing without draining disposed the HttpClient mid-pass, leaving one issue of a three-card
+    /// board on GitHub and a cancellation where a real error belonged.</summary>
+    public void DetachMirror(TimeSpan budget)
+    {
+        if (Mirror is not { } mirror) return;
+        try { mirror.DrainAsync(budget).Wait(budget + TimeSpan.FromSeconds(5)); }
+        catch (AggregateException ex) { Log($"github mirror: drain failed — {ex.InnerException?.Message ?? ex.Message}"); }
+        AttachMirror(null);
+    }
+
     /// <summary>The LAST pass, at run completion, waited for under a budget. Every other boundary is
     /// fire-and-forget because another one is coming; this one has nothing behind it, and a process
     /// that exited while the closing pass was in flight would leave the diary issue open on a run

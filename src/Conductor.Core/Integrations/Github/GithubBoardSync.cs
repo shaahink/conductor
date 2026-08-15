@@ -22,9 +22,14 @@ namespace Conductor.Core.Integrations.Github;
 /// <para><b>One direction.</b> Observed issues answer exactly one question — which issue is ours —
 /// and never influence what the run believes. D-7 / A16 / ADR 0005.</para>
 /// </summary>
-public sealed class GithubBoardSync(GithubClient client, string repo, string labelPrefix)
+public sealed class GithubBoardSync(GithubClient client, string repo, string labelPrefix, GithubMap? map = null)
 {
     private readonly string _prefix = string.IsNullOrWhiteSpace(labelPrefix) ? "conductor" : labelPrefix.Trim();
+
+    /// <summary>KS9.2 — what THIS run has already created here, remembered locally. The listing below
+    /// is a read replica: it does not show a just-created issue for seconds, which is how one process
+    /// once put two complete copies of a board on one repository. See <see cref="GithubMap"/>.</summary>
+    private readonly GithubMap _map = map ?? GithubMap.Transient();
 
     /// <summary>Push a whole run — board then diary. <paramref name="dryRun"/> reconciles and
     /// reports without issuing a single write, which is what makes "what would this do to a real
@@ -62,7 +67,17 @@ public sealed class GithubBoardSync(GithubClient client, string repo, string lab
         foreach (var card in desired)
         {
             var milestone = await milestones.NumberForAsync(card.Stage, result, ct).ConfigureAwait(false);
-            if (!byTask.TryGetValue(card.TaskId, out var existing))
+            if (!byTask.TryGetValue(card.TaskId, out var existing) && _map.IssueFor(card.TaskId) is { } known)
+            {
+                // The listing did not show it and the local map says we made it. The listing is stale,
+                // not wrong-in-principle: fetch that ONE issue by number, which reads through, and
+                // reconcile against the real document so never-clobber still holds.
+                var (fetched, fetchError) = await client.GetIssueAsync(repo, known, ct).ConfigureAwait(false);
+                if (fetched is not null) existing = fetched;
+                else result.Errors.Add($"{card.TaskId}: issue #{known} is in the local map but unreadable ({fetchError})");
+            }
+
+            if (existing is null)
             {
                 result.Created.Add(card.TaskId);
                 if (dryRun) continue;
@@ -78,12 +93,19 @@ public sealed class GithubBoardSync(GithubClient client, string repo, string lab
                 if (error is not null) { result.Errors.Add($"{card.TaskId}: {error}"); result.Created.Remove(card.TaskId); continue; }
                 if (made is not null)
                 {
+                    // Recorded the moment GitHub answers, and BEFORE the close below: a crash between
+                    // the two costs an open issue that the next pass closes, not a second issue.
+                    _map.RecordIssue(card.TaskId, made.Number);
                     result.Urls[card.TaskId] = made.HtmlUrl;
                     if (card.Closed)
                         await CloseAsync(made.Number, card, result, ct).ConfigureAwait(false);
                 }
                 continue;
             }
+
+            // Also learn from the listing: an issue an EARLIER run of this plan created is ours too,
+            // and the map is what stops the next pass re-deciding that from a replica.
+            _map.RecordIssue(card.TaskId, existing.Number);
 
             var patch = Diff(card, existing, milestone);
             if (patch is null) { result.Unchanged.Add(card.TaskId); continue; }
@@ -180,10 +202,19 @@ public sealed class GithubBoardSync(GithubClient client, string repo, string lab
     {
         var marker = GithubIdentity.RunMarker(diary.RunId);
         var existing = observed.Find(i => i.Body?.Contains(marker, StringComparison.Ordinal) == true);
+        var runKey = "run:" + diary.RunId;
+        if (existing is null && _map.IssueFor(runKey) is { } knownRun)
+        {
+            // Same replica lag as the cards, and worse if it wins: a duplicate diary issue takes the
+            // comment history with it, and the history is the reason to mirror at all.
+            var (fetched, fetchError) = await client.GetIssueAsync(repo, knownRun, ct).ConfigureAwait(false);
+            if (fetched is not null) existing = fetched;
+            else result.Errors.Add($"run issue: #{knownRun} is in the local map but unreadable ({fetchError})");
+        }
         int number;
         if (existing is null)
         {
-            result.Created.Add("run:" + diary.RunId);
+            result.Created.Add(runKey);
             if (dryRun) { result.Comments.AddRange(diary.Comments.Select(c => c.Key)); return; }
             var (made, error) = await client.CreateIssueAsync(repo, new GithubIssueRequest
             {
@@ -194,21 +225,23 @@ public sealed class GithubBoardSync(GithubClient client, string repo, string lab
             if (error is not null || made is null)
             {
                 result.Errors.Add($"run issue: {error ?? "no issue returned"}");
-                result.Created.Remove("run:" + diary.RunId);
+                result.Created.Remove(runKey);
                 return;
             }
             number = made.Number;
-            result.Urls["run:" + diary.RunId] = made.HtmlUrl;
+            _map.RecordIssue(runKey, number);
+            result.Urls[runKey] = made.HtmlUrl;
         }
         else
         {
             number = existing.Number;
-            result.Urls["run:" + diary.RunId] = existing.HtmlUrl;
+            _map.RecordIssue(runKey, number);
+            result.Urls[runKey] = existing.HtmlUrl;
             if (SameText(diary.Body, existing.Body) && diary.Closed != existing.IsOpen)
-                result.Unchanged.Add("run:" + diary.RunId);
+                result.Unchanged.Add(runKey);
             else
             {
-                result.Updated.Add("run:" + diary.RunId);
+                result.Updated.Add(runKey);
                 if (!dryRun)
                 {
                     var (_, error) = await client.UpdateIssueAsync(repo, number, new GithubIssueRequest
@@ -242,11 +275,14 @@ public sealed class GithubBoardSync(GithubClient client, string repo, string lab
         foreach (var comment in diary.Comments)
         {
             var key = GithubIdentity.SessionKeyIn(comment.Key) ?? comment.Key;
-            if (seen.Contains(key)) continue;
+            // The listing OR the local map. A comment endpoint is a read replica like every other one,
+            // and a duplicated diary comment is the most visible way for a mirror to look broken.
+            if (seen.Contains(key) || _map.CommentPosted(key)) continue;
             result.Comments.Add(key);
             if (dryRun) continue;
             var (_, postError) = await client.CreateCommentAsync(repo, number, comment.Body, ct).ConfigureAwait(false);
             if (postError is not null) result.Errors.Add($"session comment {key}: {postError}");
+            else _map.RecordComment(key, number);
         }
     }
 }

@@ -90,6 +90,14 @@ public sealed class GithubClient : IDisposable
             JsonSerializer.Serialize(request, GithubJsonContext.Default.GithubIssueRequest),
             GithubJsonContext.Default.GithubIssue, ct);
 
+    /// <summary>KS9.2 — ONE issue, by number. The list endpoint is a read replica and does not show a
+    /// just-created issue for seconds (measured live: four issues created, invisible to a list two
+    /// seconds later). When the local map says we made an issue the listing does not show, this is
+    /// what lets the pass diff against the real document instead of blind-writing over it.</summary>
+    public Task<(GithubIssue? Value, string? Error)> GetIssueAsync(
+        string repo, int number, CancellationToken ct = default) =>
+        GetAsync($"/repos/{repo}/issues/{Num(number)}", GithubJsonContext.Default.GithubIssue, ct);
+
     public Task<(GithubIssue? Value, string? Error)> UpdateIssueAsync(
         string repo, int number, GithubIssueRequest request, CancellationToken ct = default) =>
         SendJsonAsync(HttpMethod.Patch, $"/repos/{repo}/issues/{Num(number)}",

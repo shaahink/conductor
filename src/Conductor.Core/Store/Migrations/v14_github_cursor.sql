@@ -28,3 +28,30 @@ CREATE TABLE IF NOT EXISTS github_cursor (
     last_error   TEXT,
     PRIMARY KEY (run_id, repo)
 );
+
+-- The local map: what this run has already created on that destination, and where.
+--
+-- MEASURED on the live rig, against the real API, in one process: the REST issues LIST endpoint is
+-- EVENTUALLY CONSISTENT. A pass created four issues; a second pass two seconds later listed the
+-- repository, saw none of them, and created four more. Eight issues, two complete copies of the same
+-- board. (The rig's own `gh api` call, a different client with a different token, agreed with the
+-- stale view -- so this is GitHub's replica lag, not a cache in the engine.) KS9.1's two live passes
+-- only looked idempotent because they were minutes apart.
+--
+-- So identity may not depend on asking GitHub what exists. The marker in the issue body stays the
+-- identity a HUMAN can read and the thing that lets a lost map be rebuilt, but the authority on "have
+-- I already made this" is local: one row per thing this run has put there. That is also what D-7 /
+-- A16 / ADR 0005 asked for -- decide from the fold and the local map, never from what GitHub says --
+-- for an entirely different reason.
+--
+-- `key` is the task id for a card, `run:<run id>` for the diary issue, and the session marker key for
+-- a diary comment. `kind` separates them so a comment key can never collide with a task id.
+CREATE TABLE IF NOT EXISTS github_map (
+    run_id       TEXT    NOT NULL,
+    repo         TEXT    NOT NULL,
+    key          TEXT    NOT NULL,
+    kind         TEXT    NOT NULL,
+    issue_number INTEGER NOT NULL,
+    created_utc  TEXT    NOT NULL,
+    PRIMARY KEY (run_id, repo, kind, key)
+);

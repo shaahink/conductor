@@ -40,6 +40,32 @@ public sealed partial class SqliteRunStore
             ("@now", DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)),
             ("@err", lastError));
 
+    /// <summary>Everything this run has already created on that destination. The authority on "have I
+    /// already made this" — GitHub's own issue list is a read replica and answers "no" for seconds
+    /// after a create, which is how one process put two complete copies of a board on a repository.</summary>
+    public IReadOnlyList<GithubMapRow> ReadGithubMap(string runId, string repo)
+    {
+        var rows = Query(
+            "SELECT key, kind, issue_number FROM github_map WHERE run_id = @runId AND repo = @repo",
+            ("@runId", runId), ("@repo", repo));
+        return [.. rows.Select(r => new GithubMapRow(
+            (string)r["key"]!, (string)r["kind"]!,
+            (int)Convert.ToInt64(r["issue_number"] ?? 0L, CultureInfo.InvariantCulture)))];
+    }
+
+    /// <summary>Record one. Written the moment GitHub answers a create, BEFORE anything else in the
+    /// pass — a crash between the create and this row is the one gap the marker in the body exists to
+    /// close, and it costs a rebuild rather than a duplicate.</summary>
+    public bool WriteGithubMapEntry(string runId, string repo, string key, string kind, int issueNumber) =>
+        TryExecute(
+            """
+            INSERT INTO github_map (run_id, repo, key, kind, issue_number, created_utc)
+            VALUES (@runId, @repo, @key, @kind, @number, @now)
+            ON CONFLICT(run_id, repo, kind, key) DO UPDATE SET issue_number = @number
+            """,
+            ("@runId", runId), ("@repo", repo), ("@key", key), ("@kind", kind), ("@number", issueNumber),
+            ("@now", DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)));
+
     /// <summary>Record a FAILED pass without moving the mark. The mark and the error are written by
     /// different methods because they mean opposite things: one says "GitHub knows this much", the
     /// other says "the last attempt to tell it did not land".</summary>
@@ -49,6 +75,9 @@ public sealed partial class SqliteRunStore
         return WriteGithubCursor(runId, repo, current.Seq, error);
     }
 }
+
+/// <summary>One <c>github_map</c> row: a thing this run has already put on that destination.</summary>
+public readonly record struct GithubMapRow(string Key, string Kind, int IssueNumber);
 
 /// <summary>One <c>github_cursor</c> row. <see cref="Seq"/> is the event seq GitHub has been told
 /// through; zero means "nothing yet", which is also what a replay asks for.</summary>

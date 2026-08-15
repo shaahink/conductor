@@ -205,6 +205,66 @@ public sealed class KS9_2ReconcilerTests : IDisposable
         Assert.Contains(recovered.Result!.Updated, k => k == "KS9.2");
     }
 
+    // ── the read replica ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>The defect the live rig found second, and the expensive one. GitHub's issue LIST is a
+    /// read replica: one pass created four issues and the pass two seconds behind it listed the
+    /// repository, saw none of them, and created four more — two complete copies of one board, with
+    /// correct code on both ends. KS9.1's identity-by-marker is still right and still what a human
+    /// reads; it just cannot be ASKED of a replica. The local map is the authority, and this is the
+    /// test that says so: the listing lies, completely, and the board stays one board.</summary>
+    [Fact]
+    public async Task AStaleListingCannotTalkTheMirrorIntoASecondCopyOfTheBoard()
+    {
+        SeedFirstSession();
+        using var fake = new FakeGithub();
+        using var mirror = Mirror(fake);
+
+        Assert.True((await mirror.ReconcileAsync("run start").ConfigureAwait(true)).Ok);
+        Assert.Equal(3, IssuePosts(fake));
+        Assert.Equal(1, CommentPosts(fake));
+
+        // Now the replica knows nothing — the exact live shape, at maximum severity.
+        fake.ListsAreStale = true;
+        SeedSecondSession();
+        var blind = await mirror.ReconcileAsync("session 2 end").ConfigureAwait(true);
+
+        Assert.True(blind.Ok);
+        Assert.Equal(3, IssuePosts(fake));    // NOT six
+        Assert.Equal(2, CommentPosts(fake));  // session 2's comment, once — session 1's not re-posted
+        Assert.Empty(blind.Result!.Created);
+
+        // And a third pass, still blind, still changes nothing it has already said.
+        var again = await mirror.ReconcileAsync("owner-gate S1").ConfigureAwait(true);
+        Assert.False(again.Ran);
+        Assert.Equal(3, IssuePosts(fake));
+        Assert.Equal(2, CommentPosts(fake));
+    }
+
+    /// <summary>The map is not a cache in one process's head: a new process reloads it from run.db,
+    /// which is the only reason it survives the once-mode exit that fires every boundary in this
+    /// engine's shortest run.</summary>
+    [Fact]
+    public async Task TheMapIsReloadedByTheNextProcessAndStillBeatsAStaleListing()
+    {
+        SeedFirstSession();
+        using var fake = new FakeGithub();
+        using (var first = Mirror(fake))
+            Assert.True((await first.ReconcileAsync("run start").ConfigureAwait(true)).Ok);
+
+        // Two cards and the diary issue — every issue this run has put there, by key.
+        Assert.Equal(3, _store.ReadGithubMap(RunId, Repo).Count(r => r.Kind == GithubMap.IssueKind));
+        Assert.Contains(_store.ReadGithubMap(RunId, Repo), r => r.Key == "run:" + RunId);
+
+        fake.ListsAreStale = true;
+        SeedSecondSession();
+        using var second = Mirror(fake);
+        Assert.True((await second.ReconcileAsync("run start").ConfigureAwait(true)).Ok);
+
+        Assert.Equal(3, IssuePosts(fake));
+        Assert.Equal(2, CommentPosts(fake));
+    }
+
     // ── the replay ───────────────────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -260,6 +320,73 @@ public sealed class KS9_2ReconcilerTests : IDisposable
         Assert.Equal(3, IssuePosts(fake));
         // Not from now either: session 2's comment is the one thing the dead process owed.
         Assert.Equal(2, CommentPosts(fake));
+    }
+
+    // ── shutdown ─────────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>The defect the live rig found: a run in once-mode returns from the loop the instant
+    /// its session ends, and the teardown used to dispose the mirror while a fired pass was halfway
+    /// through creating a board — one issue on GitHub out of three, no diary, and a cancellation
+    /// where a real error belonged. Fire is fire-and-forget; DRAINING it is what makes the boundary
+    /// pass land in THIS process rather than converge in the next one.</summary>
+    [Fact]
+    public async Task ADrainAtShutdownLetsTheFiredPassFinish()
+    {
+        SeedFirstSession();
+        using var fake = new FakeGithub { Latency = TimeSpan.FromMilliseconds(40) };
+        using var mirror = Mirror(fake);
+
+        var inFlight = mirror.Fire("session 1 end");
+        Assert.False(inFlight.IsCompleted, "the boundary must not have waited");
+
+        await mirror.DrainAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(true);
+
+        Assert.True(inFlight.IsCompleted);
+        Assert.True((await inFlight.ConfigureAwait(true)).Ok);
+        Assert.Equal(3, IssuePosts(fake));                                   // the WHOLE board, not a prefix
+        Assert.True(_store.ReadGithubCursor(RunId, Repo).Seq > 0);
+    }
+
+    /// <summary>The second half of the same live finding. A run-start pass against the real API takes
+    /// seconds; the session that follows takes one. Its session-end boundary lands while the first
+    /// pass is still open, and the first design DROPPED it — so that session's events sat unmirrored
+    /// until the next process. One coalesced follow-up is the fix: however many boundaries fire
+    /// during a pass, exactly one more pass runs, and it carries everything they would have.</summary>
+    [Fact]
+    public async Task ABoundaryThatLandsDuringAPassIsCoalescedIntoAFollowUpNotDropped()
+    {
+        SeedFirstSession();
+        using var fake = new FakeGithub { Latency = TimeSpan.FromMilliseconds(30) };
+        using var mirror = Mirror(fake);
+
+        var slow = mirror.Fire("run start");
+
+        // The next session finishes while that pass is still walking the API.
+        SeedSecondSession();
+        var coalesced = await mirror.ReconcileAsync("session 2 end").ConfigureAwait(true);
+        Assert.False(coalesced.Ran);
+        Assert.Contains("coalesced", coalesced.Error, StringComparison.Ordinal);
+
+        await mirror.DrainAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(true);
+        Assert.True((await slow.ConfigureAwait(true)).Ok);
+
+        // The follow-up ran and carried session 2 — both diary comments are up, in THIS process.
+        Assert.Equal(2, CommentPosts(fake));
+        Assert.Equal(3, IssuePosts(fake));
+        var head = _store.ReadEventsAfter(RunId, 0).Max(e => e.Seq);
+        Assert.Equal(head, _store.ReadGithubCursor(RunId, Repo).Seq);
+    }
+
+    [Fact]
+    public async Task DrainingWithNothingInFlightCostsNothing()
+    {
+        SeedFirstSession();
+        using var fake = new FakeGithub();
+        using var mirror = Mirror(fake);
+
+        await mirror.DrainAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(true);
+        Assert.Empty(fake.Requests);
+        Assert.Equal(0L, _store.ReadGithubCursor(RunId, Repo).Seq);
     }
 
     // ── nothing inbound ──────────────────────────────────────────────────────────────────────────

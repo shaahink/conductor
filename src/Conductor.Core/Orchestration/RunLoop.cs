@@ -485,9 +485,10 @@ public sealed partial class RunLoop
         finally
         {
             _ctx.DisposeTranscript();
-            // KS9.2: the mirror owns an HttpClient. Attached at run start, released here — and never
-            // in between, because a pass in flight at teardown is a pass whose cursor must not move.
-            _ctx.AttachMirror(null);
+            // KS9.2: the mirror owns an HttpClient. Attached at run start, DRAINED then released
+            // here — a pass in flight at teardown must be allowed to finish, or a once-mode run
+            // publishes a board it was halfway through writing.
+            _ctx.DetachMirror(TimeSpan.FromSeconds(60));
             ReleaseLock();
         }
     }

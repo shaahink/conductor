@@ -211,6 +211,12 @@ public interface IRunStore : IDisposable
     /// <summary>Record a failed pass. The mark does not move — that is the point.</summary>
     bool RecordGithubSyncError(string runId, string repo, string error);
 
+    /// <summary>Everything this run has already created on that destination. GitHub's issue list is a
+    /// read replica and answers "no" for seconds after a create; this is the authority instead.</summary>
+    IReadOnlyList<GithubMapRow> ReadGithubMap(string runId, string repo);
+
+    bool WriteGithubMapEntry(string runId, string repo, string key, string kind, int issueNumber);
+
     // ---------------------------------------------------------------- raw query (read-only, parametrized)
 
     IReadOnlyList<Dictionary<string, object?>> Query(string sql, params (string Name, object? Value)[] parameters);

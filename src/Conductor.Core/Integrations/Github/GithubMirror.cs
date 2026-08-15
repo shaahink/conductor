@@ -41,6 +41,7 @@ public sealed class GithubMirror : IDisposable
     private readonly bool _includeDiary;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private int _disposed;
+    private int _coalesced;
 
     public string RunId { get; }
     public string Repo { get; }
@@ -63,8 +64,16 @@ public sealed class GithubMirror : IDisposable
         _log = log;
         _includeDiary = includeDiary;
         _client = new GithubClient(token, TimeSpan.FromSeconds(30), handler, disposeHandler: handler is null);
-        _sync = new GithubBoardSync(_client, repo, labelPrefix);
+
+        // The local map is loaded ONCE and written through on every create. GitHub's issue list is a
+        // read replica — measured live: four issues created, invisible to a list two seconds later,
+        // four more created — so "have I already made this" is answered from here, not from there.
+        _map = new GithubMap((key, kind, number) => store.WriteGithubMapEntry(RunId, Repo, key, kind, number));
+        foreach (var row in store.ReadGithubMap(runId, repo)) _map.Seed(row.Key, row.Kind, row.IssueNumber);
+        _sync = new GithubBoardSync(_client, repo, labelPrefix, _map);
     }
+
+    private readonly GithubMap _map;
 
     /// <summary>The mirror for this run, or null when the plan has not asked for one. Off by default
     /// means absent: a null <c>github</c> block, <c>enabled: false</c>, <c>liveMirror: false</c>, no
@@ -107,12 +116,17 @@ public sealed class GithubMirror : IDisposable
     {
         if (Volatile.Read(ref _disposed) != 0) return GithubMirrorPass.Idle(reason, "mirror disposed");
 
-        // A boundary that fires while a pass is in flight does NOT queue a second one: the next pass
-        // reads the same store and would compute the same board, so waiting for the gate would only
-        // buy a duplicate diff. It is dropped, and the cursor it did not advance means the following
-        // boundary picks its events up.
+        // A boundary that fires while a pass is in flight is COALESCED into one follow-up rather than
+        // queued or dropped. Dropping it was the first design and the live rig refuted it: a run-start
+        // pass against the real API takes seconds, the session that follows takes one, and its
+        // session-end boundary was thrown away — so that session's events waited for the NEXT process.
+        // Queuing every boundary would instead let a slow network build a backlog of identical diffs.
+        // One flag: however many boundaries fire during a pass, exactly one more pass follows it.
         if (!await _gate.WaitAsync(0, ct).ConfigureAwait(false))
-            return GithubMirrorPass.Idle(reason, "a pass is already running");
+        {
+            Interlocked.Exchange(ref _coalesced, 1);
+            return GithubMirrorPass.Idle(reason, "a pass is already running — coalesced into the next");
+        }
 
         var before = _client.RequestCount;
         try
@@ -170,6 +184,11 @@ public sealed class GithubMirror : IDisposable
         finally
         {
             _gate.Release();
+            // The coalesced follow-up starts only after the gate is free, and is TRACKED — a drain
+            // that returned while this one was still starting would truncate exactly the pass the
+            // coalescing was invented to save.
+            if (Interlocked.Exchange(ref _coalesced, 0) == 1 && Volatile.Read(ref _disposed) == 0)
+                _ = Track(Task.Run(() => ReconcileAsync(reason + " +coalesced", runStatusOverride, CancellationToken.None)));
         }
     }
 
@@ -177,7 +196,51 @@ public sealed class GithubMirror : IDisposable
     /// the task so a shutdown path can wait for it; callers on the hot path ignore it, and because
     /// <see cref="ReconcileAsync"/> cannot throw there is no fault to observe.</summary>
     public Task<GithubMirrorPass> Fire(string reason, string? runStatusOverride = null) =>
-        Task.Run(() => ReconcileAsync(reason, runStatusOverride, CancellationToken.None));
+        Track(Task.Run(() => ReconcileAsync(reason, runStatusOverride, CancellationToken.None)));
+
+    // Every pass ever fired that has not finished. MEASURED, live: a run in once-mode returns from
+    // the loop the instant its session ends, and a teardown that did not wait disposed the HttpClient
+    // out from under a pass halfway through creating a board — one issue on GitHub out of three, no
+    // diary, and a cancellation where a real error belonged. Tracking only the LAST fire was the
+    // second version of this bug and the rig refuted that too: the last fire is usually the one that
+    // was coalesced and returned instantly, while the pass that mattered was still running.
+    private readonly List<Task> _fired = [];
+
+    private Task<GithubMirrorPass> Track(Task<GithubMirrorPass> task)
+    {
+        lock (_fired)
+        {
+            _fired.RemoveAll(t => t.IsCompleted);
+            _fired.Add(task);
+        }
+        return task;
+    }
+
+    /// <summary>Wait for every pass in flight, so a process may exit without truncating one. Bounded:
+    /// the budget expiring is not an error, because the cursor did not move and the next process's
+    /// run-start pass pushes the same batch. The loop re-checks after each wait, because a coalesced
+    /// follow-up is born inside the pass being waited for.</summary>
+    public async Task DrainAsync(TimeSpan budget)
+    {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        while (true)
+        {
+            Task[] pending;
+            lock (_fired)
+            {
+                _fired.RemoveAll(t => t.IsCompleted);
+                pending = [.. _fired];
+            }
+            if (pending.Length == 0) return;
+
+            var left = budget - clock.Elapsed;
+            if (left <= TimeSpan.Zero) break;
+            var all = Task.WhenAll(pending);
+            if (!ReferenceEquals(await Task.WhenAny(all, Task.Delay(left)).ConfigureAwait(false), all)) break;
+        }
+        _log($"github mirror: a pass was still running after {budget.TotalSeconds:0}s at shutdown — " +
+             "the cursor did not move, so the next run pushes the same batch");
+    }
 
     /// <summary>The run's identity as the diary header wants it. Read from the store, so a resumed
     /// run's header says what the row says rather than what this process happens to remember.</summary>
