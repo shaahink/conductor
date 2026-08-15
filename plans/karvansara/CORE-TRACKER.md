@@ -4,25 +4,24 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS9.3 CLAIMED SKIPPED - the contract's own refusal branch, not a failure. STAGE KS9 IS CLOSED.
-  The gate IS the project half: no GraphQL mutation path is merged, because the scope to exercise one
-  against a real board was never granted and half-done is worse than skipped. Evidence
-  .conductor/evidence/KS9/ks9-3-projects-scope.md. Owner action for KS10.1's ledger: `gh auth refresh
-  -s project` once, then a later stage writes the mutation.
-measured LIVE, fresh build, real api.github.com, real scope-less token, five cases all exit 2: the
-  scope refusal names all four obligations, and the six scopes came from the LIVE X-OAuth-Scopes
-  header on GET /user and agree with gh auth status VERBATIM - measured, not transcribed. Zero
-  mutations proved on real GitHub: the KS9.2 scratch repo had 4 issues before and 4 after. With the
-  scope GRANTED the gate still refuses and says the board is not implemented; falling silent there
-  would read exactly like a board being mirrored. board/projectNumber had ZERO readers in src while
-  plan-config.md already promised the refusal - that promise is now true.
-red, and NEITHER is KS9.3's: ratchet 43 pragmas vs ceiling 38 (bug #44) - measured 43 at 5ff45e3 and
-  43 at HEAD, so this stage adds zero; do not raise the ceiling. And SF7_1DocsMatchReality was
-  ALREADY failing on entry - KS9.2 shipped github.liveMirror with no plan-config row. Fixed, 22/22.
-trap for any test needing a GitHub token: CONDUCTOR_GITHUB_TOKEN is process-global and
-  KS9_1GithubTokenTests clears it; xUnit runs classes in parallel and a mirror vanished mid-test.
-  Write the token to the plan's own secrets.local.json instead.
+last: FIX session #21. The battery's four reds are down and the tree is GREEN. Stage KS9 stays closed
+  (9.1/9.2 DONE, 9.3 SKIPPED); no checkpoint changed status, KS9.2 got an --amend recording that it
+  claimed DONE on a red tree. Evidence .conductor/evidence/KS9/ks9-fix-battery-green.md.
+three schema pins moved 13 -> 14 because KS9.2's own v14_github_cursor.sql took CurrentVersion to 14
+  and left them behind (RunDbTests, renamed to Schema_version_is_fourteen; K3_3ProvenanceTests:321;
+  K4_1ContextWindowTests:285). Those literals exist to force the bump to be DECIDED - that decision
+  is made, out loud, with the migration in hand. Nothing relaxed: still exact literals.
+ratchet: RunContext.cs 514 -> 459 by moving the mirror surface into a new partial
+  RunContext.Mirror.cs. architecture-baseline.json is still {} and lineCeiling is still 500 - the
+  baseline is EMPTY, so a split was the only legal fix and a debt entry was never an option.
+TRAP, and it cost a whole extra run: TWO architecture tests key on FILE NAME. The ratchet's per-file
+  ceiling, and ArchitectureBoundaryTests' GithubMirror allowlist (only RunContext.cs and
+  RunLoop.Plumbing.cs may name it under Orchestration). A split satisfies one and breaks the other.
+  Check both. A targeted filter went 10/10 and missed it; only the full suite found it.
+numbers: full suite 2645/2646 (the one red was the boundary test, fixed after), then 19/19
+  architecture green. Bug #44 (43 pragmas vs ceiling 38) is untouched, still open, owner decision.
 then: KS10.1, then KS10.2.
+
 
 ## Baseline numbers (from run.db)
 
@@ -94,7 +93,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | KS9.1 | SecretsStore gains the GitHub token field with the env override, a raw-HttpClient client lands on the ReleaseClient pattern, and github sync --backfill posts a finished run's board and diary to a scratch repo - re-running mints zero duplicates, off by default, nothing inbound | DONE | 95b0237 | .conductor/evidence/KS9/ks9-1-backfill.md |
 | KS9.2 | The live mirror reconciles over ReadEventsAfter - batched, network-failure-proof, cursor-resumable - a mid-run network kill leaves the run unharmed and the board converges on reconnect with zero duplicates | DONE | 70ae34a | .conductor/evidence/KS9/ks9-2-live-mirror.md |
-| KS9.3 | Projects v2 board via GraphQL mirrors stage status - or, without the one-time project-scope grant, reports the precise refusal and stays SKIPPED rather than half-done | TODO | - | - |
+| KS9.3 | Projects v2 board via GraphQL mirrors stage status - or, without the one-time project-scope grant, reports the precise refusal and stays SKIPPED rather than half-done | SKIPPED | - | .conductor/evidence/KS9/ks9-3-projects-scope.md |
 
 ### KS10 — Ship core
 
