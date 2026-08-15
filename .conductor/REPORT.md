@@ -1,11 +1,11 @@
 ﻿# Conductor — Karvansara core - the open door run report
 
-_Updated 2026-08-15 00:40 UTC · branch `feat/karvansara` · HEAD `c3cadc3`_
+_Updated 2026-08-15 01:08 UTC · branch `feat/karvansara` · HEAD `1264a7b`_
 
-**Status:** NeedsHuman — stage KS3 used all 10 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Environment credential error (Claude subscription/API key disabled) — orchestrator cannot proceed without user providing valid API access. [0s ago, 00:40:23Z]
-**Stage:** KS3 — Authoring - no human writes JSON · attempts used 10 · working ▸ KS3.5
-**Checkpoints:** 25/32 done · **Sessions run:** 16 · **Cost:** $63.4222 (agent $63.3242 + gates $0.0979) · **Tokens:** 1,082,945 in / 446,938 out
-**Confirmed phases:** KS0, KS1, KS2
+**Status:** Idle — stage KS3 used all 10 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Environment credential error (Claude subscription/API key disabled) — orchestrator cannot proceed without user providing valid API access. [28m ago, 00:40:23Z]
+**Stage:** KS5 — Spend - every dollar the tool can spend is governed · attempts used 0
+**Checkpoints:** 26/32 done · **Sessions run:** 17 · **Cost:** $69.2843 (agent $69.1792 + gates $0.1051) · **Tokens:** 1,199,657 in / 497,539 out
+**Confirmed phases:** KS0, KS1, KS2, KS3, KS5
 
 ## Stage progress
 
@@ -14,8 +14,8 @@ _Updated 2026-08-15 00:40 UTC · branch `feat/karvansara` · HEAD `c3cadc3`_
 | KS0 | Leftovers - the catalogue stops corrupting itself | ██████████ 3/3 | confirmed ✓ |
 | KS1 | Truth - every read surface reconciles | ██████████ 6/6 | confirmed ✓ |
 | KS2 | The open door - bare conductor is the app, and every section reads | ██████████ 8/8 | confirmed ✓ |
-| KS3 | Authoring - no human writes JSON | ████████░░ 4/5 | **← active** |
-| KS5 | Spend - every dollar the tool can spend is governed | ██████████ 4/4 | gating… |
+| KS3 | Authoring - no human writes JSON | ██████████ 5/5 | confirmed ✓ |
+| KS5 | Spend - every dollar the tool can spend is governed | ██████████ 4/4 | confirmed ✓ |
 | KS9 | The far door - GitHub is the remotest view | ░░░░░░░░░░ 0/3 | todo |
 | KS10 | Ship core | ░░░░░░░░░░ 0/3 | todo |
 
@@ -57,7 +57,7 @@ _Updated 2026-08-15 00:40 UTC · branch `feat/karvansara` · HEAD `c3cadc3`_
 
 </details>
 
-<details><summary>KS3 — Authoring - no human writes JSON (4/5)</summary>
+<details> ✅<summary>KS3 — Authoring - no human writes JSON (5/5)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
@@ -65,7 +65,7 @@ _Updated 2026-08-15 00:40 UTC · branch `feat/karvansara` · HEAD `c3cadc3`_
 | KS3.2 | The editor stops destroying: comment header preserved across plan set, add-stage and import, no silent progress-kind or gate-timeout rewrites - the add-a-stage replay diffs to only the stage | ✅ DONE | [`883dda0`](https://github.com/shaahink/conductor/commit/883dda0) |
 | KS3.3 | Schema honesty: the eight undocumented keys documented, mutatingLanes removed or wired, doctor warns on inert keys, and plan-config.md matches PlanConfig under the docs-match-reality pin | ✅ DONE | [`883dda0`](https://github.com/shaahink/conductor/commit/883dda0) |
 | KS3.4 | conductor preflight runs the launch drill as one verb - doctor, journey, dry-run compose, version-versus-release, rebuild check, escalation-block check - one verdict, each seeded drill failure caught | ✅ DONE | [`2de11fe`](https://github.com/shaahink/conductor/commit/2de11fe) |
-| KS3.5 | Import bridges: a spec-kit tasks.md, a Task-Master tasks.json and a plain markdown checklist each convert to a plan, and the spec-kit sample drives conductor demo to completion | 🔄 IN PROGRESS | - |
+| KS3.5 | Import bridges: a spec-kit tasks.md, a Task-Master tasks.json and a plain markdown checklist each convert to a plan, and the spec-kit sample drives conductor demo to completion | ✅ DONE | [`efa8327`](https://github.com/shaahink/conductor/commit/efa8327) |
 
 </details>
 
@@ -120,6 +120,7 @@ _Updated 2026-08-15 00:40 UTC · branch `feat/karvansara` · HEAD `c3cadc3`_
 | 14 | KS3 | Deliver | 8 | 08-15 00:18 | 0:00 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
 | 15 | KS3 | Deliver | 9 | 08-15 00:18 | 0:00 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
 | 16 | KS3 | Deliver | 10 | 08-15 00:18 | 0:00 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
+| 17 | KS3 | Deliver | 1 | 08-15 00:41 | 0:21 | Advanced | KS3.5 | 2 | engine-fast:OK · face-fast:OK | $5.8550 | $0.0071 | 116,712/50,601 |
 
 ## Money
 
@@ -127,30 +128,18 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 15 | 84M | 98.2% | $63.45 | 25 | 3.36M | $2.54 |
+| **run total** | 16 | 91M | 98.1% | $69.31 | 26 | 3.5M | $2.67 |
 | stage KS0 | 5 | 59.3M | 98.1% | $45.73 | 24 | 2.47M | $1.91 |
-| stage KS3 | 10 | 24.7M | 98.5% | $17.72 | 1 | 24.7M | $17.72 |
-| 2026-08 | 15 | 84M | 98.2% | $63.45 | 25 | 3.36M | $2.54 |
+| stage KS3 | 11 | 31.7M | 98.3% | $23.58 | 2 | 15.9M | $11.79 |
+| 2026-08 | 16 | 91M | 98.1% | $69.31 | 26 | 3.5M | $2.67 |
 
-_Where the money goes: agent $63.32 (100%) · gate $0.10 (0%) · advisor $0.03 (0%) · blended $0.76/M tokens._
+_Where the money goes: agent $69.18 (100%) · gate $0.11 (0%) · advisor $0.03 (0%) · blended $0.76/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-15 01:17:16  ▪ gate engine-fast pass [session]  (0.0s)
-08-15 01:17:16  ▪ gate face-fast pass [session]  (0.0s)
-08-15 01:17:21  ■ needs human — advisor: human intervention required
-08-15 01:17:21  • session #9 KS3 → AgentError  (11.9s)
-08-15 01:17:22  • session #10 KS3 Deliver started (attempt 4/10)
-08-15 01:17:28  ▪ gate engine-fast pass [session]  (0.0s)
-08-15 01:17:28  ▪ gate face-fast pass [session]  (0.0s)
-08-15 01:17:32  ■ needs human — advisor: human intervention required
-08-15 01:17:33  • session #10 KS3 → AgentError  (11.5s)
-08-15 01:17:33  • session #11 KS3 Deliver started (attempt 5/10)
-08-15 01:17:40  ▪ gate engine-fast pass [session]  (0.0s)
-08-15 01:17:40  ▪ gate face-fast pass [session]  (0.0s)
 08-15 01:17:44  ■ needs human — advisor: human intervention required
 08-15 01:17:45  • session #11 KS3 → AgentError  (11.8s)
 08-15 01:17:45  • session #12 KS3 Deliver started (attempt 6/10)
@@ -179,6 +168,18 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-15 01:18:45  ■ needs human — advisor: human intervention required
 08-15 01:18:46  • session #16 KS3 → AgentError  (11.8s)
 08-15 01:18:50  ■ needs human — stage KS3 used all 10 attempts without completing — inspect and `conductor resume` (or `conductor skip`)
+08-15 01:40:23  ■ needs human — stage KS3 used all 10 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Environment credential error (Claude subscription/API key disabled) — orchestrator cannot proceed without user providing valid API access.
+08-15 01:41:23  • session #17 KS3 Deliver started (attempt 1/10)
+08-15 02:04:12  ▪ gate engine-fast pass [session]  (58.2s)
+08-15 02:04:12  ▪ gate face-fast pass [session]  (13.2s)
+08-15 02:04:13  • session #17 KS3 → Advanced · done KS3.5 · 2 commit(s)  (22m50s)
+08-15 02:08:18  ▪ gate engine-fast pass [phase]  (0.0s)
+08-15 02:08:18  ▪ gate face-fast pass [phase]  (0.0s)
+08-15 02:08:18  ▪ gate engine-full pass [phase]  (3m58s)
+08-15 02:08:18  ▪ gate face-full pass [phase]  (4.3s)
+08-15 02:08:18  ✓ checkpoint KS3.5 confirmed
+08-15 02:08:18  ▸ stage KS3 confirmed  (1h28m26s)
+08-15 02:08:19  ▸ stage KS5 entered — Spend - every dollar the tool can spend is governed
 ```
 
 ## Health
@@ -186,11 +187,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 16 · retries 10 (62 %) · overall Alert
+sessions 17 · retries 10 (59 %) · overall Alert
 ⛔ [same-failure-loop] stage KS3: 10 consecutive sessions made no progress
 ⚠ [context-saturation] session #3: 23,814,216 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 24,323,658 context tokens (≥ 20,000,000)
-⚠ [high-retry-rate] 10/16 sessions were retries (62 %)
+⚠ [high-retry-rate] 10/17 sessions were retries (59 %)
 ```
 
 ## Repo
@@ -199,7 +200,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvansara
-working tree: M .conductor/REPORT.md, M plans/karvansara/CORE-TRACKER.md, M src/Conductor.Core/PlanImportService.cs, M src/Conductor/Commands/DemoCommand.cs, M src/Conductor/Commands/PlanImportCommand.cs, ?? src/Conductor.Core/Planning/ChecklistImporter.cs, ?? src/Conductor.Core/Planning/ImportBridge.cs, ?? src/Conductor.Core/Planning/SpecKitImporter.cs (+5 more)
+working tree: M .conductor/REPORT.md, M plans/karvansara/CORE-TRACKER.md
 vs upstream: up to date
 ```
 
@@ -232,6 +233,9 @@ vs upstream: up to date
 - **s7 (KS3 Deliver)** — 2 commit(s):
   - [`c3cadc3`](https://github.com/shaahink/conductor/commit/c3cadc3) docs(tracker,evidence): KS3.4 - the round-8 measurement, and the handoff hands over KS3.5
   - [`2de11fe`](https://github.com/shaahink/conductor/commit/2de11fe) fix(core,cli): KS3.4 round 8 - the scheduling is part of the decision, and a battery is not silence
+- **s17 (KS3 Deliver)** — 2 commit(s):
+  - [`1264a7b`](https://github.com/shaahink/conductor/commit/1264a7b) fix(core,cli,docs): KS3.5 - the id that passes every regex the contract names, and loses the board
+  - [`efa8327`](https://github.com/shaahink/conductor/commit/efa8327) feat(core,cli): KS3.5 - three boards you already wrote, converted for nothing
 
 ## Phase handovers (audit)
 
@@ -254,26 +258,37 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> Your organization has disabled Claude subscription access for Claude Code · Use an Anthropic API key instead, or ask your admin to enable access
+> **KS3.5 landed: three import bridges, and the green run that was throwing the board away**
+> - Spec-kit/Task-Master/checklist convert behind one content-detecting entry point, zero spend, reached from `plan import` and the new `demo --from`; stage KS3 now complete.
+> - Live rig proved the contract's id bar insufficient: `P31.T001` passes every named regex and still synced "0 added, 3 scaffolded". Real bar is ProgressConventions.cs:24 — digits after the dot, silent skip otherwise.
+> - Fixed ids, tightened IsDrivableCheckpointId, added the provider round-trip fact. 15/15 new, 59/59 pinned neighbours. Live: Completed, exit 0, 5/5 confirmed.
+>
+> artefacts: efa8327, 1264a7b, src/Conductor.Core/Planning/{ImportBridge, SpecKitImporter, TaskMasterImporter, ChecklistImporter}.cs, src/Conductor/Commands/DemoCommand.Import.cs, tests/Conductor.Tests/KS3_5ImportBridgeTests.cs
+>
+> evidence: .conductor/evidence/KS3/ks3-5.md
+>
+> gaps: EvidenceArtifact.cs:87 is a fourth, stricter id reader (3 digits max per side) — a 4-digit phase or task count would pass the provider and fail evidence association; filed as a bug, not hit by any fixture. Full gate battery is conductor's to run, not mine.
 
 ## Tracker handoff
 
 ```
-last: KS3.4 round 8 CLAIMED (2de11fe) - the compose leg's decision now reaches the session a
-  launch spawns. GateScheduling is ONE classifier for the loop and the drill; the auto-fix-audit
-  branch carries Kind=Audit through the scheduling (rig: drill 7047 chars = launch 7047), and the
-  completion / phase-gate headlines say the battery runs FIRST and a red required gate composes a
-  Fix session in the same run. Evidence .conductor/evidence/KS3/ks3-4-round8.md; re-runnable rigs
-  plans/karvansara/contracts/ks3-4-v8-rigs/run-round8.ps1. Pre-fix 7/89 red, fixed 89/89 green.
-open: KS3.5 per contracts/KS3.json - spec-kit tasks.md, Task-Master tasks.json and a plain
-  markdown checklist to plan; the spec-kit sample must convert AND drive `conductor demo` to done.
+last: KS3.5 CLAIMED - stage KS3 is complete. Three bridges behind ImportBridge.Read (spec-kit,
+  Task-Master, checklist), reached from `plan import` and the new `demo --from`, content-detected,
+  zero spend. Evidence .conductor/evidence/KS3/ks3-5.md; rig ks3-5-rigs/run-demo-speckit.ps1.
+  Live: 5 added / 0 scaffolded, status Completed, exit 0, all 5 converted tasks engine-confirmed.
+measured, and it cost a live run: the contract's id bar (FakeAgentCommand's two regexes) is
+  NECESSARY BUT NOT SUFFICIENT. `P31.T001` passes both AND MarkdownPlanParser, and the first run
+  still synced "0 added, 3 scaffolded" - the board thrown away, placeholders driven to DONE, green.
+  The binding reader is ProgressConventions.cs:24 (row regex :64-72): the suffix must be DIGITS,
+  and an unreadable row is skipped in SILENCE. Drivable = the intersection, [A-Za-z]{1,4}\d+\.\d+.
+  Any future id minting must be proven through ProgressProviderFactory, not a regex assertion.
 then: KS9 (scratch repo only; KS9.3 expects precise-refusal SKIPPED), KS10.1-10.2 per
   contracts/KS9-10.json; KS10.3 owner-only. KS10.2 is one command in payesh (`npm run harvest &&
   npm run evidence`), then branch, commit corpus.json, open the PR - main is stale by 3 runs.
-measured: full batteries run serially with -nodeReuse:false -p:UseSharedCompilation=false. No
-  preflight leg runs gates. `conductor bg start` rejects -nodeReuse:false and a --filter with a pipe.
+measured: batteries run serially with -nodeReuse:false -p:UseSharedCompilation=false. A demo rig
+  MUST clear CONDUCTOR_PLAN - its fake agent calls `task --done` and would claim on the live run.
 ```

@@ -219,7 +219,25 @@ DELETE anywhere**.
 ## Gate battery
 
 `dotnet build Conductor.slnx -clp:ErrorsOnly` — 0 warnings, 0 errors.
-Full-suite and ratchet numbers are in the session's commit and the handoff.
+
+`dotnet test Conductor.slnx` (full, unfiltered) — **Passed: 2605, Failed: 0, Skipped: 0**, 3m 16s.
+
+`powershell -File tools/gates/ratchet.ps1` — **RED, and red before this session**:
+
+```
+ratchet: tests    floor=1932  now=2280
+ratchet: pragmas  ceil=38     now=43
+ratchet: archdebt base=0      now=0
+
+RATCHET GATE FAILED - the bar was lowered:
+  * ANALYZER SUPPRESSIONS ABOVE CEILING (43 > 38).
+```
+
+Test attributes went UP (1932 → 2280). The suppression count did not move: `git grep "#pragma
+warning disable" -- src` gives **43 at the pre-session commit `1264a7b` and 43 at HEAD** — KS9.1 adds
+zero. Five suppressions predating this session have to be RETIRED to clear it, and
+`ratchet-baseline.json` says by its own rule that `maxPragmas` may only go down, so raising it is a
+human decision and not a fix. Filed as **bug #44** rather than edited into green.
 
 ## Not touched
 

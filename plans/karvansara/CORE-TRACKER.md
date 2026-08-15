@@ -4,21 +4,22 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS3.5 CLAIMED - stage KS3 is complete. Three bridges behind ImportBridge.Read (spec-kit,
-  Task-Master, checklist), reached from `plan import` and the new `demo --from`, content-detected,
-  zero spend. Evidence .conductor/evidence/KS3/ks3-5.md; rig ks3-5-rigs/run-demo-speckit.ps1.
-  Live: 5 added / 0 scaffolded, status Completed, exit 0, all 5 converted tasks engine-confirmed.
-measured, and it cost a live run: the contract's id bar (FakeAgentCommand's two regexes) is
-  NECESSARY BUT NOT SUFFICIENT. `P31.T001` passes both AND MarkdownPlanParser, and the first run
-  still synced "0 added, 3 scaffolded" - the board thrown away, placeholders driven to DONE, green.
-  The binding reader is ProgressConventions.cs:24 (row regex :64-72): the suffix must be DIGITS,
-  and an unreadable row is skipped in SILENCE. Drivable = the intersection, [A-Za-z]{1,4}\d+\.\d+.
-  Any future id minting must be proven through ProgressProviderFactory, not a regex assertion.
-then: KS9 (scratch repo only; KS9.3 expects precise-refusal SKIPPED), KS10.1-10.2 per
-  contracts/KS9-10.json; KS10.3 owner-only. KS10.2 is one command in payesh (`npm run harvest &&
-  npm run evidence`), then branch, commit corpus.json, open the PR - main is stale by 3 runs.
-measured: batteries run serially with -nodeReuse:false -p:UseSharedCompilation=false. A demo rig
-  MUST clear CONDUCTOR_PLAN - its fake agent calls `task --done` and would claim on the live run.
+last: KS9.1 CLAIMED. `conductor github sync --backfill <run> [--repo owner/name]` pushes a
+  finished run's board (issue per checkpoint, marker identity, status/source/confirmed labels,
+  stage milestones) + diary (run issue, one comment per SessionFinished). Live, twice, against
+  PRIVATE shaahink/conductor-sync-scratch: 7 created/10 comments, then 0/0/7 unchanged, 29
+  requests down to 3. Evidence .conductor/evidence/KS9/ks9-1-backfill.md. Suite 2605/0.
+measured, twice, and only by RUNNING it: (1) a Spectre CommandOption value name may not contain
+  a slash - `--repo <OWNER/NAME>` threw at CommandModelBuilder.Build, which builds EVERY command
+  at startup, so it killed `status`, `task` and `run` too, through a green build and green suite.
+  Pinned in B11_2 EveryCommandOptionTemplateParses. (2) the archive spells run status `Completed`
+  and the task graph spells its statuses lower-case; an ordinal check left the diary issue open.
+  Drive the fresh binary once for any new CLI option - the suite cannot see either class.
+red, and NOT this session: ratchet is at 43 pragmas vs ceiling 38. git grep gives 43 at 1264a7b
+  and 43 at HEAD; KS9.1 adds zero. Raising maxPragmas is forbidden by that file - bug #44 filed.
+then: KS9.2 (reconciler over ReadEventsAfter; github_map + cursor land THERE - see the KS9.1 card
+  amendment: read-only store and a written map cannot both hold, and v13 is taken, so it is v14).
+  KS9.3's refusal branch is live - `gh auth status` today: no `project` scope.
 
 
 ## Baseline numbers (from run.db)
@@ -27,7 +28,7 @@ measured: batteries run serially with -nodeReuse:false -p:UseSharedCompilation=f
 |---|---|
 | Total checkpoints | 32 |
 | Done | 24 |
-| Claimed (unconfirmed) | 1 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -74,7 +75,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | KS3.2 | The editor stops destroying: comment header preserved across plan set, add-stage and import, no silent progress-kind or gate-timeout rewrites - the add-a-stage replay diffs to only the stage | DONE ✓ | 883dda0 | .conductor/evidence/KS3/ks3-2.md |
 | KS3.3 | Schema honesty: the eight undocumented keys documented, mutatingLanes removed or wired, doctor warns on inert keys, and plan-config.md matches PlanConfig under the docs-match-reality pin | DONE ✓ | 883dda0 | .conductor/evidence/KS3/ks3-3.md |
 | KS3.4 | conductor preflight runs the launch drill as one verb - doctor, journey, dry-run compose, version-versus-release, rebuild check, escalation-block check - one verdict, each seeded drill failure caught | DONE | 2de11fe | .conductor/evidence/KS3/ks3-4-round8.md |
-| KS3.5 | Import bridges: a spec-kit tasks.md, a Task-Master tasks.json and a plain markdown checklist each convert to a plan, and the spec-kit sample drives conductor demo to completion | IN PROGRESS | - | - |
+| KS3.5 | Import bridges: a spec-kit tasks.md, a Task-Master tasks.json and a plain markdown checklist each convert to a plan, and the spec-kit sample drives conductor demo to completion | DONE | efa8327 | .conductor/evidence/KS3/ks3-5.md |
 
 ### KS5 — Spend - every dollar the tool can spend is governed
 
