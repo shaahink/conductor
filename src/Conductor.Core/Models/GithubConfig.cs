@@ -55,4 +55,46 @@ public sealed class GithubConfig
     /// <summary>Prefix for every label conductor owns, so a mirror never fights the repo's own
     /// labels. <c>conductor</c> yields <c>conductor:status:done</c>.</summary>
     public string LabelPrefix { get; set; } = "conductor";
+
+    /// <summary>The only two board spellings. Anything else is refused by name rather than
+    /// silently read as the default — a typo that quietly downgrades a board to issues-only is
+    /// indistinguishable, from the outside, from a project mirror that ran and did nothing.</summary>
+    public const string BoardIssues = "issues";
+
+    /// <inheritdoc cref="BoardIssues"/>
+    public const string BoardIssuesAndProject = "issues+project";
+
+    /// <summary>True when this block asks for a Projects v2 board on top of the issue board. An
+    /// unknown <see cref="Board"/> value is NOT this — it is <see cref="BoardRefusal"/>'s business,
+    /// so a misspelling can never arrive here as a quiet false.</summary>
+    public bool WantsProjectBoard =>
+        string.Equals(Board?.Trim(), BoardIssuesAndProject, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// KS9.3 — the config gate, as a sentence rather than as a branch in a command, so the bar
+    /// "refuses BY NAME, never a silent no-op" is asserted against the text itself. null means the
+    /// board block is coherent and the caller may proceed.
+    ///
+    /// <para>Absent is not wrong: a null or blank <see cref="Board"/> is the default issue board,
+    /// because a plan written before this field existed must keep behaving exactly as it did. A
+    /// value that was TYPED and is not one of the two spellings is always wrong.</para>
+    /// </summary>
+    public string? BoardRefusal()
+    {
+        var board = Board?.Trim();
+        if (string.IsNullOrEmpty(board)) return null;
+
+        var issues = string.Equals(board, BoardIssues, StringComparison.OrdinalIgnoreCase);
+        if (!issues && !WantsProjectBoard)
+            return $"github.board '{board}' is not a board. it is '{BoardIssues}' or '{BoardIssuesAndProject}'.";
+
+        // Reached only for issues+project: the project half needs a number, and 0 is what the field
+        // holds when nobody set one. docs/plan-config.md has promised this refusal since KS9.1.
+        if (WantsProjectBoard && ProjectNumber <= 0)
+            return $"github.board is '{BoardIssuesAndProject}' but github.projectNumber is {ProjectNumber}. " +
+                "set it to the Projects v2 board number from the project url " +
+                "(github.com/users/<owner>/projects/<number>).";
+
+        return null;
+    }
 }

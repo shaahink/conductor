@@ -132,6 +132,38 @@ public sealed class GithubClient : IDisposable
                 GithubJsonContext.Default.GithubMilestoneRequest),
             GithubJsonContext.Default.GithubMilestoneRef, ct);
 
+    // ── scopes ───────────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// KS9.3 — what this token is ALLOWED to do, straight from GitHub, before anything is written.
+    /// A GET, deliberately: a scope check that discovered its answer by attempting a mutation and
+    /// reading the failure would have already written on the tokens that DO carry the scope.
+    ///
+    /// <para><b>Three answers, not two.</b> <c>Error</c> non-null is "we could not ask" (401, no
+    /// network). A null <c>RawScopes</c> with no error is "GitHub answered and reported no scope
+    /// header at all" — which is what a fine-grained PAT or a GitHub App token looks like, and it is
+    /// NOT the same statement as "this token has no scopes". Collapsing those two into one would
+    /// tell an owner holding a perfectly good fine-grained token to run a command that cannot help
+    /// them.</para>
+    /// </summary>
+    public async Task<(string? RawScopes, string? Error)> ProbeScopesAsync(CancellationToken ct = default)
+    {
+        var url = ApiBase + "/user";
+        try
+        {
+            RequestCount++;
+            using var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode) return (null, await DescribeAsync(resp, url, ct).ConfigureAwait(false));
+            return (resp.Headers.TryGetValues("X-OAuth-Scopes", out var values)
+                ? string.Join(",", values)
+                : null, null);
+        }
+        catch (Exception ex) when (IsTransport(ex))
+        {
+            return (null, $"{ex.GetType().Name}: {ex.Message} ({url})");
+        }
+    }
+
     // ── transport ────────────────────────────────────────────────────────────────────────────────
 
     private static string Num(int n) => n.ToString(CultureInfo.InvariantCulture);

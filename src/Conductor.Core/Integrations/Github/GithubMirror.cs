@@ -102,6 +102,16 @@ public sealed class GithubMirror : IDisposable
             return null;
         }
 
+        // KS9.3 — the run's own boundary for the project half. Loud, once, at creation, and then the
+        // ISSUE mirror carries on: unlike the CLI, a run must not lose a working issue board over an
+        // extra it cannot have, because KS9.2's whole posture is that the run is never harmed by this
+        // integration. The scopes are NOT probed here — that is a network call on the run's startup
+        // path, and `github sync --project` is where an operator asks the question on purpose.
+        var boardRefusal = cfg.BoardRefusal();
+        if (boardRefusal is not null || cfg.WantsProjectBoard)
+            log($"github project board off: {boardRefusal ?? GithubProjects.NotImplementedLine} " +
+                "(the issue board is unaffected)");
+
         log($"github mirror on → {repo} (token from {source})");
         return new GithubMirror(store, runId, repo, token, cfg.LabelPrefix, cfg.RunHistoryIssue, log, handler);
     }

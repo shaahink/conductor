@@ -54,6 +54,13 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         [Description("Reconcile and report what would change, writing nothing.")]
         public bool DryRun { get; init; }
 
+        // KS9.3. Asking for the project board from the command line instead of by editing a plan is
+        // what makes the gate REACHABLE — and today the gate is the whole of the project half, so
+        // this option's only observable behaviour is a precise refusal.
+        [CommandOption("--project <NUMBER>")]
+        [Description("Also mirror a Projects v2 board (needs a token with the 'project' scope). Refuses without it.")]
+        public int? Project { get; init; }
+
         [CommandOption("--home <PATH>")]
         [Description("Read a state home other than this machine's.")]
         public string? Home { get; init; }
@@ -67,6 +74,14 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
 
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
 
+        // KS9.3 — the board's own coherence is decided first, because it costs nothing and because a
+        // misspelt board or a missing project number is a fact about the plan, not a discovery made
+        // against the network. It fires whether the project board was asked for in the plan or with
+        // --project, and it fires before a destination is even resolved.
+        var board = BoardView(plan, settings.Project);
+        if (board.BoardRefusal() is { } configRefusal)
+            return Refuse([configRefusal, "nothing was contacted and nothing was written."]);
+
         var repo = Destination(plan, settings.Repo);
         if (repo is null) return RefuseNoDestination(plan);
         if (!repo.Contains('/', StringComparison.Ordinal))
@@ -79,6 +94,18 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         // refusal is a fact about configuration, not a discovery made against the network.
         var (token, source) = GithubIdentity.ResolveToken(plan);
         if (token is null) return RefuseNoToken(plan);
+
+        // KS9.3 — the scope check is a GET, and it happens before the backfill's first write rather
+        // than being discovered by one that failed. A caller who asked for a project board and cannot
+        // have one is refused WHOLE: pushing the issue half while quietly dropping the half that was
+        // asked for is precisely the silent no-op this gate exists to prevent. Set github.board back
+        // to 'issues' — which the refusal says — and the issue mirror runs untouched.
+        if (board.WantsProjectBoard)
+        {
+            using var probe = new GithubClient(token, TimeSpan.FromSeconds(30));
+            var stop = await GithubProjects.PreflightAsync(probe, board, source).ConfigureAwait(false);
+            if (stop.Count > 0) return Refuse(stop);
+        }
 
         if (string.IsNullOrWhiteSpace(settings.Backfill))
         {
@@ -104,6 +131,30 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
     {
         if (!string.IsNullOrWhiteSpace(overrideRepo)) return overrideRepo.Trim();
         return plan.Github is { Enabled: true } ? GithubIdentity.Resolve(plan) : null;
+    }
+
+    /// <summary>KS9.3 — the github block as the BOARD gate sees it. <c>--project N</c> asks for the
+    /// project board without editing a plan, so it synthesises the block the gate would have read;
+    /// only <c>board</c> and <c>projectNumber</c> are consulted by that gate, and the destination and
+    /// token are resolved from the plan and <c>--repo</c> exactly as before.</summary>
+    private static GithubConfig BoardView(PlanConfig plan, int? projectOverride) =>
+        projectOverride is null
+            ? plan.Github ?? new GithubConfig()
+            : new GithubConfig
+            {
+                Board = GithubConfig.BoardIssuesAndProject,
+                ProjectNumber = projectOverride.Value,
+            };
+
+    /// <summary>A refusal built in Core, printed here: first line loud, the rest indented. Same shape
+    /// as <see cref="RefuseNoToken"/>, and 2 for the same reason — the caller asked for something the
+    /// configuration or the credential cannot give, which is not a run failure.</summary>
+    private static int Refuse(IReadOnlyList<string> lines)
+    {
+        AnsiConsole.MarkupLine($"[red]{Markup.Escape(lines[0])}[/]");
+        foreach (var line in lines.Skip(1))
+            AnsiConsole.MarkupLine($"  [grey]{Markup.Escape(line)}[/]");
+        return 2;
     }
 
     private ArchiveView? OpenRun(Settings settings, out string refusal)
@@ -163,14 +214,7 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
     /// <summary>The refusal text is built in Core (<c>GithubIdentity.MissingTokenRefusal</c>) so the
     /// bar "names both sources" is asserted against the sentence itself, not against a reading of
     /// this file. Printed here, decided there.</summary>
-    private static int RefuseNoToken(PlanConfig plan)
-    {
-        var lines = GithubIdentity.MissingTokenRefusal(plan);
-        AnsiConsole.MarkupLine($"[red]{Markup.Escape(lines[0])}[/]");
-        foreach (var line in lines.Skip(1))
-            AnsiConsole.MarkupLine($"  [grey]{Markup.Escape(line)}[/]");
-        return 2;
-    }
+    private static int RefuseNoToken(PlanConfig plan) => Refuse(GithubIdentity.MissingTokenRefusal(plan));
 
     private static int Help()
     {
@@ -179,6 +223,8 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         AnsiConsole.MarkupLine("[grey]  one issue per checkpoint, one run issue with a comment per session.[/]");
         AnsiConsole.MarkupLine("[grey]  re-running mints nothing: identity is a marker in the issue body.[/]");
         AnsiConsole.MarkupLine("[grey]  nothing is ever read back from GitHub into the run.[/]");
+        AnsiConsole.MarkupLine($"[grey]  --project <n> asks for a Projects v2 board: needs the " +
+            $"'{GithubProjects.RequiredScope}' scope, and refuses by name without it.[/]");
         return 1;
     }
 }
