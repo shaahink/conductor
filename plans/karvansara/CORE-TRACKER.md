@@ -4,22 +4,24 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS9.1 CLAIMED. `conductor github sync --backfill <run> [--repo owner/name]` pushes a
-  finished run's board (issue per checkpoint, marker identity, status/source/confirmed labels,
-  stage milestones) + diary (run issue, one comment per SessionFinished). Live, twice, against
-  PRIVATE shaahink/conductor-sync-scratch: 7 created/10 comments, then 0/0/7 unchanged, 29
-  requests down to 3. Evidence .conductor/evidence/KS9/ks9-1-backfill.md. Suite 2605/0.
-measured, twice, and only by RUNNING it: (1) a Spectre CommandOption value name may not contain
-  a slash - `--repo <OWNER/NAME>` threw at CommandModelBuilder.Build, which builds EVERY command
-  at startup, so it killed `status`, `task` and `run` too, through a green build and green suite.
-  Pinned in B11_2 EveryCommandOptionTemplateParses. (2) the archive spells run status `Completed`
-  and the task graph spells its statuses lower-case; an ordinal check left the diary issue open.
-  Drive the fresh binary once for any new CLI option - the suite cannot see either class.
-red, and NOT this session: ratchet is at 43 pragmas vs ceiling 38. git grep gives 43 at 1264a7b
-  and 43 at HEAD; KS9.1 adds zero. Raising maxPragmas is forbidden by that file - bug #44 filed.
-then: KS9.2 (reconciler over ReadEventsAfter; github_map + cursor land THERE - see the KS9.1 card
-  amendment: read-only store and a written map cannot both hold, and v13 is taken, so it is v14).
-  KS9.3's refusal branch is live - `gh auth status` today: no `project` scope.
+last: KS9.2 CLAIMED. GithubMirror is a reconciler over IRunStore.ReadEventsAfter on the WatchLoop
+  cursor idiom - never an IEventSink. Delta decides IF, full fold decides WHAT, cursor (v14
+  github_cursor, keyed run+repo) advances only after a clean push. Six boundaries; five
+  fire-and-forget via RunContext.MirrorBoard, run-complete waited under 90s. Off unless
+  github.enabled AND github.liveMirror. Evidence .conductor/evidence/KS9/ks9-2-live-mirror.md.
+measured LIVE, fresh build vs PRIVATE shaahink/conductor-sync-scratch-ks92, and neither was
+  findable by reading: (1) `run --once` returns the instant a session ends and the teardown
+  disposed the mirror mid-pass - one issue of three on GitHub. Passes are tracked and DRAINED now,
+  and a boundary landing during a pass is COALESCED into one follow-up, not dropped (tracking only
+  the last fire was the same bug twice). (2) GITHUB'S REST ISSUES LIST IS EVENTUALLY CONSISTENT:
+  4 issues created, invisible to a list 2s later, 4 more created - two copies of one board. `gh`
+  agreed with the stale view, so it is replica lag. Fixed by v14 github_map: the marker stays the
+  human-readable identity, but the authority on "already made this" is local; a mapped issue the
+  listing lacks is fetched BY NUMBER, which reads through, so never-clobber still holds.
+red, and NOT this session: ratchet 43 pragmas vs ceiling 38 (bug #44). KS9.2 adds ZERO - CA1031
+  and CA2000 were both removed by construction, not suppression. Do not raise the ceiling.
+then: KS9.3. `gh auth status` today still has no `project` scope, so the contract's precise-refusal
+  SKIPPED outcome is the expected one. Then KS10.1/KS10.2.
 
 
 ## Baseline numbers (from run.db)
