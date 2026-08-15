@@ -4,21 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS10.2 DONE (evidence .conductor/evidence/KS10/ks10-2-docs-pin.md). Four commits: 7ee50b3
-  README+operating+CHANGELOG, 263c7f8 the two new SF7_1 partials, f4e42eb .github, c3d2cdf evidence.
-STILL TRUE FROM #23: the PATH conductor CANNOT WRITE. Use
-  `dotnet run --project src/Conductor -- VERB -p plans/karvansara/core.plan.json` for every verb,
-  claims included. Bug #45. The fresh build's exe is also what you put first on PATH for anything
-  that shells `conductor` (the payesh harvest does).
-what remains: KS10.3 ONLY, and it is owner-only - merge to master, tag with the [Unreleased] section
-  as the body (leave the heading alone; `sh tools/changelog-section.sh Unreleased` exits 0, 131
-  lines), reinstall, `github sync --backfill` this run, merge payesh PR #1.
-for the owner at KS10.3: payesh PR https://github.com/shaahink/payesh/pull/1 is OPEN, main untouched
-  at 43b59e4. Its second commit relaxes a privacy rule (a public repo's run slug stops being secret)
-  - that one wants a real read, not a rubber stamp. This run 9647f1b8 is EXCLUDED from the corpus
-  until anonymise.json gets it a label/scenario/repoKey + disposition.
-new bugs: #47 payesh anonymity unfalsifiable on a one-word repo name (FIXED in PR #1), #48
-  `conductor face` with no live run here attaches to ANOTHER repo's run without saying so.
+last: nothing claimed, by design. KS10.1/KS10.2 are DONE; KS10.3 is the only row left and it is
+  owner-only by its own contract - KS9-10.json acceptance[0]: "no session performs any of this ...
+  a delivery agent's only job is to leave the checklist runnable and the tracker row untouched".
+  Row left TODO and unamended. Delivered: .conductor/evidence/KS10/ks10-3-owner-runbook.md - every
+  precondition of the nine steps measured, none of them performed.
+measured so the owner need not: merge to master is a FAST-FORWARD (master 304fc5b is an ancestor,
+  99 behind; both branches = origin). `conductor ps` works on the OLD engine but store reads do not
+  (schema 14 vs 13, bug #45), so step 7's backfill must FOLLOW the reinstall, not precede it.
+  `sh tools/changelog-section.sh 0.4.1` exits 1 TODAY (heading is [Unreleased], CHANGELOG.md:21):
+  the step-3 rename is mandatory; tag v0.4.1 (MinVer, last tag v0.4.0). Contract correction - the
+  version-equals-tag assert is in the build job, release.yml:157-163, not in guard.
+HUMAN: KS10.3 is yours. Run the runbook in order; nothing else in this plan is open.
+
 
 ## Baseline numbers (from run.db)
 
@@ -26,7 +24,7 @@ new bugs: #47 payesh anonymity unfalsifiable on a one-word repo name (FIXED in P
 |---|---|
 | Total checkpoints | 32 |
 | Done | 27 |
-| Claimed (unconfirmed) | 2 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -97,7 +95,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | KS10.1 | The internal record reconciles: ARCHITECTURE.md and docs/dev match the engine for everything this plan changed, the closure ledger names every bug and followup row closed here or its living owner, and conductor budget's re-measure is written into TOKEN-BUDGET-TUNING for edge to compile against | DONE | b961c07 | .conductor/evidence/KS10/ks10-1-closure-ledger.md |
-| KS10.2 | The published surface reconciles and is pinned: README, the docs user set and its index, .github templates where a verb changed, and the Unreleased CHANGELOG section written as the release body - conductor --help lists no verb absent from cli.md, every README command block executes as written, SF7_1DocsMatchRealityTests goes red on a seeded stale doc, and payesh's harvest is green on the deduped store with its PR open or its refusal recorded | TODO | - | - |
+| KS10.2 | The published surface reconciles and is pinned: README, the docs user set and its index, .github templates where a verb changed, and the Unreleased CHANGELOG section written as the release body - conductor --help lists no verb absent from cli.md, every README command block executes as written, SF7_1DocsMatchRealityTests goes red on a seeded stale doc, and payesh's harvest is green on the deduped store with its PR open or its refusal recorded | DONE | 7ee50b3 | .conductor/evidence/KS10/ks10-2-docs-pin.md |
 | KS10.3 | Owner-only: feat/karvansara merges to master, the release tags through the pipeline with KS10.2's section as its body, the reinstalled version matches the releases page, this run's own board backfills to GitHub - the first real use of KS9 - and the payesh PR merges | TODO | - | - |
 
 ## Dependencies

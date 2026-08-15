@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvansara core - the open door run report
 
-_Updated 2026-08-15 03:18 UTC · branch `feat/karvansara` · HEAD `5286704`_
+_Updated 2026-08-15 04:32 UTC · branch `feat/karvansara` · HEAD `05a3a5b`_
 
-**Status:** Idle — stage KS3 used all 10 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Environment credential error (Claude subscription/API key disabled) — orchestrator cannot proceed without user providing valid API access. [2h 37m ago, 00:40:23Z]
-**Stage:** KS9 — The far door - GitHub is the remotest view · attempts used 0 · working ▸ KS9.3
-**Checkpoints:** 28/32 done · **Sessions run:** 22 · **Cost:** $115.8629 (agent $115.7303 + gates $0.1327) · **Tokens:** 1,890,596 in / 819,692 out
+**Status:** Idle — stage KS3 used all 10 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Environment credential error (Claude subscription/API key disabled) — orchestrator cannot proceed without user providing valid API access. [3h 51m ago, 00:40:23Z]
+**Stage:** KS10 — Ship core · attempts used 0 · working ▸ KS10.3
+**Checkpoints:** 30/32 done · **Sessions run:** 24 · **Cost:** $145.9718 (agent $145.8273 + gates $0.1445) · **Tokens:** 2,311,819 in / 1,020,789 out
 **Confirmed phases:** KS0, KS1, KS2, KS3, KS5, KS9
 
 ## Stage progress
@@ -17,7 +17,7 @@ _Updated 2026-08-15 03:18 UTC · branch `feat/karvansara` · HEAD `5286704`_
 | KS3 | Authoring - no human writes JSON | ██████████ 5/5 | confirmed ✓ |
 | KS5 | Spend - every dollar the tool can spend is governed | ██████████ 4/4 | confirmed ✓ |
 | KS9 | The far door - GitHub is the remotest view | ███████░░░ 2/3 | confirmed ✓ |
-| KS10 | Ship core | ░░░░░░░░░░ 0/3 | todo |
+| KS10 | Ship core | ███████░░░ 2/3 | **← active** |
 
 <details> ✅<summary>KS0 — Leftovers - the catalogue stops corrupting itself (3/3)</summary>
 
@@ -90,12 +90,12 @@ _Updated 2026-08-15 03:18 UTC · branch `feat/karvansara` · HEAD `5286704`_
 
 </details>
 
-<details><summary>KS10 — Ship core (0/3)</summary>
+<details><summary>KS10 — Ship core (2/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| KS10.1 | The internal record reconciles: ARCHITECTURE.md and docs/dev match the engine for everything this plan changed, the closure ledger names every bug and followup row closed here or its living owner, and conductor budget's re-measure is written into TOKEN-BUDGET-TUNING for edge to compile against | ⬜ TODO | - |
-| KS10.2 | The published surface reconciles and is pinned: README, the docs user set and its index, .github templates where a verb changed, and the Unreleased CHANGELOG section written as the release body - conductor --help lists no verb absent from cli.md, every README command block executes as written, SF7_1DocsMatchRealityTests goes red on a seeded stale doc, and payesh's harvest is green on the deduped store with its PR open or its refusal recorded | ⬜ TODO | - |
+| KS10.1 | The internal record reconciles: ARCHITECTURE.md and docs/dev match the engine for everything this plan changed, the closure ledger names every bug and followup row closed here or its living owner, and conductor budget's re-measure is written into TOKEN-BUDGET-TUNING for edge to compile against | ✅ DONE | [`b961c07`](https://github.com/shaahink/conductor/commit/b961c07) |
+| KS10.2 | The published surface reconciles and is pinned: README, the docs user set and its index, .github templates where a verb changed, and the Unreleased CHANGELOG section written as the release body - conductor --help lists no verb absent from cli.md, every README command block executes as written, SF7_1DocsMatchRealityTests goes red on a seeded stale doc, and payesh's harvest is green on the deduped store with its PR open or its refusal recorded | ✅ DONE | - |
 | KS10.3 | Owner-only: feat/karvansara merges to master, the release tags through the pipeline with KS10.2's section as its body, the reinstalled version matches the releases page, this run's own board backfills to GitHub - the first real use of KS9 - and the payesh PR merges | ⬜ TODO | - |
 
 </details>
@@ -126,6 +126,8 @@ _Updated 2026-08-15 03:18 UTC · branch `feat/karvansara` · HEAD `5286704`_
 | 20 | KS9 | Deliver | 1 | 08-15 02:19 | 0:20 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $6.8900 | $0.0056 | 125,576/61,711 |
 | 21 | KS9 | Fix | 2 | 08-15 02:48 | 0:10 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $3.9531 | $0.0078 | 82,977/30,867 |
 | 22 | KS9 | Fix | 3 | 08-15 03:07 | 0:07 | Progress |  | 0 | engine-fast:cached · face-fast:cached | $2.7796 |  | 64,464/19,644 |
+| 23 | KS10 | Deliver | 1 | 08-15 03:18 | 0:35 | Advanced | KS10.1 | 6 | engine-fast:OK · face-fast:OK | $14.5873 | $0.0059 | 201,893/91,602 |
+| 24 | KS10 | Deliver | 1 | 08-15 03:54 | 0:36 | Advanced | KS10.2 | 5 | engine-fast:OK · face-fast:OK | $15.5097 | $0.0059 | 219,330/109,495 |
 
 ## Money
 
@@ -133,28 +135,20 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 21 | 155.2M | 98.3% | $115.89 | 28 | 5.54M | $4.14 |
+| **run total** | 22 | 176M | 98.3% | $130.48 | 29 | 6.07M | $4.50 |
 | stage KS0 | 5 | 59.3M | 98.1% | $45.73 | 24 | 2.47M | $1.91 |
 | stage KS3 | 11 | 31.7M | 98.3% | $23.58 | 2 | 15.9M | $11.79 |
 | stage KS9 | 5 | 64.2M | 98.4% | $46.58 | 2 | 32.1M | $23.29 |
-| 2026-08 | 21 | 155.2M | 98.3% | $115.89 | 28 | 5.54M | $4.14 |
+| stage KS10 | 1 | 20.8M | 98.6% | $14.59 | 1 | 20.8M | $14.59 |
+| 2026-08 | 22 | 176M | 98.3% | $130.48 | 29 | 6.07M | $4.50 |
 
-_Where the money goes: agent $115.73 (100%) · gate $0.13 (0%) · advisor $0.03 (0%) · blended $0.75/M tokens._
+_Where the money goes: agent $130.32 (100%) · gate $0.14 (0%) · advisor $0.03 (0%) · blended $0.74/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-15 02:08:18  ▪ gate face-full pass [phase]  (4.3s)
-08-15 02:08:18  ✓ checkpoint KS3.5 confirmed
-08-15 02:08:18  ▸ stage KS3 confirmed  (1h28m26s)
-08-15 02:08:19  ▸ stage KS5 entered — Spend - every dollar the tool can spend is governed
-08-15 02:08:19  ▸ stage KS5 confirmed  (0.1s)
-08-15 02:08:20  ▸ stage KS9 entered — The far door - GitHub is the remotest view
-08-15 02:08:20  • session #18 KS9 Deliver started (attempt 1/6)
-08-15 02:45:49  ▪ gate engine-fast pass [session]  (57.7s)
-08-15 02:45:49  ▪ gate face-fast pass [session]  (22.2s)
 08-15 02:45:50  • session #18 KS9 → Advanced · done KS9.1 · 3 commit(s)  (37m29s)
 08-15 02:45:53  • session #19 KS9 Deliver started (attempt 1/6)
 08-15 03:19:47  ▪ gate engine-fast pass [session]  (58.2s)
@@ -186,6 +180,15 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-15 04:18:04  ▪ gate face-full pass [phase]  (0.0s)
 08-15 04:18:04  ✓ checkpoint KS9.1 confirmed
 08-15 04:18:04  ✓ checkpoint KS9.2 confirmed
+08-15 04:18:04  ▸ stage KS9 confirmed  (2h09m44s)
+08-15 04:18:05  ▸ stage KS10 entered — Ship core
+08-15 04:18:05  • session #23 KS10 Deliver started (attempt 1/6)
+08-15 04:54:42  ▪ gate engine-fast pass [session]  (55.8s)
+08-15 04:54:42  ▪ gate face-fast pass [session]  (3.6s)
+08-15 04:54:43  • session #23 KS10 → Advanced · done KS10.1 · 6 commit(s)  (36m37s)
+08-15 04:54:43  • session #24 KS10 Deliver started (attempt 1/6)
+08-15 05:32:19  ▪ gate engine-fast pass [session]  (55.7s)
+08-15 05:32:19  ▪ gate face-fast pass [session]  (3.8s)
 ```
 
 ## Health
@@ -193,13 +196,13 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 22 · retries 12 (55 %) · overall Alert
+sessions 24 · retries 12 (50 %) · overall Alert
 ⛔ [same-failure-loop] stage KS3: 10 consecutive sessions made no progress
 ⚠ [context-saturation] session #18: 21,765,939 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #19: 25,244,870 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #23: 20,544,148 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #3: 23,814,216 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 24,323,658 context tokens (≥ 20,000,000)
-⚠ [high-retry-rate] 12/22 sessions were retries (55 %)
 ```
 
 ## Repo
@@ -208,17 +211,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvansara
-working tree: M .conductor/REPORT.md, M plans/karvansara/CORE-TRACKER.md, M tests/Conductor.Tests/FakeGithub.cs, M tests/Conductor.Tests/KS9_2ReconcilerTests.cs
+working tree: M .conductor/REPORT.md
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s5 (KS0 Fix)** — 2 commit(s):
-  - [`b7ebabe`](https://github.com/shaahink/conductor/commit/b7ebabe) docs(tracker): KS0.3 - the handoff carries the full-suite number, not a filtered one
-  - [`eb9778e`](https://github.com/shaahink/conductor/commit/eb9778e) fix(gates,store): KS0.3 - the gate builds beside the engine, not over it (bugs #16, #27)
-- **s6 (KS0 Deliver)** — 1 commit(s):
-  - [`883dda0`](https://github.com/shaahink/conductor/commit/883dda0) docs(tracker): KS0.1 - the parked half was already true, so the door closes on measurement
 - **s7 (KS3 Deliver)** — 2 commit(s):
   - [`c3cadc3`](https://github.com/shaahink/conductor/commit/c3cadc3) docs(tracker,evidence): KS3.4 - the round-8 measurement, and the handoff hands over KS3.5
   - [`2de11fe`](https://github.com/shaahink/conductor/commit/2de11fe) fix(core,cli): KS3.4 round 8 - the scheduling is part of the decision, and a battery is not silence
@@ -242,6 +240,19 @@ vs upstream: up to date
   - [`5286704`](https://github.com/shaahink/conductor/commit/5286704) docs(tracker): KS9 - the handoff hands over a green tree and the trap that cost a run
   - [`769ee6f`](https://github.com/shaahink/conductor/commit/769ee6f) fix(tests,evidence): KS9 - the allowlist was types wearing filenames, and the split changed a spelling
   - [`10e3257`](https://github.com/shaahink/conductor/commit/10e3257) fix(core,tests): KS9 - the mirror moves to its own file, and the pin follows the schema
+- **s23 (KS10 Deliver)** — 6 commit(s):
+  - [`3555e02`](https://github.com/shaahink/conductor/commit/3555e02) docs(tracker,design): KS10.1 - the design docs stop describing an unbuilt feature
+  - [`b21ddcc`](https://github.com/shaahink/conductor/commit/b21ddcc) test(docs): KS10.1 - the budget number the next plan compiles against is pinned
+  - [`ee06740`](https://github.com/shaahink/conductor/commit/ee06740) docs(arch): KS10.1 - the map is re-measured against the engine it maps
+  - [`52408d1`](https://github.com/shaahink/conductor/commit/52408d1) docs(ledger): KS10.1 - the era closes with four bugs that never arrived
+  - [`6348921`](https://github.com/shaahink/conductor/commit/6348921) docs(budget): KS10.1 - the re-measure says 0.85, so the plan doc says 0.85
+  - [`b961c07`](https://github.com/shaahink/conductor/commit/b961c07) test(ks9): the coalesce test holds the pass open instead of hoping it is slow
+- **s24 (KS10 Deliver)** — 5 commit(s):
+  - [`05a3a5b`](https://github.com/shaahink/conductor/commit/05a3a5b) docs(tracker): KS10.2 - the handoff says only KS10.3 is left, and it is the owner's
+  - [`c3d2cdf`](https://github.com/shaahink/conductor/commit/c3d2cdf) docs(evidence): KS10.2 - the four artifacts the claim rests on
+  - [`f4e42eb`](https://github.com/shaahink/conductor/commit/f4e42eb) docs(github): KS10.2 - the templates ask for the diagnostic this era added
+  - [`263c7f8`](https://github.com/shaahink/conductor/commit/263c7f8) test(docs): KS10.2 - the verb surface is pinned in both directions, on both pages
+  - [`7ee50b3`](https://github.com/shaahink/conductor/commit/7ee50b3) docs(published): KS10.2 - the front page opens the door the engine opens
 
 ## Phase handovers (audit)
 
@@ -264,30 +275,37 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:cached
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> Holding for the suite result.
+> **KS10.2 done — published surface reconciled, pinned by tests, payesh PR open**
+> - README, operating.md §2 and CHANGELOG [Unreleased] fixed; two false README claims corrected, not reworded
+> - Two new SF7_1 partials derive from Program.cs and reflection; four seeded stale docs each caught by name
+> - payesh re-harvest found three pre-existing breakages including KS0.2's `closed` status; all fixed, PR #1 open, main untouched
+>
+> artefacts: 7ee50b3, 263c7f8, f4e42eb, c3d2cdf, 05a3a5b, shaahink/payesh#1
+>
+> evidence: .conductor/evidence/KS10/ks10-2-docs-pin.md, .conductor/evidence/KS10/ks10-2-readme-blocks.txt, .conductor/evidence/KS10/ks10-2-payesh-pr.md, .conductor/evidence/KS10/ks10-2-changelog-section.txt
+>
+> gaps: KS10.3 owner-only (merge, tag, reinstall, backfill, merge PR #1); PR #1's public-repo privacy relaxation needs an owner decision; run 9647f1b8 excluded from the payesh corpus until anonymise.json names it; bug #48 open
 
 ## Tracker handoff
 
 ```
-last: FIX session #21. The battery's four reds are down and the tree is GREEN. Stage KS9 stays closed
-  (9.1/9.2 DONE, 9.3 SKIPPED); no checkpoint changed status, KS9.2 got an --amend recording that it
-  claimed DONE on a red tree. Evidence .conductor/evidence/KS9/ks9-fix-battery-green.md.
-three schema pins moved 13 -> 14 because KS9.2's own v14_github_cursor.sql took CurrentVersion to 14
-  and left them behind (RunDbTests, renamed to Schema_version_is_fourteen; K3_3ProvenanceTests:321;
-  K4_1ContextWindowTests:285). Those literals exist to force the bump to be DECIDED - that decision
-  is made, out loud, with the migration in hand. Nothing relaxed: still exact literals.
-ratchet: RunContext.cs 514 -> 459 by moving the mirror surface into a new partial
-  RunContext.Mirror.cs. architecture-baseline.json is still {} and lineCeiling is still 500 - the
-  baseline is EMPTY, so a split was the only legal fix and a debt entry was never an option.
-TRAP, and it cost a whole extra run: TWO architecture tests key on FILE NAME. The ratchet's per-file
-  ceiling, and ArchitectureBoundaryTests' GithubMirror allowlist (only RunContext.cs and
-  RunLoop.Plumbing.cs may name it under Orchestration). A split satisfies one and breaks the other.
-  Check both. A targeted filter went 10/10 and missed it; only the full suite found it.
-numbers: full suite 2645/2646 (the one red was the boundary test, fixed after), then 19/19
-  architecture green. Bug #44 (43 pragmas vs ceiling 38) is untouched, still open, owner decision.
-then: KS10.1, then KS10.2.
+last: KS10.2 DONE (evidence .conductor/evidence/KS10/ks10-2-docs-pin.md). Four commits: 7ee50b3
+  README+operating+CHANGELOG, 263c7f8 the two new SF7_1 partials, f4e42eb .github, c3d2cdf evidence.
+STILL TRUE FROM #23: the PATH conductor CANNOT WRITE. Use
+  `dotnet run --project src/Conductor -- VERB -p plans/karvansara/core.plan.json` for every verb,
+  claims included. Bug #45. The fresh build's exe is also what you put first on PATH for anything
+  that shells `conductor` (the payesh harvest does).
+what remains: KS10.3 ONLY, and it is owner-only - merge to master, tag with the [Unreleased] section
+  as the body (leave the heading alone; `sh tools/changelog-section.sh Unreleased` exits 0, 131
+  lines), reinstall, `github sync --backfill` this run, merge payesh PR #1.
+for the owner at KS10.3: payesh PR https://github.com/shaahink/payesh/pull/1 is OPEN, main untouched
+  at 43b59e4. Its second commit relaxes a privacy rule (a public repo's run slug stops being secret)
+  - that one wants a real read, not a rubber stamp. This run 9647f1b8 is EXCLUDED from the corpus
+  until anonymise.json gets it a label/scenario/repoKey + disposition.
+new bugs: #47 payesh anonymity unfalsifiable on a one-word repo name (FIXED in PR #1), #48
+  `conductor face` with no live run here attaches to ANOTHER repo's run without saying so.
 ```
