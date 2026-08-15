@@ -8,7 +8,7 @@ namespace Conductor.Core.Store;
 internal static class MigrationRunner
 {
     /// <summary>Current schema version — the highest migration we ship.</summary>
-    public const int CurrentVersion = 13;
+    public const int CurrentVersion = 14;
 
     /// <summary>Column added to embedded resource path: folder path segments joined by <c>.</c></summary>
     private static readonly string ResourcePrefix = "Conductor.Core.Store.Migrations.";

@@ -148,6 +148,9 @@ public sealed partial class VerdictEngine
             if (_ctx.Notifier.Admit(nameof(RunStatus.AwaitingOwner), $"owner-gate {id}"))
             {
                 Notify($"Conductor {_ctx.Plan.Name}: stage {id} is green and awaiting owner approval");
+                // KS9.2: the owner being asked to approve is the moment the board most needs to be
+                // current — it is what they will look at to decide.
+                _ctx.MirrorBoard($"owner-gate {id}");
                 _ = _telegram.PushWithKeyboardAsync($"Stage {id} green — owner approval needed",
                     [("Approve", "approve")], CancellationToken.None);
             }

@@ -110,6 +110,7 @@ public sealed partial class RunLoop
             });
             WarnOnDirtyEngine();
             NotifyRunStart();
+            AttachGithubMirror();
             // SF5.4: two engines on one machine are two identical entries in a task manager until one of
             // them says which run it is. Set once here, refreshed on every stage entry below.
             Core.Fleet.ProcessTitle.Set(_ctx.Plan.Repo, _ctx.Plan.Name, _ctx.State.RunId, _ctx.State.CurrentStage);
@@ -484,6 +485,9 @@ public sealed partial class RunLoop
         finally
         {
             _ctx.DisposeTranscript();
+            // KS9.2: the mirror owns an HttpClient. Attached at run start, released here — and never
+            // in between, because a pass in flight at teardown is a pass whose cursor must not move.
+            _ctx.AttachMirror(null);
             ReleaseLock();
         }
     }

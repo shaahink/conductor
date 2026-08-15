@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvansara core - the open door run report
 
-_Updated 2026-08-15 01:08 UTC · branch `feat/karvansara` · HEAD `1264a7b`_
+_Updated 2026-08-15 01:45 UTC · branch `feat/karvansara` · HEAD `181e72a`_
 
-**Status:** Idle — stage KS3 used all 10 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Environment credential error (Claude subscription/API key disabled) — orchestrator cannot proceed without user providing valid API access. [28m ago, 00:40:23Z]
-**Stage:** KS5 — Spend - every dollar the tool can spend is governed · attempts used 0
-**Checkpoints:** 26/32 done · **Sessions run:** 17 · **Cost:** $69.2843 (agent $69.1792 + gates $0.1051) · **Tokens:** 1,199,657 in / 497,539 out
+**Status:** Idle — stage KS3 used all 10 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Environment credential error (Claude subscription/API key disabled) — orchestrator cannot proceed without user providing valid API access. [1h 05m ago, 00:40:23Z]
+**Stage:** KS9 — The far door - GitHub is the remotest view · attempts used 0 · working ▸ KS9.2
+**Checkpoints:** 27/32 done · **Sessions run:** 18 · **Cost:** $84.8520 (agent $84.7389 + gates $0.1131) · **Tokens:** 1,406,372 in / 601,674 out
 **Confirmed phases:** KS0, KS1, KS2, KS3, KS5
 
 ## Stage progress
@@ -16,7 +16,7 @@ _Updated 2026-08-15 01:08 UTC · branch `feat/karvansara` · HEAD `1264a7b`_
 | KS2 | The open door - bare conductor is the app, and every section reads | ██████████ 8/8 | confirmed ✓ |
 | KS3 | Authoring - no human writes JSON | ██████████ 5/5 | confirmed ✓ |
 | KS5 | Spend - every dollar the tool can spend is governed | ██████████ 4/4 | confirmed ✓ |
-| KS9 | The far door - GitHub is the remotest view | ░░░░░░░░░░ 0/3 | todo |
+| KS9 | The far door - GitHub is the remotest view | ███░░░░░░░ 1/3 | **← active** |
 | KS10 | Ship core | ░░░░░░░░░░ 0/3 | todo |
 
 <details> ✅<summary>KS0 — Leftovers - the catalogue stops corrupting itself (3/3)</summary>
@@ -80,11 +80,11 @@ _Updated 2026-08-15 01:08 UTC · branch `feat/karvansara` · HEAD `1264a7b`_
 
 </details>
 
-<details><summary>KS9 — The far door - GitHub is the remotest view (0/3)</summary>
+<details><summary>KS9 — The far door - GitHub is the remotest view (1/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| KS9.1 | SecretsStore gains the GitHub token field with the env override, a raw-HttpClient client lands on the ReleaseClient pattern, and github sync --backfill posts a finished run's board and diary to a scratch repo - re-running mints zero duplicates, off by default, nothing inbound | ⬜ TODO | - |
+| KS9.1 | SecretsStore gains the GitHub token field with the env override, a raw-HttpClient client lands on the ReleaseClient pattern, and github sync --backfill posts a finished run's board and diary to a scratch repo - re-running mints zero duplicates, off by default, nothing inbound | ✅ DONE | - |
 | KS9.2 | The live mirror reconciles over ReadEventsAfter - batched, network-failure-proof, cursor-resumable - a mid-run network kill leaves the run unharmed and the board converges on reconnect with zero duplicates | ⬜ TODO | - |
 | KS9.3 | Projects v2 board via GraphQL mirrors stage status - or, without the one-time project-scope grant, reports the precise refusal and stays SKIPPED rather than half-done | ⬜ TODO | - |
 
@@ -121,6 +121,7 @@ _Updated 2026-08-15 01:08 UTC · branch `feat/karvansara` · HEAD `1264a7b`_
 | 15 | KS3 | Deliver | 9 | 08-15 00:18 | 0:00 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
 | 16 | KS3 | Deliver | 10 | 08-15 00:18 | 0:00 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
 | 17 | KS3 | Deliver | 1 | 08-15 00:41 | 0:21 | Advanced | KS3.5 | 2 | engine-fast:OK · face-fast:OK | $5.8550 | $0.0071 | 116,712/50,601 |
+| 18 | KS9 | Deliver | 1 | 08-15 01:08 | 0:36 | Advanced | KS9.1 | 3 | engine-fast:OK · face-fast:OK | $15.5597 | $0.0080 | 206,715/104,135 |
 
 ## Money
 
@@ -140,11 +141,6 @@ _Where the money goes: agent $69.18 (100%) · gate $0.11 (0%) · advisor $0.03 (
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-15 01:17:44  ■ needs human — advisor: human intervention required
-08-15 01:17:45  • session #11 KS3 → AgentError  (11.8s)
-08-15 01:17:45  • session #12 KS3 Deliver started (attempt 6/10)
-08-15 01:17:52  ▪ gate engine-fast pass [session]  (0.0s)
-08-15 01:17:52  ▪ gate face-fast pass [session]  (0.0s)
 08-15 01:17:57  ■ needs human — advisor: human intervention required
 08-15 01:17:57  • session #12 KS3 → AgentError  (12.0s)
 08-15 01:17:58  • session #13 KS3 Deliver started (attempt 7/10)
@@ -180,6 +176,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-15 02:08:18  ✓ checkpoint KS3.5 confirmed
 08-15 02:08:18  ▸ stage KS3 confirmed  (1h28m26s)
 08-15 02:08:19  ▸ stage KS5 entered — Spend - every dollar the tool can spend is governed
+08-15 02:08:19  ▸ stage KS5 confirmed  (0.1s)
+08-15 02:08:20  ▸ stage KS9 entered — The far door - GitHub is the remotest view
+08-15 02:08:20  • session #18 KS9 Deliver started (attempt 1/6)
+08-15 02:45:49  ▪ gate engine-fast pass [session]  (57.7s)
+08-15 02:45:49  ▪ gate face-fast pass [session]  (22.2s)
 ```
 
 ## Health
@@ -187,11 +188,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 17 · retries 10 (59 %) · overall Alert
+sessions 18 · retries 10 (56 %) · overall Alert
 ⛔ [same-failure-loop] stage KS3: 10 consecutive sessions made no progress
 ⚠ [context-saturation] session #3: 23,814,216 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 24,323,658 context tokens (≥ 20,000,000)
-⚠ [high-retry-rate] 10/17 sessions were retries (59 %)
+⚠ [high-retry-rate] 10/18 sessions were retries (56 %)
 ```
 
 ## Repo
@@ -200,7 +201,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvansara
-working tree: M .conductor/REPORT.md, M plans/karvansara/CORE-TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
@@ -236,6 +237,10 @@ vs upstream: up to date
 - **s17 (KS3 Deliver)** — 2 commit(s):
   - [`1264a7b`](https://github.com/shaahink/conductor/commit/1264a7b) fix(core,cli,docs): KS3.5 - the id that passes every regex the contract names, and loses the board
   - [`efa8327`](https://github.com/shaahink/conductor/commit/efa8327) feat(core,cli): KS3.5 - three boards you already wrote, converted for nothing
+- **s18 (KS9 Deliver)** — 3 commit(s):
+  - [`181e72a`](https://github.com/shaahink/conductor/commit/181e72a) docs(tracker,evidence): KS9.1 - the full-suite number, and the handoff hands over KS9.2
+  - [`42c4af6`](https://github.com/shaahink/conductor/commit/42c4af6) fix(cli,core,tests): KS9.1 - two defects the live backfill found, and the board it proved
+  - [`95b0237`](https://github.com/shaahink/conductor/commit/95b0237) feat(core,cli,docs): KS9.1 - the board goes out to GitHub, and stays out
 
 ## Phase handovers (audit)
 
@@ -258,37 +263,38 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> **KS3.5 landed: three import bridges, and the green run that was throwing the board away**
-> - Spec-kit/Task-Master/checklist convert behind one content-detecting entry point, zero spend, reached from `plan import` and the new `demo --from`; stage KS3 now complete.
-> - Live rig proved the contract's id bar insufficient: `P31.T001` passes every named regex and still synced "0 added, 3 scaffolded". Real bar is ProgressConventions.cs:24 — digits after the dot, silent skip otherwise.
-> - Fixed ids, tightened IsDrivableCheckpointId, added the provider round-trip fact. 15/15 new, 59/59 pinned neighbours. Live: Completed, exit 0, 5/5 confirmed.
+> **KS9.1 landed - GitHub board mirror, proven idempotent live against a scratch repo**
+> - Live twice on private shaahink/conductor-sync-scratch: 7 created/10 comments, then 0/0/7 unchanged, 29 requests down to 3
+> - Found by running it: a Spectre option value name with a slash kills EVERY verb at startup; archive/task-graph status casing left the diary issue open. Both fixed and pinned
+> - Amended the card: read-only store and a written github_map cannot both hold, so marker reconciliation is the delivered path and the table moves to KS9.2 (v14, not v13)
 >
-> artefacts: efa8327, 1264a7b, src/Conductor.Core/Planning/{ImportBridge, SpecKitImporter, TaskMasterImporter, ChecklistImporter}.cs, src/Conductor/Commands/DemoCommand.Import.cs, tests/Conductor.Tests/KS3_5ImportBridgeTests.cs
+> artefacts: 95b0237, 42c4af6, 181e72a, src/Conductor.Core/Integrations/Github/, src/Conductor/Commands/GithubCommand.cs, tests/Conductor.Tests/KS9_1*.cs, tests/Conductor.Tests/FakeGithub.cs, docs/cli.md
 >
-> evidence: .conductor/evidence/KS3/ks3-5.md
+> evidence: .conductor/evidence/KS9/ks9-1-backfill.md
 >
-> gaps: EvidenceArtifact.cs:87 is a fourth, stricter id reader (3 digits max per side) — a 4-digit phase or task count would pass the provider and fail evidence association; filed as a bug, not hit by any fixture. Full gate battery is conductor's to run, not mine.
+> gaps: ratchet RED at 43 pragmas vs ceiling 38 - red before this session too (43 at 1264a7b, 43 at HEAD), KS9.1 adds zero; filed as bug #44 because raising maxPragmas is forbidden. KS9.2 and KS9.3 untouched; KS9.3's refusal branch is live since gh has no project scope.
 
 ## Tracker handoff
 
 ```
-last: KS3.5 CLAIMED - stage KS3 is complete. Three bridges behind ImportBridge.Read (spec-kit,
-  Task-Master, checklist), reached from `plan import` and the new `demo --from`, content-detected,
-  zero spend. Evidence .conductor/evidence/KS3/ks3-5.md; rig ks3-5-rigs/run-demo-speckit.ps1.
-  Live: 5 added / 0 scaffolded, status Completed, exit 0, all 5 converted tasks engine-confirmed.
-measured, and it cost a live run: the contract's id bar (FakeAgentCommand's two regexes) is
-  NECESSARY BUT NOT SUFFICIENT. `P31.T001` passes both AND MarkdownPlanParser, and the first run
-  still synced "0 added, 3 scaffolded" - the board thrown away, placeholders driven to DONE, green.
-  The binding reader is ProgressConventions.cs:24 (row regex :64-72): the suffix must be DIGITS,
-  and an unreadable row is skipped in SILENCE. Drivable = the intersection, [A-Za-z]{1,4}\d+\.\d+.
-  Any future id minting must be proven through ProgressProviderFactory, not a regex assertion.
-then: KS9 (scratch repo only; KS9.3 expects precise-refusal SKIPPED), KS10.1-10.2 per
-  contracts/KS9-10.json; KS10.3 owner-only. KS10.2 is one command in payesh (`npm run harvest &&
-  npm run evidence`), then branch, commit corpus.json, open the PR - main is stale by 3 runs.
-measured: batteries run serially with -nodeReuse:false -p:UseSharedCompilation=false. A demo rig
-  MUST clear CONDUCTOR_PLAN - its fake agent calls `task --done` and would claim on the live run.
+last: KS9.1 CLAIMED. `conductor github sync --backfill <run> [--repo owner/name]` pushes a
+  finished run's board (issue per checkpoint, marker identity, status/source/confirmed labels,
+  stage milestones) + diary (run issue, one comment per SessionFinished). Live, twice, against
+  PRIVATE shaahink/conductor-sync-scratch: 7 created/10 comments, then 0/0/7 unchanged, 29
+  requests down to 3. Evidence .conductor/evidence/KS9/ks9-1-backfill.md. Suite 2605/0.
+measured, twice, and only by RUNNING it: (1) a Spectre CommandOption value name may not contain
+  a slash - `--repo <OWNER/NAME>` threw at CommandModelBuilder.Build, which builds EVERY command
+  at startup, so it killed `status`, `task` and `run` too, through a green build and green suite.
+  Pinned in B11_2 EveryCommandOptionTemplateParses. (2) the archive spells run status `Completed`
+  and the task graph spells its statuses lower-case; an ordinal check left the diary issue open.
+  Drive the fresh binary once for any new CLI option - the suite cannot see either class.
+red, and NOT this session: ratchet is at 43 pragmas vs ceiling 38. git grep gives 43 at 1264a7b
+  and 43 at HEAD; KS9.1 adds zero. Raising maxPragmas is forbidden by that file - bug #44 filed.
+then: KS9.2 (reconciler over ReadEventsAfter; github_map + cursor land THERE - see the KS9.1 card
+  amendment: read-only store and a written map cannot both hold, and v13 is taken, so it is v14).
+  KS9.3's refusal branch is live - `gh auth status` today: no `project` scope.
 ```

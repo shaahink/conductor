@@ -470,6 +470,9 @@ public sealed partial class VerdictEngine
         // K5.4: the whole point of severity. The run has stopped and cannot restart itself — this is
         // the one message that has earned the right to buzz a phone at 3am.
         Notify($"Conductor {_ctx.Plan.Name}: needs attention — {reason}", PushSeverity.Alert);
+        // KS9.2: same beat as the buzz, and gated by the same Admit — a park that has already been
+        // announced does not re-push a board that has not changed.
+        _ctx.MirrorBoard("needs-human");
         _ = _telegram.PushWithKeyboardAsync(reason,
         [
             ("Resume", "resume"),

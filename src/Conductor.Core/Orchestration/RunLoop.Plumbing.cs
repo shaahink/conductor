@@ -7,6 +7,7 @@ using Conductor.Core.Commands;
 using Conductor.Core.Events;
 using Conductor.Core.Evidence;
 using Conductor.Core.Integrations;
+using Conductor.Core.Integrations.Github;
 using Conductor.Core.Integrations.Messaging;
 using Conductor.Core.Orchestration;
 using Conductor.Core.Planning;
@@ -223,6 +224,11 @@ public sealed partial class RunLoop
             // wall-clock, which the record has always carried and no message ever rendered.
             SessionProgress.WorkCommits(rec),
             rec.EndedUtc is { } ended ? ended - rec.StartedUtc : null));
+
+        // KS9.2: the session boundary is the mirror's main beat — one pass, after the checkpoint
+        // writes and the tracker regeneration above, so the board it computes is the board the
+        // tracker just showed. Fire-and-forget through RunContext: it cannot throw and cannot block.
+        _ctx.MirrorBoard($"session {rec.Number} end");
     }
 
     // ---------------------------------------------------------------- notifications
@@ -240,6 +246,28 @@ public sealed partial class RunLoop
         var verb = _ctx.State.SessionCounter > 0 ? "resumed" : "started";
         Notify($"Conductor {_ctx.Plan.Name}: run {verb} — repo {_ctx.Plan.Repo} " +
                $"(branch {Git.Branch(_ctx.Plan.Repo)}) · engine {BuildInfo.Current.Full}");
+    }
+
+    // ---------------------------------------------------------------- KS9.2 the live mirror
+
+    /// <summary>Attach the run's GitHub mirror, once, at run start — and push immediately, so a run
+    /// that is resumed after a process died with an unpushed tail catches up before its first session
+    /// rather than at the end of it. Null when the plan has not opted in, which is the default.</summary>
+    private void AttachGithubMirror()
+    {
+        if (_ctx.Store is not { } db) return;
+        // The dance is CA2000's own prescription for a transfer of dispose ownership: create into a
+        // local, hand it over, null the local so the finally cannot double-dispose what the context
+        // now owns. RunContext disposes it in RunLoop's finally.
+        GithubMirror? mirror = null;
+        try
+        {
+            mirror = GithubMirror.TryCreate(_ctx.Plan, db, _ctx.State.RunId, _ctx.Log);
+            _ctx.AttachMirror(mirror);
+            mirror = null;
+        }
+        finally { mirror?.Dispose(); }
+        _ctx.MirrorBoard("run start");
     }
 
     private void Notify(string message, PushSeverity severity = PushSeverity.Quiet)

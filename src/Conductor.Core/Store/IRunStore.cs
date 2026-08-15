@@ -198,6 +198,19 @@ public interface IRunStore : IDisposable
     IReadOnlyList<StageOutcomeRow> QuerySessionOutcomesByStage(string runId);
     IReadOnlyList<GateFailureRow> QueryRecentGateFailures(string runId, int limit = 5);
 
+    // ---------------------------------------------------------------- KS9.2 github mirror cursor
+
+    /// <summary>How far into this run's event log the given repository has been told. Keyed by the
+    /// destination as well as the run: the same run mirrored into a scratch repo and then into a real
+    /// one has told each a different amount.</summary>
+    GithubCursorRow ReadGithubCursor(string runId, string repo);
+
+    /// <summary>Advance the mark, AFTER a batch has been pushed without errors.</summary>
+    bool WriteGithubCursor(string runId, string repo, long seq, string? lastError);
+
+    /// <summary>Record a failed pass. The mark does not move — that is the point.</summary>
+    bool RecordGithubSyncError(string runId, string repo, string error);
+
     // ---------------------------------------------------------------- raw query (read-only, parametrized)
 
     IReadOnlyList<Dictionary<string, object?>> Query(string sql, params (string Name, object? Value)[] parameters);

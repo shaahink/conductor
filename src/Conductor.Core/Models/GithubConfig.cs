@@ -38,6 +38,12 @@ public sealed class GithubConfig
     /// a refusal rather than a silent no-op when <see cref="Board"/> asks for a project.</summary>
     public int ProjectNumber { get; set; }
 
+    /// <summary>KS9.2 — reconcile the board AS THE RUN GOES, at the boundaries the engine already
+    /// treats as boundaries, instead of only on a manual <c>github sync --backfill</c>. True by
+    /// default, but only ever consulted under <see cref="Enabled"/>: a plan that has not opted in has
+    /// no mirror to switch off. Set false to keep the backfill and nothing else.</summary>
+    public bool LiveMirror { get; set; } = true;
+
     /// <summary>Mirror the run's diary as one issue with one comment per finished session. True by
     /// default: the board says what the work IS, and the diary says what happened to it.</summary>
     public bool RunHistoryIssue { get; set; } = true;

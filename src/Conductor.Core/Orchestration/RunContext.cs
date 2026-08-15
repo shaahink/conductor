@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
+using Conductor.Core.Integrations.Github;
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
 using Conductor.Core.Store;
@@ -41,6 +42,52 @@ public sealed class RunContext
     /// <summary>KS2.6: the gate every notification passes through — dry-run silence and the
     /// one-push-per-incident rate limit. See <see cref="ParkNotifier"/>.</summary>
     public ParkNotifier Notifier { get; }
+    /// <summary>KS9.2 — the live GitHub mirror, or null when the plan has not opted in (which is the
+    /// default, and is also what every plan written before KS9 gets). Deliberately NOT a constructor
+    /// parameter and deliberately NOT an <c>IEventSink</c>: it is attached once at run start by
+    /// <c>RunLoop</c>, it is a reconciler the boundaries poke, and a null one is simply never poked —
+    /// so a plan without a <c>github</c> block runs the code path it ran before this existed.</summary>
+    public GithubMirror? Mirror { get; private set; }
+
+    /// <summary>Attach (or replace, on a plan reload) the run's mirror. Disposing the old one is the
+    /// caller's business only at shutdown; a reload swaps the destination and the old client must not
+    /// outlive it, so this disposes what it replaces.</summary>
+    public void AttachMirror(GithubMirror? mirror)
+    {
+        if (ReferenceEquals(Mirror, mirror)) return;
+        Mirror?.Dispose();
+        Mirror = mirror;
+    }
+
+    /// <summary>Poke the mirror at a boundary. Null-safe, non-blocking and incapable of throwing —
+    /// the three properties that let this be called from the verdict path without the verdict path
+    /// caring whether GitHub exists, is configured, or is up.</summary>
+    /// <remarks>The discard is the same SHAPE as the <c>Notify</c> idiom next door and not the same
+    /// thing: that one drops faults on the floor, whereas <c>ReconcileAsync</c> is total — it catches
+    /// its own exceptions, logs one line and holds the cursor, so there is provably no fault here to
+    /// observe. The alternative, awaiting a network call on the verdict path, is the back-pressure
+    /// this whole design exists to avoid.</remarks>
+    public void MirrorBoard(string reason, string? runStatus = null) => _ = Mirror?.Fire(reason, runStatus);
+
+    /// <summary>The LAST pass, at run completion, waited for under a budget. Every other boundary is
+    /// fire-and-forget because another one is coming; this one has nothing behind it, and a process
+    /// that exited while the closing pass was in flight would leave the diary issue open on a run
+    /// that had finished. The budget is a ceiling, not a promise: it expires, the run still ends, and
+    /// the next process's run-start pass catches the board up.</summary>
+    public void MirrorFinalPass(string reason, string runStatus, TimeSpan budget)
+    {
+        if (Mirror is not { } mirror) return;
+        try
+        {
+            if (!mirror.Fire(reason, runStatus).Wait(budget))
+                Log($"github mirror: closing pass did not finish within {budget.TotalSeconds:0}s — the board will catch up on the next run");
+        }
+        catch (AggregateException ex)
+        {
+            Log($"github mirror: closing pass failed — {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
     public IWorkflowResolver Workflows { get; }
     public IAssignmentPolicy Assignments { get; }
     public IQaPolicy Qa { get; }

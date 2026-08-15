@@ -71,6 +71,12 @@ public sealed partial class VerdictEngine
         Notify($"Conductor: plan {_ctx.Plan.Name} COMPLETE ({_ctx.State.SessionCounter} sessions) — " +
                $"repo {_ctx.Plan.Repo} · engine {BuildInfo.Current.Full}", telegram: false);
 
+        // KS9.2: the closing pass, and the only one that is WAITED for — after RecordRunEnd, so the
+        // runs row already carries the terminal status the diary issue closes on. The status is also
+        // passed explicitly: a mirror that had to infer "over" from a row it raced would be deciding
+        // the most visible bit of the board on a timing question.
+        _ctx.MirrorFinalPass("run complete", _ctx.State.Status.ToString(), TimeSpan.FromSeconds(90));
+
         var first = _ctx.State.History.Count > 0 ? _ctx.State.History[0].StartedUtc : (DateTime?)null;
         _ = _telegram.PushRunCompleteAsync(new RunCompletePush(
             _ctx.State.SessionCounter,

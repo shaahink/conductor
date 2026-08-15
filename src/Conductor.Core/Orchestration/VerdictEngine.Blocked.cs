@@ -76,6 +76,8 @@ public sealed partial class VerdictEngine
             "blockeduntil");
         Notify($"Conductor {_ctx.Plan.Name}: {BlockedUntilRequest.Describe(req.UntilUtc, req.Reason, now)}");
         _saveAndReport();
+        // KS9.2: a run that is about to sleep is exactly the run whose board a reader will look at.
+        _ctx.MirrorBoard("blocked-until");
         return true;
     }
 
