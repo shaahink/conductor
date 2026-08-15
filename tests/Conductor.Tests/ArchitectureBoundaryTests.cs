@@ -472,7 +472,12 @@ public class ArchitectureBoundaryTests
         {
             var code = CodeOnly(file);
             if (!code.Contains("GithubMirror", StringComparison.Ordinal)) continue;
-            if (file.Name is "RunContext.cs" or "RunLoop.Plumbing.cs") continue;
+            // The allowlist is TYPES wearing filenames: RunContext, which holds the mirror and is the
+            // door, and RunLoop, which attaches it at run start. RunContext.Mirror.cs is the same
+            // class as RunContext.cs — the mirror surface moved into its own partial when the parent
+            // crossed the 500-line ratchet — so admitting it widens nothing. Anything else under
+            // Orchestration still has to come through MirrorBoard / MirrorFinalPass.
+            if (file.Name is "RunContext.cs" or "RunContext.Mirror.cs" or "RunLoop.Plumbing.cs") continue;
             violations.Add($"  {file.Name} names GithubMirror directly — boundaries poke it through " +
                 "RunContext.MirrorBoard / MirrorFinalPass, which are null-safe and cannot throw.");
         }
