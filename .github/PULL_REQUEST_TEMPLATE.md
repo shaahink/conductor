@@ -37,3 +37,16 @@ diff.
 
 - [ ] No test deleted, no analyzer suppression added, no gate command softened
 - [ ] If an ADR settled what I'm changing, I amended the ADR in this PR
+
+## If you added or renamed a verb
+
+A verb lives in **four** places and the docs tests fail the build when they disagree — this is a
+checklist, not a request for extra work.
+
+- [ ] `src/Conductor/Program.cs` (registered, and `.IsHidden()` only if it is genuinely not a verb
+      to reach for — hiding one to make `K7_2DocsVerbCoverageTests` green is the cheat that test exists to stop)
+- [ ] `docs/cli.md` — a reference row
+- [ ] `docs/operating.md` §2 "Full command reference" — the page an agent driving conductor is pointed at
+- [ ] `src/Conductor/Commands/CompletionCommand.cs` — the one `Verbs` constant both shells read
+- [ ] Quoted it in `README.md`? Then every flag on that line must be one the command's settings type
+      declares — strict parsing means a stale flag exits non-zero for whoever copies it

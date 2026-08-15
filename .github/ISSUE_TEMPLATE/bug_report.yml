@@ -61,7 +61,11 @@ body:
     attributes:
       label: Evidence
       description: >
-        The tail of `.conductor/conductor.log`, plus `conductor status`. Redact anything private —
+        `conductor preflight` first if the run had not started yet — it is one verdict over six
+        legs (doctor, journey, the composed prompt, engine-versus-release, a stale-build check, the
+        handoff block) and it usually names the problem outright. Otherwise the tail of
+        `.conductor/conductor.log`, plus `conductor status` — which widens to this machine's board
+        when the directory names no plan, so it answers from anywhere. Redact anything private:
         prompts can contain your source.
       render: shell
 
