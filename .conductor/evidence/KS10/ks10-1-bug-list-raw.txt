@@ -1,0 +1,132 @@
+╭────┬────────┬────────┬───────┬───────────────────────┬───────────────────────╮
+│ #  │ sev    │ status │ stage │ title                 │ filed by              │
+├────┼────────┼────────┼───────┼───────────────────────┼───────────────────────┤
+│ 46 │ medium │ open   │ KS10  │ Bugs do not survive a │ this run              │
+│    │        │        │       │ state-home split:     │                       │
+│    │        │        │       │ karvan's              │                       │
+│    │        │        │       │ #24/#27/#31/#35 never │                       │
+│    │        │        │       │ reached this era's    │                       │
+│    │        │        │       │ store, so no          │                       │
+│    │        │        │       │ karvansara prompt     │                       │
+│    │        │        │       │ ever saw them         │                       │
+│ 45 │ high   │ open   │ KS10  │ Any verb from a newer │ this run              │
+│    │        │        │       │ build silently        │                       │
+│    │        │        │       │ migrates the live     │                       │
+│    │        │        │       │ run.db and locks the  │                       │
+│    │        │        │       │ RUNNING engine out of │                       │
+│    │        │        │       │ its own store         │                       │
+│ 44 │ medium │ open   │ KS9   │ ratchet gate is RED   │ this run              │
+│    │        │        │       │ before this session:  │                       │
+│    │        │        │       │ 43 analyzer           │                       │
+│    │        │        │       │ suppressions against  │                       │
+│    │        │        │       │ a ceiling of 38       │                       │
+│ 43 │ medium │ open   │ KS3   │ Import bridges: a     │ this run              │
+│    │        │        │       │ 4-digit phase/task    │                       │
+│    │        │        │       │ count mints ids that  │                       │
+│    │        │        │       │ pass the progress     │                       │
+│    │        │        │       │ provider but fail     │                       │
+│    │        │        │       │ EvidenceArtifact's [  │                       │
+│    │        │        │       │ A-Za-z]{1,4}\d{1,3}[  │                       │
+│    │        │        │       │ ._]\d{1,3} reader     │                       │
+│    │        │        │       │ (EvidenceArtifact.cs: │                       │
+│    │        │        │       │ 87) - a fourth id     │                       │
+│    │        │        │       │ shape, stricter than  │                       │
+│    │        │        │       │ the intersection      │                       │
+│    │        │        │       │ KS3.5 measured. No    │                       │
+│    │        │        │       │ fixture hits it; a    │                       │
+│    │        │        │       │ spec-kit board with   │                       │
+│    │        │        │       │ 1000+ tasks or a      │                       │
+│    │        │        │       │ Phase 1000 would.     │                       │
+│ 42 │ low    │ open   │ KS10  │ catalogue repair can  │ this run              │
+│    │        │        │       │ never collapse a      │                       │
+│    │        │        │       │ duplicate that lands  │                       │
+│    │        │        │       │ in the LIVE store:    │                       │
+│    │        │        │       │ refusing a live store │                       │
+│    │        │        │       │ is correct, but it    │                       │
+│    │        │        │       │ leaves the only fix   │                       │
+│    │        │        │       │ out-of-band (an owner │                       │
+│    │        │        │       │ run at an idle        │                       │
+│    │        │        │       │ moment), which parked │                       │
+│    │        │        │       │ KS0.1 for two days    │                       │
+│ 41 │ medium │ open   │ KS10  │ payesh anonymity gate │ this run              │
+│    │        │        │       │ fails closed on the   │                       │
+│    │        │        │       │ generic word          │                       │
+│    │        │        │       │ 'website': a          │                       │
+│    │        │        │       │ catalogued repo named │                       │
+│    │        │        │       │ 'website' makes every │                       │
+│    │        │        │       │ page with ordinary    │                       │
+│    │        │        │       │ prose or schema.org   │                       │
+│    │        │        │       │ @type=WebSite a leak  │                       │
+│    │        │        │       │ report                │                       │
+│ 40 │ medium │ open   │ KS0   │ Verdict counts        │ this run              │
+│    │        │        │       │ satellite-repo        │                       │
+│    │        │        │       │ commits made by       │                       │
+│    │        │        │       │ anyone as the         │                       │
+│    │        │        │       │ session's own work    │                       │
+│ 39 │ low    │ open   │ KS1   │ An interrupted        │ this run              │
+│    │        │        │       │ session leaves a      │                       │
+│    │        │        │       │ non-terminal          │                       │
+│    │        │        │       │ 'running' session row │                       │
+│    │        │        │       │ at $0.00 that no verb │                       │
+│    │        │        │       │ can close             │                       │
+│ 38 │ medium │ open   │ KS2   │ Telegram getUpdates   │ this run              │
+│    │        │        │       │ 409 conflict loop:    │                       │
+│    │        │        │       │ two engines share one │                       │
+│    │        │        │       │ bot token, inbound    │                       │
+│    │        │        │       │ Telegram control is   │                       │
+│    │        │        │       │ dead for the live run │                       │
+│ 37 │ medium │ open   │ KS0   │ history --json does   │ this run              │
+│    │        │        │       │ not list every        │                       │
+│    │        │        │       │ catalogued run: three │                       │
+│    │        │        │       │ non-terminal baton    │                       │
+│    │        │        │       │ rows were invisible   │                       │
+│    │        │        │       │ to it while a direct  │                       │
+│    │        │        │       │ read of the same      │                       │
+│    │        │        │       │ stores found them     │                       │
+│ 36 │ medium │ fixed  │ KS0   │ The karvansara store  │ this run              │
+│    │        │        │       │ holds a truncated     │                       │
+│    │        │        │       │ copy of df9c4af8 that │                       │
+│    │        │        │       │ only an idle-moment   │                       │
+│    │        │        │       │ 'conductor catalogue  │                       │
+│    │        │        │       │ repair --apply' can   │                       │
+│    │        │        │       │ remove                │                       │
+│ 23 │ medium │ open   │ SF7   │ CI Windows gate       │ Sarban face - the     │
+│    │        │        │       │ battery flakes on     │ watch…                │
+│    │        │        │       │ SF0_3PidsAndBackgroun │                       │
+│    │        │        │       │ dWorkTests.McpBgStatu │                       │
+│    │        │        │       │ s_CallsAnUninspectabl │                       │
+│    │        │        │       │ ePidRunning_NotDead - │                       │
+│    │        │        │       │ expects Unverifiable, │                       │
+│    │        │        │       │ GH runner answers     │                       │
+│    │        │        │       │ Ours/Recycled         │                       │
+│ 21 │ medium │ open   │ SF6   │ Nothing warns when a  │ Sarban face - the     │
+│    │        │        │       │ plan's packs push the │ watch…                │
+│    │        │        │       │ composed prompt past  │                       │
+│    │        │        │       │ the argv ceiling -    │                       │
+│    │        │        │       │ conductor-maestro.pla │                       │
+│    │        │        │       │ n.json declares 5974  │                       │
+│    │        │        │       │ chars of packs on top │                       │
+│    │        │        │       │ of a ~7900-char base  │                       │
+│    │        │        │       │ prompt                │                       │
+│ 19 │ medium │ open   │ SF3   │ SC7.2 session digest  │ Sarban face - the     │
+│    │        │        │       │ never records a       │ watch…                │
+│    │        │        │       │ claim: Claims needs   │                       │
+│    │        │        │       │ an MCP task_update,   │                       │
+│    │        │        │       │ but every session     │                       │
+│    │        │        │       │ claims through the    │                       │
+│    │        │        │       │ conductor CLI         │                       │
+│ 18 │ low    │ open   │ SF1   │ The bottom bar        │ Sarban face - the     │
+│    │        │        │       │ hard-clips a pane's   │ watch…                │
+│    │        │        │       │ contextual help with  │                       │
+│    │        │        │       │ no ellipsis, so the   │                       │
+│    │        │        │       │ last hint is silently │                       │
+│    │        │        │       │ deleted               │                       │
+│ 15 │ medium │ open   │ SF0   │ A composed prompt     │ Sarban face - the     │
+│    │        │        │       │ over ~8191 chars      │ watch…                │
+│    │        │        │       │ silently stops a      │                       │
+│    │        │        │       │ cmd.exe-based agent   │                       │
+│    │        │        │       │ from running, and the │                       │
+│    │        │        │       │ run reports success   │                       │
+╰────┴────────┴────────┴───────┴───────────────────────┴───────────────────────╯
+5 open bug(s) carried forward from an earlier run in this repo. They are still 
+yours: fix and close them with conductor bug fix <id>.

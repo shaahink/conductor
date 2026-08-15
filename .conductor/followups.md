@@ -489,3 +489,110 @@ not a recollection.
 **Nothing here is homeless.** Four followup rows need the owner, one is re-homed to K7.2, one rides
 into the next era; five bugs closed between K7.1 and the ship, and the eleven still open ride into
 the next era in the database rather than in markdown, so nobody has to remember to copy them.
+
+---
+
+## KS10.1 closure ledger — 2026-08-15 (the Karvansara era's final reconciliation)
+
+Same contract as SF7.1's and K7.1's: **no row whose state is unstated, and nothing silently dropped.**
+Every line below was checked on 2026-08-15 against the tree or against the live store, and the check
+is named beside the claim rather than left as "verified".
+
+### The finding this ledger exists to catch — and it caught one
+
+K7.1 closed with a promise: the eleven bugs it left open *"ride into the next era in the database
+rather than in markdown, so nobody has to remember to copy them."* **Four of them did not arrive.**
+
+Measured with a read-only open of all three stores on this machine:
+
+| store | runs it holds | bug ids | schema |
+|---|---|---|---|
+| `%LOCALAPPDATA%/conductor/runs/conductor-karvansara-core---the-open-door-308cfb9b/run.db` — **live** | sarban-core, sarban-face, **karvansara** | 1–23, 36–46 | v14 |
+| `%LOCALAPPDATA%/conductor/runs/conductor-karvan-core-…-b4640aef/run.db` | karvan-core | 1–35 | v12 |
+| `C:/code/conductor/.conductor/run.db` — pre-K3.1 leftover, last written 2026-08-07 | sarban ×2, karvan-core | 1–35 | v9 |
+
+The live store imported the two **sarban** runs and their bugs, but not karvan-core's. So ids **24–35
+are absent from the store every karvansara session read**, the sequence jumps 23 → 36 with a hole in
+it, and `conductor bug list`'s "N open bug(s) carried forward from an earlier run in this repo" was
+only ever as complete as the one store it opens. Four of the twelve are still open, and one of those
+— **#35** — was never named in *any* ledger, K7.1's included. That is the silent drop the contract
+exists to prevent, and it is filed as **#46** rather than fixed here.
+
+### Followup rows — state at karvansara's end
+
+| row | state at 2026-08-15 | owner from here |
+|---|---|---|
+| the 43 rows closed by the 2026-07-28 triage and the SF0.4 disposition | **CLOSED**, unchanged | — |
+| FU-OWNER-10, FU-OWNER-11, FU-OWNER-13 | **CLOSED** by SF7.1, unchanged | — |
+| FU-F1-06 | **CLOSED at KS0.2** (`15627b9`) — K7.1 re-verified it open and this era closed it; the SF7.1 pin turned over to assert the writer exists and the engine calls it | — |
+| FU-B2-3 | **PARTIAL**, unchanged by KS0–KS10: the decision is implemented, the live gate still wants a recovery lane | the owner |
+| FU-B11-2 | **PARTIAL is the final answer**, unchanged — running the engine on Linux needs a Linux host | the owner |
+| FU-B11-3 | **OPEN, owner-gated**, unchanged — real cTrader credentials and real money | the owner |
+| FU-OWNER-14 | **re-homed again, K7.2 → KS10.3.** K7.2 could not take the reinstall because a second conductor run was live; KS10.3's spec carries it verbatim and it is the owner's first install of this run | KS10.3 |
+
+**This era wrote to this file once** — KS0.2's `ed6aab9`, closing FU-F1-06 — and filed everything else
+as a bug. That is the same shape K7.1 reported, and the same conclusion holds: the followup ledger and
+the bug ledger are one ledger in two file formats, and the bug half is the one with a store behind it.
+
+### Bugs closed by this era
+
+`fixed_session` is the store's own column. Two rows carry no session number because `bug fix` does not
+record one when it is not run from inside a session — noted here rather than guessed at.
+
+| bug | closed by | what closed it |
+|---|---|---|
+| #16 | KS0.3, 2026-08-13 | the gate battery could try to rebuild a running `conductor.exe`. Survived three eras because no stage had ever owned `tools/gates`; KS0.3 gave it one. |
+| #20 | KS0.3, 2026-08-13 | `run` resolved `CONDUCTOR_PLAN` over the CWD, so a scratch rig launched inside a session could target the driving run's plan. The sharpest of the seven carried in — the phantom `F0`–`R0` stages in `plans/karvan/CORE-TRACKER.md` are its scar. |
+| #36 | KS0.1, session 6 | the karvansara store held a truncated copy of `df9c4af8` that only an idle-moment `conductor catalogue repair --apply` could remove. Closed by that command, against a backup, on the real store. |
+| #17 | karvan, 2026-08-05 | the CLI silently accepted and ignored any unknown option. Listed as open by K7.1 and already fixed when that ledger was written — restated here rather than dropped, because a row whose state changes is restated. |
+
+### Bugs open at the close — every one, with a name against it
+
+They live in the stores, not in this table; the table exists so the ledger is complete. **Nine are in
+the live store and reach the next run's prompts. Four are in karvan's store and do not** — that is the
+`#46` defect above, and until it is fixed the only thing carrying them is this row.
+
+| bug | what | owner from here |
+|---|---|---|
+| #15 | a composed prompt over ~8191 chars silently stops a cmd.exe-based agent, and the run reports success | next era, engine lane — fix with #21, same root |
+| #18 | the bottom bar hard-clips a pane's contextual help with no ellipsis | next era, face lane |
+| #19 | the session digest never records a claim: it counts MCP `task_update`, and every session claims through the CLI | next era — under-reporting claims for four runs now |
+| #21 | nothing warns when a plan's packs push the composed prompt past the argv ceiling | next era — fix with #15 |
+| #23 | CI Windows gate battery flakes on `SF0_3PidsAndBackgroundWorkTests.McpBgStatus_CallsAnUninspectablePidRunning_NotDead` | next era, CI lane |
+| #37 | `history --json` does not list every catalogued run: three non-terminal baton rows were invisible to it while a direct read found them | next era, store lane |
+| #38 | Telegram `getUpdates` 409 conflict loop — two engines share one bot token, inbound control is dead for the live run | the owner (one token per engine) |
+| #39 | an interrupted session leaves a non-terminal `running` session row at $0.00 that no verb can close | next era, store lane — `conductor run close` covers the run row, not the session row |
+| #40 | Verdict counts satellite-repo commits made by anyone as the session's own work | next era, verdict lane |
+| #41 | payesh's anonymity gate fails closed on the generic word "website" | KS10.2 works around it; the fix is the site's own repo |
+| #42 | `catalogue repair` can never collapse a duplicate that lands in the LIVE store | next era, store lane — refusing a live store is correct, so this needs an idle-moment path |
+| #43 | import bridges: a 4-digit phase/task count mints ids that pass the progress provider but fail plan validation | KS3.5's own follow-on — next era, planning lane |
+| #44 | ratchet gate red before the era began: 43 analyzer suppressions against a ceiling of 38 | **the owner** — raising the ceiling is the one move a session may not make, so this is a decision, not a task |
+| #45 | any verb from a newer build silently migrates the live `run.db` and locks the RUNNING engine out of its own store | **the owner, before anything else** — it happened to this session (see below) and it is the highest-severity row here |
+| #46 | bugs do not survive a state-home split: karvan's #24/#27/#31/#35 never reached this era's store | next era, store lane — and it is why the four rows below are in markdown at all |
+| #24 | `AgentConfig.Merge` silently drops `Env`: a stage-level agent override wipes the plan-level `agent.env` | next era, engine lane — **karvan's store only**, invisible to `bug list` here |
+| #27 | a brand-new `run.db` logs `FOREIGN KEY constraint failed` on the first `run_state` write | next era, store lane — **karvan's store only** |
+| #31 | `bubbles/textarea` cannot replace `widgets.TextArea` until the face's key dispatch stops being a string | next era, face lane — **karvan's store only** |
+| #35 | `tools/w3/window-close.ps1` and `tools/sf1/sf1-2-live-proof.ps1` read `run.db` from the pre-K3.1 path and write scratch runs into the operator's real state home | next era, tooling lane — **karvan's store only, and named in no ledger before this one** |
+
+### The three gaps the KS5 lane close handed forward — verified today, not restated
+
+| gap | measured | owner from here |
+|---|---|---|
+| the face's `tokens cap` row quotes the plan-file ceiling | **CONFIRMED.** `face-go/internal/tui/tab_home.go:661-666` reads `m.plan.doc.Limits.MaxRunTokens` — the plan **file** — while the money row four lines above reads `b.cap`, the ceiling **in force**. So after `approve --tokens N` the two rows disagree, and the one that disagrees is the one KS5.4 raised. | next era, face lane — the wire needs to carry the effective token ceiling the way it already carries `costCap` |
+| `approve` lost `CtlCommand`'s `--yes` and `--force` | **CONFIRMED live.** `ApproveCommand.Settings` (`src/Conductor/Commands/ApproveCommand.cs:24-33`) declares only `--amount` and `--tokens`; `CtlCommand.cs:15,19` still declares both flags. Probed from a scratch cwd against a nonexistent plan so nothing could be written: `approve --yes` exits 1 with `error: Unknown option 'yes'.` Since bug #17 made unknown options fatal, every script that piped `approve --yes` now fails instead of being ignored. | next era, CLI lane — decide whether `approve` needs a confirmation flag at all, then restore or document its absence |
+| one owner-gate-plus-lowered-cap path spends a session before parking | **CONFIRMED as designed, with the cost named.** `RunLoop.Budget.cs:46-49` makes any other awaiting-owner reason outrank the cap check, deliberately — "that park was somebody's decision and this check must not rewrite it into a request for money". The consequence is the reported one: release the gate while the cap sits below current spend and the loop spends a session before the cap check next fires. | next era, engine lane — the precedence is right; what is missing is a check at release time |
+
+### What this session did to the run, stated plainly
+
+KS10.1's own acceptance required `budget` and `money` re-run **through the fresh build** against the
+live store. `MigrationRunner.Run` (`src/Conductor.Core/Store/MigrationRunner.cs:21-45`) migrates on
+**every** `RunDb` construction, including a read-only reporting verb, so that took the live store from
+v13 to v14. The engine driving this run is the published snapshot `0.4.1-alpha.0.49+9bf2742`, whose
+`CurrentVersion` is 13 — so from that moment every **new** invocation of the PATH binary refuses at
+`MigrationRunner.cs:29`, and `conductor note`, `conductor task` and `conductor bug` all stopped
+working mid-session. The claim went through `dotnet run --project src/Conductor -- task …` instead.
+
+The run survived because `ConductorHost.cs:160` registers `IRunStore` as a **singleton**: the
+supervisor holds the connection it opened at v13 and never re-migrates. **If that engine is restarted
+before the owner installs a newer build, it cannot reopen its own store.** That is bug #45, it is
+filed `high`, and KS10.3's reinstall is what clears it.
