@@ -408,8 +408,9 @@ loud.
 |---|---|---|---|
 | `enabled` | bool | `false` | The master switch. False means the mirror never runs, even with a token present and a repo named. |
 | `repo` | string | `""` | `owner/name` to mirror **into**. Empty and `enabled: true` derives it from the plan repo's `origin`; a scratch mirror does not have to live in the repo being worked on. |
-| `board` | string | `"issues"` | `issues`, or `issues+project` for a Projects v2 board as well (needs `projectNumber` and a token with the `project` scope). |
-| `projectNumber` | int | `0` | The Projects v2 board number from the project URL. `0` with `board: "issues+project"` is refused by name, never a silent no-op. |
+| `board` | string | `"issues"` | `issues`, or `issues+project` for a Projects v2 board as well (needs `projectNumber` and a token with the `project` scope). Any other value is refused **by name** rather than read as the default — silently downgrading a typo to issues-only is indistinguishable from a project mirror that ran and did nothing. The project half refuses today whatever the scope: see [cli.md](cli.md#the-projects-v2-half-refuses-and-says-why). |
+| `projectNumber` | int | `0` | The Projects v2 board number from the project URL. `0` with `board: "issues+project"` is refused by name, never a silent no-op — before a destination is resolved and before anything is dialled. |
+| `liveMirror` | bool | `true` | Reconcile the board **as the run goes**, at the boundaries the engine already treats as boundaries, instead of only on a manual `github sync --backfill`. Only ever consulted under `enabled`, so a plan that never opted in has no mirror to switch off; set `false` to keep the backfill and nothing else. |
 | `runHistoryIssue` | bool | `true` | Mirror the run's diary as one issue with one comment per finished session. |
 | `reportAsPrComment` | bool | `false` | Post the run report as a PR comment when the run's branch has one open. Off by default — a comment on someone's PR is the loudest thing this integration can do. |
 | `labelPrefix` | string | `"conductor"` | Prefix for every label conductor owns, so the mirror never fights the repository's own labels. `conductor` yields `conductor:status:done`. Labels *outside* this prefix are never removed. |

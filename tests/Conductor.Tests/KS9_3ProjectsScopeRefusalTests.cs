@@ -1,6 +1,10 @@
 using System.Net;
+using Conductor.Core;
+using Conductor.Core.Integrations;
 using Conductor.Core.Integrations.Github;
+using Conductor.Core.Store;
 using Conductor.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Conductor.Tests;
 
@@ -207,6 +211,100 @@ public sealed class KS9_3ProjectsScopeRefusalTests
 
         Assert.True(config.WantsProjectBoard);
         Assert.Null(config.BoardRefusal());
+    }
+
+    /// <summary>A token in the plan's OWN secrets file, never in the environment variable. Both are
+    /// real sources, but $CONDUCTOR_GITHUB_TOKEN is process-global and KS9_1GithubTokenTests clears
+    /// it while asserting the no-token refusal — xUnit runs the two classes in parallel, so a mirror
+    /// here vanished mid-test. A per-temp-dir file cannot race.</summary>
+    private static void Token(PlanConfig plan)
+    {
+        Directory.CreateDirectory(plan.StateDir);
+        SecretsStore.WriteGithubToken(plan.StateDir, "t");
+    }
+
+    /// <summary>A real store, because TryCreate takes one and a fake IRunStore here would be a
+    /// second implementation of an interface this file has no opinion about.</summary>
+    private static SqliteRunStore Store(string dir)
+    {
+        var store = new SqliteRunStore(Path.Combine(dir, "run.db"), NullLogger<SqliteRunStore>.Instance);
+        store.SetRunId("run-ks930000000");
+        store.InitializeRun("run-ks930000000", "ks9-3", "C:/code/conductor", "feat/karvansara",
+            new EngineStamp("0.4.1", "abc123", false));
+        return store;
+    }
+
+    // ── the run's own boundary ───────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// A plan that asks a RUN for a project board is told, once, at mirror creation — and then keeps
+    /// its issue mirror. That asymmetry with the CLI is deliberate and is the KS9.2 posture: a run
+    /// must never lose a working issue board over an extra it cannot have. What it must not get is
+    /// silence, which is what the field's first ten weeks of having no reader looked like.
+    /// </summary>
+    [Theory]
+    [InlineData(GithubConfig.BoardIssuesAndProject, 3, "not implemented")]
+    [InlineData(GithubConfig.BoardIssuesAndProject, 0, "github.projectNumber is 0")]
+    [InlineData("issues+projekt", 3, "is not a board")]
+    public void ARunAskedForAProjectBoardIsToldOnceAndKeepsItsIssueMirror(string board, int number, string expected)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "ks93m-" + Guid.NewGuid().ToString("N")[..8]);
+        try
+        {
+            Directory.CreateDirectory(dir);
+            var plan = new PlanConfig
+            {
+                Name = "p",
+                Repo = dir,
+                Github = new GithubConfig
+                {
+                    Enabled = true, Repo = "owner/scratch", Board = board, ProjectNumber = number,
+                },
+            };
+            var lines = new List<string>();
+            Token(plan);
+
+            using var store = Store(dir);
+            using var mirror = GithubMirror.TryCreate(plan, store, "run-ks930000000", lines.Add);
+
+            Assert.NotNull(mirror);   // the issue mirror lives
+            var told = Assert.Single(lines, l => l.StartsWith("github project board off:", StringComparison.Ordinal));
+            Assert.Contains(expected, told, StringComparison.Ordinal);
+            Assert.Contains("the issue board is unaffected", told, StringComparison.Ordinal);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch (IOException) { /* not the assertion */ }
+        }
+    }
+
+    /// <summary>And the default board says nothing at all — a line here would be noise on every run
+    /// that never asked for a board.</summary>
+    [Fact]
+    public void ARunOnTheDefaultBoardIsToldNothingAboutProjects()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "ks93n-" + Guid.NewGuid().ToString("N")[..8]);
+        try
+        {
+            Directory.CreateDirectory(dir);
+            var plan = new PlanConfig
+            {
+                Name = "p", Repo = dir,
+                Github = new GithubConfig { Enabled = true, Repo = "owner/scratch" },
+            };
+            var lines = new List<string>();
+            Token(plan);
+
+            using var store = Store(dir);
+            using var mirror = GithubMirror.TryCreate(plan, store, "run-ks930000000", lines.Add);
+
+            Assert.NotNull(mirror);
+            Assert.DoesNotContain(lines, l => l.Contains("project board", StringComparison.Ordinal));
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch (IOException) { /* not the assertion */ }
+        }
     }
 
     /// <summary>Records what the gate did, and answers /user with the scopes header a classic token

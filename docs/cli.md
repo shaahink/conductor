@@ -196,6 +196,7 @@ that is correct, not a gap. The tracker and the event log stay the contract.
 | `github sync --backfill <run> --repo owner/name` | Mirror into a repository other than the plan's. Point it at a scratch repo the first time; a backfill will *not* derive its destination from your working repo's `origin` unless the plan opted in with `github.enabled`. |
 | `github sync --backfill <run> --dry-run` | Reconcile and report what would change, writing nothing. |
 | `github sync --backfill <run> --no-diary` | Board only — skip the run issue and its per-session comments. |
+| `github sync … --project <n>` | Ask for a Projects v2 board as well, without editing the plan (the same thing as `board: "issues+project"`). **It refuses today, by design** — see below. |
 
 Identity is a marker in the issue body (`<!-- conductor:task KS9.1 -->`), not the title, so re-running
 a backfill mints **zero** duplicates and a reworded checkpoint updates its issue instead of growing a
@@ -210,6 +211,30 @@ board. `CONDUCTOR_GITHUB_API` repoints the API root (for a loopback fake, or an 
 every surface that writes announces the override — a destination that writes issues is never
 redirected silently. Plan-side configuration lives in the `github` block: see
 [plan-config.md](plan-config.md).
+
+### The Projects v2 half refuses, and says why
+
+`--project <n>`, or `board: "issues+project"`, asks for a Projects v2 board on top of the issue
+board. Projects v2 exists **only** in GitHub's GraphQL API — REST cannot move a board item — and a
+mutation there needs the classic `project` scope, which `repo` does not imply. Conductor checks that
+scope with a `GET /user` **before** anything is written, and refuses by name if it is missing:
+
+```
+a Projects v2 board needs the 'project' scope and this token does not carry it. nothing was written.
+  scopes observed: delete_repo, gist, read:org, repo, user, workflow
+  scope required: project — Projects v2 is GraphQL-only, and the REST api cannot move a board item.
+  token source: CONDUCTOR_GITHUB_TOKEN
+  the owner grants it once, interactively: gh auth refresh -s project
+  conductor will not run that: it is interactive and it rewrites this machine's stored credential.
+  until then set github.board to 'issues' — the issue board mirrors in full without it.
+```
+
+Granting the scope is yours to do: `gh auth refresh -s project` is interactive and it rewrites the
+machine's stored credential, so conductor names it and never runs it. **With the scope granted the
+board still refuses**, saying it is not implemented — the GraphQL mutation path was deliberately not
+written, because it could not have been exercised even once against a real board. A gate that fell
+silent instead would look, from the outside, exactly like a board being mirrored. The issue board is
+unaffected either way; inside a run the refusal is one log line and the issue mirror carries on.
 
 ## Overriding the defaults
 
