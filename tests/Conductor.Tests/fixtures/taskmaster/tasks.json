@@ -1,0 +1,42 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Set up the project",
+        "description": "Repository, build script and CI skeleton.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [
+          { "id": 1, "title": "Initialise the repository", "status": "pending" },
+          { "id": 2, "title": "Add the build script", "status": "done" }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Implement the greeting endpoint",
+        "description": "A handler and its unit tests.",
+        "status": "pending",
+        "dependencies": [1],
+        "priority": "high",
+        "subtasks": [
+          { "id": 1, "title": "Write the handler", "status": "pending" }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Document the API",
+        "description": "README section plus an example request.",
+        "status": "pending",
+        "dependencies": [2],
+        "priority": "medium",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2026-08-15T00:00:00Z",
+      "description": "Tasks for the master context"
+    }
+  }
+}

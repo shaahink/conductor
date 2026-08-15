@@ -35,12 +35,13 @@ public static class PlanImportCommand
                 AnsiConsole.MarkupLine($"[grey]Read {Markup.Escape(descriptionOrFile)} ({description.Length} chars)[/]");
             }
 
-            // M6.1: prefer the deterministic markdown path — no model, no spend.
-            var result = PlanImportService.ParseStructured(description, plan);
+            // M6.1: prefer the deterministic path — no model, no spend. KS3.5: which now covers three
+            // foreign formats as well as this project's own, selected by content.
+            var (result, format) = PlanImportService.ParseKnown(description, plan);
             if (result is not null)
             {
-                AnsiConsole.MarkupLine($"[grey]Parsed structurally (no model call) → {result.Stages.Count} stages, " +
-                    $"{result.Checkpoints.Count} checkpoints[/]");
+                AnsiConsole.MarkupLine($"[grey]Read {Markup.Escape(ImportBridge.Describe(format))} deterministically " +
+                    $"(no model call) → {result.Stages.Count} stages, {result.Checkpoints.Count} checkpoints[/]");
             }
             else
             {

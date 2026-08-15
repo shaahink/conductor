@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 
 using Conductor.Core;
+using Conductor.Core.Planning;
 using Conductor.Core.Store;
 using Conductor.Hosting;
 using Conductor.Models;
@@ -28,7 +29,7 @@ namespace Conductor.Commands;
 /// It is also the runtime proof that the engine is not Windows-only: the gates carry no
 /// <c>shell</c>, so they resolve to the host's own (see <c>docs/platforms.md</c>).
 /// </summary>
-public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
+public sealed partial class DemoCommand : AsyncCommand<DemoCommand.Settings>
 {
     public sealed class Settings : CommandSettings
     {
@@ -39,6 +40,10 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
         [CommandOption("--keep")]
         [Description("Keep the demo repo afterwards so you can poke at .conductor/ — plan, run.db, prompts, logs.")]
         public bool Keep { get; init; }
+
+        [CommandOption("--from <FILE>")]
+        [Description("Drive YOUR document instead of the built-in plan: a spec-kit tasks.md, a Task-Master tasks.json, a markdown checklist, or a conductor plan/tracker. Converted with no model call.")]
+        public string? From { get; init; }
     }
 
     /// <summary>The demo plan's name. One const because it is half of the (repo, plan) key
@@ -64,14 +69,28 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
             return 1;
         }
 
+        // KS3.5: `--from` swaps the built-in plan for YOUR document, converted by the same zero-spend
+        // bridges `conductor plan import` uses. Read BEFORE the repo is built: a document that does
+        // not convert should cost the caller a message, not a directory.
+        DemoImport? imported = null;
+        if (settings.From is { Length: > 0 } from)
+        {
+            imported = LoadImport(from);
+            if (imported is null) return 1;
+            AnsiConsole.MarkupLine($"[grey]read {Markup.Escape(imported.SourceName)} as " +
+                $"{Markup.Escape(ImportBridge.Describe(imported.Format))} — {imported.Stages} stage(s), " +
+                $"{imported.Checkpoints} checkpoint(s), no model call[/]");
+        }
+
         try
         {
             AnsiConsole.MarkupLine($"[grey]1/3[/] building a throwaway repo at {Markup.Escape(dir)}");
-            if (!await ScaffoldAsync(dir, exe).ConfigureAwait(false)) return 1;
+            if (!await ScaffoldAsync(dir, exe, imported).ConfigureAwait(false)) return 1;
 
-            AnsiConsole.MarkupLine("[grey]2/3[/] driving the plan — 3 checkpoints across 2 stages");
+            AnsiConsole.MarkupLine($"[grey]2/3[/] driving the plan — {imported?.Checkpoints ?? 3} checkpoints across " +
+                $"{imported?.Stages ?? 2} stages");
             AnsiConsole.WriteLine();
-            var (code, state, plan) = await DriveAsync(dir).ConfigureAwait(false);
+            var (code, state, plan) = await DriveAsync(dir, imported).ConfigureAwait(false);
 
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine($"[grey]3/3[/] done — status [bold]{Markup.Escape(state.Status.ToString())}[/], " +
@@ -111,8 +130,11 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
             plan: DemoPlanName,
             note: "conductor demo — a throwaway run; this keeps it out of the machine-level store.");
 
-    /// <summary>A real git repo with a real tracker and a plan pointed at the built-in agent.</summary>
-    private static async Task<bool> ScaffoldAsync(string dir, string exe)
+    /// <summary>A real git repo with a real tracker and a plan pointed at the built-in agent.
+    /// <paramref name="imported"/> (KS3.5) swaps in a converted document's stages and tracker; the
+    /// rest — the agent wiring, the host-portable git gates, the state pointer — is the same
+    /// scaffold, because those are the parts the demo exists to demonstrate.</summary>
+    private static async Task<bool> ScaffoldAsync(string dir, string exe, DemoImport? imported = null)
     {
         Directory.CreateDirectory(dir);
         PinStateToTheThrowawayRepo(dir);
@@ -130,15 +152,20 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
 
         await File.WriteAllTextAsync(Path.Combine(dir, "README.md"),
             "# Demo project\n\nA throwaway repo so `conductor demo` has something real to work on.\n").ConfigureAwait(false);
-        await File.WriteAllTextAsync(Path.Combine(dir, "TRACKER.md"), Tracker).ConfigureAwait(false);
-        await File.WriteAllTextAsync(Path.Combine(dir, "conductor.plan.json"), PlanJson(dir, exe)).ConfigureAwait(false);
+        await File.WriteAllTextAsync(Path.Combine(dir, "TRACKER.md"), imported?.Tracker ?? Tracker).ConfigureAwait(false);
+        await File.WriteAllTextAsync(Path.Combine(dir, "conductor.plan.json"),
+            PlanJson(dir, exe, imported?.StagesJson)).ConfigureAwait(false);
+        // The source document travels with the repo, so a kept demo shows what was converted and what
+        // it became, side by side.
+        if (imported is not null)
+            await File.WriteAllTextAsync(Path.Combine(dir, "SOURCE-" + imported.SourceName), imported.SourceText).ConfigureAwait(false);
 
         await GitAsync(dir, "add", "-A").ConfigureAwait(false);
         await GitAsync(dir, "commit", "-m", "chore: demo scaffold", "--no-gpg-sign", "--quiet").ConfigureAwait(false);
         return true;
     }
 
-    private static async Task<(int Code, RunState State, PlanConfig Plan)> DriveAsync(string dir)
+    private static async Task<(int Code, RunState State, PlanConfig Plan)> DriveAsync(string dir, DemoImport? imported = null)
     {
         var planPath = Path.Combine(dir, "conductor.plan.json");
         var plan = PlanConfig.Load(planPath);
@@ -153,7 +180,12 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
         // No control plane and no Face: a first run should not open a port (and trip a firewall
         // prompt) or take over the terminal. maxSessions is a backstop, not the exit condition —
         // a healthy demo finishes because every checkpoint is confirmed.
-        var opts = new RunOptions(DryRun: false, Once: false, MaxSessions: 16, ControlPlane: false, ControlPlanePort: 0, StartPaused: false);
+        // KS3.5: an imported board carries as many checkpoints as its author wrote, and each one costs
+        // at least a delivery session (plus whatever the QA dial adds), so the backstop scales with
+        // the work. It stays a BACKSTOP: a healthy demo still finishes because every checkpoint is
+        // confirmed, not because it ran out of sessions.
+        var cap = imported is null ? 16 : Math.Max(16, imported.Checkpoints * 4);
+        var opts = new RunOptions(DryRun: false, Once: false, MaxSessions: cap, ControlPlane: false, ControlPlanePort: 0, StartPaused: false);
         using var host = ConductorHost.Build(plan, state, new PlainSink(), opts, consoleSink: true);
 
         // SC1.1: the demo is a real run, so it gets the run path's real wiring. The scaffolded demo
@@ -234,6 +266,13 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
         }
     }
 
+    /// <summary>The built-in plan's two stages, verbatim — <c>PlanJson</c> renders exactly this when
+    /// nothing was imported, so `conductor demo` with no arguments is byte-for-byte what it was.</summary>
+    private const string DefaultStages = """
+        { "id": "D1", "title": "Build the thing", "sessions": 2 },
+            { "id": "D2", "title": "Write it up", "sessions": 1 }
+        """;
+
     internal const string Tracker = """
         # Conductor demo — TRACKER
 
@@ -256,10 +295,13 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
     /// own (powershell on Windows, bash elsewhere). git is already a hard requirement, so it is the
     /// one command guaranteed present on every platform this can run on.
     /// </summary>
-    internal static string PlanJson(string dir, string exe)
+    internal static string PlanJson(string dir, string exe, string? stagesJson = null)
     {
         var repo = dir.Replace("\\", "/", StringComparison.Ordinal);
         var agent = exe.Replace("\\", "/", StringComparison.Ordinal);
+        // KS3.5: the ONLY thing an imported document changes about this file. The agent wiring, the
+        // gates and the limits are the demo's, unchanged, because they are what it demonstrates.
+        var stages = stagesJson is { Length: > 0 } ? stagesJson : DefaultStages;
         return string.Create(CultureInfo.InvariantCulture, $$"""
         {
           "name": "{{DemoPlanName}}",
@@ -274,8 +316,7 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
           "statusAgent": { "enabled": false },
           "audit": { "enabled": false },
           "stages": [
-            { "id": "D1", "title": "Build the thing", "sessions": 2 },
-            { "id": "D2", "title": "Write it up", "sessions": 1 }
+            {{stages}}
           ],
           "gates": [
             { "name": "build", "command": "git rev-parse --verify HEAD", "tier": "fast", "timeoutMinutes": 2 },

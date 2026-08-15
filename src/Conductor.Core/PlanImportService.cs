@@ -26,6 +26,18 @@ public static class PlanImportService
         return result;
     }
 
+    /// <summary>KS3.5: the whole zero-spend path in one call — this project's own structured plan and
+    /// tracker documents, then the three foreign bridges (spec-kit <c>tasks.md</c>, Task-Master
+    /// <c>tasks.json</c>, a plain markdown checklist), each selected by what the text IS rather than
+    /// what it is called. Returns the format so the caller can say which reader claimed the file; a
+    /// <see cref="ImportFormat.None"/> is the only case that may reach the advisor and cost money.</summary>
+    public static (ImportResult? Result, ImportFormat Format) ParseKnown(string text, PlanConfig? plan = null)
+    {
+        var (result, format) = ImportBridge.Read(text);
+        if (result is not null && plan != null) ProposeDefaultGates(plan, result);
+        return (result, format);
+    }
+
     /// <summary>W4.1: a plan with no gates verifies nothing — every session verdict falls back to
     /// "did it commit?". The deterministic path proposed zero; it now proposes the same build+test
     /// pair `conductor init` derives from the repo's marker files. Only when the plan has no gates
