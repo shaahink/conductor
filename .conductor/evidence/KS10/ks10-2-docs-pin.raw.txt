@@ -1,0 +1,111 @@
+KS10.2 seeded-stale-doc proof
+repo: 263c7f8  branch: feat/karvansara
+date: 2026-08-15T04:12:59Z
+
+==================================================================
+BASELINE (nothing seeded)
+==================================================================
+Passed!  - Failed:     0, Passed:    36, Skipped:     0, Total:    36, Duration: 1 s - Conductor.Tests.dll (net10.0)
+
+==================================================================
+SEED: the contract's own example: docs/cli.md stops naming the github verb
+  sed -i 's/`github/`gitxhub/g' docs/cli.md
+==================================================================
+--- git diff --stat ---
+warning: LF will be replaced by CRLF in docs/cli.md.
+The file will have its original line endings in your working directory
+ docs/cli.md | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+--- test run ---
+[xUnit.net 00:00:00.74]     Conductor.Tests.K7_2DocsVerbCoverageTests.CliReference_NamesEveryShippedVerb [FAIL]
+  Failed Conductor.Tests.K7_2DocsVerbCoverageTests.CliReference_NamesEveryShippedVerb [8 ms]
+  Error Message:
+   docs/cli.md does not name these shipped verbs: github - document them there, or hide the command in Program.cs if it is not a verb to reach for.
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:01.88]     Conductor.Tests.SF7_1DocsMatchRealityTests.TheCompletionListTheCliReferenceAndTheOperatingGuideAgreeOnTheVerbSet [FAIL]
+[xUnit.net 00:00:01.88]     Conductor.Tests.SF7_1DocsMatchRealityTests.TheCliReferenceDocumentsNoVerbTheEngineHasStoppedShipping [FAIL]
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.TheCompletionListTheCliReferenceAndTheOperatingGuideAgreeOnTheVerbSet [3 ms]
+  Error Message:
+   these verbs tab-complete but are not on both doc pages (cli.md and operating.md §2): github. A verb you can only discover by pressing TAB is a verb nobody finds.
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.TheCliReferenceDocumentsNoVerbTheEngineHasStoppedShipping [1 ms]
+  Error Message:
+   docs/cli.md has reference rows for verbs Program.cs does not register: gitxhub - a deleted verb keeps its documentation forever unless something asks this question. Delete the row, or un-hide the command.
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+Failed!  - Failed:     3, Passed:    33, Skipped:     0, Total:    36, Duration: 1 s - Conductor.Tests.dll (net10.0)
+--- reverted: 0 modified path(s) remain ---
+
+==================================================================
+SEED: README quotes a flag conductor run does not declare (--once -> --onces)
+  sed -i 's/conductor run --once /conductor run --onces /' README.md
+==================================================================
+--- git diff --stat ---
+warning: LF will be replaced by CRLF in README.md.
+The file will have its original line endings in your working directory
+ README.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+--- test run ---
+[xUnit.net 00:00:00.88]     Conductor.Tests.SF7_1DocsMatchRealityTests.EveryFlagTheReadmeWritesIsDeclaredByTheCommandItIsWrittenOn [FAIL]
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.EveryFlagTheReadmeWritesIsDeclaredByTheCommandItIsWrittenOn [10 ms]
+  Error Message:
+   README.md writes options the command does not declare. Strict parsing means each of these EXITS NON-ZERO when a reader copies it:
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+Failed!  - Failed:     1, Passed:    35, Skipped:     0, Total:    36, Duration: 1 s - Conductor.Tests.dll (net10.0)
+--- reverted: 0 modified path(s) remain ---
+
+==================================================================
+SEED: operating.md section 2 loses the row for a shipped verb (watches)
+  sed -i '/^| `watches /d' docs/operating.md
+==================================================================
+--- git diff --stat ---
+warning: LF will be replaced by CRLF in docs/operating.md.
+The file will have its original line endings in your working directory
+ docs/operating.md | 1 -
+ 1 file changed, 1 deletion(-)
+--- test run ---
+[xUnit.net 00:00:01.09]     Conductor.Tests.SF7_1DocsMatchRealityTests.TheOperatingGuideFullCommandReferenceNamesEveryShippedVerb [FAIL]
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.TheOperatingGuideFullCommandReferenceNamesEveryShippedVerb [3 ms]
+  Error Message:
+   docs/operating.md's "Full command reference" does not name these shipped verbs: watches - give each a row, or stop calling §2 full.
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:02.43]     Conductor.Tests.SF7_1DocsMatchRealityTests.TheCompletionListTheCliReferenceAndTheOperatingGuideAgreeOnTheVerbSet [FAIL]
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.TheCompletionListTheCliReferenceAndTheOperatingGuideAgreeOnTheVerbSet [5 ms]
+  Error Message:
+   these verbs tab-complete but are not on both doc pages (cli.md and operating.md §2): watches. A verb you can only discover by pressing TAB is a verb nobody finds.
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+Failed!  - Failed:     2, Passed:    34, Skipped:     0, Total:    36, Duration: 1 s - Conductor.Tests.dll (net10.0)
+--- reverted: 0 modified path(s) remain ---
+
+==================================================================
+SEED: docs/cli.md documents a verb the engine does not ship (ghost row)
+  printf '| `teleport` | seeded ghost verb - the engine registers no such thing |\n' >> docs/cli.md
+==================================================================
+--- git diff --stat ---
+warning: LF will be replaced by CRLF in docs/cli.md.
+The file will have its original line endings in your working directory
+ docs/cli.md | 1 +
+ 1 file changed, 1 insertion(+)
+--- test run ---
+[xUnit.net 00:00:02.83]     Conductor.Tests.SF7_1DocsMatchRealityTests.TheCliReferenceDocumentsNoVerbTheEngineHasStoppedShipping [FAIL]
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.TheCliReferenceDocumentsNoVerbTheEngineHasStoppedShipping [3 ms]
+  Error Message:
+   docs/cli.md has reference rows for verbs Program.cs does not register: teleport - a deleted verb keeps its documentation forever unless something asks this question. Delete the row, or un-hide the command.
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+Failed!  - Failed:     1, Passed:    35, Skipped:     0, Total:    36, Duration: 1 s - Conductor.Tests.dll (net10.0)
+--- reverted: 0 modified path(s) remain ---
+
+==================================================================
+GREEN AGAIN (all seeds reverted)
+==================================================================
+Passed!  - Failed:     0, Passed:    36, Skipped:     0, Total:    36, Duration: 1 s - Conductor.Tests.dll (net10.0)
+
+tree after: 4 modified path(s) (expect only this script)
