@@ -393,7 +393,25 @@ adopted verbatim: every hygiene checkpoint buys one permanent design asset)*
 Basis: karvan-core at the tag — 24 checkpoints × **16.8M tokens** × **$13.24**, zero rollovers in
 30 costed sessions at **32M / 0.70**; blended $0.74/M at 98.3% cache reads.
 
-- **Keep 32M / 0.70 — and keep the model the pair was fitted to.** The ceiling is only valid for
+> ⚠ **Corrected in place at KS10.1 (2026-08-15): the ratio is 0.85, not 0.70.** The estimate above
+> was written before this run had a corpus of its own. Re-measured on it — `dotnet run --project
+> src/Conductor -- budget --json`, raw at `.conductor/evidence/KS10/ks10-1-budget-remeasure.json` —
+> the prescription is *"the ceiling is right and the nudge is not: keep maxSessionTokens at 32M and
+> move softBreakRatio 0.7 -> 0.85"*. The ceiling holds (zero rollovers in 12 costed sessions, three
+> nudged and all three clean); the **nudge fires at 22.42M against a 22.08M median closer — 1.02×**,
+> so the median session is told to wrap up at the point it would have closed anyway. Karvan
+> prescribed the same 0.85 from headroom; this run prescribes it from the closers. **Where this
+> paragraph and the prescription disagree, the prescription wins**, and it is `32M / 0.85` that
+> karvansara-edge compiles against. Full working: `TOKEN-BUDGET-TUNING.md` §10.
+>
+> The per-checkpoint basis below survives the re-measure: karvan-core re-run today is 24 checkpoints
+> × 16.8M × $13.24, unchanged. This run's own 22.2M / $16.56 per checkpoint is a **remainder**
+> figure — KS3.4 took eight rounds, KS9 took two fix sessions — and is the variance edge should
+> budget for, not the mean it should plan against (§10 shows the arithmetic and why `budget`'s own
+> `tokensPerCheckpoint: 5.54M` for this run is a denominator artefact).
+
+- **Keep 32M — and move the ratio to 0.85. Keep the model the pair was fitted to.** ~~32M / 0.70~~
+  → **32M / 0.85** (nudge 27.2M), measured at KS10.1. The ceiling is only valid for
   `claude-opus-5`, the model whose run.db produced it (the sonnet→opus re-derivation was a
   measured **2.2×** scale factor, and doctor warns on neither direction). Any model change
   re-derives the pair from a fresh `conductor budget` before launch — KS7.4 re-measures the
@@ -403,7 +421,9 @@ Basis: karvan-core at the tag — 24 checkpoints × **16.8M tokens** × **$13.24
   16.8M / $13.24 per checkpoint)* — cap **$530** (~29% headroom, Karvan's ratio). Sessions
   planned 1:1 with checkpoints (Karvan's measured shape), `stageSlackFactor` 2.
 - **Plan II edge, 16 checkpoints:** ≈ 270M tokens ≈ **$210** *(estimate)* — cap **$280**, minus
-  whatever KS7.5 earns; re-estimated at compile time from KS10.1's measure.
+  whatever KS7.5 earns. **KS10.1's measure is in and it does not move this line:** the 16.8M / $13.24
+  basis re-verified against a longer karvan run (30 costed sessions, 403.9M, still 16.8M/ckpt), so
+  the estimate stands as written. What changes is the ceiling pair it runs under — `32M / 0.85`.
 - Cut lines, in order: KS8 (MCP/ATIF), then KS9.3 (Projects v2), then KS3.5 (import bridges).
   Core's KS0+KS1 are indivisible (the door doesn't open onto lying surfaces); KS9.1–9.2 are
   committed per ND-9 and not on the cut list.

@@ -1,0 +1,208 @@
+{
+  "runs": [
+    {
+      "runId": "e9e21d10aedf4390a1580ac6930bac3e",
+      "plan": "Sarban core - the engine says what it knows",
+      "windows": [
+        {
+          "label": "no ceiling observed",
+          "firstSession": 1,
+          "lastSession": 28,
+          "sessions": 28,
+          "costedSessions": 28,
+          "capTokens": null,
+          "capMeasured": false,
+          "nudgeTokens": null,
+          "headroomTokens": null,
+          "tokens": 504472082,
+          "checkpoints": 26,
+          "tokensPerCheckpoint": 19402772,
+          "rollovers": 0,
+          "rolloverRate": 0,
+          "nudged": 0,
+          "nudgedAndEndedClean": 0,
+          "closers": 26,
+          "floorTokens": 5519839,
+          "medianCloserTokens": 17475594,
+          "maxCloserTokens": 35846496
+        }
+      ],
+      "prescription": {
+        "maxSessionTokens": 41000000,
+        "softBreakRatio": 0.9,
+        "nudgeTokens": 36900000,
+        "headroomTokens": 4100000,
+        "wrapUpBasis": 1500000,
+        "wrapUpMeasured": false,
+        "verdict": "set maxSessionTokens to 41M at softBreakRatio 0.9 - nudge 36.9M clears the 35.8M largest closer, headroom 4.1M is 2.7x the assumed 1.5M wrap-up.",
+        "findings": [
+          "no ceiling was in force over these 28 sessions.",
+          "wrap-up is ASSUMED at 1.5M (TOKEN-BUDGET-TUNING.md section 7 step 2) - no session in this window was ever nudged, so there is nothing to measure. Re-run this after one is."
+        ]
+      }
+    },
+    {
+      "runId": "8cefa5de8f164848bd42b275e14ba9cf",
+      "plan": "Sarban face - the watcher and the surfaces",
+      "capPayoff": 1.556,
+      "windows": [
+        {
+          "label": "no ceiling observed",
+          "firstSession": 1,
+          "lastSession": 8,
+          "sessions": 8,
+          "costedSessions": 7,
+          "capTokens": null,
+          "capMeasured": false,
+          "nudgeTokens": null,
+          "headroomTokens": null,
+          "tokens": 158931679,
+          "checkpoints": 6,
+          "tokensPerCheckpoint": 26488613,
+          "rollovers": 1,
+          "rolloverRate": 0.1429,
+          "nudged": 0,
+          "nudgedAndEndedClean": 0,
+          "closers": 6,
+          "floorTokens": 14712289,
+          "medianCloserTokens": 23393419,
+          "maxCloserTokens": 37322795
+        },
+        {
+          "label": "8M / nudge 6.07M",
+          "firstSession": 9,
+          "lastSession": 41,
+          "sessions": 33,
+          "costedSessions": 33,
+          "capTokens": 8000000,
+          "capMeasured": true,
+          "nudgeTokens": 6066604,
+          "nudgeRatio": 0.7583,
+          "headroomTokens": 1933396,
+          "tokens": 238273734,
+          "checkpoints": 14,
+          "tokensPerCheckpoint": 17019552,
+          "rollovers": 10,
+          "rolloverRate": 0.303,
+          "nudged": 30,
+          "nudgedAndEndedClean": 20,
+          "closers": 14,
+          "floorTokens": 4655672,
+          "medianCloserTokens": 7256291,
+          "maxCloserTokens": 7752892,
+          "wrapUp": {
+            "min": 418731,
+            "median": 1365994,
+            "max": 1696355,
+            "samples": 20
+          }
+        }
+      ],
+      "prescription": {
+        "maxSessionTokens": 11000000,
+        "softBreakRatio": 0.75,
+        "nudgeTokens": 8250000,
+        "headroomTokens": 2750000,
+        "wrapUpBasis": 1365994,
+        "wrapUpMeasured": true,
+        "verdict": "set maxSessionTokens to 11M at softBreakRatio 0.75 - nudge 8.25M clears the 7.75M largest closer, headroom 2.75M is 2.0x the measured 1.37M wrap-up.",
+        "findings": [
+          "NUDGE BELOW THE MEDIAN CLOSER: it fires at 6.07M, 0.84x the 7.26M median closing session - every session is interrupted before it could have finished naturally.",
+          "HEADROOM THIN: 1.93M after the nudge is 1.4x the measured 1.37M wrap-up; the rule is \u003E= 1.5x.",
+          "THE RAIL IS DELIVERED AND IGNORED: all 10 killed sessions had already been nudged and not one of them stopped. The cooperative break is the only path that ends a capped session on its own terms, and here it converted zero.",
+          "ROLLOVER RATE 30% (10 of 33) - above a quarter, the cap is buying churn as much as discipline."
+        ]
+      }
+    },
+    {
+      "runId": "df9c4af8044442cca197463d9af7e670",
+      "plan": "Karvan core - the engine knows what it did and what it cost",
+      "windows": [
+        {
+          "label": "32M / nudge 22.5M",
+          "firstSession": 1,
+          "lastSession": 32,
+          "sessions": 32,
+          "costedSessions": 30,
+          "capTokens": 32000000,
+          "capMeasured": true,
+          "nudgeTokens": 22539159,
+          "nudgeRatio": 0.7043,
+          "headroomTokens": 9460841,
+          "tokens": 403913542,
+          "checkpoints": 24,
+          "tokensPerCheckpoint": 16829731,
+          "rollovers": 0,
+          "rolloverRate": 0,
+          "nudged": 7,
+          "nudgedAndEndedClean": 7,
+          "closers": 20,
+          "floorTokens": 3265268,
+          "medianCloserTokens": 13817747,
+          "maxCloserTokens": 26060893,
+          "wrapUp": {
+            "min": 176193,
+            "median": 1860890,
+            "max": 3521734,
+            "samples": 7
+          }
+        }
+      ],
+      "prescription": {
+        "maxSessionTokens": 32000000,
+        "softBreakRatio": 0.85,
+        "nudgeTokens": 27200000,
+        "headroomTokens": 4800000,
+        "wrapUpBasis": 1860890,
+        "wrapUpMeasured": true,
+        "verdict": "the ceiling is right and the nudge is not: keep maxSessionTokens at 32M and move softBreakRatio 0.7 -\u003E 0.85 - the nudge goes 22.5M -\u003E 27.2M, which clears the 26.1M largest closer, headroom 4.8M is 2.6x the measured 1.86M wrap-up.",
+        "findings": []
+      }
+    },
+    {
+      "runId": "9647f1b80d1841e9997a801562a267c7",
+      "plan": "Karvansara core - the open door",
+      "windows": [
+        {
+          "label": "32M / nudge 22.4M",
+          "firstSession": 2,
+          "lastSession": 22,
+          "sessions": 21,
+          "costedSessions": 12,
+          "capTokens": 32000000,
+          "capMeasured": true,
+          "nudgeTokens": 22423885,
+          "nudgeRatio": 0.7007,
+          "headroomTokens": 9576115,
+          "tokens": 155183184,
+          "checkpoints": 28,
+          "tokensPerCheckpoint": 5542257,
+          "rollovers": 0,
+          "rolloverRate": 0,
+          "nudged": 3,
+          "nudgedAndEndedClean": 3,
+          "closers": 7,
+          "floorTokens": 2948834,
+          "medianCloserTokens": 22076789,
+          "maxCloserTokens": 25561873,
+          "wrapUp": {
+            "min": 1709259,
+            "median": 2280431,
+            "max": 2981512,
+            "samples": 3
+          }
+        }
+      ],
+      "prescription": {
+        "maxSessionTokens": 32000000,
+        "softBreakRatio": 0.85,
+        "nudgeTokens": 27200000,
+        "headroomTokens": 4800000,
+        "wrapUpBasis": 2280431,
+        "wrapUpMeasured": true,
+        "verdict": "the ceiling is right and the nudge is not: keep maxSessionTokens at 32M and move softBreakRatio 0.7 -\u003E 0.85 - the nudge goes 22.4M -\u003E 27.2M, which clears the 25.6M largest closer, headroom 4.8M is 2.1x the measured 2.28M wrap-up.",
+        "findings": []
+      }
+    }
+  ]
+}

@@ -296,3 +296,98 @@ Two caveats, both measured rather than assumed:
 - **Zero rollovers is not the same as zero waste.** Nineteen of twenty-four sessions closed at least
   one checkpoint; five closed none. That is a far better ratio than sarban-face's 14 of 33, but the
   tail exists, and §8 — context discipline — is still where it gets shorter.
+
+---
+
+## 10. The karvansara era's own numbers — 32M confirmed, 0.70 → **0.85** prescribed (KS10.1, 2026-08-15)
+
+Produced by `dotnet run --project src/Conductor -- budget --json` and `dotnet run --project
+src/Conductor -- money --json` against this repo's own catalogue — the **deduped** one KS0.1 produced
+— and deliberately *not* by the `conductor` on PATH, which is the mid-era snapshot driving this run
+(`0.4.1-alpha.0.49+9bf2742`). Every figure below is copied out of the raw output, which is committed:
+`.conductor/evidence/KS10/ks10-1-budget-remeasure.json`,
+`.conductor/evidence/KS10/ks10-1-money-remeasure.json`. Nothing here is typed by hand.
+
+**As of session 23 of the karvansara run, and it moves with every session after it** — the same
+caveat §9 carries, and §9 is the proof it matters: K7.1 wrote 26 costed / 371.7M / 15.5M for
+karvan-core, and re-run today the same command says **30 costed / 403.9M / 16.8M**. Nothing
+regressed; the run got longer.
+
+### The measurement
+
+| run | ceiling | costed sess | tokens | ckpt | tok/ckpt | floor | median closer | max closer | rollover | wrap-up |
+|---|---|---|---|---|---|---|---|---|---|---|
+| karvan-core (re-measured today) | 32M / nudge 22.5M | 30 of 32 | 403.9M | 24 | 16.8M | 3.27M | 13.82M | 26.06M | **0** | 1.86M (n=7) |
+| **karvansara-core** | **32M / nudge 22.4M** | **12 of 21** | **155.2M** | **28 ⚠ see below** | **5.54M ⚠** | **2.95M** | **22.08M** | **25.56M** | **0** | **2.28M (n=3)** |
+
+Money, same store: karvansara-core is **$115.89** over 21 sessions at **$0.7468/M** and **98.25% cache
+reads**; the project total across all four runs is now **122 sessions, 1.461B tokens, $1,091.12, 98
+checkpoints, $0.7469/M, 98.31% cache reads**. Cost per token has not moved in three eras — §2's claim
+that the saving is *work per token*, never price per token, survives a fourth run.
+
+### The prescription — and it wins over this plan's estimate
+
+`budget`'s verdict for karvansara-core, verbatim from the JSON:
+
+> the ceiling is right and the nudge is not: keep maxSessionTokens at 32M and move softBreakRatio
+> 0.7 -> 0.85 - the nudge goes 22.4M -> 27.2M, which clears the 25.6M largest closer, headroom 4.8M
+> is 2.1x the measured 2.28M wrap-up.
+
+Its `findings` array is **empty** — no warning fired on this window. The ceiling is where the
+measurements put it: **zero rollovers in 12 costed sessions**, three sessions nudged and **all three
+ended clean** (`nudged: 3, nudgedAndEndedClean: 3`), against sarban-face's ten kills in thirty-three.
+
+**The ratio is the number that is wrong, and this run is the first to show it hurting.** The nudge
+fires at 22.42M against a **22.08M median closer** — a ratio of **1.02×**. The median closing session
+is being told to wrap up at almost exactly the point it would have closed on its own. §7 step 4's
+rule is that the nudge must *clear* the median closer; here it lands on it. Karvan prescribed 0.85
+from headroom alone (§9, "the ratio could rise"); karvansara prescribes it from the closers, which is
+the stronger evidence. **Both runs now agree, so the plan doc's `32M / 0.70` is corrected in place** —
+see `KARVANSARA-PLAN-2026-08-13.md` §"Budget prescription", which now reads 32M / 0.85 with this
+measurement beside it.
+
+Not applied to a live plan file here, for the same reason §9 gave: changing the ratio mid-run
+re-tunes the budget under the sessions still running against it. It is a one-line change for whoever
+launches **karvansara-edge**, and that is where it belongs.
+
+### ⚠ The 28-checkpoint count is real and misleading — corrected, not repeated
+
+`BudgetAnalyzer.cs:190` computes `Checkpoints: costed.Sum(s => s.ClosedCheckpoints.Count)` — every
+checkpoint a costed session *closed*, which is the right definition for a normal run and the wrong
+denominator for a **finish** run. Measured against `run.db`, not assumed:
+
+```sql
+SELECT number, stage_id, newly_done FROM sessions
+WHERE run_id='9647f1b80d1841e9997a801562a267c7' AND newly_done IS NOT NULL;
+-- 3/KS0 -> KS0.2 | 5/KS0 -> KS0.3 | 6/KS0 -> KS0.1,KS3.1..KS3.3,KS1.1..KS1.6,KS2.1..(22 ids)
+-- 7/KS3 -> KS3.4 | 17/KS3 -> KS3.5 | 18/KS9 -> KS9.1 | 19/KS9 -> KS9.2
+```
+
+**Twenty-two of the twenty-eight closed in a single session** — #6, the phase-gate confirmation of the
+wave-era lanes, which were delivered by lane runs whose tokens are not in this run's costs at all.
+So `tokensPerCheckpoint: 5542257` is not this era's cost per checkpoint; it is 155.2M divided by other
+runs' work. The same distortion is visible in `money`'s stage table: **KS0, 5 sessions, 24
+checkpoints, 2.47M/ckpt**.
+
+The honest figure divides this run's tokens by the checkpoints *these sessions* delivered — seven,
+which is exactly `budget`'s own independent `closers: 7`:
+
+**155,183,184 ÷ 7 = 22.2M tokens and $115.89 ÷ 7 = $16.56 per checkpoint.**
+
+That is **32% above** the plan's 16.8M / $13.24 karvan basis, and the reason is in the stage table
+rather than in the engine: this run is the hard remainder. `money`'s stages say **KS3: 11 sessions,
+2 checkpoints, 15.85M/ckpt, $11.79** (KS3.4 took eight rounds) and **KS9: 5 sessions, 2 checkpoints,
+32.08M/ckpt, $23.29** (two of the five were fix sessions after a red battery). A remainder costs more
+per checkpoint than a green field; that is a finding about *what was left*, not about the budget.
+
+### What karvansara-edge compiles against
+
+- **Ceiling 32M, softBreakRatio 0.85** (nudge 27.2M). Measured, prescribed twice, model-bound to
+  `claude-opus-5` exactly as §9 and the plan say — a model change re-derives the pair.
+- **Per-checkpoint estimate: 16.8M / $13.24**, the karvan basis, re-verified today against a longer
+  karvan run and unchanged. Edge is new work, not a remainder, so this is the right basis — but
+  budget the **variance**, not the mean: KS9's 32.1M/ckpt is the shape a checkpoint takes when its
+  first attempt fails a gate.
+- **Wrap-up 2.28M** measured on n=3 here (1.71M–2.98M). §7's assumed 1.5M is now low on two eras'
+  evidence; at 0.85 the headroom is 4.8M, which is 2.1× that measured wrap-up and still inside the
+  ≥1.5× rule.
