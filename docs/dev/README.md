@@ -30,6 +30,15 @@ because `plans/karvan/core.plan.json:32` names it as its `tracker`, and `plans/k
 break a plan that has not run yet, which is the same trap the W-series paragraph above describes. It
 moves when the lanes plan does.
 
+**Karvansara keeps BOTH files, and this is the reason** (recorded at KS10.3, 2026-08-15, when the
+core plan shipped as v0.4.1): what closed is the *core plan*, not the era. `karvansara-edge` — KS4
+(verification that can't be gamed), KS6 (quality lane), KS7 (platform catch-up), KS8 — is unauthored,
+belongs in `plans/karvansara/` beside the plan that just finished, and its design is the same brief
+that would move. `plans/karvansara/core.plan.json:36` names `CORE-TRACKER.md` as its `tracker`, and
+`.conductor/contracts/KS2face.json` and `KS9-10.json` address the brief by path. So the tracker stays
+in `plans/karvansara/` and `KARVANSARA-PLAN-2026-08-13.md` stays here; both move when edge closes.
+Same trap, one era later.
+
 ## Findings and write-ups
 
 | Doc | What it is |

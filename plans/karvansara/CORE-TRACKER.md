@@ -4,18 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: nothing claimed, by design. KS10.1/KS10.2 are DONE; KS10.3 is the only row left and it is
-  owner-only by its own contract - KS9-10.json acceptance[0]: "no session performs any of this ...
-  a delivery agent's only job is to leave the checklist runnable and the tracker row untouched".
-  Row left TODO and unamended. Delivered: .conductor/evidence/KS10/ks10-3-owner-runbook.md - every
-  precondition of the nine steps measured, none of them performed.
-measured so the owner need not: merge to master is a FAST-FORWARD (master 304fc5b is an ancestor,
-  99 behind; both branches = origin). `conductor ps` works on the OLD engine but store reads do not
-  (schema 14 vs 13, bug #45), so step 7's backfill must FOLLOW the reinstall, not precede it.
-  `sh tools/changelog-section.sh 0.4.1` exits 1 TODAY (heading is [Unreleased], CHANGELOG.md:21):
-  the step-3 rename is mandatory; tag v0.4.1 (MinVer, last tag v0.4.0). Contract correction - the
-  version-equals-tag assert is in the build job, release.yml:157-163, not in guard.
-HUMAN: KS10.3 is yours. Run the runbook in order; nothing else in this plan is open.
+last: SHIPPED. KS10.3 done by the owner's explicit authorisation, 2026-08-15, every step of the
+  runbook performed in its order: master fast-forwarded to 1274197, v0.4.1 tagged and released
+  (run 31885190092, guard + five platforms green, six assets), reinstalled to 0.4.1+12741973f209.
+  Evidence: .conductor/evidence/KS10/ks10-3-shipped.md. The core plan is 32/32 - 30 delivered,
+  KS9.3 SKIPPED by its own refusal branch, KS10.3 now DONE.
+measured, not assumed: `conductor update --check` says "running the latest release (latest release
+  v0.4.1)" - the acceptance, in the tool's own words. The backfill wrote 33 issues + 24 comments to
+  shaahink/conductor and a second pass returned 0 created / 33 unchanged: KS9.1's idempotence, first
+  proof against a real repo. payesh PR #1 merged 12:47Z after a real read of the privacy commit -
+  both exemptions scoped to already-public names, private slugs still secret, 69 new tests pin it.
+HUMAN: nothing here is open. The era's brief and this tracker deliberately do NOT move to
+  docs/history yet - core.plan.json:36 names this file and karvansara-edge (KS4, KS6-KS8) is
+  unauthored in this same directory. They move when edge closes. Optional: gh auth refresh -s
+  project (grants the scope; the Projects v2 board itself is still deliberately unbuilt).
 
 
 ## Baseline numbers (from run.db)
@@ -96,7 +98,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | KS10.1 | The internal record reconciles: ARCHITECTURE.md and docs/dev match the engine for everything this plan changed, the closure ledger names every bug and followup row closed here or its living owner, and conductor budget's re-measure is written into TOKEN-BUDGET-TUNING for edge to compile against | DONE | b961c07 | .conductor/evidence/KS10/ks10-1-closure-ledger.md |
 | KS10.2 | The published surface reconciles and is pinned: README, the docs user set and its index, .github templates where a verb changed, and the Unreleased CHANGELOG section written as the release body - conductor --help lists no verb absent from cli.md, every README command block executes as written, SF7_1DocsMatchRealityTests goes red on a seeded stale doc, and payesh's harvest is green on the deduped store with its PR open or its refusal recorded | DONE | 7ee50b3 | .conductor/evidence/KS10/ks10-2-docs-pin.md |
-| KS10.3 | Owner-only: feat/karvansara merges to master, the release tags through the pipeline with KS10.2's section as its body, the reinstalled version matches the releases page, this run's own board backfills to GitHub - the first real use of KS9 - and the payesh PR merges | TODO | - | - |
+| KS10.3 | Owner-only: feat/karvansara merges to master, the release tags through the pipeline with KS10.2's section as its body, the reinstalled version matches the releases page, this run's own board backfills to GitHub - the first real use of KS9 - and the payesh PR merges | DONE | 1274197 | .conductor/evidence/KS10/ks10-3-shipped.md |
 
 ## Dependencies
 
