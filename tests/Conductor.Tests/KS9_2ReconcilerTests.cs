@@ -356,10 +356,16 @@ public sealed class KS9_2ReconcilerTests : IDisposable
     public async Task ABoundaryThatLandsDuringAPassIsCoalescedIntoAFollowUpNotDropped()
     {
         SeedFirstSession();
-        using var fake = new FakeGithub { Latency = TimeSpan.FromMilliseconds(30) };
+        using var fake = new FakeGithub();
         using var mirror = Mirror(fake);
 
+        // HELD at its first request, not merely slowed. Fire queues onto the thread pool, and a pass
+        // that has not started holds no gate — with latency alone the boundary below could reach the
+        // gate first, take it, and RUN, which is the opposite of the claim and is how this test went
+        // red under the full suite's load. Awaiting arrival makes "a pass is in flight" observed.
+        var arrived = fake.HoldNextRequest();
         var slow = mirror.Fire("run start");
+        await arrived.ConfigureAwait(true);
 
         // The next session finishes while that pass is still walking the API.
         SeedSecondSession();
@@ -367,6 +373,7 @@ public sealed class KS9_2ReconcilerTests : IDisposable
         Assert.False(coalesced.Ran);
         Assert.Contains("coalesced", coalesced.Error, StringComparison.Ordinal);
 
+        fake.Release();
         await mirror.DrainAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(true);
         Assert.True((await slow.ConfigureAwait(true)).Ok);
 

@@ -1,11 +1,11 @@
 ﻿# Conductor — Karvansara core - the open door run report
 
-_Updated 2026-08-15 02:19 UTC · branch `feat/karvansara` · HEAD `5ff45e3`_
+_Updated 2026-08-15 03:18 UTC · branch `feat/karvansara` · HEAD `5286704`_
 
-**Status:** Idle — stage KS3 used all 10 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Environment credential error (Claude subscription/API key disabled) — orchestrator cannot proceed without user providing valid API access. [1h 39m ago, 00:40:23Z]
+**Status:** Idle — stage KS3 used all 10 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Environment credential error (Claude subscription/API key disabled) — orchestrator cannot proceed without user providing valid API access. [2h 37m ago, 00:40:23Z]
 **Stage:** KS9 — The far door - GitHub is the remotest view · attempts used 0 · working ▸ KS9.3
-**Checkpoints:** 28/32 done · **Sessions run:** 19 · **Cost:** $102.2267 (agent $102.1075 + gates $0.1192) · **Tokens:** 1,617,579 in / 707,470 out
-**Confirmed phases:** KS0, KS1, KS2, KS3, KS5
+**Checkpoints:** 28/32 done · **Sessions run:** 22 · **Cost:** $115.8629 (agent $115.7303 + gates $0.1327) · **Tokens:** 1,890,596 in / 819,692 out
+**Confirmed phases:** KS0, KS1, KS2, KS3, KS5, KS9
 
 ## Stage progress
 
@@ -16,7 +16,7 @@ _Updated 2026-08-15 02:19 UTC · branch `feat/karvansara` · HEAD `5ff45e3`_
 | KS2 | The open door - bare conductor is the app, and every section reads | ██████████ 8/8 | confirmed ✓ |
 | KS3 | Authoring - no human writes JSON | ██████████ 5/5 | confirmed ✓ |
 | KS5 | Spend - every dollar the tool can spend is governed | ██████████ 4/4 | confirmed ✓ |
-| KS9 | The far door - GitHub is the remotest view | ███████░░░ 2/3 | **← active** |
+| KS9 | The far door - GitHub is the remotest view | ███████░░░ 2/3 | confirmed ✓ |
 | KS10 | Ship core | ░░░░░░░░░░ 0/3 | todo |
 
 <details> ✅<summary>KS0 — Leftovers - the catalogue stops corrupting itself (3/3)</summary>
@@ -85,7 +85,7 @@ _Updated 2026-08-15 02:19 UTC · branch `feat/karvansara` · HEAD `5ff45e3`_
 | # | Title | Status | Commit |
 |---|---|---|---|
 | KS9.1 | SecretsStore gains the GitHub token field with the env override, a raw-HttpClient client lands on the ReleaseClient pattern, and github sync --backfill posts a finished run's board and diary to a scratch repo - re-running mints zero duplicates, off by default, nothing inbound | ✅ DONE | [`95b0237`](https://github.com/shaahink/conductor/commit/95b0237) |
-| KS9.2 | The live mirror reconciles over ReadEventsAfter - batched, network-failure-proof, cursor-resumable - a mid-run network kill leaves the run unharmed and the board converges on reconnect with zero duplicates | ✅ DONE | - |
+| KS9.2 | The live mirror reconciles over ReadEventsAfter - batched, network-failure-proof, cursor-resumable - a mid-run network kill leaves the run unharmed and the board converges on reconnect with zero duplicates | ✅ DONE | [`70ae34a`](https://github.com/shaahink/conductor/commit/70ae34a) |
 | KS9.3 | Projects v2 board via GraphQL mirrors stage status - or, without the one-time project-scope grant, reports the precise refusal and stays SKIPPED rather than half-done | ⬜ TODO | - |
 
 </details>
@@ -123,6 +123,9 @@ _Updated 2026-08-15 02:19 UTC · branch `feat/karvansara` · HEAD `5ff45e3`_
 | 17 | KS3 | Deliver | 1 | 08-15 00:41 | 0:21 | Advanced | KS3.5 | 2 | engine-fast:OK · face-fast:OK | $5.8550 | $0.0071 | 116,712/50,601 |
 | 18 | KS9 | Deliver | 1 | 08-15 01:08 | 0:36 | Advanced | KS9.1 | 3 | engine-fast:OK · face-fast:OK | $15.5597 | $0.0080 | 206,715/104,135 |
 | 19 | KS9 | Deliver | 1 | 08-15 01:45 | 0:32 | Advanced | KS9.2 | 4 | engine-fast:OK · face-fast:OK | $17.3686 | $0.0061 | 211,207/105,796 |
+| 20 | KS9 | Deliver | 1 | 08-15 02:19 | 0:20 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $6.8900 | $0.0056 | 125,576/61,711 |
+| 21 | KS9 | Fix | 2 | 08-15 02:48 | 0:10 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $3.9531 | $0.0078 | 82,977/30,867 |
+| 22 | KS9 | Fix | 3 | 08-15 03:07 | 0:07 | Progress |  | 0 | engine-fast:cached · face-fast:cached | $2.7796 |  | 64,464/19,644 |
 
 ## Money
 
@@ -130,46 +133,19 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 17 | 113.1M | 98.2% | $84.88 | 27 | 4.19M | $3.14 |
+| **run total** | 21 | 155.2M | 98.3% | $115.89 | 28 | 5.54M | $4.14 |
 | stage KS0 | 5 | 59.3M | 98.1% | $45.73 | 24 | 2.47M | $1.91 |
 | stage KS3 | 11 | 31.7M | 98.3% | $23.58 | 2 | 15.9M | $11.79 |
-| stage KS9 | 1 | 22.1M | 98.6% | $15.57 | 1 | 22.1M | $15.57 |
-| 2026-08 | 17 | 113.1M | 98.2% | $84.88 | 27 | 4.19M | $3.14 |
+| stage KS9 | 5 | 64.2M | 98.4% | $46.58 | 2 | 32.1M | $23.29 |
+| 2026-08 | 21 | 155.2M | 98.3% | $115.89 | 28 | 5.54M | $4.14 |
 
-_Where the money goes: agent $84.74 (100%) · gate $0.11 (0%) · advisor $0.03 (0%) · blended $0.75/M tokens._
+_Where the money goes: agent $115.73 (100%) · gate $0.13 (0%) · advisor $0.03 (0%) · blended $0.75/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-15 01:18:04  ▪ gate face-fast pass [session]  (0.0s)
-08-15 01:18:09  ■ needs human — advisor: human intervention required
-08-15 01:18:10  • session #13 KS3 → AgentError  (12.0s)
-08-15 01:18:10  • session #14 KS3 Deliver started (attempt 8/10)
-08-15 01:18:17  ▪ gate engine-fast pass [session]  (0.0s)
-08-15 01:18:17  ▪ gate face-fast pass [session]  (0.0s)
-08-15 01:18:21  ■ needs human — advisor: human intervention required
-08-15 01:18:22  • session #14 KS3 → AgentError  (12.1s)
-08-15 01:18:22  • session #15 KS3 Deliver started (attempt 9/10)
-08-15 01:18:29  ▪ gate engine-fast pass [session]  (0.0s)
-08-15 01:18:29  ▪ gate face-fast pass [session]  (0.0s)
-08-15 01:18:33  ■ needs human — advisor: human intervention required
-08-15 01:18:34  • session #15 KS3 → AgentError  (11.7s)
-08-15 01:18:34  • session #16 KS3 Deliver started (attempt 10/10)
-08-15 01:18:41  ▪ gate engine-fast pass [session]  (0.0s)
-08-15 01:18:41  ▪ gate face-fast pass [session]  (0.0s)
-08-15 01:18:45  ■ needs human — advisor: human intervention required
-08-15 01:18:46  • session #16 KS3 → AgentError  (11.8s)
-08-15 01:18:50  ■ needs human — stage KS3 used all 10 attempts without completing — inspect and `conductor resume` (or `conductor skip`)
-08-15 01:40:23  ■ needs human — stage KS3 used all 10 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Environment credential error (Claude subscription/API key disabled) — orchestrator cannot proceed without user providing valid API access.
-08-15 01:41:23  • session #17 KS3 Deliver started (attempt 1/10)
-08-15 02:04:12  ▪ gate engine-fast pass [session]  (58.2s)
-08-15 02:04:12  ▪ gate face-fast pass [session]  (13.2s)
-08-15 02:04:13  • session #17 KS3 → Advanced · done KS3.5 · 2 commit(s)  (22m50s)
-08-15 02:08:18  ▪ gate engine-fast pass [phase]  (0.0s)
-08-15 02:08:18  ▪ gate face-fast pass [phase]  (0.0s)
-08-15 02:08:18  ▪ gate engine-full pass [phase]  (3m58s)
 08-15 02:08:18  ▪ gate face-full pass [phase]  (4.3s)
 08-15 02:08:18  ✓ checkpoint KS3.5 confirmed
 08-15 02:08:18  ▸ stage KS3 confirmed  (1h28m26s)
@@ -183,6 +159,33 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-15 02:45:53  • session #19 KS9 Deliver started (attempt 1/6)
 08-15 03:19:47  ▪ gate engine-fast pass [session]  (58.2s)
 08-15 03:19:47  ▪ gate face-fast pass [session]  (3.2s)
+08-15 03:19:48  • session #19 KS9 → Advanced · done KS9.2 · 4 commit(s)  (33m54s)
+08-15 03:19:48  • session #20 KS9 Deliver started (attempt 1/6)
+08-15 03:41:16  ▪ gate engine-fast pass [session]  (53.1s)
+08-15 03:41:16  ▪ gate face-fast pass [session]  (3.0s)
+08-15 03:41:17  • session #20 KS9 → Progress · 3 commit(s)  (21m29s)
+08-15 03:48:12  ▪ gate engine-fast pass [phase]  (0.0s)
+08-15 03:48:13  ▪ gate face-fast pass [phase]  (0.0s)
+08-15 03:48:13  ▪ gate engine-full FAIL [phase]  (3m29s)
+08-15 03:48:13  ▪ gate face-full pass [phase]  (2.8s)
+08-15 03:48:13  • session #21 KS9 Fix started (attempt 2/6)
+08-15 04:00:28  ▪ gate engine-fast pass [session]  (54.4s)
+08-15 04:00:28  ▪ gate face-fast pass [session]  (23.8s)
+08-15 04:00:28  • session #21 KS9 → Progress · 3 commit(s)  (12m15s)
+08-15 04:07:26  ▪ gate engine-fast pass [phase]  (0.0s)
+08-15 04:07:26  ▪ gate face-fast pass [phase]  (0.0s)
+08-15 04:07:26  ▪ gate engine-full FAIL [phase]  (3m24s)
+08-15 04:07:26  ▪ gate face-full pass [phase]  (1.5s)
+08-15 04:07:26  • session #22 KS9 Fix started (attempt 3/6)
+08-15 04:14:36  ▪ gate engine-fast pass [session]  (0.0s)
+08-15 04:14:36  ▪ gate face-fast pass [session]  (0.0s)
+08-15 04:14:37  • session #22 KS9 → Progress  (7m10s)
+08-15 04:18:04  ▪ gate engine-fast pass [phase]  (0.0s)
+08-15 04:18:04  ▪ gate face-fast pass [phase]  (0.0s)
+08-15 04:18:04  ▪ gate engine-full pass [phase]  (3m25s)
+08-15 04:18:04  ▪ gate face-full pass [phase]  (0.0s)
+08-15 04:18:04  ✓ checkpoint KS9.1 confirmed
+08-15 04:18:04  ✓ checkpoint KS9.2 confirmed
 ```
 
 ## Health
@@ -190,12 +193,13 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 19 · retries 10 (53 %) · overall Alert
+sessions 22 · retries 12 (55 %) · overall Alert
 ⛔ [same-failure-loop] stage KS3: 10 consecutive sessions made no progress
 ⚠ [context-saturation] session #18: 21,765,939 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #19: 25,244,870 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #3: 23,814,216 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 24,323,658 context tokens (≥ 20,000,000)
-⚠ [high-retry-rate] 10/19 sessions were retries (53 %)
+⚠ [high-retry-rate] 12/22 sessions were retries (55 %)
 ```
 
 ## Repo
@@ -204,25 +208,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvansara
-working tree: clean
+working tree: M .conductor/REPORT.md, M plans/karvansara/CORE-TRACKER.md, M tests/Conductor.Tests/FakeGithub.cs, M tests/Conductor.Tests/KS9_2ReconcilerTests.cs
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s3 (KS0 Deliver)** — 6 commit(s):
-  - [`e6f8819`](https://github.com/shaahink/conductor/commit/e6f8819) docs(tracker): KS0.2 - the handoff names the ratchet the scoped filter does not cover
-  - [`e4c9984`](https://github.com/shaahink/conductor/commit/e4c9984) refactor(store): KS0.2 - one file, one job, so the ratchet goes green again
-  - [`ca5c5c2`](https://github.com/shaahink/conductor/commit/ca5c5c2) docs(tracker): KS0.2 - the handoff carries what was measured, not what was assumed
-  - [`f82f3b1`](https://github.com/shaahink/conductor/commit/f82f3b1) feat(cli): KS0.2 - the four phantom rows are closed, and the procedure is a script
-  - [`ed6aab9`](https://github.com/shaahink/conductor/commit/ed6aab9) test(store): KS0.2 - the hand-SQL procedure cannot be written again
-  - [`15627b9`](https://github.com/shaahink/conductor/commit/15627b9) feat(store): KS0.2 - a run record can be closed, and a park stops saying running
-- **s4 (KS0 Deliver)** — 1 commit(s) (+4 in satellite repo(s)):
-  - [`a8fa298`](https://github.com/shaahink/conductor/commit/a8fa298) fix(plan): KS0.3 - the directory you are standing in beats an inherited variable (bug #20)
-  - `8f9ea3b` feat(record): the harvest gets a trigger — npm run sync, a daily task, and refusals for the unattended path [conductor-site]
-  - `bc3f071` feat(concepts): the ideas move — ten drawings that take input, and the still stands whole without JS [conductor-site]
-  - `39c3214` fix(articles): the strip is above the argument — two directions righted, and a ratio given its name [conductor-site]
-  - `236eb82` feat(site): the word becomes the mark — a drawn logo, the loop on the cover, and a head crawlers can read [conductor-site]
 - **s5 (KS0 Fix)** — 2 commit(s):
   - [`b7ebabe`](https://github.com/shaahink/conductor/commit/b7ebabe) docs(tracker): KS0.3 - the handoff carries the full-suite number, not a filtered one
   - [`eb9778e`](https://github.com/shaahink/conductor/commit/eb9778e) fix(gates,store): KS0.3 - the gate builds beside the engine, not over it (bugs #16, #27)
@@ -243,6 +234,14 @@ vs upstream: up to date
   - [`67d2a08`](https://github.com/shaahink/conductor/commit/67d2a08) fix(core,tests): KS9.2 - two defects the live rig found, and the second is GitHub
   - [`25e3f1f`](https://github.com/shaahink/conductor/commit/25e3f1f) test(tests): KS9.2 - eleven tests against a real store and a fake that can go dark
   - [`70ae34a`](https://github.com/shaahink/conductor/commit/70ae34a) feat(core): KS9.2 - the mirror is a reconciler, and the cursor is the whole of its state
+- **s20 (KS9 Deliver)** — 3 commit(s):
+  - [`205ff63`](https://github.com/shaahink/conductor/commit/205ff63) docs(evidence): KS9.3 - the artifact both claims cite, actually in the tree
+  - [`a1ad0b9`](https://github.com/shaahink/conductor/commit/a1ad0b9) docs(tracker,evidence,cli): KS9.3 - the refusal is the delivery, and stage KS9 closes
+  - [`8b70adf`](https://github.com/shaahink/conductor/commit/8b70adf) feat(core,cli,tests): KS9.3 - the gate is the project half, and every branch of it refuses
+- **s21 (KS9 Fix)** — 3 commit(s):
+  - [`5286704`](https://github.com/shaahink/conductor/commit/5286704) docs(tracker): KS9 - the handoff hands over a green tree and the trap that cost a run
+  - [`769ee6f`](https://github.com/shaahink/conductor/commit/769ee6f) fix(tests,evidence): KS9 - the allowlist was types wearing filenames, and the split changed a spelling
+  - [`10e3257`](https://github.com/shaahink/conductor/commit/10e3257) fix(core,tests): KS9 - the mirror moves to its own file, and the pin follows the schema
 
 ## Phase handovers (audit)
 
@@ -265,40 +264,30 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:cached
 
 ## Last session result
 
-> **KS9.2 landed — live GitHub mirror as a cursor reconciler, proved against real GitHub**
-> - KS9.2 CLAIMED: GithubMirror reconciles over IRunStore.ReadEventsAfter on the WatchLoop cursor idiom, never an IEventSink; v14 github_cursor advances only after a clean push; six boundaries, five fire-and-forget, run-complete waited.
-> - Live rig vs PRIVATE shaahink/conductor-sync-scratch-ks92 found two defects reading could not: a once-mode run truncating its own in-flight pass (now drained + coalesced), and GitHub's REST issues LIST being eventually consistent — 4 issues …
-> - 35 KS9_1/KS9_2 tests pass; build 0 errors/0 warnings; pragma ratchet unchanged at 43 (CA1031 and CA2000 removed by construction, not suppression).
->
-> artefacts: 70ae34a, 25e3f1f, 67d2a08, 5ff45e3; src/Conductor.Core/Integrations/Github/{GithubMirror, GithubMap, GithubBoardSync, GithubClient}.cs, src/Conductor.Core/Store/{Migrations/v14_github_cursor.sql
->
-> evidence: .conductor/evidence/KS9/ks9-2-live-mirror.md
->
-> gaps: KS9.3 untouched — gh still lacks the `project` scope, so its precise-refusal SKIPPED outcome is expected. Ratchet stays red at 43 pragmas vs ceiling 38 (bug #44, pre-existing, KS9.2 adds zero). Full-suite run not done this session; only the KS9/architecture filters were run.
+> Holding for the suite result.
 
 ## Tracker handoff
 
 ```
-last: KS9.2 CLAIMED. GithubMirror is a reconciler over IRunStore.ReadEventsAfter on the WatchLoop
-  cursor idiom - never an IEventSink. Delta decides IF, full fold decides WHAT, cursor (v14
-  github_cursor, keyed run+repo) advances only after a clean push. Six boundaries; five
-  fire-and-forget via RunContext.MirrorBoard, run-complete waited under 90s. Off unless
-  github.enabled AND github.liveMirror. Evidence .conductor/evidence/KS9/ks9-2-live-mirror.md.
-measured LIVE, fresh build vs PRIVATE shaahink/conductor-sync-scratch-ks92, and neither was
-  findable by reading: (1) `run --once` returns the instant a session ends and the teardown
-  disposed the mirror mid-pass - one issue of three on GitHub. Passes are tracked and DRAINED now,
-  and a boundary landing during a pass is COALESCED into one follow-up, not dropped (tracking only
-  the last fire was the same bug twice). (2) GITHUB'S REST ISSUES LIST IS EVENTUALLY CONSISTENT:
-  4 issues created, invisible to a list 2s later, 4 more created - two copies of one board. `gh`
-  agreed with the stale view, so it is replica lag. Fixed by v14 github_map: the marker stays the
-  human-readable identity, but the authority on "already made this" is local; a mapped issue the
-  listing lacks is fetched BY NUMBER, which reads through, so never-clobber still holds.
-red, and NOT this session: ratchet 43 pragmas vs ceiling 38 (bug #44). KS9.2 adds ZERO - CA1031
-  and CA2000 were both removed by construction, not suppression. Do not raise the ceiling.
-then: KS9.3. `gh auth status` today still has no `project` scope, so the contract's precise-refusal
-  SKIPPED outcome is the expected one. Then KS10.1/KS10.2.
+last: FIX session #21. The battery's four reds are down and the tree is GREEN. Stage KS9 stays closed
+  (9.1/9.2 DONE, 9.3 SKIPPED); no checkpoint changed status, KS9.2 got an --amend recording that it
+  claimed DONE on a red tree. Evidence .conductor/evidence/KS9/ks9-fix-battery-green.md.
+three schema pins moved 13 -> 14 because KS9.2's own v14_github_cursor.sql took CurrentVersion to 14
+  and left them behind (RunDbTests, renamed to Schema_version_is_fourteen; K3_3ProvenanceTests:321;
+  K4_1ContextWindowTests:285). Those literals exist to force the bump to be DECIDED - that decision
+  is made, out loud, with the migration in hand. Nothing relaxed: still exact literals.
+ratchet: RunContext.cs 514 -> 459 by moving the mirror surface into a new partial
+  RunContext.Mirror.cs. architecture-baseline.json is still {} and lineCeiling is still 500 - the
+  baseline is EMPTY, so a split was the only legal fix and a debt entry was never an option.
+TRAP, and it cost a whole extra run: TWO architecture tests key on FILE NAME. The ratchet's per-file
+  ceiling, and ArchitectureBoundaryTests' GithubMirror allowlist (only RunContext.cs and
+  RunLoop.Plumbing.cs may name it under Orchestration). A split satisfies one and breaks the other.
+  Check both. A targeted filter went 10/10 and missed it; only the full suite found it.
+numbers: full suite 2645/2646 (the one red was the boundary test, fixed after), then 19/19
+  architecture green. Bug #44 (43 pragmas vs ceiling 38) is untouched, still open, owner decision.
+then: KS10.1, then KS10.2.
 ```

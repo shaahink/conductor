@@ -77,6 +77,36 @@ internal sealed class FakeGithub : HttpMessageHandler
     /// WAITS for its in-flight pass at shutdown from one that races it and usually wins.</summary>
     public TimeSpan Latency { get; set; }
 
+    private TaskCompletionSource? _release;
+    private TaskCompletionSource? _arrived;
+    private int _holdArmed;
+
+    /// <summary>KS9.2 — a HARD hold, and the reason latency alone is not one. A pass is fired onto the
+    /// thread pool, and a pass that has not STARTED holds no gate: under the full suite's load the
+    /// work item can still be queued when a test's own boundary reaches the gate, so the boundary wins
+    /// it and RUNS where the claim says it must coalesce. Latency cannot close that window — it only
+    /// slows a pass that already began. This parks the next request INSIDE the handler and hands back
+    /// a task that completes once that request has genuinely arrived, so "a pass is in flight" is an
+    /// observed fact rather than a bet on the scheduler. Call <see cref="Release"/> to let it go.</summary>
+    public Task HoldNextRequest()
+    {
+        _arrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Volatile.Write(ref _holdArmed, 1);
+        return _arrived.Task;
+    }
+
+    /// <summary>Let the held request answer. Safe to call when nothing is held.</summary>
+    public void Release() => _release?.TrySetResult();
+
+    /// <summary>A failed assertion between the hold and the release would otherwise leave a request
+    /// parked forever and turn a one-line failure into a hung test run.</summary>
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) _release?.TrySetResult();
+        base.Dispose(disposing);
+    }
+
     /// <summary>KS9.2 — GitHub's own eventual consistency, reproduced. MEASURED live: a pass created
     /// four issues and a list two seconds later showed none of them, so the next pass created four
     /// more. With this set the LIST endpoints answer empty while the by-number GET still reads
@@ -91,6 +121,12 @@ internal sealed class FakeGithub : HttpMessageHandler
             request.Method.Method, path, body,
             request.Headers.UserAgent.ToString(), request.Headers.Accept.ToString(),
             request.Headers.Authorization?.ToString()));
+
+        if (Interlocked.Exchange(ref _holdArmed, 0) == 1)
+        {
+            _arrived!.TrySetResult();
+            await _release!.Task.WaitAsync(ct).ConfigureAwait(false);
+        }
 
         if (Latency > TimeSpan.Zero) await Task.Delay(Latency, ct).ConfigureAwait(false);
         if (Outage is { } why) throw new HttpRequestException(why);
