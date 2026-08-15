@@ -53,7 +53,7 @@ public sealed class RunDbTests : IDisposable
     }
 
     [Fact]
-    public void Schema_version_is_thirteen()
+    public void Schema_version_is_fourteen()
     {
         var rows = _db.Query("SELECT version FROM schema_version");
         Assert.Single(rows);
@@ -61,7 +61,11 @@ public sealed class RunDbTests : IDisposable
         // SqliteRunStore.CurrentSchemaVersion would assert that a constant equals itself and let a
         // schema bump land without anyone deciding it should.
         // v11 engine stamp + limits · v12 sessions.context_* · v13 runs.limits_json_at_launch + reload provenance
-        Assert.Equal(13L, (long)rows[0]["version"]!);
+        // v14 (KS9.2) github_cursor + github_map — the live mirror's high-water mark and its local
+        // "what have I already created there" map. The pin moved because that migration is real and
+        // registered (Store/Migrations/v14_github_cursor.sql), which is precisely the decision this
+        // literal exists to force somebody to make out loud.
+        Assert.Equal(14L, (long)rows[0]["version"]!);
     }
 
     [Fact]

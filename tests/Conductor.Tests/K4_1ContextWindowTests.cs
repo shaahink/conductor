@@ -280,9 +280,9 @@ public sealed class K4_1ContextWindowTests : IDisposable
         SqliteConnection.ClearAllPools();
 
         var archive = RunArchive.TryOpen(db)!;
-        // The pin follows the shipped version (KS1.1 took it to v13): this test asserts the
-        // v11 -> current upgrade path lands, not that v12 is the end.
-        Assert.Equal(13, SqliteRunStore.CurrentSchemaVersion);
+        // The pin follows the shipped version (KS1.1 took it to v13, KS9.2 to v14): this test asserts
+        // the v11 -> current upgrade path lands, not that v12 is the end.
+        Assert.Equal(14, SqliteRunStore.CurrentSchemaVersion);
         Assert.Equal((long)SqliteRunStore.CurrentSchemaVersion,
             Convert.ToInt64(archive.Query("SELECT version FROM schema_version")[0]["version"]));
         var session = Assert.Single(archive.Sessions("run-k41-0003"));
