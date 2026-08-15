@@ -69,7 +69,9 @@ Where to look when something's off (full table in `DOGFOOD-RUNBOOK.md`):
 |---|---|
 | `init [-o <dir>] [--name N] [--repo P]` | Scaffold a runnable plan + editable `templates/` + `TRACKER.md`, gates chosen from the detected repo type (dotnet/go/rust/node/python). Self-checks it loads. |
 | `new-plan [-o <dir>]` | Minimal scaffold (plan + tracker only), no templates/gates. `init` supersedes it. |
+| `demo [--from <file>] [--keep] [-o <dir>]` | Drive a complete plan end to end against the built-in fake agent, in a throwaway directory. No credentials, no spend, no PowerShell. `--from` drives *your* board instead — a spec-kit `tasks.md`, a Task-Master `tasks.json`, a plain markdown checklist or a conductor plan/tracker, converted with no model call. `--keep` leaves the directory to poke at. See §6. |
 | `doctor` | <2s health check: agent CLI, git, face-go binary, DNS/disk/API, budget, Telegram. Exit 1 if any `fail`. |
+| `journey` | The pre-flight itinerary: identity, stages, gates, human moments — what the run will do, stage by stage, before it does any of it. Writes no state and spawns no agent. `preflight` runs this as one of its legs; reach for `journey` alone when the itinerary is the only thing you want to read. |
 | `preflight [--no-auth-check] [--no-update-check]` | The launch drill as one verb: doctor (0 fail), journey resolution (workflow + model per stage), the next session's prompt composed and measured, running engine versus the latest release, a stale-engine check, and the tracker handoff block. One verdict, one exit code, and the verdict line names the legs that failed. Decides from the loop's own inputs as the loop prepares them — the declared plan projected over the work graph in an existing `run.db` (read-only, modelling the startup sync) and the saved state after both halves of crash recovery (state.json's and the event log's) — so what it names is what `conductor run` does. No agent spawns and preflight creates nothing under the plan's `.conductor/`, WAL sidecars included — resolving the plan's `run.db` location registers it in the machine catalogue, as plain `doctor` does. |
 | `run [--dry-run] [--once] [--max-sessions N] [--headless] [--no-face] [--no-control-plane] [--port P] [--paused]` | Drive the plan. `--dry-run` = print the first prompt, spawn nothing. `--once` = one session. `--headless` = plain line output, no TUI (use this when driving from a non-interactive shell). `--no-face` = control plane up, no TUI. `--paused` = come up idle (author the plan / pre-seed the kanban first); `resume` starts session 1. |
 | `face [--demo]` | Attach a TUI to an already-running engine (`--demo` = offline synthetic data). |
@@ -103,6 +105,8 @@ going. Destructive ones need `--yes`.
 | `kill --yes` | Kill the current agent session; the loop re-evaluates. |
 | `abort --yes` | Kill the session AND stop the conductor. |
 | `rollback --yes [--force]` | Reset the working tree to the stage-start commit (`--force` if dirty). |
+| `plan reload` | Queue the `reload-plan` control action: a running loop validates the file and swaps the plan at its next session boundary. Listed here as well as under authoring because it is a *live* control intent — `plan set` queues it for you when an engine holds the plan, and raising `limits.maxRunCostUsd` then reloading is the other way past a budget park. |
+| `heartbeat` | Force a fresh `REPORT.md` right now. Only meaningful mid-session — it snapshots the live agent, so it is the one control verb that takes effect *during* a session rather than at the next boundary. |
 | `rollover <tokens>\|off\|clear` (queues the `set-rollover` control verb) | P5: session-token rollover for THIS RUN ONLY — a session past the cap ends `RolledOver` (handoff written, next session fresh, no attempt burned). `off` forces it off even if the plan sets a cap; `clear` hands back to `limits.maxSessionTokens`. Run-state only — never writes the plan file. The active override is on `GET /state` as `maxSessionTokensThisRun` (absent = none) and in the Face's Settings "rollover (run)" row. |
 
 ### Knowledge & plan authoring
@@ -135,7 +139,12 @@ They answer after a run has ended, and from any directory.
 ### Infra
 `bg start\|status\|logs\|stop` (long-running commands, so they don't look like a stall) ·
 `mcp-serve` (the MCP task server the engine wires into each session) · `completion <shell>` ·
-`audit <stage> --replay` (post-hoc read-only audit of a completed stage).
+`audit <stage> --replay` (post-hoc read-only audit of a completed stage) ·
+`version [--json] [--short]` (semver, git sha, build date — stamped at build — and *which file
+answered*; takes no plan and works in any directory) ·
+`update [--check] [-y]` (check the latest release and swap this binary for it; verifies the
+download's checksum, runs it and asks its version before replacing anything, and **refuses while a
+run is live**).
 
 ---
 
