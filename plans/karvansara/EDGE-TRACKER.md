@@ -4,20 +4,19 @@
 
 ## Handoff (overwrite this block, <=12 lines, no history)
 
-last: KS7.3 DONE. `conductor otel` exports a run's event log as an OTLP trace (run > stage > session >
-  gate/tool), gen_ai.* on the session where the convention is actually true, per-turn curve as span
-  events. Official otelcol 0.159.0 rendered 27 spans / 934 turn events of THIS run; 137.4M cache reads
-  against 1.6M input, in somebody else's viewer. No OpenTelemetry SDK dependency.
-reconciles: exact on all 7 finished sessions, span-from-event-fold vs the sessions table written live
-  by the provider's own meter. Table is in the evidence file.
-also: the four-way cache split now survives - TokenDelta.CacheWrite is a SUBSET of Input, never a peer;
-  Input keeps its shipped meaning so no archived total moved. 0 means "not reported".
-next: KS7.4 lifecycle - and do NOT re-probe the model lineup: contextWindow 1000000 / maxOutput 64000
-  for claude-opus-5[1m], plus a second model (haiku-4-5) billed inside one session, are already in
-  .conductor/evidence/KS7/ks7-3-cost-usage-and-otel.md section 1 with the raw capture path.
-trap: building tests/Conductor.Tests/Conductor.Tests.csproj ALONE gives 716 analyzer errors in files
-  you did not touch; the same tree is clean via `dotnet build Conductor.slnx`. Bug #53 filed: the new
-  cache_creation 5m/1h TTL split is dropped, which only bites a future rate-based cost model.
+last: KS7.3 DONE (5794417) and KS7.4 DONE (87b5364). `conductor otel` exports a run as an OTLP trace -
+  official otelcol 0.159.0 rendered 27 spans of this run; the per-turn curve reconciles EXACTLY with
+  K4.1 on all 7 finished sessions. Fork measured: --fork-session composes with --session-id, costs
+  0.15% more than resume and $0.0001 less, so fix/audit sessions can branch without losing id control.
+KS7.5 IS PARTIAL AND UNCLAIMED - the tree is green, the work is committed, do not redo it.
+  landed: GateFailureSpill (wired at all 3 VerdictEngine sites), RepoMapBattery + DefinitionOfDoneBattery
+  written but NOT YET REGISTERED in PromptBuilder.BatterySection - that is the single next action,
+  plus BatteriesConfig flags, tests, and the subagent-delegation line in PromptBuilder.BuiltIns.
+read the amendment on the KS7.5 card first: measured, a whole composed prompt is 17.7k-26.3k CHARS
+  (4.4k-6.6k tokens) against a 135k-195k mean turn - 3-4% of a turn. Prompt trimming CANNOT move the
+  66%. The exit as written needs N future sessions under the new prompts; one session cannot produce it.
+build: use the MSBuild switches nodeReuse:false and UseSharedCompilation=false (bug #54) or you get 9
+  bogus Conductor.Planning analyzer errors. Bug #53: cache_creation 5m/1h TTL split is dropped.
 
 
 ## Baseline numbers (from run.db)

@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
 using Conductor.Core.Lanes;
@@ -105,7 +105,7 @@ public sealed partial class VerdictEngine
             _ctx.State.PendingFix = new PendingFix
             {
                 FromSession = _ctx.State.History.LastOrDefault()?.Number ?? 0,
-                GateFailures = GateRunner.FailureDetails(gates),
+                GateFailures = GateFailureSpill.Render(gates, _ctx.Plan.StateDir, _ctx.State.History.LastOrDefault()?.Number ?? 0),
                 ProgressSummary = $"phase {pg.StageId} full battery — {GateRunner.Token(gates)} — make the claims true",
             };
             _ctx.State.PendingPhaseGate = null;

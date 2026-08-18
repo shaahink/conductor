@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
 using Conductor.Core.Integrations.Messaging;
@@ -409,7 +409,7 @@ public sealed partial class VerdictEngine
             _ctx.State.PendingFix = new PendingFix
             {
                 FromSession = rec.Number,
-                GateFailures = GateRunner.FailureDetails(gates),
+                GateFailures = GateFailureSpill.Render(gates, _ctx.Plan.StateDir, rec.Number),
                 // SC4.2: the fix session is told the same number the verdict acted on. Telling it
                 // "new commits: 3" when three were conductor's own status writes sends it hunting
                 // for work that was never done.

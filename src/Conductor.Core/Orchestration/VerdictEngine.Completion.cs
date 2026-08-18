@@ -1,4 +1,4 @@
-using Conductor.Core.Events;
+﻿using Conductor.Core.Events;
 using Conductor.Core.Integrations;
 using Conductor.Models;
 
@@ -34,7 +34,9 @@ public sealed partial class VerdictEngine
         _ctx.State.PendingFix = new PendingFix
         {
             FromSession = _ctx.State.History.LastOrDefault()?.Number ?? 0,
-            GateFailures = GateRunner.FailureDetails(gates),
+            // KS7.5: the excerpt goes in the prompt, the full output goes to a file the fix session can
+            // read once instead of carrying on every turn.
+            GateFailures = GateFailureSpill.Render(gates, _ctx.Plan.StateDir, _ctx.State.History.LastOrDefault()?.Number ?? 0),
             ProgressSummary = "tracker claims all checkpoints DONE, but the gate battery is red — the claims are not yet true",
         };
         _ctx.Log("completion NOT confirmed — gates red; queuing a fix session");
