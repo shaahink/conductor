@@ -147,17 +147,21 @@ public sealed partial class SessionRunner
     /// budget while it also decides blast radius is the kind of half-true label this project has
     /// been burned by before.
     /// </remarks>
-    private string? WriteSessionSettings(StageConfig stage)
+    private string? WriteSessionSettings(StageConfig stage, int sessionNumber)
     {
         var permissions = PermissionPosture.SettingsFragment(_ctx.Plan.ResolveAgent(stage).Permissions);
         var conductorExe = Environment.ProcessPath;
-        var wantsHook = _ctx.EffectiveMaxSessionTokens is not null
-            && !string.IsNullOrEmpty(conductorExe) && File.Exists(conductorExe);
-        if (!wantsHook && permissions is null) return null;
+        // KS7.2: the hook is now due whenever conductor can run it at all. It used to be written only
+        // for a session with a token ceiling, because delivering the soft break was the only thing it
+        // did; the tool-event channel has no such precondition, and a run without a ceiling would
+        // otherwise silently fall back to transcript parsing for reasons that have nothing to do with
+        // telemetry.
+        var haveExe = !string.IsNullOrEmpty(conductorExe) && File.Exists(conductorExe);
+        if (!haveExe && permissions is null) return null;
         try
         {
             var settings = new Dictionary<string, object>(StringComparer.Ordinal);
-            if (wantsHook)
+            if (haveExe)
             {
                 // Forward slashes, on Windows, deliberately. The agent CLI runs a hook command through
                 // a shell, and that shell reads `\` as an escape: the same command with native
@@ -167,24 +171,22 @@ public sealed partial class SessionRunner
                 // in both positions.
                 var exe = conductorExe!.Replace('\\', '/');
                 var stateDir = _ctx.Plan.StateDir.Replace('\\', '/');
+                var toolEvents = HookToolLog.PathFor(_ctx.Plan.StateDir, sessionNumber).Replace('\\', '/');
+                var command = $"\"{exe}\" hook-budget --state-dir \"{stateDir}\" --tool-events \"{toolEvents}\"";
+                object Entry() => new
+                {
+                    matcher = "*",
+                    hooks = new[] { new { type = "command", command, timeout = 10 } },
+                };
+                // KS7.2: BOTH events, and the second one is not redundant. PostToolUse does not fire
+                // for a call that was refused or failed — measured on 2.1.235, twice — so it alone
+                // counts successes, while the transcript this channel is replacing counts attempts.
+                // PreToolUse is the attempt; PostToolUse turns it into an attempt that worked, and
+                // still carries the soft-break notice it has carried since B13.3.
                 settings["hooks"] = new Dictionary<string, object>(StringComparer.Ordinal)
                 {
-                    ["PostToolUse"] = new[]
-                    {
-                        new
-                        {
-                            matcher = "*",
-                            hooks = new[]
-                            {
-                                new
-                                {
-                                    type = "command",
-                                    command = $"\"{exe}\" hook-budget --state-dir \"{stateDir}\"",
-                                    timeout = 10,
-                                },
-                            },
-                        },
-                    },
+                    ["PreToolUse"] = new[] { Entry() },
+                    ["PostToolUse"] = new[] { Entry() },
                 };
             }
             if (permissions is not null) settings["permissions"] = permissions;
@@ -269,7 +271,7 @@ public sealed partial class SessionRunner
             var claudePath = Path.Combine(_ctx.Plan.StateDir, "mcp-config.claude.json");
             await File.WriteAllTextAsync(opencodePath, JsonSerializer.Serialize(opencodeConfig, opts), ct).ConfigureAwait(false);
             await File.WriteAllTextAsync(claudePath, JsonSerializer.Serialize(claudeConfig, opts), ct).ConfigureAwait(false);
-            return new McpWiring(opencodePath, claudePath, WriteSessionSettings(stage));
+            return new McpWiring(opencodePath, claudePath, WriteSessionSettings(stage, rec.Number));
         }
         catch (Exception ex)
         {

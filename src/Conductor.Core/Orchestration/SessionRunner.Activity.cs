@@ -28,6 +28,30 @@ public sealed partial class SessionRunner
         if (_ctx.Activity.Count > 60) _ctx.Activity.RemoveRange(0, 20);
     }
 
+    /// <summary>KS7.2 — swaps the transcript-derived digest for the hook-derived one, when the hook
+    /// delivered anything. Called once, at session end, after the stream has been drained.</summary>
+    /// <remarks>
+    /// The live fold in <see cref="TrackActivity"/> stays exactly as it was, and on purpose: it is
+    /// what feeds the Face's agent pane and the out-of-repo write check WHILE the session runs, and a
+    /// digest that only existed after the process exited would take that away from a session that
+    /// gets killed. So the transcript path remains the running estimate and the hook file becomes the
+    /// record — primary where it exists, silent where it does not.
+    /// <para>Absent and empty are the same answer here. A hook-less agent (opencode, <c>--bare</c>, a
+    /// provider with no hook surface at all) writes no file; a session that made no tool calls writes
+    /// an empty one; in both the transcript-derived digest is the only source there is, and promoting
+    /// an empty digest over it would report a session that did nothing.</para>
+    /// </remarks>
+    private void PromoteHookDigest(SessionRecord rec)
+    {
+        var path = HookToolLog.PathFor(_ctx.Plan.StateDir, rec.Number);
+        if (HookToolLog.BuildDigest(path, _ctx.Plan.Repo) is not { } hookDigest) return;
+        var before = rec.Digest.ToolCalls;
+        rec.Digest = hookDigest;
+        if (before != hookDigest.ToolCalls)
+            _ctx.Log($"session #{rec.Number} digest source: hook ({hookDigest.ToolCalls} calls; " +
+                     $"the transcript saw {before})");
+    }
+
     /// <summary>How many distinct out-of-repo paths one session records. The verdict reports a COUNT
     /// and names the first few; a session that writes a thousand files under %TEMP% must not put a
     /// thousand strings in state.json to say so.</summary>

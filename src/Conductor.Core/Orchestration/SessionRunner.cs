@@ -331,6 +331,9 @@ public sealed partial class SessionRunner
                 _ctx.State.AuditedStages.Add(stage.Id);
             _ctx.Log($"session #{rec.Number} exited (code {exit}, {(rec.EndedUtc - rec.StartedUtc).Value.TotalMinutes:0}m" +
                 (agent.CostUsd.HasValue ? $", ${agent.CostUsd:0.00}" : "") + ")");
+            // KS7.2: the hook's record replaces the transcript's reconstruction here, before anything
+            // reads the digest — the log line below, the verdict, and run.db all take the promoted one.
+            PromoteHookDigest(rec);
             // SC7.2: the digest at a glance, in the log, beside the exit it describes.
             if (!rec.Digest.IsEmpty) _ctx.Log($"session #{rec.Number} digest: {rec.Digest.Summary()}");
             // KS7.1: what the posture actually stopped. Logged only when it stopped something, so a

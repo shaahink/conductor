@@ -38,7 +38,23 @@ public sealed class SessionDigest
     /// skim surface, so it keeps less.</summary>
     public const int MaxCommandChars = 200;
 
+    /// <summary>KS7.2 — where these counts came from: <c>hook</c> when the agent CLI's own tool hooks
+    /// delivered them, <c>transcript</c> when they were re-derived from the assistant stream.
+    /// Stored rather than inferred, because "hooks are the primary source" is a claim a reader must be
+    /// able to CHECK on any given session — a run where the hook silently never fired would otherwise
+    /// look exactly like one where it did.</summary>
+    public string Source { get; set; } = TranscriptSource;
+
+    public const string HookSource = "hook";
+    public const string TranscriptSource = "transcript";
+
     public int ToolCalls { get; set; }
+
+    /// <summary>KS7.2 — how many of those calls did not come back: refused by the permission posture,
+    /// exited nonzero, or cut off when the session died. Only the hook source can know this (the
+    /// transcript sees the request, never the outcome), so it stays 0 on a transcript-derived digest
+    /// rather than pretending every call succeeded.</summary>
+    public int FailedCalls { get; set; }
 
     /// <summary>Tool name (MCP prefix stripped) to call count.</summary>
     public Dictionary<string, int> Mix { get; set; } = new(StringComparer.Ordinal);
@@ -85,21 +101,82 @@ public sealed class SessionDigest
                 FilesTouched[key] = FilesTouched.TryGetValue(key, out var f) ? f + 1 : 1;
         }
 
-        if (call.Field("taskId") is { Length: > 0 } id && call.Field("status") is { Length: > 0 } status
-            && Claims.Count < MaxClaims)
-            Claims.Add(id + " -> " + status);
+        if (call.Field("taskId") is { Length: > 0 } id && call.Field("status") is { Length: > 0 } status)
+            AddClaim(id, status);
 
         var normalized = ToolEventExtractor.Normalize(call.Name);
         if (normalized == "bg_start" && (call.Field("purpose") ?? call.Field("command")) is { Length: > 0 } purpose
             && BackgroundJobs.Count < MaxJobs)
             BackgroundJobs.Add(Clip(purpose));
 
-        if (call.Field("command") is { Length: > 0 } command && IsNotable(command))
+        if (call.Field("command") is { Length: > 0 } command)
         {
-            var clipped = Clip(command);
-            if (Commands.Count < MaxCommands && !Commands.Contains(clipped, StringComparer.Ordinal))
-                Commands.Add(clipped);
+            // Bug #19 class. The claim counter used to read ONE shape — the MCP task_update call's
+            // taskId/status pair — while the sessions doing the claiming ran `conductor task --done`
+            // through the shell, because that is what their own prompt tells them to do and the MCP
+            // tools arrive deferred in some harnesses. So the digest reported "0 claims" for sessions
+            // that had claimed, and the number was read as evidence that nothing was delivered.
+            if (TryReadCliClaim(command, out var cliId, out var cliStatus)) AddClaim(cliId, cliStatus);
+            if (IsNotable(command))
+            {
+                var clipped = Clip(command);
+                if (Commands.Count < MaxCommands && !Commands.Contains(clipped, StringComparer.Ordinal))
+                    Commands.Add(clipped);
+            }
         }
+    }
+
+    private void AddClaim(string id, string status)
+    {
+        var entry = id + " -> " + status;
+        if (Claims.Count < MaxClaims && !Claims.Contains(entry, StringComparer.Ordinal)) Claims.Add(entry);
+    }
+
+    /// <summary>The board-moving flags of <c>conductor task</c>, mapped to the status word the MCP
+    /// path already writes so one board move reads the same however it was made. <c>--amend</c> is
+    /// absent on purpose: it attaches a note and moves nothing, and a digest that reported it as a
+    /// claim would overstate what the session did.</summary>
+    private static readonly Dictionary<string, string> ClaimFlags = new(StringComparer.Ordinal)
+    {
+        ["--done"] = "done",
+        ["--in-progress"] = "in_progress",
+        ["--todo"] = "todo",
+        ["--blocked"] = "blocked",
+        ["--skipped"] = "skipped",
+    };
+
+    /// <summary>Verbs that only ever LOOK at text. A session greps its own prompt for
+    /// <c>task --done</c> often enough that reading one as a board move would put checkpoints on the
+    /// evidence trail that were never claimed — and a fabricated claim is a worse failure than a
+    /// missed one.</summary>
+    private static readonly HashSet<string> ClaimReaders = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "grep", "rg", "cat", "head", "tail", "sed", "awk", "echo", "type", "less", "more", "find", "wc",
+    };
+
+    /// <summary>Reads a <c>conductor task --&lt;move&gt; &lt;id&gt;</c> out of a shell command line.
+    /// Deliberately narrow: the <c>task</c> word must be present as its own token, the flag must be
+    /// one that moves a card, and the id must be the very next token and not itself a flag.</summary>
+    internal static bool TryReadCliClaim(string command, out string id, out string status)
+    {
+        id = "";
+        status = "";
+        var tokens = command.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (tokens.Length < 3) return false;
+        if (ClaimReaders.Contains(ToolLine.BaseName(tokens[0].Trim('"', '\'')))) return false;
+
+        var taskAt = Array.FindIndex(tokens, t => string.Equals(t.Trim('"', '\''), "task", StringComparison.Ordinal));
+        if (taskAt < 0) return false;
+        for (var i = taskAt + 1; i < tokens.Length - 1; i++)
+        {
+            if (!ClaimFlags.TryGetValue(tokens[i], out var mapped)) continue;
+            var candidate = tokens[i + 1].Trim('"', '\'');
+            if (candidate.Length == 0 || candidate.StartsWith('-')) return false;
+            id = candidate;
+            status = mapped;
+            return true;
+        }
+        return false;
     }
 
     /// <summary>The one-line form the run log carries at session end — the whole digest at a glance,
@@ -116,6 +193,8 @@ public sealed class SessionDigest
         if (Claims.Count > 0) parts.Add($"{Claims.Count} claim{(Claims.Count == 1 ? "" : "s")}");
         if (BackgroundJobs.Count > 0) parts.Add($"{BackgroundJobs.Count} bg job{(BackgroundJobs.Count == 1 ? "" : "s")}");
         if (Commands.Count > 0) parts.Add($"{Commands.Count} build/test command{(Commands.Count == 1 ? "" : "s")}");
+        if (FailedCalls > 0) parts.Add($"{FailedCalls} failed/refused");
+        parts.Add("via " + Source);
         return string.Join(" · ", parts);
     }
 
@@ -126,7 +205,11 @@ public sealed class SessionDigest
     {
         var sb = new StringBuilder();
         sb.Append("TOOL CALLS: ").Append(ToolCalls.ToString(CultureInfo.InvariantCulture))
-          .Append("  ·  distinct tools: ").Append(DistinctTools.ToString(CultureInfo.InvariantCulture)).AppendLine();
+          .Append("  ·  distinct tools: ").Append(DistinctTools.ToString(CultureInfo.InvariantCulture))
+          .Append("  ·  source: ").Append(Source);
+        if (FailedCalls > 0)
+            sb.Append("  ·  failed or refused: ").Append(FailedCalls.ToString(CultureInfo.InvariantCulture));
+        sb.AppendLine();
         if (Mix.Count > 0)
             sb.Append("MIX: ").AppendLine(string.Join(", ", Ranked(Mix).Select(p => p.Key + " " + p.Value.ToString(CultureInfo.InvariantCulture))));
 

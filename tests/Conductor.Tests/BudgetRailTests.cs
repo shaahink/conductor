@@ -210,7 +210,7 @@ public class BudgetRailTests
         // writer THIS test owns; nothing running beside it can reach in.
         using var sw = new StringWriter();
         var cmd = new HookBudgetCommand { Output = sw };
-        var exit = cmd.Execute(null!, new HookBudgetCommand.Settings { StateDir = stateDir });
+        var exit = cmd.ExecuteAsync(null!, new HookBudgetCommand.Settings { StateDir = stateDir }).GetAwaiter().GetResult();
         return (exit, sw.ToString());
     }
 }
