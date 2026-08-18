@@ -136,6 +136,51 @@ announce itself. `ClaudeProvider` parses each `permission_denied` into a `refusa
 `toolRefused` event stamped with session and stage, and a counted line in the run log. A `toolRefused`
 row can only exist if the rules reached the session.
 
+### 3c. What the session did — the hook channel is the record (KS7.2)
+
+The per-session digest — call count, tool mix, files written, claims, background jobs, build commands
+— used to be re-derived from the assistant stream. It is now written by the agent CLI's own tool
+hooks and the stream is the fallback.
+
+Conductor writes `settings.session.json` into the state dir
+(`SessionRunner.Mcp.cs:WriteSessionSettings`) registering the hidden `hook-budget` verb on **both**
+`PreToolUse` and `PostToolUse` with matcher `*`. Each invocation appends to
+`.conductor/hook-tools/NNN.jsonl`: a PreToolUse writes the CALL (`ToolEventExtractor.Extract` over the
+hook's `tool_input`, which is the same object the stream's `tool_use.input` carries), a PostToolUse
+writes an OUTCOME line merged back by `tool_use_id`. At session end `PromoteHookDigest`
+(`SessionRunner.Activity.cs:44`) rebuilds the digest from that file; the digest records the `source`
+it came from, so a reader can check the claim on any given session rather than take the design's word
+for it.
+
+**Why both events, and not just the one that already existed.** Measured twice on claude 2.1.235:
+**PostToolUse does not fire for a tool call that was refused or failed.** Across a probe run and a rig
+run, every call whose `tool_result` came back clean had a PostToolUse and no call whose result carried
+`is_error` did — no exceptions in either direction. A PostToolUse-only channel therefore counts
+successes while the stream it replaces counts attempts, and the two can never agree: a session whose
+forty test commands all failed would have reported none. PreToolUse fires for every call the model
+makes, including the ones the posture then refuses, so it is the same population the transcript had.
+What PostToolUse adds is the one thing the transcript never knew — `FailedCalls`, how many calls did
+not come back.
+
+**Fallback.** No file, or an empty one, means the transcript-derived digest stands untouched. That is
+an opencode session, a `--bare` claude, any provider with no hook surface, and a session that made no
+calls; absent and empty are deliberately the same answer, because promoting an empty digest over the
+transcript would report a session that did nothing.
+
+**Skills vs `promptExtra` — decided here, and it is a decision, not a preference.** A skill's body
+loads only when the agent invokes it; only its one-line description (~25 tokens) is resident. Both
+delivery paths were verified in print mode: a project `.claude/skills/` with `--setting-sources
+project`, and — better — `--plugin-dir <dir>`, which delivers the same skill with `--setting-sources`
+empty and writes nothing into the target repo. Against that, this plan's `promptExtra` is ~1.66k
+tokens, 37% of the composed prompt. **`promptExtra` stays.** Its content is a trap list whose value is
+being read *before* the first edit by a session that does not yet know it needs it, and a body that
+loads only if the agent chooses to invoke it is a rail conditional on curiosity. The saving is small
+against that risk — the resident tokens sit in the cached prefix. The criterion, written down so it is
+not re-argued: **if not reading it causes harm the session cannot detect, it is a rail and stays
+resident; if it only helps once the decision is already made, it is a reference and can move to a
+skill.** The reference half (golden rebaseline recipe, face style rules, plan-editor caveats) is
+KS7.5's to spend, through `--plugin-dir` pointed at the state dir.
+
 
 ### 4. Verdict
 

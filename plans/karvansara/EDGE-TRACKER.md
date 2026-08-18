@@ -2,29 +2,31 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, ≤ 12 lines, no history)
+## Handoff (overwrite this block, <=12 lines, no history)
 
-last: KS7.1 DONE (0c3380f posture+refusal telemetry, efe1e69 the claim-path fix, 4bc1fff evidence).
-  A stage ran GREEN under the restricted profile on a scratch rig - gates green, newly DONE [R1.1],
-  six refusals telemetered on three surfaces. agent.permissions {mode,allow,deny} is real config.
-stage: KS7 - 7.2 hooks, 7.3 cost/OTel, 7.4 lifecycle, 7.5 context economics are still TODO.
-gate: scoped 213/213 (KS7_1, Architecture, SF7_1Docs, PlanConfig, BudgetRail, Provider, AgentConfig,
-  ResolveArgs, Transcript). Two suites went red first and were FIXED, not relaxed - the docs gate
-  because agent.permissions was undocumented, the ratchet because PlanConfig.cs passed 500 lines.
-next: KS7.2. Every checkpoint still opens by verifying its flags against the installed claude
-  (2.1.235) - the six --permission-mode spellings and the settings keys are already verified in
-  .conductor/evidence/KS7/ks7-1-posture.md, do not re-probe those.
-trap: a probe that only runs READ-ONLY shell commands will tell you print mode approves everything;
-  it does not. Bug #51 is open and worth reading before any posture work: the CLI gate refuses
-  git add/git commit too, so a plan whose delivery is commits must allowlist them.
+last: KS7.2 DONE (5b8d56e channel+tests+corpus, this commit docs+evidence). The digest is now written
+  by the agent CLI's own PreToolUse/PostToolUse hooks into .conductor/hook-tools/NNN.jsonl and
+  promoted over the transcript at session end; absent/empty = fallback, and the digest stores its
+  source. Bug #19's class is dead: a `conductor task --done` made through Bash is counted.
+gate: scoped 96/96 (KS7_2, Architecture, SF7_1Docs, BudgetRail, SessionDigest, Transcript, Ratchet).
+next: KS7.3 cost/OTel, then 7.4 lifecycle, 7.5 context economics. KS7.5 inherits a named seam and a
+  decision: promptExtra stays for rails, `--plugin-dir` carries the reference half as skills.
+do-not-re-probe: claude 2.1.235 flags in .conductor/evidence/KS7/ks7-2-hooks-as-ground-truth.md -
+  --include-hook-events is LIFECYCLE ONLY (no tool_input), --plugin-dir works with empty
+  --setting-sources, and the six hook events that fire are listed there.
+trap: PostToolUse does NOT fire for a refused or failed call - measured twice. Any design that reads
+  it as "the calls this session made" is counting successes. And never `dotnet run` a rig while a
+  `dotnet build` is in flight: Conductor.Planning fails with analyzer errors that reproduce in
+  neither build alone. Drive src/Conductor/bin/Debug/net10.0/conductor.exe instead. Bug #52 is open.
+
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 24 |
-| Done | 0 |
-| Claimed (unconfirmed) | 5 |
+| Done | 5 |
+| Claimed (unconfirmed) | 1 |
 
 ## Checkpoints
 
@@ -35,17 +37,17 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS11.1 | The messenger seam: composition, chat profiles and evidence browsing extracted channel-agnostic; TelegramService becomes the transport adapter; golden replay proves current pushes byte-identical through the seam; a fake channel drives the full surface in tests; an architecture test forbids Telegram types outside the adapter | DONE | 7e64866 | .conductor/evidence/KS11/ks11-1-messenger-seam.md |
-| KS11.2 | Profiles admin and observer, per chat: old-shape allowedChatIds plans behave byte-identically (pinned); an unknown profile string is refused by name at plan load; the observer surface is closed to status/tasks/progress/evidence/daily, a control or inject attempt refused by name - proven by an exhaustive command-by-profile matrix test | DONE | 1471ef9 | .conductor/evidence/KS11/KS11.2-chat-profiles.md |
-| KS11.3 | Onboarding + the push grammar: run start and /start post a per-profile onboarding message (what the run is, what will be pushed, what this chat may ask); every push type recomposed to headline / proof / telemetry with money and tokens in monospace; goldens pin both profiles' renderings; a checkpoint push reads standalone | DONE | 1471ef9 | .conductor/evidence/KS11/KS11.3-onboarding-and-grammar.md |
-| KS11.4 | Evidence on demand: /evidence lists checkpoints with evidence, /evidence with an id sends the artifact (document upload for files, chunked text otherwise) with size caps and a per-chat rate limit; an observer pulls a real evidence artifact end-to-end in the rig; the clip constants no longer bound what a reader can reach | DONE | df5048e | .conductor/evidence/KS11/KS11.4-evidence-on-demand.md |
-| KS11.5 | Metrics on demand: /progress /money /tokens answer with figures that cross-check against status and money on the same run.db to the cent (billed money only, no price table in the diff); the daily digest re-rendered in the same grammar, golden pinned | DONE | d6be308 | .conductor/evidence/KS11/KS11.5-metrics-on-demand.md |
+| KS11.1 | The messenger seam: composition, chat profiles and evidence browsing extracted channel-agnostic; TelegramService becomes the transport adapter; golden replay proves current pushes byte-identical through the seam; a fake channel drives the full surface in tests; an architecture test forbids Telegram types outside the adapter | DONE ✓ | 7e64866 | .conductor/evidence/KS11/ks11-1-messenger-seam.md |
+| KS11.2 | Profiles admin and observer, per chat: old-shape allowedChatIds plans behave byte-identically (pinned); an unknown profile string is refused by name at plan load; the observer surface is closed to status/tasks/progress/evidence/daily, a control or inject attempt refused by name - proven by an exhaustive command-by-profile matrix test | DONE ✓ | 1471ef9 | .conductor/evidence/KS11/KS11.2-chat-profiles.md |
+| KS11.3 | Onboarding + the push grammar: run start and /start post a per-profile onboarding message (what the run is, what will be pushed, what this chat may ask); every push type recomposed to headline / proof / telemetry with money and tokens in monospace; goldens pin both profiles' renderings; a checkpoint push reads standalone | DONE ✓ | 1471ef9 | .conductor/evidence/KS11/KS11.3-onboarding-and-grammar.md |
+| KS11.4 | Evidence on demand: /evidence lists checkpoints with evidence, /evidence with an id sends the artifact (document upload for files, chunked text otherwise) with size caps and a per-chat rate limit; an observer pulls a real evidence artifact end-to-end in the rig; the clip constants no longer bound what a reader can reach | DONE ✓ | df5048e | .conductor/evidence/KS11/KS11.4-evidence-on-demand.md |
+| KS11.5 | Metrics on demand: /progress /money /tokens answer with figures that cross-check against status and money on the same run.db to the cent (billed money only, no price table in the diff); the daily digest re-rendered in the same grammar, golden pinned | DONE ✓ | d6be308 | .conductor/evidence/KS11/KS11.5-metrics-on-demand.md |
 
 ### KS7 — Platform catch-up - posture, hooks, usage, lifecycle, context economics
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS7.1 | Permission posture: an allowlist/deny settings profile replaces dangerously-skip-permissions for unattended runs if the installed CLI sustains it - a karvan-class stage runs green under the restricted profile with refusals telemetered, OR a filed finding says precisely why not; blast-radius posture stated honestly in ARCHITECTURE.md | TODO | - | - |
+| KS7.1 | Permission posture: an allowlist/deny settings profile replaces dangerously-skip-permissions for unattended runs if the installed CLI sustains it - a karvan-class stage runs green under the restricted profile with refusals telemetered, OR a filed finding says precisely why not; blast-radius posture stated honestly in ARCHITECTURE.md | DONE | 0c3380f | .conductor/evidence/KS7/ks7-1-posture.md |
 | KS7.2 | Hooks as ground truth: tool events by hook (extending the hook-budget channel) become the primary source, transcript parsing the fallback; hook-derived digests match transcript-derived on a replay corpus; a hook-less agent still works; digest claim-counting (bug 19 class) fixed; skills-vs-promptExtra decided and recorded | TODO | - | - |
 | KS7.3 | Cost/usage: per-turn usage with cache split parsed from the stream; OTel emit mirroring gen_ai names from the event log; an OTLP collector renders a run's spans; the per-turn context curve reconciles with K4.1's derivation | TODO | - | - |
 | KS7.4 | Session lifecycle: fork-instead-of-cold-resume for fix/audit sessions where supported, with the measured token delta vs the resume baseline; resume flags re-verified; model lineup and context ceilings re-measured into TOKEN-BUDGET-TUNING | TODO | - | - |
