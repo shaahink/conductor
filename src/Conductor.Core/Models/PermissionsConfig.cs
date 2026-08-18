@@ -73,6 +73,22 @@ public sealed class PermissionsConfig
         return $"agent.permissions.mode '{mode}' is not a permission mode. it is one of: {string.Join(", ", KnownModes)}.";
     }
 
+    /// <summary>KS7.1 — every posture problem in a plan, plan-wide and per stage. It lives here rather
+    /// than inline in <c>PlanConfig.CollectErrors</c> so the rule and the type that owns it stay in one
+    /// file; the plan's validator calls it in one line.</summary>
+    /// <remarks>A mode the CLI does not know is silently ignored by the CLI, so a typo would otherwise
+    /// produce a run that REPORTS a posture it is not under — and print mode already hides a settings
+    /// file that fails to validate, which leaves no other place to catch it.</remarks>
+    public static IEnumerable<string> CollectPostureErrors(AgentConfig? planAgent, IEnumerable<StageConfig>? stages)
+    {
+        if (planAgent?.Permissions?.ModeRefusal() is { } planError) yield return planError;
+        foreach (var s in stages ?? [])
+        {
+            if (s.Agent?.Permissions?.ModeRefusal() is { } stageError)
+                yield return $"stage '{s.Id}': {stageError}";
+        }
+    }
+
     /// <summary>Merge semantics matching the rest of <see cref="AgentConfig"/>: a stage-level block
     /// replaces the plan-level one field by field, and an unset field falls through rather than
     /// clearing what the plan said.</summary>

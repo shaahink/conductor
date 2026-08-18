@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\u0022C:/code/conductor/src/Conductor/bin/Debug/net10.0/conductor.exe\u0022 hook-budget --state-dir \u0022C:/Users/shahi/AppData/Local/Temp/ks71-rig/.conductor\u0022",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read",
+      "Write"
+    ],
+    "deny": [
+      "Bash(curl:*)",
+      "Bash(git push:*)",
+      "WebFetch",
+      "WebSearch"
+    ]
+  }
+}

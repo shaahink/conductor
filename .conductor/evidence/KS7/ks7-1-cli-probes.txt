@@ -1,0 +1,62 @@
+KS7.1 - live probes against the INSTALLED claude CLI
+cwd C:/Users/shahi/AppData/Local/Temp/ks71-probe, model claude-haiku-4-5-20251001, -p print mode
+every probe asked for two Bash calls: `git status --short` then `echo ok`
+
+==============================================================================
+deny-stream.jsonl  --  deny by BARE TOOL NAME, no --permission-mode flag
+  settings: {  "permissions": {   "allow": ["Read", "Write"],   "deny": ["Bash"],   "defaultMode": "acceptEdits"  } } 
+  init  permissionMode=acceptEdits
+  init  Bash=False WebFetch=True WebSearch=True PowerShell=False
+  tool_use   ToolSearch {"query": "select:Bash", "max_results": 1}
+  tool_result is_error=None "No matching deferred tools found"
+
+==============================================================================
+allow-stream.jsonl  --  allow list + deny WebFetch/WebSearch, defaultMode acceptEdits
+  settings: {  "permissions": {   "allow": ["Bash(echo:*)", "Read", "Write", "Glob", "Grep"],   "deny": ["WebFetch", "WebSearch"],   "defaultMode": "acceptEdits"  } } 
+  init  permissionMode=acceptEdits
+  init  Bash=True WebFetch=False WebSearch=False PowerShell=True
+  tool_use   Bash   {"command": "git status --short", "description": "Check git status"}
+  tool_result is_error=True "Exit code 128\nfatal: not a git repository (or any of the parent directories): .git"
+  tool_use   Bash   {"command": "echo ok", "description": "Echo ok"}
+  tool_result is_error=False "ok"
+
+==============================================================================
+stream-manual.jsonl  --  same profile, --permission-mode manual
+  settings: {  "permissions": {   "allow": ["Bash(echo:*)", "Read", "Write", "Glob", "Grep"],   "deny": ["WebFetch", "WebSearch"],   "defaultMode": "acceptEdits"  } } 
+  init  permissionMode=default
+  init  Bash=True WebFetch=False WebSearch=False PowerShell=True
+  tool_use   Bash   {"command": "git status --short", "description": "Check git status with short format"}
+  tool_use   Bash   {"command": "echo ok", "description": "Print ok"}
+  tool_result is_error=False "ok"
+  tool_result is_error=True "Exit code 128\nfatal: not a git repository (or any of the parent directories): .git"
+
+==============================================================================
+stream-dontAsk.jsonl  --  same profile, --permission-mode dontAsk
+  settings: {  "permissions": {   "allow": ["Bash(echo:*)", "Read", "Write", "Glob", "Grep"],   "deny": ["WebFetch", "WebSearch"],   "defaultMode": "acceptEdits"  } } 
+  init  permissionMode=dontAsk
+  init  Bash=True WebFetch=False WebSearch=False PowerShell=True
+  tool_use   Bash   {"command": "git status --short; echo ok", "description": "Run git status and echo ok in sequence"}
+  tool_result is_error=False "fatal: not a git repository (or any of the parent directories): .git\nok"
+
+==============================================================================
+stream-denyspec.jsonl  --  deny by SPECIFIER Bash(git:*)
+  settings: {  "permissions": {   "allow": ["Bash(echo:*)"],   "deny": ["Bash(git:*)", "Bash(curl:*)", "WebFetch", "WebSearch"],   "defaultMode": "acceptEdits"  } } 
+  init  permissionMode=acceptEdits
+  init  Bash=True WebFetch=False WebSearch=False PowerShell=False
+  tool_use   Bash   {"command": "git status --short", "description": "Check git status"}
+  DENIED  {"type": "system", "subtype": "permission_denied", "tool_name": "Bash", "tool_use_id": "toolu_01WZuUvL3VBPxSbjfjRRbzae", "decision_reason_type": "subcommandResults", "message": "Permission to use Bash with command git status --short has been denied.", "uuid": 
+  tool_result is_error=True "Permission to use Bash with command git status --short has been denied."
+  tool_use   Bash   {"command": "echo ok", "description": "Print ok"}
+  tool_result is_error=False "ok"
+
+==============================================================================
+stream-bypass-deny.jsonl  --  same deny profile WITH --dangerously-skip-permissions
+  settings: {  "permissions": {   "allow": ["Bash(echo:*)"],   "deny": ["Bash(git:*)", "Bash(curl:*)", "WebFetch", "WebSearch"],   "defaultMode": "acceptEdits"  } } 
+  init  permissionMode=bypassPermissions
+  init  Bash=True WebFetch=False WebSearch=False PowerShell=False
+  tool_use   Bash   {"command": "git status --short", "description": "Check git status"}
+  DENIED  {"type": "system", "subtype": "permission_denied", "tool_name": "Bash", "tool_use_id": "toolu_013GX3poFMLpxSxsy2ur3PUg", "decision_reason_type": "subcommandResults", "message": "Permission to use Bash with command git status --short has been denied.", "uuid": 
+  tool_result is_error=True "Permission to use Bash with command git status --short has been denied."
+  tool_use   Bash   {"command": "echo ok", "description": "Echo confirmation"}
+  tool_result is_error=False "ok"
+
