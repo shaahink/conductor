@@ -4,19 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS11.4 DONE (df5048e feature+tests, cb84b1e goldens, 88ec389 docs+evidence). /evidence lists
-  every claim with an artifact; /evidence <id> uploads it (photo when visual). The argument is a
-  checkpoint ID, never a path - the path comes from the tracker row, and four traversal strings are
-  pinned as refused. Caps are the surface's own: 10MB per artifact, 8 pulls per chat per 10 min,
-  only file-carrying answers charged. An observer pulls note-5.md - the artifact the push budget
-  could only announce - on the real wire.
-stage: KS11 in flight, 4 of 5 done. Next is KS11.5, the last one before the ownerGate park.
-gate: scoped suites 347/347. Full suite 2762/2763 - the one failure is bug #49, passes 5/5 alone.
-next: **KS11.5** - /progress /money /tokens. Flipping their Implemented flag in SurfaceCommands is
-  the only catalogue edit; that moves the SAME six ask-line goldens again (rebaseline in its own
-  commit, read the diff - only the ask line may move). Figures must cross-check to the cent.
-trap: never set CONDUCTOR_TELEGRAM_TOKEN in a test class - xUnit runs classes in parallel and three
-  token-absence assertions elsewhere go red. Both wire rigs now use SecretsStore into their own dir.
+last: KS11.5 DONE (d6be308 feature+tests+docs, 7d461bb goldens, 2230ccc evidence). /progress /money
+  /tokens answer, and none of the figures is computed in the composer: it calls MoneySection.Read,
+  which is the four calls conductor money makes in the same order, so the cross-check is by
+  construction. Proven three ways - analyzer, rendered answer, SQLite SUM - plus an observer asking
+  /money and /tokens through the Bot API stub. The digest now reads in the CH-5 grammar.
+stage: KS11 COMPLETE - all five checkpoints claimed. The stage parks on its ownerGate next; the park
+  is the owner's window to reinstall the mid-era engine for the BookToCourse run, not an error.
+gate: scoped suites 236/236 (KS11_*, Telegram, Messaging, Notify, Money, K5_2, K4_3). Full suite ran
+  clean apart from the known parallel-load flake class (bug #49).
+next: KS12 - the record (ARCHITECTURE.md + docs/dev), then the field-guide harvest re-run. Nothing
+  before KS12 touches C:/code/conductor-site, and work there is a branch + PR, never a push to main.
+trap: a python heredoc replacement containing a backslash-b writes a literal BACKSPACE into the C#
+  file - the code looks right in every editor and the regex silently never matches. Use raw strings.
 
 ## Baseline numbers (from run.db)
 
@@ -24,7 +24,7 @@ trap: never set CONDUCTOR_TELEGRAM_TOKEN in a test class - xUnit runs classes in
 |---|---|
 | Total checkpoints | 24 |
 | Done | 0 |
-| Claimed (unconfirmed) | 3 |
+| Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
 
@@ -38,7 +38,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | KS11.1 | The messenger seam: composition, chat profiles and evidence browsing extracted channel-agnostic; TelegramService becomes the transport adapter; golden replay proves current pushes byte-identical through the seam; a fake channel drives the full surface in tests; an architecture test forbids Telegram types outside the adapter | DONE | 7e64866 | .conductor/evidence/KS11/ks11-1-messenger-seam.md |
 | KS11.2 | Profiles admin and observer, per chat: old-shape allowedChatIds plans behave byte-identically (pinned); an unknown profile string is refused by name at plan load; the observer surface is closed to status/tasks/progress/evidence/daily, a control or inject attempt refused by name - proven by an exhaustive command-by-profile matrix test | DONE | 1471ef9 | .conductor/evidence/KS11/KS11.2-chat-profiles.md |
 | KS11.3 | Onboarding + the push grammar: run start and /start post a per-profile onboarding message (what the run is, what will be pushed, what this chat may ask); every push type recomposed to headline / proof / telemetry with money and tokens in monospace; goldens pin both profiles' renderings; a checkpoint push reads standalone | DONE | 1471ef9 | .conductor/evidence/KS11/KS11.3-onboarding-and-grammar.md |
-| KS11.4 | Evidence on demand: /evidence lists checkpoints with evidence, /evidence with an id sends the artifact (document upload for files, chunked text otherwise) with size caps and a per-chat rate limit; an observer pulls a real evidence artifact end-to-end in the rig; the clip constants no longer bound what a reader can reach | TODO | - | - |
+| KS11.4 | Evidence on demand: /evidence lists checkpoints with evidence, /evidence with an id sends the artifact (document upload for files, chunked text otherwise) with size caps and a per-chat rate limit; an observer pulls a real evidence artifact end-to-end in the rig; the clip constants no longer bound what a reader can reach | DONE | df5048e | .conductor/evidence/KS11/KS11.4-evidence-on-demand.md |
 | KS11.5 | Metrics on demand: /progress /money /tokens answer with figures that cross-check against status and money on the same run.db to the cent (billed money only, no price table in the diff); the daily digest re-rendered in the same grammar, golden pinned | TODO | - | - |
 
 ### KS7 — Platform catch-up - posture, hooks, usage, lifecycle, context economics
