@@ -1,0 +1,254 @@
+{
+  // KARVANSARA plan 2 of 2 - the edge. Verification that can't be gamed, the platform catch-up,
+  // the quality lane, interop - and KS11, the remote surface the owner asked for by name
+  // (Chapar: docs/dev/CHAPAR-REMOTE-SURFACE-2026-08-18.md). Era spec:
+  // docs/dev/KARVANSARA-PLAN-2026-08-13.md section 6, Plan II. Compiled after KS10.1's
+  // re-measure per D-1: the ceiling pair is 32M / 0.85 (TOKEN-BUDGET-TUNING section 10).
+  //
+  // STAGE ORDER IS DELIBERATE, not the design doc's listing order: KS11 first because a live
+  // consumer waits (the BookToCourse run's stakeholder group chat), and it parks on an ownerGate
+  // so the owner may take the early-reinstall option. KS7 second (permission posture + context
+  // economics pay for the rest of the run). KS6 before KS4 because KS6.4's evidence-to-verdict
+  // extraction is the seam KS4.5 plugs into. KS8 stays cut-first. KS12 closes the era - the KS10
+  // pattern applied to edge; when it lands, CORE-TRACKER, this tracker and the era brief move to
+  // docs/history per docs/dev/README.md.
+  //
+  // TRAPS THIS FILE ITSELF CARRIES (inherited from the core file, all still true):
+  //  * `conductor plan set` round-trips this file through System.Text.Json and DROPS EVERY COMMENT.
+  //    Keep this annotated copy safe, or restore the comments by hand afterwards.
+  //  * `agent.model` is dropped silently unless {model} appears in BOTH args and resumeArgs. It does.
+  //    Verify with `conductor journey` - the Model column must never read (default).
+  //  * templatesDir resolves against THIS FILE'S directory, so "templates" means
+  //    plans/karvansara/templates/ - shared with core on purpose. tracker and planDoc are
+  //    repo-relative. They differ on purpose; do not "fix" one to match the other.
+  //  * limits.maxSessionTokens and softBreakRatio are MEASURED: 32M / 0.85 per KS10.1's re-measure
+  //    (nudge 27.2M against a 22.08M median closer). Valid for claude-opus-5 only; any model change
+  //    re-derives from a fresh `conductor budget` BEFORE launch (KS7.4 re-measures the lineup).
+  //    Cap $420 = est $318 (24 cp x $13.24 measured mean) + ~32% headroom; the core run's own
+  //    remainder figure ($16.56/cp) lands at $397, still inside.
+  "version": "1.0",
+  "planVersion": 1,
+  "name": "Karvansara edge - gates that can't be gamed, and the courier",
+  "repo": "C:/code/conductor",
+  // payesh is a satellite ONLY so KS12.2's harvest-refresh commits register as progress - the
+  // verdict diffs it, nothing more. No stage before KS12 has any business there. Never push its
+  // main: that repo auto-deploys a public site.
+  "satelliteRepos": [
+    "C:/code/conductor-site"
+  ],
+  "tracker": "plans/karvansara/EDGE-TRACKER.md",
+  "planDoc": "docs/dev/KARVANSARA-PLAN-2026-08-13.md",
+  "branchPattern": "^feat/karvansara-edge$",
+  "pauseOnBlocked": true,
+  "agent": {
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--session-id",
+      "{sessionId}"
+    ],
+    "resumeArgs": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--resume",
+      "{claudeSessionId}"
+    ],
+    "output": "stream-json",
+    "model": "claude-opus-5"
+  },
+  "advisor": {
+    "enabled": true,
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "json",
+      "--model",
+      "claude-haiku-4-5-20251001"
+    ],
+    "output": "json",
+    "timeoutMinutes": 6
+  },
+  "setup": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "teardown": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "progress": {
+    "kind": "markdown-table"
+  },
+  "stages": [
+    {
+      "id": "KS11",
+      "title": "Chapar - the remote surface: profiles, onboarding, evidence on demand",
+      "sessions": 5,
+      "ownerGate": true,
+      "kind": "deliver",
+      "notes": "STRAND DOC: docs/dev/CHAPAR-REMOTE-SURFACE-2026-08-18.md - decisions CH-1 to CH-8 and the checkpoint table there ARE the bar; read it whole before touching TelegramService, and take acceptance from the tracker rows, which mirror it. Order matters: KS11.1's seam extraction is behaviour-preserving (golden replay proves current pushes byte-identical) and everything else builds on it. Non-negotiables the doc states and sessions have historically shortcut: no second channel is built, a fake channel in tests proves the seam; the observer command surface is CLOSED and its enforcement test is an exhaustive command-by-profile matrix, never a sample; old-shape allowedChatIds plans behave byte-identically; billed money only, no price table in any diff. LIVE-PROOF RULE for the whole stage: scratch bot token and scratch chats only - never the owner's real chat, never the BookToCourse group; TelegramConfig.ApiBaseUrl is the stub seam. This stage parks on its ownerGate when confirmed: the park is the owner's window to reinstall the mid-era engine for the BookToCourse run; do not treat the park as an error."
+    },
+    {
+      "id": "KS7",
+      "title": "Platform catch-up - posture, hooks, usage, lifecycle, context economics",
+      "sessions": 5,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/KARVANSARA-PLAN-2026-08-13.md section 6, stage KS7. Every checkpoint OPENS by verifying the flags it depends on against the installed CLI - the era doc marks the whole Claude Code catch-up flag-level unverified, so treat every flag as a hypothesis until claude --help confirms it. KS7.1 permission posture: an allowlist/deny settings profile replaces dangerously-skip-permissions for unattended runs if the installed CLI sustains it - a karvan-class stage must run green under the restricted profile with refusals telemetered, OR a filed finding says precisely why not; the blast-radius story lands in ARCHITECTURE.md honestly either way. This matters beyond this repo: the BookToCourse run executes on a borrowed account, and posture is the sharpest trust item in the audit. KS7.2 hooks as ground truth: tool events delivered by hook extend the hook-budget channel and become the primary source, transcript parsing demoted to fallback - hook-derived digests must match transcript-derived on a replay corpus, and a hook-less agent still works; the digest claim-counting defect (bug 19 class) dies here, and skills-versus-promptExtra is evaluated and DECIDED here, recorded as a decision not an opinion. KS7.3 cost and usage: per-turn usage with cache split parsed from the stream, and an OTel emit mirroring gen_ai names from the event log - an OTLP collector must render a run's spans; the per-turn context curve must reconcile with K4.1's derivation. KS7.4 session lifecycle: fork-instead-of-cold-resume for fix and audit sessions where the CLI supports it, resume flags re-verified, and the model lineup and context ceilings re-measured into TOKEN-BUDGET-TUNING - the measured fork-versus-resume token delta is the evidence. KS7.5 context economics, B7, attack the 66 percent: gate output truncated in-prompt with the full text as an evidence file, RepoMapBattery and a definition-of-done recap battery on the shipped IPromptBattery seam, and templates that teach search-delegation to subagents - the exit is a MEASURED drop in cache-read tokens per session versus the karvan baseline on a comparable stage, reported by conductor budget, not asserted."
+    },
+    {
+      "id": "KS6",
+      "title": "Quality lane - hygiene that buys design",
+      "sessions": 4,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/KARVANSARA-PLAN-2026-08-13.md section 6, stage KS6 - the verified plan's Epic 3, rule adopted verbatim: every hygiene checkpoint buys one permanent design asset, and a checkpoint that only silences warnings is a checkpoint done wrong. KS6.1: a curated Roslynator set of roughly 25 design-shaped rules as errors, everything else explicitly off - the curation IS the deliverable, each rule adopted with a one-line reason in the config comments. KS6.2: an analyzer-debt count ratchet extending ratchet.ps1 semantics, and the referee must not be editable by the agent that plays the game - put the baseline where a session cannot quietly rewrite it and prove a seeded rewrite goes red. KS6.3: complexity budgets CA1502, CA1505, CA1506 with ratchets, first targets the largest partial surfaces - VerdictEngine at 8 files and ControlPlaneServer at 11. KS6.4 is the era's one funded deep refactor: extract the pure evidence-to-verdict function from VerdictEngine so the taxonomy is testable without the loop - this is the seam KS4.5's judge-as-evidence plugs into, which is why this stage runs before KS4. Bug 44 is pre-existing RED here (43 pragmas against a ceiling of 38): this stage owns it - either the debt comes down under the ratchet or the finding says why the ceiling moves, with evidence."
+    },
+    {
+      "id": "KS4",
+      "title": "Verification that can't be gamed",
+      "sessions": 5,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/KARVANSARA-PLAN-2026-08-13.md section 6, stage KS4 - the anti-gaming gate classes the 2026 reward-hacking literature named as conductor's gap while confirming its posture. KS4.1 holdout gates: a visibility holdout gate class excluded from prompts, the tool contract, and every log the agent reads, run only by the engine at verdict time - the exit is a grep of the composed prompt plus transcript proving absence, and a seeded gaming fake-agent that passes visible gates, fails the holdout, and goes red. KS4.2 regression gate class with PASS-TO-PASS semantics: nothing that worked broke, as a NAMED class with distinct reporting - a seeded regression must flip the verdict with the class named in evidence. KS4.3 mutation gate kind: mutation-score at or above a threshold, diff-scoped, Stryker.NET first - the deterministic counter to the-agent-wrote-both-code-and-tests; a checkpoint adding tests must clear the score on changed files, and an era-boundary run on conductor's own suite is recorded. KS4.4 worktree-per-stage-attempt: each attempt in a worktree, a failed attempt drops the tree for mechanical rollback, the verdict receives the clean attempt diff, merge is ff-only on green, and never branch -D an unmerged branch - the lanes plan's L1.3 fix lands here per ND-8 with the amendment committed; the Windows lock and removal path must be proven, and an orphan sweep runs at startup. KS4.5 judge as evidence, never verdict: a second-model review whose structured output joins the evidence taxonomy as a new advisory row through KS6.4's extracted seam, with the deterministic signals still deciding - judge disagreement is recorded as evidence, and NO code path lets a judge score flip a gate verdict; assert that negatively in a test, not in prose."
+    },
+    {
+      "id": "KS8",
+      "title": "Interop - the run as a readable artifact (cut-first)",
+      "sessions": 2,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/KARVANSARA-PLAN-2026-08-13.md section 6, stage KS8. This stage is the plan's FIRST cut line: if budget or calendar demand it, it is skipped whole with a note, never half-done. KS8.1 read-only MCP surface: history, status and money as MCP resources, control operations excluded BY DESIGN - the ADR that documents this cites MCP's 2026 attack record as the reason; the exit is an MCP client listing runs and quoting RECONCILED status, and no write tool existing on the surface. KS8.2 ATIF trajectory export from the fold - history export with billed costs included, validating against the ATIF schema on the karvan-core run so 22 runs become shareable artifacts - plus AGENTS.md generated and honored via the CLAUDE.md-import pattern."
+    },
+    {
+      "id": "KS12",
+      "title": "Ship edge - close the era",
+      "sessions": 3,
+      "ownerGate": true,
+      "kind": "deliver",
+      "notes": "SPEC: the KS10 pattern from docs/dev/KARVANSARA-PLAN-2026-08-13.md applied to edge; KS10's own notes in plans/karvansara/core.plan.json are the worked example. KS12.1 the INTERNAL record: reconcile ARCHITECTURE.md and docs/dev with the engine for everything edge changed; a closure ledger naming every bug and followup row closed here or its living owner - bug 44 and the KS10.1 inherited gaps included; re-run conductor budget and write this run's figures into TOKEN-BUDGET-TUNING, the number the NEXT era compiles against, and where the prescription disagrees with this plan's estimate the prescription wins and the plan doc is corrected in place. KS12.2 the PUBLISHED surface: README first, then the docs user set - cli.md, operating.md (the observer-profile and group-chat setup lands here), quickstart.md, troubleshooting.md, tracker.md, plan-config.md with the new telegram chats shape and every key edge added, and the docs/README.md index; the Unreleased section of CHANGELOG.md written as the release body, because release.yml refuses a tag whose section is missing and uses it verbatim; extend the docs-match-reality tests so every verb and config key edge added is pinned and proven red on a seeded stale doc; re-run the payesh harvest against the run store on a branch and open a PR - NEVER push that repo's main. KS12.3 is OWNER-ONLY: merge feat/karvansara-edge to master, tag the release through the existing pipeline with KS12.2's CHANGELOG section as the body, reinstall with the reported version matching the releases page - only after confirming no other conductor run is live on this machine - run conductor github sync --backfill of THIS run as the closing act, merge the payesh PR, and MOVE plans/karvansara/CORE-TRACKER.md, EDGE-TRACKER.md and the era brief to docs/history per docs/dev/README.md: the Karvansara era closes here, both trackers together, as the core handoff promised."
+    }
+  ],
+  "gates": [
+    {
+      "name": "engine-fast",
+      "command": "dotnet build Conductor.slnx -clp:ErrorsOnly",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 15
+    },
+    {
+      "name": "face-fast",
+      "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go build ./... && go vet ./...\"",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 10
+    },
+    {
+      "name": "engine-full",
+      "command": "dotnet test Conductor.slnx",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 40
+    },
+    {
+      "name": "face-full",
+      "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go test ./...\"",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 15
+    }
+  ],
+  "gatePolicy": "perPhase",
+  "verifyEachDelivery": true,
+  "limits": {
+    "stallMinutes": 15,
+    "stallGraceMinutes": 3,
+    "sessionTimeoutMinutes": 120,
+    "batterySettleSeconds": 120,
+    "authPreflight": true,
+    "maxResumesPerSession": 2,
+    "stageSlackFactor": 2,
+    "backoffMinutes": 30,
+    "maxBackoffs": 10,
+    "maxRunCostUsd": 420,
+    "approvalMode": false,
+    "maxSessionTokens": 32000000,
+    "softBreakRatio": 0.85,
+    "maxConcurrentLanes": 2,
+    "stallPatternTermination": true,
+    "sameFailureCircuitBreaker": true,
+    "stallBackoffMinutes": 12,
+    "overheadCostPerSecond": 0.0001,
+    "verifierThreshold": 80
+  },
+  "report": {
+    "commit": false,
+    "push": false,
+    "heartbeatMinutes": 0
+  },
+  "telegram": {
+    "allowedChatIds": [
+      "99205495"
+    ],
+    "pollIntervalSeconds": 4,
+    "enableTwoWay": true
+  },
+  // Dogfooding KS9.2: the edge run mirrors its own board to the public repo, live. The ENGINE
+  // does this - no session ever posts an issue by hand (trap 11 below).
+  "github": {
+    "enabled": true,
+    "repo": "shaahink/conductor",
+    "board": "issues",
+    "liveMirror": true,
+    "runHistoryIssue": true
+  },
+  "promptExtra": "TRAPS THIS REPO HAS ALREADY PAID FOR, in order of cost:\n0. THIS REPO'S .conductor/ IS THE LIVE STATE OF THE RUN DRIVING YOU. The claim and note verbs (conductor task, note, bug, bg) and the read-only verbs (status, task --list) are yours; NEVER aim a run-control verb (run, pause, resume, abort, approve, plan set, plan reload, goto, skip, retry-stage, rollback, kill) at this repo. Any live-run proof spawns YOUR build against a scratch repo with its own tiny plan and its own state dir - under the temp directory - never against C:/code/conductor.\n1. NEVER run tools/install.ps1 or overwrite the published engine. The conductor driving you runs from that published copy. The owner reinstalls at the KS11 ownerGate park (their option) and at KS12.3, never a session.\n2. The conductor on PATH is the published engine driving you - NOT your working tree. Exercise YOUR changes through the fresh build: dotnet run --project src/Conductor -- VERB (or go run ./cmd/... in face-go). Testing a new verb through the PATH shim only proves the published engine lacks it. Exception by design: task claims go through the PATH copy, because they target the driving run.\n3. A SECOND CONDUCTOR RUN IS EXPECTED TO SHARE THIS MACHINE during this era - the BookToCourse run in C:/Code/BookToCourse, on a different Claude account. You can break it without touching its repo: never kill a conductor.exe, conductor-face.exe or stray dotnet process by pid without checking its command line with Get-CimInstance Win32_Process first; leave anything whose path is not this repo alone. Give every scratch rig its own port and its own state dir, pass -p explicitly to every verb, and clear CONDUCTOR_PLAN in any shell you spawn.\n4. TELEGRAM PROOFS USE A SCRATCH BOT AND SCRATCH CHATS ONLY. Never push to the owner's real chat id or any group containing the stakeholder from a rig; TelegramConfig.ApiBaseUrl is the stub seam for wire-level tests, and the token binds at engine startup only. The clip constants and command dispatch you are changing are LIVE in the engine driving you - your changes reach it only after the owner reinstalls.\n5. THE GITHUB BOARD MIRROR IS THE ENGINE'S JOB. This plan's github block mirrors the run to shaahink/conductor via the engine's own reconciler - never create, edit or close issues there by hand or by gh from a session; KS8 and KS11 proofs that need a repo use a PRIVATE scratch repo (gh repo create conductor-sync-scratch) with the CONDUCTOR_GITHUB_TOKEN override.\n6. .conductor/evidence/ IS GITIGNORED BY STAR AND FORCE-ADDED. A plain git add -A silently drops a new evidence artifact; every evidence file needs git add -f, and the claim's evidence path must exist in the COMMIT, not just on disk.\n7. NO GATE MAY REBUILD THE RUNNING ENGINE. This plan's gates build the solution, which is safe; never add a gate or proof step that runs tools/install.ps1, publishes to the engine's install path, or rebuilds conductor.exe in place.\n8. A literal brace token in a file under this plan's templates directory KILLS THE ENGINE - the template text is validated for unresolved placeholders, the refusal goes to stderr only, and it fires when a stage first renders that template. After any template edit, sweep it: only real placeholder names may appear, and a doubled brace emits a literal one.\n9. Keep the escalation token out of the tracker's handoff block unless you are escalating right now. The match is a plain substring, so prose describing the convention parks the run as hard as raising one. Write escalation in prose; the literal form is the word HUMAN followed by a colon, and the tracker legend below the checkpoints is the only place it is spelled out.\n10. face-go: pad plain text then style, never width-format an ANSI string; clamp with MaxWidth and MaxHeight; goldens pin UTC and live in face-go/internal/tui/testdata/golden - regenerate them only in a separate rebaseline commit; read face-go/STYLE.md and adr 0006 before any face change; the pane viewport is the ONLY scroll idiom.\n11. Orphaned dotnet test hosts flake the full suite. Stopping one is sanctioned ONLY after trap 3's command-line check proves it belongs to this repo; never kill a conductor process, yours or anyone's.\n12. PowerShell tooling targets Windows PowerShell 5.1 and must stay ASCII-only - em-dashes have torn string literals here before. Never call gh --jq from PowerShell when the filter contains double quotes; fetch raw JSON and ConvertFrom-Json.\n13. Commit per checkpoint with the repo's trailer convention and push feat/karvansara-edge. Go sources are checked out LF; keep them that way. If you move a file this run depends on - the plan's readOrder target, the tracker, a template - update the plan and reload it in the same checkpoint, or the next session reads nothing.\n14. This era's token ceiling was measured, not guessed: 32M with the nudge at 27.2M (softBreakRatio 0.85 per KS10.1's re-measure), fitted to claude-opus-5. If you believe the ceiling is wrong, say so with a measurement in the handoff - do not work around it by splitting a checkpoint you were not asked to split. A model change invalidates the pair; that re-derivation belongs to the owner.\n15. THE FIELD GUIDE IS A LIVE PUBLIC SITE. C:/code/conductor-site is shaahink/payesh, and a push to its main auto-deploys payesh.vercel.app to the world. It is a satellite for ONE reason: KS12.2 re-runs its harvest as an end-to-end proof. Work there on a branch, open a PR, and stop; the owner merges at KS12.3. No stage before KS12 touches that repo at all. Its figures are recomputed from the run store, never typed in, and anonymisation fails closed.\n16. EVERY KS7 CHECKPOINT OPENS by verifying its CLI flags against the installed claude - the era doc marks the whole catch-up flag-level unverified. A flag that does not exist is a finding to file with the exact help output, never a reason to guess a synonym.\n17. ANY BATCH THAT RUNS LONGER THAN TEN MINUTES MUST BE A TRACKED BACKGROUND CHILD, or the stall watchdog kills your session while it is working. The watchdog samples agent output, tool output and live bg children only - a subprocess you wait on inside a foreground tool call is invisible to all three, and this run's stall window is fifteen minutes plus three of grace. Start it with conductor bg start --purpose LABEL -- COMMAND, then follow it with conductor bg status and conductor bg logs -t 40. This binds hardest on KS4.3's Stryker mutation runs and the era-boundary run over conductor's own suite, on KS7.3's OTLP collector, on KS7.2's replay corpus and on any by-hand full battery; a stall kill costs the whole session's uncommitted work, not just the attempt.",
+  "templatesDir": "templates",
+  "packs": [],
+  "batteryCollapse": false,
+  "readOrder": [
+    "docs/dev/KARVANSARA-PLAN-2026-08-13.md"
+  ],
+  "analysisLanes": [],
+  "workflows": {
+    "deliver": {
+      "name": "deliver",
+      "description": "Deliver until the stage's checkpoints are confirmed; fix only when gates are red.",
+      "steps": [
+        {
+          "id": "deliver",
+          "kind": "deliver",
+          "deliver": true
+        },
+        {
+          "id": "fix-if-red",
+          "kind": "fix",
+          "runIf": "!gatesGreen",
+          "deliver": true
+        }
+      ],
+      "repeat": true
+    }
+  },
+  "defaultWorkflow": "deliver"
+}
