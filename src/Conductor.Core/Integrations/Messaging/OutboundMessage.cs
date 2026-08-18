@@ -31,7 +31,10 @@ public sealed record OutboundAttachment(string Path, bool AsPhoto, string Captio
 /// seventh tuple element is where that stops being readable.</summary>
 /// <param name="ChatId">The chat this copy is addressed to — one item per allowed chat.</param>
 /// <param name="Text">The message body, WITHOUT the identity stamp, which is applied on the wire.</param>
-/// <param name="KeyboardJson">Serialised inline keyboard, or null.</param>
+/// <param name="Buttons">The buttons to offer, or null. KS11.1: this was a pre-serialised
+/// Telegram <c>inline_keyboard</c> payload built during composition, which put one channel's wire
+/// format in the middle of the seam. The buttons are now carried as themselves and serialised by
+/// whichever adapter is about to send them.</param>
 /// <param name="Ack">SC1.2's completion source: the send loop reports back so a queue-routed test can
 /// answer its HTTP caller. Null for every ordinary fire-and-forget push.</param>
 /// <param name="SessionNumber">The number the identity line carries — the RECORD's for a session-end
@@ -44,9 +47,14 @@ public sealed record OutboundAttachment(string Path, bool AsPhoto, string Captio
 public sealed record OutboundMessage(
     string ChatId,
     string Text,
-    string? KeyboardJson = null,
+    IReadOnlyList<MessageButton>? Buttons = null,
     TaskCompletionSource<string?>? Ack = null,
     int? SessionNumber = null,
     PushSeverity Severity = PushSeverity.Quiet,
     OutboundAttachment? Attachment = null,
     string? StageId = null);
+
+/// <summary>One offered action: what it says, and the opaque token that comes back when it is
+/// pressed. KS11.1 — composition names buttons; only the adapter knows what an inline keyboard
+/// looks like on the wire.</summary>
+public readonly record struct MessageButton(string Text, string CallbackData);

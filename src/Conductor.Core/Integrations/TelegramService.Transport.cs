@@ -78,7 +78,7 @@ public sealed partial class TelegramService
     /// is noise, and the chunks are threaded together anyway.</summary>
     private async Task SendTextAsync(OutboundMessage item, CancellationToken ct)
     {
-        var stamped = FormattableString.Invariant($"{Stamp(item.SessionNumber, item.StageId)}\n{item.Text}");
+        var stamped = FormattableString.Invariant($"{_composer.Stamp(item.SessionNumber, item.StageId)}\n{item.Text}");
         var chunks = HtmlChunker.Split(stamped);
         // The "(2/4)" counter is appended AFTER the split, so it has to be paid for BEFORE it: a
         // chunk that came back exactly at the limit was pushed 13 characters over it by its own
@@ -94,9 +94,11 @@ public sealed partial class TelegramService
                 : FormattableString.Invariant($"{chunks[i]}\n<i>({i + 1}/{chunks.Count})</i>");
             payload["parse_mode"] = "HTML";
 
-            if (item.KeyboardJson != null && i == chunks.Count - 1)
+            // KS11.1: the seam names buttons; turning them into an inline keyboard is this
+            // adapter's job, and it happens here rather than during composition.
+            if (item.Buttons is { Count: > 0 } buttons && i == chunks.Count - 1)
             {
-                using var kbDoc = JsonDocument.Parse(item.KeyboardJson);
+                using var kbDoc = JsonDocument.Parse(KeyboardFor(buttons));
                 payload["reply_markup"] = kbDoc.RootElement.Clone();
             }
 
@@ -116,7 +118,7 @@ public sealed partial class TelegramService
         {
             var why = bytes < 0 ? "the file is not readable from the engine"
                                 : $"{bytes / (1024.0 * 1024.0):0.#} MB is over Telegram's {TelegramLimits.MaxDocumentBytes / (1024 * 1024)} MB limit";
-            await SendTextAsync(item with { Text = $"{item.Text}\n<i>not attached — {EscapeHtml(why)}</i>" }, ct)
+            await SendTextAsync(item with { Text = $"{item.Text}\n<i>not attached — {MessageComposer.EscapeHtml(why)}</i>" }, ct)
                 .ConfigureAwait(false);
             return;
         }
@@ -128,8 +130,8 @@ public sealed partial class TelegramService
         foreach (var (k, v) in BasePayload(item.ChatId, item.Severity))
             AddField(form, k, Convert.ToString(v, CultureInfo.InvariantCulture) ?? "");
 
-        var caption = FormattableString.Invariant($"{Stamp(item.SessionNumber, item.StageId)}\n{att.Caption}");
-        AddField(form, "caption", Clip(caption, HtmlChunker.TelegramMaxCaptionChars));
+        var caption = FormattableString.Invariant($"{_composer.Stamp(item.SessionNumber, item.StageId)}\n{att.Caption}");
+        AddField(form, "caption", MessageComposer.Clip(caption, HtmlChunker.TelegramMaxCaptionChars));
         AddField(form, "parse_mode", "HTML");
         await AddFileAsync(form, method == "sendPhoto" ? "photo" : "document", att.Path, ct).ConfigureAwait(false);
 
@@ -186,7 +188,34 @@ public sealed partial class TelegramService
 
     /// <summary>Convenience for the call sites that only ever send plain text to one chat.</summary>
     internal Task SendAsync(string chatId, string text, CancellationToken ct,
-        string? keyboardJson = null, int? sessionNumber = null,
+        IReadOnlyList<MessageButton>? buttons = null, int? sessionNumber = null,
         PushSeverity severity = PushSeverity.Quiet) =>
-        SendAsync(new OutboundMessage(chatId, text, keyboardJson, null, sessionNumber, severity), ct);
+        SendAsync(new OutboundMessage(chatId, text, buttons, null, sessionNumber, severity), ct);
+
+    /// <summary>Telegram's <c>inline_keyboard</c>, one row. KS11.1 moved it out of composition: the
+    /// seam decides WHAT to offer, the adapter decides what that looks like on a wire.</summary>
+    private static string BuildInlineKeyboard(IReadOnlyList<(string Text, string CallbackData)> buttons)
+    {
+        var elements = new List<Dictionary<string, string>>(buttons.Count);
+        foreach (var (text, data) in buttons)
+            elements.Add(new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["text"] = text,
+                ["callback_data"] = data,
+            });
+
+        var kb = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["inline_keyboard"] = new[] { elements },
+        };
+
+        return JsonSerializer.Serialize(kb, JsonOpts);
+    }
+
+    /// <summary>The seam's buttons, as this wire's keyboard. Deliberately NOT an overload of
+    /// <see cref="BuildInlineKeyboard"/>: a tuple list and a MessageButton list are close enough
+    /// that reflection cannot tell the two apart, and B6.1's suite reaches for that name by
+    /// string.</summary>
+    private static string KeyboardFor(IReadOnlyList<MessageButton> buttons) =>
+        BuildInlineKeyboard([.. buttons.Select(b => (b.Text, b.CallbackData))]);
 }

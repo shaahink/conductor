@@ -50,7 +50,8 @@ public interface ITelegramService
     Task PushEvidenceAsync(IReadOnlyList<Evidence.EvidenceArtifact> artifacts, CancellationToken ct = default);
 }
 
-public sealed partial class TelegramService : IHostedService, ITelegramService, IReportsStartOutcome, IDisposable
+public sealed partial class TelegramService
+    : IHostedService, ITelegramService, IMessageChannel, IReportsStartOutcome, IDisposable
 {
     internal static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -66,8 +67,14 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     private string? _token;
     internal PlanConfig _plan;
     internal readonly RunState _state;
-    internal IProgressProvider _progress;
     internal readonly ILogger<TelegramService> _log;
+
+    /// <summary>KS11.1 — what this run SAYS and what it ANSWERS, neither of which is this class's
+    /// business any more. Rebuilt on every plan adoption for the same reason the plan itself is
+    /// re-derived there (SC1.3): a reload can rename the plan, move the tracker and change the stage
+    /// map under a composer that had snapshotted all three.</summary>
+    private RemoteSurface _surface;
+    private MessageComposer _composer;
     /// <summary>SC1.2: the ack is how <c>POST /telegram/test</c> can route through the REAL queue and
     /// still answer its HTTP caller — the send loop completes it with null on success or the error
     /// text on failure. Every ordinary push leaves it null and stays fire-and-forget.
@@ -86,8 +93,6 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     /// two starts and leave orphaned loops behind.</summary>
     private readonly SemaphoreSlim _gate = new(1, 1);
     internal readonly IRunStore? _store;
-    internal DateTime _lastDigestUtc = DateTime.UtcNow;
-    internal readonly Dictionary<string, bool> _pendingInjections = new(StringComparer.Ordinal);
 
     /// <summary>M8.2: last time getUpdates succeeded, and the last poll/send error message (if
     /// any) — surfaced by the /telegram/status endpoint so the Face can show live connection
@@ -123,11 +128,16 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     /// the constructor and again by every reload, so there is one derivation and the two cannot
     /// drift. The token is re-resolved here too: it lives outside the plan (env var or secrets file)
     /// and can appear at any moment, which is exactly the case that used to need a restart.</summary>
-    [MemberNotNull(nameof(_plan), nameof(_progress), nameof(_apiBase))]
+    [MemberNotNull(nameof(_plan), nameof(_apiBase), nameof(_composer), nameof(_surface))]
     private void AdoptPlan(PlanConfig plan)
     {
         _plan = plan;
-        _progress = ProgressProviderFactory.Create(plan);
+        _composer = new MessageComposer(plan, _state, ProgressProviderFactory.Create(plan), _store,
+            m => _log.LogWarning("{Message}", m));
+        _surface = new RemoteSurface(this, _composer, new CommandRouter(_composer, plan), _state, _store,
+            WriteControlFileAsync,
+            (instruction, stage) => _log.LogInformation(
+                "Telegram /inject: {Instruction} (stage={Stage})", instruction, stage));
         _cfg = plan.Telegram;
         _token = ResolveToken(plan);
 
@@ -278,55 +288,24 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         _http.Dispose();
     }
 
-    // Every real caller is `_ = Push…(…)` fire-and-forget, so an exception here would be an
-    // unobserved task exception nobody ever sees. The queue is unbounded, so TryWrite never blocks
-    // and never throws — it just returns false once StopAsync has closed the channel.
+    // ── ITelegramService: every one of these belongs to the seam now ──
+
     public Task PushAsync(string message, PushSeverity severity = PushSeverity.Quiet,
-        CancellationToken ct = default)
-    {
-        // Nothing to read the tracker for if the push cannot be delivered — this guard is repeated
-        // inside EnqueueAsync, which is the one that actually decides.
-        if (!_started || _cfg?.AllowedChatIds is not { Count: > 0 }) return Task.CompletedTask;
-
-        // K5.2: where the run is, on every engine push — fifteen messages of the owner's own run
-        // carried no checkpoint count, no stage progress and no ETA between them. Appended, never
-        // substituted, and empty when there is no tracker to read.
-        var progress = ProgressLine(null);
-        return EnqueueAsync(progress.Length > 0 ? message + "\n" + EscapeHtml(progress) : message,
-            null, severity, null, ct);
-    }
-
-    /// <summary>The one write path onto the send queue. <paramref name="sessionNumber"/> is the
-    /// number the identity line will carry: the RECORD's for a session-end push, and the live
-    /// counter for everything else (K5.2 — the number used to be printed twice, from two sources).</summary>
-    /// <remarks>K5.4: <paramref name="severity"/> decides whether the push buzzes the owner's phone,
-    /// and <paramref name="attachment"/> makes it a file rather than text. Both are properties of the
-    /// EVENT, so they are chosen by the caller that knows what happened, not here.</remarks>
-    private Task EnqueueAsync(string message, int? sessionNumber,
-        PushSeverity severity = PushSeverity.Quiet, OutboundAttachment? attachment = null,
-        CancellationToken ct = default, string? stageId = null)
-    {
-        // SC1.3: read the queue field ONCE — a reload can swap it between the check and the write,
-        // and a push split across two queues would be delivered twice or not at all.
-        var queue = _sendQueue;
-        if (!_started || _cfg?.AllowedChatIds is not { Count: > 0 } ids) return Task.CompletedTask;
-        foreach (var cid in ids)
-            queue.Writer.TryWrite(new OutboundMessage(cid, message, null, null, sessionNumber, severity, attachment, stageId));
-        return Task.CompletedTask;
-    }
+        CancellationToken ct = default) => _surface.PushAsync(message, severity, ct);
 
     public Task PushWithKeyboardAsync(string message,
-        IReadOnlyList<(string Text, string CallbackData)> buttons, CancellationToken ct = default)
-    {
-        var queue = _sendQueue;
-        if (!_started || _cfg is not { EnableTwoWay: true, AllowedChatIds.Count: > 0 } cfg) return Task.CompletedTask;
-        var kb = BuildInlineKeyboard(buttons);
-        foreach (var cid in cfg.AllowedChatIds)
-            // A keyboard means the engine is ASKING the owner for something — that is the definition
-            // of a push that should buzz.
-            queue.Writer.TryWrite(new OutboundMessage(cid, message, kb, Severity: PushSeverity.Alert));
-        return Task.CompletedTask;
-    }
+        IReadOnlyList<(string Text, string CallbackData)> buttons, CancellationToken ct = default) =>
+        _surface.PushWithKeyboardAsync(message,
+            [.. buttons.Select(b => new MessageButton(b.Text, b.CallbackData))], ct);
+
+    public Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default) =>
+        _surface.PushSessionEndAsync(push, ct);
+
+    public Task PushRunCompleteAsync(RunCompletePush push, CancellationToken ct = default) =>
+        _surface.PushRunCompleteAsync(push, ct);
+
+    public Task PushEvidenceAsync(IReadOnlyList<Evidence.EvidenceArtifact> artifacts,
+        CancellationToken ct = default) => _surface.PushEvidenceAsync(artifacts, ct);
 
     private async Task PollLoopAsync(CancellationToken ct)
     {
@@ -336,7 +315,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
             try
             {
                 await PollOnceAsync(ct).ConfigureAwait(false);
-                await MaybeSendDailyDigestAsync(ct).ConfigureAwait(false);
+                await _surface.MaybeSendDailyDigestAsync(ct).ConfigureAwait(false);
                 _lastPollUtc = DateTime.UtcNow;
                 _lastError = null;
             }
@@ -365,22 +344,38 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         }
     }
 
+    /// <summary>KS11.1 — the adapter's whole inbound job: unwrap the Bot API envelope, check the
+    /// chat is one of ours, and hand plain text to the seam. What the text MEANS is
+    /// <see cref="CommandRouter"/>'s, and what to do about it is <see cref="RemoteSurface"/>'s.</summary>
     private async Task HandleUpdateAsync(TgUpdate upd, CancellationToken ct)
     {
         if (upd.Message is { } msg)
         {
             var chatId = msg.Chat?.Id.ToString(CultureInfo.InvariantCulture);
             if (!IsAllowed(chatId)) return;
-            await HandleMessageAsync(chatId!, msg, ct).ConfigureAwait(false);
+            await _surface.HandleMessageAsync(chatId!, ProfileFor(chatId!), msg.Text ?? "", ct)
+                .ConfigureAwait(false);
         }
         if (upd.CallbackQuery is { } cb)
         {
             var chatId = cb.Message?.Chat?.Id.ToString(CultureInfo.InvariantCulture)
                          ?? cb.From?.Id.ToString(CultureInfo.InvariantCulture);
             if (!IsAllowed(chatId)) return;
-            await HandleCallbackAsync(cb, ct).ConfigureAwait(false);
+
+            // Answering the query is what stops the client spinning. It is a Bot API obligation and
+            // has nothing to do with what the press MEANT, so it stays on this side of the seam.
+            await AnswerCallbackAsync(cb.Id, ct).ConfigureAwait(false);
+
+            // The answer goes to whoever PRESSED it, which is not always the chat the keyboard was
+            // posted in — a group keyboard pressed by the owner is answered to the owner.
+            if (cb.From is not { } from) return;
+            var to = from.Id.ToString(CultureInfo.InvariantCulture);
+            await _surface.HandleCallbackAsync(to, ProfileFor(to), cb.Data ?? "", ct).ConfigureAwait(false);
         }
     }
+
+    /// <summary>KS11.2 is what makes this answer anything but <see cref="ChatProfile.Admin"/>.</summary>
+    private static ChatProfile ProfileFor(string chatId) => ChatProfile.Admin;
 
     /// <summary>Reads the queue it was STARTED with, not the current field: a reload swaps in a new
     /// queue, and a loop that followed the field would end up as a second reader on it.</summary>
@@ -422,17 +417,15 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     /// already superseded.
     /// <para>Read off the LIVE plan and state rather than a constructor snapshot: a reload can rename
     /// the plan (SC1.3) and the session counter moves under every message.</para></summary>
-    internal string IdentityLine => IdentityFor(null);
+    internal string IdentityLine => _composer.IdentityLine;
 
-    /// <summary>K5.2: ONE source for the session number. A session-end push passes the record's own
-    /// number, which is the truthful one for a message about that session; everything else falls
-    /// back to the live counter. The body no longer prints a second copy that could disagree.</summary>
-    internal string IdentityFor(int? sessionNumber)
-    {
-        var name = string.IsNullOrWhiteSpace(_plan.Name) ? "conductor" : _plan.Name.Trim();
-        return FormattableString.Invariant(
-            $"<i>{EscapeHtml(name)} · s{sessionNumber ?? _state.SessionCounter}</i>");
-    }
+    /// <summary>KS11.1: composition moved to <see cref="MessageComposer"/>. These stay as the names
+    /// the rest of the engine and its suites already call a conductor push by.</summary>
+    internal string Stamp(int? sessionNumber, string? stageId = null) => _composer.Stamp(sessionNumber, stageId);
+
+    internal string StageLabel(string stageId) => _composer.StageLabel(stageId);
+
+    internal static string Elapsed(TimeSpan d) => MessageComposer.Elapsed(d);
 
     // K5.4: the wire path moved to TelegramService.Transport.cs — the identity stamp is still applied
     // at that single choke point (FU-OWNER-11), and it now also chunks at 4096, threads the run and
