@@ -164,7 +164,7 @@ public sealed partial class TelegramService
     /// field, and taking the gate for either would let a wedged start block a status read.</remarks>
     public string? DeliveryBlocker => TelegramReadiness.MissingHalf(
         hasBlock: _cfg is not null, hasToken: IsConfigured,
-        allowedChatIds: _cfg?.AllowedChatIds.Count ?? 0, started: _started);
+        allowedChatIds: _cfg?.ChatCount ?? 0, started: _started);
 
     /// <summary>SF0.1 / bug 2: whether <see cref="StartAsync"/> actually started the loops. It very
     /// often does not — no telegram block is the ordinary case — and until this existed the host
@@ -375,7 +375,15 @@ public sealed partial class TelegramService
     }
 
     /// <summary>KS11.2 is what makes this answer anything but <see cref="ChatProfile.Admin"/>.</summary>
-    private static ChatProfile ProfileFor(string chatId) => ChatProfile.Admin;
+    /// <summary>KS11.2 / CH-2: the profile the plan gave this chat. An id that is not a target
+    /// cannot reach here — <see cref="IsAllowed"/> runs first — so the fallback is unreachable
+    /// rather than a policy, and it is the SAFE profile, not the permissive one.</summary>
+    private ChatProfile ProfileFor(string chatId)
+    {
+        foreach (var t in Targets)
+            if (string.Equals(t.ChatId, chatId, StringComparison.Ordinal)) return t.Profile;
+        return ChatProfile.Observer;
+    }
 
     /// <summary>Reads the queue it was STARTED with, not the current field: a reload swaps in a new
     /// queue, and a loop that followed the field would end up as a second reader on it.</summary>
@@ -460,9 +468,15 @@ public sealed partial class TelegramService
         catch (Exception ex) { _log.LogWarning(ex, "Failed to write control.json"); }
     }
 
+    /// <summary>KS11.2: who the bot answers at all. Now read from the resolved target list rather
+    /// than <c>AllowedChatIds</c> directly, so a chat named only in the new <c>chats</c> block is
+    /// served — WHAT it may then ask is <see cref="Messaging.CommandRouter"/>'s decision, not this
+    /// one, which is why this stayed a yes/no.</summary>
     private bool IsAllowed(string? chatId)
     {
-        if (chatId == null || _cfg?.AllowedChatIds is not { Count: > 0 } ids) return false;
-        return ids.Contains(chatId, StringComparer.Ordinal);
+        if (chatId == null) return false;
+        foreach (var t in Targets)
+            if (string.Equals(t.ChatId, chatId, StringComparison.Ordinal)) return true;
+        return false;
     }
 }

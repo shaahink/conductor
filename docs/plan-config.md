@@ -356,11 +356,39 @@ over the changes it exists to check.
 
 | Field | Type | Description |
 |---|---|---|
-| `allowedChatIds` | string[] | Allowed chat IDs for commands. Empty = push-only **to nobody** — the bot has no chat to send to, and `doctor` warns. |
+| `allowedChatIds` | string[] | Allowed chat IDs for commands, all of them admin chats. Empty **and** `chats` empty = push-only **to nobody** — the bot has no chat to send to, and `doctor` warns. |
+| `chats` | object[] | Per-chat profiles: `{ "chatId": "-100123456", "profile": "observer" }`. Supersedes `allowedChatIds` for any id it names; ids only in the old list stay admin. An omitted `profile` is `admin`; a profile string the engine cannot read **fails plan load by name** rather than defaulting. |
 | `pollIntervalSeconds` | int | getUpdate polling interval. Default 4. |
 | `enableTwoWay` | bool | Enable incoming commands via Telegram. |
 | `apiBaseUrl` | string | Bot API root. Defaults to `https://api.telegram.org`; set it only to point at a test double. |
 | `messageThreadId` | int | The forum topic every push of this run belongs to, when the chat is a forum supergroup. Unset — the ordinary case — means the run threads itself by replying to its own first message, which is the only way to group a run in a non-forum chat. |
+
+### Chat profiles
+
+Two profiles, and the difference is what a chat may ASK for — pushes go to every configured chat
+either way.
+
+| Profile | May ask | Never |
+|---|---|---|
+| `admin` | everything: `/status` `/tasks` `/daily` `/start`, `/inject`, `/chat`, and (with `enableTwoWay`) `/pause` `/resume` `/approve` `/skip` `/abort` `/kill` | — |
+| `observer` | `/status` `/tasks` `/daily` `/start` (and `/progress` `/evidence` `/money` `/tokens` as they land) | control verbs, `/inject`, `/chat`, and any confirmation button — each refused in one named line |
+
+This exists so a stakeholder can be put in a chat the bot serves without also being handed the
+steering wheel, which `allowedChatIds` alone made impossible. A plan carrying only `allowedChatIds`
+behaves exactly as it did before profiles existed.
+
+```jsonc
+"telegram": {
+  "chats": [
+    { "chatId": "99205495",   "profile": "admin"    },   // the owner, full surface
+    { "chatId": "-100123456", "profile": "observer" }    // a group chat with a stakeholder in it
+  ],
+  "enableTwoWay": true
+}
+```
+
+Evidence files are served as-is. What a group chat may see is decided when the profile is granted;
+there is no redaction layer.
 
 Token read from the `CONDUCTOR_TELEGRAM_TOKEN` environment variable, or from
 `<stateDir>/secrets.local.json` (written by the Face's Telegram tab / `POST /telegram/token`, and

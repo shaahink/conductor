@@ -1,4 +1,5 @@
 using Conductor.Core.Integrations.Messaging;
+using Conductor.Models;
 
 namespace Conductor.Core.Integrations;
 
@@ -19,12 +20,27 @@ public sealed partial class TelegramService
 
     public bool AllowsControl => _cfg?.EnableTwoWay == true;
 
-    /// <summary>CH-2's profiles are not readable from a plan until KS11.2, so every configured chat
-    /// is an admin chat — which is precisely what every configured chat is today.</summary>
-    public IReadOnlyList<ChatTarget> Targets =>
-        _cfg?.AllowedChatIds is { Count: > 0 } ids
-            ? [.. ids.Select(id => new ChatTarget(id, ChatProfile.Admin))]
-            : [];
+    /// <summary>KS11.2 / CH-2: every chat this bot serves and what each one is for, resolved from
+    /// the plan's <c>chats</c> block merged over the old <c>allowedChatIds</c> list.
+    ///
+    /// <para>An old-shape plan yields its own ids in its own order, all admin — which is exactly
+    /// what this property returned before the block existed. A profile string that got past plan
+    /// validation unread would be a bug, and is treated as one: the chat is DROPPED rather than
+    /// promoted, so the failure is a chat that hears nothing, not a chat that can steer.</para></summary>
+    public IReadOnlyList<ChatTarget> Targets => ResolveTargets(_cfg);
+
+    internal static IReadOnlyList<ChatTarget> ResolveTargets(TelegramConfig? cfg)
+    {
+        if (cfg == null) return [];
+        var targets = new List<ChatTarget>();
+        foreach (var (chatId, profileName) in cfg.ResolvedChats())
+        {
+            var profile = ChatProfiles.TryParse(profileName ?? ChatProfiles.AdminName);
+            if (profile != null) targets.Add(new ChatTarget(chatId, profile.Value));
+        }
+
+        return targets;
+    }
 
     /// <summary>The one write path onto the send queue. Every real caller is fire-and-forget, so
     /// this must never throw: the queue is unbounded, so TryWrite never blocks, and it returns false

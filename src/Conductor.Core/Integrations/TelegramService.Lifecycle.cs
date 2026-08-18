@@ -31,7 +31,7 @@ public sealed partial class TelegramService
         {
             var missing = TelegramReadiness.MissingHalf(
                 hasBlock: _cfg is not null, hasToken: _token is not null,
-                allowedChatIds: _cfg?.AllowedChatIds.Count ?? 0, started: false);
+                allowedChatIds: _cfg?.ChatCount ?? 0, started: false);
             // No telegram block at all is an ordinary, deliberate choice; a block that cannot deliver
             // is a misconfiguration the owner meant to work, and warrants the louder level.
             if (_cfg is null) _log.LogInformation("Telegram not started: {Reason}", missing);
@@ -113,7 +113,7 @@ public sealed partial class TelegramService
     {
         var missing = TelegramReadiness.MissingHalf(
             hasBlock: _cfg is not null, hasToken: _token is not null,
-            allowedChatIds: _cfg?.AllowedChatIds.Count ?? 0, started: _started);
+            allowedChatIds: _cfg?.ChatCount ?? 0, started: _started);
         var message = overrideMessage ?? (missing is null
             ? $"the running engine picked it up — Telegram is delivering to {_cfg!.AllowedChatIds.Count} chat id(s) now, no restart needed"
             : $"saved, but this run still will not deliver: {missing}");
@@ -128,7 +128,11 @@ public sealed partial class TelegramService
         return a.PollIntervalSeconds == b.PollIntervalSeconds
             && a.EnableTwoWay == b.EnableTwoWay
             && string.Equals(a.ApiBaseUrl, b.ApiBaseUrl, StringComparison.Ordinal)
-            && a.AllowedChatIds.SequenceEqual(b.AllowedChatIds, StringComparer.Ordinal);
+            && a.AllowedChatIds.SequenceEqual(b.AllowedChatIds, StringComparer.Ordinal)
+            // KS11.2: the chats block is part of what the loops were built from. Comparing only the
+            // old list would let an edit that adds an observer chat - or DEMOTES an admin one - be
+            // read as "nothing changed", and the running loops would keep the old permissions.
+            && ResolveTargets(a).SequenceEqual(ResolveTargets(b));
     }
 
     /// <summary>SC1.1: how long the send queue is allowed to flush before shutdown stops waiting.

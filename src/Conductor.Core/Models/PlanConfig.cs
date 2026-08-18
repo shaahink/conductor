@@ -349,6 +349,11 @@ public sealed class PlanConfig
         // as the run lasts. Judge it here, where the author can still fix it for free.
         ValidateAdvisor(Advisor, errors);
 
+        // KS11.2 / CHAPAR CH-2: a chat profile the engine cannot read is refused BY NAME here, at
+        // plan load, and never quietly read as admin. Getting this wrong means an outsider holding
+        // the steering wheel, so it fails the same way an unknown github.board does.
+        if (Telegram?.ProfileRefusal() is { } chatRefusal) errors.Add(chatRefusal);
+
         return errors;
     }
 

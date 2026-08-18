@@ -451,11 +451,11 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
 
         var missing = TelegramReadiness.MissingHalf(
             hasBlock: cfg is not null, hasToken: hasToken,
-            allowedChatIds: cfg?.AllowedChatIds.Count ?? 0, started: null);
+            allowedChatIds: cfg?.ChatCount ?? 0, started: null);
 
         return missing is not null
             ? new Check("telegram", "warn", missing)
-            : new Check("telegram", "ok", $"token present, {cfg!.AllowedChatIds.Count} allowed chat id(s)");
+            : new Check("telegram", "ok", $"token present, {cfg!.ChatCount} allowed chat id(s)");
     }
 
     private static string RenderCheck(Check c)

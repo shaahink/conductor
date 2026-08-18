@@ -28,6 +28,11 @@ public enum SurfaceAction
 
     /// <summary>Remember that this chat's NEXT plain message is an injection, and say so.</summary>
     ArmInjection = 5,
+
+    /// <summary>KS11.2 / CH-3 — the verb exists and this chat may not use it. Delivered exactly like
+    /// <see cref="Reply"/>; it is a separate action so that "an observer was refused" is a fact the
+    /// command-by-profile matrix can assert, rather than a string it has to pattern-match.</summary>
+    Refuse = 6,
 }
 
 /// <param name="Text">The reply body, or the instruction for <see cref="SurfaceAction.Inject"/>.</param>
@@ -44,16 +49,19 @@ public sealed record CommandOutcome(
     public static readonly CommandOutcome Nothing = new(SurfaceAction.None);
 
     public static CommandOutcome Reply(string text) => new(SurfaceAction.Reply, text);
+
+    /// <summary>CH-3's named refusal — one line, naming the verb and the profile.</summary>
+    public static CommandOutcome Refuse(string text) => new(SurfaceAction.Refuse, text);
 }
 
 /// <summary>KS11.1 / CHAPAR CH-1 — inbound dispatch, channel-agnostic. It takes the text a reader
 /// typed and the profile of the chat they typed it in, and answers with a decision.
 ///
-/// <para>KS11.1 preserves today's behaviour exactly: every chat arrives as
-/// <see cref="ChatProfile.Admin"/>, so every command routes as it always has. What has changed is
-/// that the routing is now a function of (text, profile) in one readable place — which is the shape
-/// CH-3's closed observer surface needs, and the shape its exhaustive command-by-profile matrix can
-/// actually be written against.</para></summary>
+/// <para>KS11.2 makes the profile load-bearing. Every inbound path — a typed verb, a plain message
+/// while injection is armed, and a button press — passes through <see cref="Gate"/> before anything
+/// else happens, so the closed observer surface of CH-3 is enforced in ONE place rather than as a
+/// refusal bolted onto each handler. An admin routes exactly as it always has, which is what the
+/// KS11.1 goldens pin.</para></summary>
 public sealed class CommandRouter
 {
     private readonly MessageComposer _composer;
@@ -65,8 +73,8 @@ public sealed class CommandRouter
         _plan = plan;
     }
 
-    /// <param name="profile">What this chat is allowed to be. Carried through KS11.1 without
-    /// branching on it — the value is Admin everywhere until KS11.2 can read it from a plan.</param>
+    /// <param name="profile">What this chat is allowed to be, read from the plan's
+    /// <c>telegram.chats</c> block (or Admin, for an old-shape <c>allowedChatIds</c> plan).</param>
     /// <param name="twoWay">Whether the channel is wired for control verbs at all.</param>
     /// <param name="injectionArmed">Whether this chat's last exchange asked it for injection text.</param>
     public CommandOutcome Route(string text, ChatProfile profile, bool twoWay, bool injectionArmed)
@@ -75,8 +83,16 @@ public sealed class CommandRouter
         text = text.Trim();
         if (text.Length == 0) return CommandOutcome.Nothing;
 
+        if (Gate(text, profile) is { } refusal) return refusal;
+
         if (injectionArmed && !text.StartsWith('/'))
+        {
+            // An observer can never arm injection (the callback that arms it is gated too), so this
+            // is belt and braces — and it is the branch that would silently turn a plain sentence
+            // into a steering instruction if the gate above were ever moved below it.
+            if (profile != ChatProfile.Admin) return CommandOutcome.Nothing;
             return new CommandOutcome(SurfaceAction.Inject, text);
+        }
 
         if (text.Equals("/status", StringComparison.OrdinalIgnoreCase))
             return CommandOutcome.Reply(_composer.StatusText());
@@ -129,12 +145,39 @@ public sealed class CommandRouter
             ]);
     }
 
+    /// <summary>KS11.2 / CH-3 — the one gate. Answers a refusal when this chat may not use the verb
+    /// it typed, and null when routing should carry on as normal.
+    ///
+    /// <para>A verb NOT in <see cref="SurfaceCommands.All"/> is not refused: an unknown command has
+    /// always been met with silence, and a bot in a busy group that answers every stray slash is a
+    /// bot that gets removed from the group. Silence is also what an unimplemented browse verb gets,
+    /// for both profiles — which is why <see cref="SurfaceCommand.Implemented"/> exists.</para></summary>
+    private static CommandOutcome? Gate(string text, ChatProfile profile)
+    {
+        if (profile == ChatProfile.Admin) return null;
+        if (!text.StartsWith('/')) return CommandOutcome.Nothing;
+
+        var command = SurfaceCommands.Find(text);
+        if (command == null) return CommandOutcome.Nothing;
+
+        return command.AllowedFor(profile) ? null : CommandOutcome.Refuse(SurfaceCommands.Refusal(command));
+    }
+
     /// <summary>A button press, routed by the same rules and with no channel type in sight — the
     /// callback payload is a string this side of the seam owns, because this side is what put it on
-    /// the button.</summary>
-    public CommandOutcome RouteCallback(string data)
+    /// the button.
+    ///
+    /// <para>KS11.2 gave this the profile it was missing. Pushes fan out to every configured chat,
+    /// so a confirmation keyboard raised by the owner lands in the observer's chat too; without the
+    /// check below, pressing it wrote control.json. Nothing on a callback is a browse verb, so an
+    /// observer is refused the whole callback surface by name.</para></summary>
+    public CommandOutcome RouteCallback(string data, ChatProfile profile)
     {
         ArgumentNullException.ThrowIfNull(data);
+
+        if (profile != ChatProfile.Admin)
+            return CommandOutcome.Refuse(
+                $"That button is not part of the observer surface. Observers can ask: {SurfaceCommands.BrowseList}.");
 
         if (data.StartsWith("cancel:", StringComparison.Ordinal))
             return CommandOutcome.Reply("Cancelled.");

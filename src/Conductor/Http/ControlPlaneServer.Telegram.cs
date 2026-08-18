@@ -60,7 +60,7 @@ public sealed partial class ControlPlaneServer
             var block = _plan.Telegram;
             return new TelegramStatusDto(
                 Configured: block is not null, Started: false, HasToken: false,
-                AllowedChatIds: block?.AllowedChatIds ?? [],
+                AllowedChatIds: block is null ? [] : [.. block.ResolvedChats().Select(c => c.ChatId)],
                 PollIntervalSeconds: block?.PollIntervalSeconds ?? 4, EnableTwoWay: block?.EnableTwoWay ?? false,
                 BotUsername: null, LastError: null, LastPollUtc: null,
                 WillDeliver: false,
@@ -81,13 +81,16 @@ public sealed partial class ControlPlaneServer
 
         var missing = TelegramReadiness.MissingHalf(
             hasBlock: true, hasToken: svc.IsConfigured,
-            allowedChatIds: cfg.AllowedChatIds.Count, started: svc._started);
+            allowedChatIds: cfg.ChatCount, started: svc._started);
 
         return new TelegramStatusDto(
             Configured: true,
             Started: svc._started,
             HasToken: svc.IsConfigured,
-            AllowedChatIds: cfg.AllowedChatIds,
+            // KS11.2: every chat served, old list and chats block merged - the field is what the
+            // bot will talk to, and showing only half of it is how a reader concludes a configured
+            // observer chat was never picked up.
+            AllowedChatIds: [.. cfg.ResolvedChats().Select(c => c.ChatId)],
             PollIntervalSeconds: cfg.PollIntervalSeconds,
             EnableTwoWay: cfg.EnableTwoWay,
             BotUsername: svc._botUsername,

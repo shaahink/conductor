@@ -162,7 +162,7 @@ public sealed class RemoteSurface
     /// goes — for a callback that is the user who pressed it, which is not always the chat the
     /// keyboard was posted in.</summary>
     public Task HandleCallbackAsync(string chatId, ChatProfile profile, string data, CancellationToken ct)
-        => ApplyAsync(chatId, _router.RouteCallback(data), ct);
+        => ApplyAsync(chatId, _router.RouteCallback(data, profile), ct);
 
     private async Task ApplyAsync(string chatId, CommandOutcome outcome, CancellationToken ct)
     {
@@ -172,6 +172,13 @@ public sealed class RemoteSurface
                 return;
 
             case SurfaceAction.Reply:
+                await ReplyAsync(chatId, outcome.Text!, null, ct).ConfigureAwait(false);
+                return;
+
+            case SurfaceAction.Refuse:
+                // KS11.2 / CH-3: delivered exactly like a reply, and deliberately NOT written to the
+                // engine log — the only log delegate this class holds is the inject path's, and a
+                // refusal logged through it would read as an injection that never happened.
                 await ReplyAsync(chatId, outcome.Text!, null, ct).ConfigureAwait(false);
                 return;
 

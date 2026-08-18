@@ -180,6 +180,41 @@ process alive? → log tail → `crash-*.log`? → `git status` (uncommitted wor
 → `conductor run -p <plan>` to resume (it reads `run.db` alone and the next prompt tells the worker to
 re-orient).
 
+### Letting someone else watch — a group chat with an observer profile (KS11.2)
+
+A stakeholder who wants to follow a run does not need the steering wheel, and until KS11.2 there was
+no way to give them one without the other: `allowedChatIds` gated pushes and commands together, so
+any chat the bot served could `/inject` and, with `enableTwoWay`, `/abort`.
+
+```jsonc
+"telegram": {
+  "chats": [
+    { "chatId": "99205495",   "profile": "admin"    },
+    { "chatId": "-100123456", "profile": "observer" }
+  ],
+  "enableTwoWay": true
+}
+```
+
+Both chats get every push. The observer chat may ask `/status`, `/tasks`, `/daily` and `/start`; a
+control verb, `/inject`, `/chat` or a tap on a confirmation button gets one named line saying so and
+nothing happens. An unknown command is met with silence, as it always has been.
+
+**Three things about group chats specifically:**
+
+1. **Privacy mode.** A bot added to a group sees only messages addressed to it — commands like
+   `/status@yourbot`, and replies to its own messages — unless you turn privacy mode off in
+   @BotFather (*Bot Settings → Group Privacy*). Leave it ON: the run's own commands still work, and
+   the bot is not reading the group's conversation. Note that with privacy on, plain `/status` in a
+   group may not reach the bot at all; `/status@yourbot` always does.
+2. **The chat id is negative,** and a supergroup's has a `-100` prefix. Get it from @userinfobot
+   inside the group, and quote it as a string in the plan.
+3. **Evidence is served as-is.** Granting `observer` to a group is a decision about what that group
+   may see; there is no redaction layer between the artifact and the chat.
+
+An unknown profile string fails plan load by name — `conductor doctor` will not paper over it, and
+the run refuses to start rather than guessing which side of the line a chat belongs on.
+
 ### Unattended supervision — the night watch (SF5)
 
 **The problem with babysitting by polling.** An agent tailing the log every 30s spends its budget on
