@@ -196,15 +196,37 @@ any chat the bot served could `/inject` and, with `enableTwoWay`, `/abort`.
 }
 ```
 
-Both chats get every push. The observer chat may ask `/status`, `/tasks`, `/daily` and `/start`; a
-control verb, `/inject`, `/chat` or a tap on a confirmation button gets one named line saying so and
-nothing happens. An unknown command is met with silence, as it always has been.
+Both chats get every push. The observer chat may ask `/status`, `/tasks`, `/daily`, `/evidence` and
+`/start`; a control verb, `/inject`, `/chat` or a tap on a confirmation button gets one named line
+saying so and nothing happens. An unknown command is met with silence, as it always has been.
 
 Each chat is introduced before the run's first word: what this run is (plan, stage map, budget
 ceiling), what will arrive here and when, and exactly what this chat may ask. A chat added by a
 plan reload mid-run gets the same introduction at the reload, and `/start` re-sends it on request.
 The "what you can ask" list is built from the same catalogue that enforces the permission, so it
 cannot promise a verb the bot would refuse.
+
+### Asking for the evidence — `/evidence` (KS11.4)
+
+A push spends a small budget on files — four artifacts per batch — and announces the rest by name.
+That is deliberate: a push nobody asked for should not be forty lines and thirty uploads. What
+changed in KS11.4 is that the announcement is no longer the end of the road.
+
+* `/evidence` lists every checkpoint that has an artifact, with the file's name and size, and says
+  plainly which ones the engine can no longer reach (a path that moved, or a claim made on another
+  machine). The list is not truncated; a long one is split into chunks by the transport.
+* `/evidence KS11.2` sends the artifacts that checkpoint claimed — as a document, or as a photo when
+  the artifact is a screenshot. A claim naming two artifacts sends both.
+
+The argument is a **checkpoint id**, never a path: the path comes from the tracker row the engine
+itself wrote, so there is no way to ask the bot for a file the run never claimed as evidence. An id
+nobody claimed gets a line saying so rather than silence.
+
+Two limits, and both are the run's rather than Telegram's: an artifact over **10 MB** is named
+instead of uploaded (it is still on the engine's machine at the path shown), and each chat may pull
+**8 artifacts per 10 minutes**. The limit is per chat, so a group reader working through the list
+cannot use up the owner's budget, and only an answer that actually carries a file is counted — a
+mistyped id costs nothing. A refusal says when to ask again.
 
 **Three things about group chats specifically:**
 
@@ -216,7 +238,9 @@ cannot promise a verb the bot would refuse.
 2. **The chat id is negative,** and a supergroup's has a `-100` prefix. Get it from @userinfobot
    inside the group, and quote it as a string in the plan.
 3. **Evidence is served as-is.** Granting `observer` to a group is a decision about what that group
-   may see; there is no redaction layer between the artifact and the chat.
+   may see; there is no redaction layer between the artifact and the chat. Since KS11.4 the group
+   can also *pull* any artifact the run has claimed, not just receive the ones a push carried — so
+   the decision is about the whole evidence trail of the run, not about the next four files.
 
 An unknown profile string fails plan load by name — `conductor doctor` will not paper over it, and
 the run refuses to start rather than guessing which side of the line a chat belongs on.

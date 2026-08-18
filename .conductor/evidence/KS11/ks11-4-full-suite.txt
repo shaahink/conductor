@@ -1,0 +1,13 @@
+KS11.4 full suite, 2026-08-18, at commit cb84b1e (conductor bg, purpose ks11-4-full)
+
+  dotnet test Conductor.slnx --no-build
+
+Failed!  - Failed:     1, Passed:  2762, Skipped:     0, Total:  2763, Duration: 2 m 20 s - Conductor.Tests.dll (net10.0)
+
+The single failure is KS1_2StagesFromFoldTests.DerivedStatusMatchesTheStatusSurface_ForEverySeededRun
+(KS1_2StagesFromFoldTests.cs:174, Actual: "active"). It is NOT this checkpoint's:
+
+  dotnet test --filter FullyQualifiedName~KS1_2StagesFromFold   ->  Passed! 5/5, 338 ms
+
+i.e. it passes alone and fails only under full-suite parallel load, on a path (RunStateProjection.Fold /
+SnapshotBuilder / RunArchive) that this diff does not touch. Filed as bug #49 rather than patched here.
