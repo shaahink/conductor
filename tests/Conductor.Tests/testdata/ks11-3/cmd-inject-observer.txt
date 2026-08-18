@@ -1,1 +1,1 @@
-/inject is not part of the observer surface and this chat is an observer. Observers can ask: /status, /tasks, /daily, /evidence.
+/inject is not part of the observer surface and this chat is an observer. Observers can ask: /status, /tasks, /daily, /progress, /evidence, /money, /tokens.
