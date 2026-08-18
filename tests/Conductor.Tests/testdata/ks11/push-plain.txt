@@ -1,0 +1,5 @@
+sendMessage [silent]
+    <i>Karvansara edge · s12</i>
+    <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
+    the run resumed after the owner approved past the cap
+    progress: 1/4 checkpoints · KS11 1/4

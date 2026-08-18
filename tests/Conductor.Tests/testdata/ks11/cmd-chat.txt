@@ -1,0 +1,6 @@
+sendMessage [silent]
+    <i>Karvansara edge · s12</i>
+    <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
+    Use `conductor chat "your question"` from the terminal to ask questions about this run.
+    
+    Example: `conductor chat -p  "how did session 9 die?"`

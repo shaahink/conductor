@@ -1,0 +1,6 @@
+sendMessage [silent]
+    <i>Karvansara edge · s12</i>
+    <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
+    <b>Conductor Daily Digest — Karvansara edge</b>
+    Status: <b>Running</b> | Stage: KS11
+    Sessions: 12 | Cost: $42.0000

@@ -1,0 +1,4 @@
+sendMessage [silent]
+    <i>Karvansara edge · s12</i>
+    <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
+    Conductor bot is running. Use /status to see the current state.

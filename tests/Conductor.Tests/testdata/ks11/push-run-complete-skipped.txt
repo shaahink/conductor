@@ -1,0 +1,8 @@
+sendMessage [notify]
+    <i>Karvansara edge · s12</i>
+    <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
+    <b>run complete, with stages skipped</b>
+    6/9 checkpoints · 4 sessions
+    skipped: KS4, KS7
+    cost: $42.00 of $50.00 (84%, $8.00 left)
+    <a href="https://github.com/acme/widgets/blob/feat%2Fkarvansara-edge/.conductor/REPORT.md">the run's report</a>

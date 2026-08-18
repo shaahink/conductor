@@ -1,0 +1,15 @@
+sendMessage [silent]
+    <i>Karvansara edge · s12</i>
+    <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
+    <b>Conductor — Karvansara edge</b>
+    
+    Status: <b>Running</b>
+    Stage: KS11  |  attempts used: 1
+    Checkpoints: 1/4 done
+    Sessions: 12  |  Cost: $42.0000
+    
+    <b>KS11 checkpoints:</b>
+      [DONE] KS11.1: the messenger seam
+      [ACTV] KS11.2: profiles admin and observer
+      [TODO] KS11.3: onboarding and the push grammar
+      [TODO] KS11.4: evidence on demand

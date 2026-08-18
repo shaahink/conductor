@@ -64,6 +64,49 @@ public sealed class RecordingBotApi : IDisposable
         lock (_gate) return new List<BotCall>(_calls);
     }
 
+    /// <summary>KS11.1: the stub can now DELIVER as well as record. Every inbound-command test in
+    /// this repo used to stand up its own listener because this one answered <c>getUpdates</c> with
+    /// a hard-coded empty list; the seam's surface — every command, on every profile — has to be
+    /// driveable through the same double that captures what came back, or the two halves of one
+    /// exchange are asserted against two different fakes.</summary>
+    public void QueueCommand(string chatId, string text)
+    {
+        lock (_gate) _pending.Enqueue((chatId, text));
+    }
+
+    private readonly Queue<(string ChatId, string Text)> _pending = new();
+    private int _nextUpdateId = 1;
+
+    /// <summary>Hands over every queued command ONCE. A long-poll that kept re-serving the same
+    /// update would have the engine answer it on every tick, which is a livelock rather than a
+    /// test.</summary>
+    private string DrainUpdates()
+    {
+        (string ChatId, string Text)[] batch;
+        int first;
+        lock (_gate)
+        {
+            if (_pending.Count == 0) return """{"ok":true,"result":[]}""";
+            batch = _pending.ToArray();
+            _pending.Clear();
+            first = _nextUpdateId;
+            _nextUpdateId += batch.Length;
+        }
+
+        var sb = new StringBuilder("""{"ok":true,"result":[""");
+        for (var i = 0; i < batch.Length; i++)
+        {
+            if (i > 0) sb.Append(',');
+            var id = (first + i).ToString(CultureInfo.InvariantCulture);
+            sb.Append("{\"update_id\":").Append(id)
+              .Append(",\"message\":{\"message_id\":").Append(id)
+              .Append(",\"chat\":{\"id\":").Append(batch[i].ChatId)
+              .Append("},\"text\":").Append(JsonSerializer.Serialize(batch[i].Text))
+              .Append("}}");
+        }
+        return sb.Append("]}").ToString();
+    }
+
     private static int FreePort()
     {
         using var probe = new TcpListener(IPAddress.Loopback, 0);
@@ -86,7 +129,7 @@ public sealed class RecordingBotApi : IDisposable
 
             if (string.Equals(method, "getUpdates", StringComparison.Ordinal))
             {
-                await RespondAsync(ctx, """{"ok":true,"result":[]}""").ConfigureAwait(false);
+                await RespondAsync(ctx, DrainUpdates()).ConfigureAwait(false);
                 continue;
             }
 
