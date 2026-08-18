@@ -17,6 +17,13 @@ public sealed record TokenDelta : ConductorEvent
     public long Output { get; init; }
     public long Reasoning { get; init; }
     public long CacheRead { get; init; }
+
+    /// <summary>KS7.3 — of <see cref="Input"/>, how many were cache WRITES. A subset of Input, never a
+    /// peer: adding it to a total that already contains Input double-counts. Zero on every event
+    /// written before this checkpoint and on providers whose wire does not report the split, which is
+    /// why a consumer must treat 0 as "not reported" rather than "no cache was written".</summary>
+    public long CacheWrite { get; init; }
+
     public decimal CostUsd { get; init; }
 }
 

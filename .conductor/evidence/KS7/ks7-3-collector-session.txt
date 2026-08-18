@@ -1,0 +1,54 @@
+Span #3
+    Trace ID       : b898c408a64e2dffd34fe87d097d761c
+    Parent ID      : 3da637ae91c8f14f
+    ID             : 8021cadf1fa2cb2a
+    Name           : chat claude-opus-5
+    Kind           : Client
+    Start time     : 2026-08-18 18:09:26.753 +0000 UTC
+    End time       : 2026-08-18 18:13:13.139 +0000 UTC
+    Status code    : Error
+    Status message : Interrupted
+    DroppedAttributesCount: 0
+    DroppedEventsCount: 0
+    DroppedLinksCount: 0
+Attributes:
+     -> gen_ai.system: Str(anthropic)
+     -> gen_ai.provider.name: Str(anthropic)
+     -> gen_ai.operation.name: Str(chat)
+     -> gen_ai.request.model: Str(claude-opus-5)
+     -> gen_ai.usage.input_tokens: Int(70721)
+     -> gen_ai.usage.output_tokens: Int(104)
+     -> gen_ai.usage.cache_read_input_tokens: Int(894095)
+     -> gen_ai.usage.cache_creation_input_tokens: Int(0)
+     -> gen_ai.conversation.id: Str(524908a8-d31d-4ad6-a092-747e3f1c1f23)
+     -> conductor.session.number: Int(1)
+     -> conductor.session.kind: Str(Deliver)
+     -> conductor.session.attempt: Int(1)
+     -> conductor.stage.id: Str(KS11)
+     -> conductor.context.high_water_tokens: Int(91236)
+     -> conductor.context.mean_turn_tokens: Int(64321)
+     -> conductor.context.turns: Int(15)
+     -> conductor.session.outcome: Str(Interrupted)
+Events:
+SpanEvent #0
+     -> Name: gen_ai.turn
+     -> Timestamp: 2026-08-18 18:09:59.64 +0000 UTC
+     -> DroppedAttributesCount: 0
+     -> Attributes::
+          -> gen_ai.usage.input_tokens: Int(18518)
+          -> gen_ai.usage.output_tokens: Int(1)
+          -> gen_ai.usage.cache_read_input_tokens: Int(20543)
+          -> gen_ai.usage.cache_creation_input_tokens: Int(0)
+          -> conductor.context.prompt_tokens: Int(39061)
+SpanEvent #1
+     -> Name: gen_ai.turn
+     -> Timestamp: 2026-08-18 18:10:25.673 +0000 UTC
+     -> DroppedAttributesCount: 0
+     -> Attributes::
+          -> gen_ai.usage.input_tokens: Int(637)
+          -> gen_ai.usage.output_tokens: Int(3)
+          -> gen_ai.usage.cache_read_input_tokens: Int(39059)
+          -> gen_ai.usage.cache_creation_input_tokens: Int(0)
+          -> conductor.context.prompt_tokens: Int(39696)
+SpanEvent #2
+     -> Name: gen_ai.turn

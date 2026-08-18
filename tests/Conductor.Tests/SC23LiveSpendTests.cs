@@ -1,4 +1,4 @@
-using Conductor.Http;
+﻿using Conductor.Http;
 using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Core.Http;
@@ -25,7 +25,7 @@ public class SC23LiveSpendTests
         var deltas = new List<TokenDelta>();
         var state = new AgentStreamState(
             (_, _) => { },
-            (i, o, r, c, cost) => deltas.Add(new TokenDelta { Input = i, Output = o, Reasoning = r, CacheRead = c, CostUsd = cost }));
+            (i, o, r, c, cw, cost) => deltas.Add(new TokenDelta { Input = i, Output = o, Reasoning = r, CacheRead = c, CacheWrite = cw, CostUsd = cost }));
         return (state, deltas);
     }
 

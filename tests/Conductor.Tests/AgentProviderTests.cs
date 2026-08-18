@@ -247,7 +247,7 @@ public class AgentProviderTests
     public void TokenDeltaEmittedOnStepFinishViaDelegate()
     {
         var deltas = new List<(long Inp, long Out, long R, long C, decimal Cost)>();
-        var state = new AgentStreamState((k, t) => { }, (i, o, r, c, cost) => deltas.Add((i, o, r, c, cost)));
+        var state = new AgentStreamState((k, t) => { }, (i, o, r, c, _, cost) => deltas.Add((i, o, r, c, cost)));
         var provider = new OpencodeProvider();
 
         provider.ParseLine("""{"type":"step_finish","part":{"tokens":{"input":800,"output":200,"reasoning":50,"cache":{"read":1500}},"cost":0.005}}""", state);
@@ -260,7 +260,7 @@ public class AgentProviderTests
     public void OpencodeAdapterEmitsTokenDeltaPerStepFinish()
     {
         var deltas = new List<(long Inp, long Out, long R, long C, decimal Cost)>();
-        var state = new AgentStreamState((k, t) => { }, (i, o, r, c, cost) => deltas.Add((i, o, r, c, cost)));
+        var state = new AgentStreamState((k, t) => { }, (i, o, r, c, _, cost) => deltas.Add((i, o, r, c, cost)));
         var provider = new OpencodeProvider();
 
         provider.ParseLine("""{"type":"step_finish","part":{"tokens":{"input":100,"output":50},"cost":0.001}}""", state);

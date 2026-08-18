@@ -5,7 +5,7 @@ namespace Conductor.Core.Providers;
 
 public sealed class AgentStreamState(
     Action<string, string> emit,
-    Action<long, long, long, long, decimal>? onTokenDelta = null,
+    TokenDeltaSink? onTokenDelta = null,
     Action<ToolCall, string>? onTool = null,
     Action<ToolRefusal>? onRefusal = null)
 {
@@ -13,7 +13,7 @@ public sealed class AgentStreamState(
     private readonly Lock _lock = new();
     private readonly StringBuilder _buffer = new();
     private readonly HashSet<string> _countedMessageIds = new(StringComparer.Ordinal);
-    private readonly Action<long, long, long, long, decimal>? _onTokenDelta = onTokenDelta;
+    private readonly TokenDeltaSink? _onTokenDelta = onTokenDelta;
     private readonly ContextWindowMeter _context = new();
 
     public void Emit(string kind, string text) => emit(kind, text);
@@ -49,7 +49,13 @@ public sealed class AgentStreamState(
     }
 
     public void EmitTokenDelta(long input, long output, long reasoning, long cacheRead, decimal costUsd)
-        => _onTokenDelta?.Invoke(input, output, reasoning, cacheRead, costUsd);
+        => _onTokenDelta?.Invoke(input, output, reasoning, cacheRead, 0, costUsd);
+
+    /// <summary>KS7.3 — the same delta, with the cache-write half of <paramref name="input"/> named.
+    /// <paramref name="cacheWrite"/> is a SUBSET of <paramref name="input"/>, never a peer of it; see
+    /// <see cref="TokensCacheWrite"/> for why the totals were left alone.</summary>
+    public void EmitTokenDelta(long input, long output, long reasoning, long cacheRead, long cacheWrite, decimal costUsd)
+        => _onTokenDelta?.Invoke(input, output, reasoning, cacheRead, cacheWrite, costUsd);
 
     /// <summary>K4.1 — record the prompt size of ONE deduplicated API call: everything the wire says was
     /// sent up, cached prefix included. Separate from <see cref="EmitTokenDelta"/> because the two answer
@@ -96,4 +102,30 @@ public sealed class AgentStreamState(
     public long? TokensOutput { get; set; }
     public long? TokensReasoning { get; set; }
     public long? TokensCacheRead { get; set; }
+
+    /// <summary>
+    /// KS7.3 — of <see cref="TokensInput"/>, how many tokens were CACHE WRITES
+    /// (<c>cache_creation_input_tokens</c>). A subset, not a fifth bucket.
+    /// </summary>
+    /// <remarks>
+    /// The wire has always reported a four-way split and this state carried three of it: cache-creation
+    /// was added into <see cref="TokensInput"/> and lost its name there (ClaudeProvider's ReadUsage says
+    /// so in as many words — "the state has four buckets and no cache-write bucket"). That fold is not a
+    /// bug and is deliberately NOT undone here: <c>SessionRecord.TokensTotal</c> sums the buckets to gate
+    /// <c>limits.maxSessionTokens</c>, 18 archived runs and every cost row in the store were written
+    /// against that meaning, and re-basing it would silently restate history.
+    /// <para>So the split is recovered by NAMING the part rather than by moving it. Every total is
+    /// unchanged to the token; what is new is that a consumer — the OTel export, a cost model that wants
+    /// the 1.25x/2x write rates rather than the 1x fresh rate — can now ask which part of the input was a
+    /// write. The invariant a reader must keep: <c>TokensCacheWrite &lt;= TokensInput</c>, and adding it
+    /// to a total that already contains <see cref="TokensInput"/> double-counts.</para>
+    /// </remarks>
+    public long? TokensCacheWrite { get; set; }
 }
+
+/// <summary>KS7.3 — one deduplicated API call's usage, cache split included. A named delegate rather
+/// than a sixth <c>Action&lt;...&gt;</c> arity: the positional tuple was already at the edge of
+/// readable, and <c>cacheWrite</c> is the one parameter a caller must not confuse with its neighbour
+/// (it is contained IN <paramref name="input"/>).</summary>
+public delegate void TokenDeltaSink(
+    long input, long output, long reasoning, long cacheRead, long cacheWrite, decimal costUsd);

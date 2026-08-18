@@ -52,6 +52,10 @@ public sealed class AgentSession : IDisposable
     public long? TokensOutput => _stream.TokensOutput;
     public long? TokensReasoning => _stream.TokensReasoning;
     public long? TokensCacheRead => _stream.TokensCacheRead;
+
+    /// <summary>KS7.3 — the cache-WRITE part of <see cref="TokensInput"/>. A subset of it; see
+    /// <see cref="AgentStreamState.TokensCacheWrite"/>.</summary>
+    public long? TokensCacheWrite => _stream.TokensCacheWrite;
     /// <summary>K4.1: per-turn context high water and mean for this session — how full the window ran,
     /// not how much the session spent in total.</summary>
     public Conductor.Core.Events.ContextWindowStats Context => _stream.Context;
@@ -71,8 +75,8 @@ public sealed class AgentSession : IDisposable
         // Stamp the conductor session number on every TokenDelta so the LiveMetrics.ForSession fold
         // (B2.6) can attribute live burn to a session — EventLog only stamps Seq/Ts/RunId, not the
         // per-event SessionId, so it MUST be set here or ForSession folds nothing (B2.6 regression).
-        Action<long, long, long, long, decimal>? tokenDelta = eventSink != null
-            ? (i, o, r, c, cost) => eventSink.Emit(new TokenDelta { SessionId = conductorSessionId, Input = i, Output = o, Reasoning = r, CacheRead = c, CostUsd = cost })
+        TokenDeltaSink? tokenDelta = eventSink != null
+            ? (i, o, r, c, cw, cost) => eventSink.Emit(new TokenDelta { SessionId = conductorSessionId, Input = i, Output = o, Reasoning = r, CacheRead = c, CacheWrite = cw, CostUsd = cost })
             : null;
         _stream = new AgentStreamState((kind, text) =>
         {

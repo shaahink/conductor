@@ -1,0 +1,33 @@
+InstrumentationScope conductor.otel 0.4.2-alpha.0.26
+Span #0
+    Trace ID       : b898c408a64e2dffd34fe87d097d761c
+    Parent ID      : 
+    ID             : 4500feba2370bd3f
+    Name           : conductor.run
+    Kind           : Internal
+    Start time     : 2026-08-18 18:09:25.675 +0000 UTC
+    End time       : 2026-08-18 22:47:13.705 +0000 UTC
+    Status code    : Unset
+    Status message : 
+    DroppedAttributesCount: 0
+    DroppedEventsCount: 0
+    DroppedLinksCount: 0
+Attributes:
+     -> conductor.run.id: Str(9491891fe700463ba0d876c06280cce2)
+     -> conductor.run.sessions: Int(8)
+     -> conductor.run.stages: Int(2)
+     -> conductor.run.checkpoints_confirmed: Int(5)
+     -> gen_ai.usage.input_tokens: Int(1627658)
+     -> gen_ai.usage.output_tokens: Int(9372)
+     -> gen_ai.usage.cache_read_input_tokens: Int(137391968)
+     -> gen_ai.usage.cache_creation_input_tokens: Int(0)
+     -> conductor.plan: Str(Karvansara edge - gates that can't be gamed, and the courier)
+     -> conductor.repo: Str(C:/code/conductor)
+     -> conductor.branch: Str(feat/karvansara-edge)
+     -> conductor.driver.version: Str(0.0.0.0)
+Span #1
+    Trace ID       : b898c408a64e2dffd34fe87d097d761c
+    Parent ID      : 4500feba2370bd3f
+    ID             : 3da637ae91c8f14f
+    Name           : stage KS11
+    Kind           : Internal

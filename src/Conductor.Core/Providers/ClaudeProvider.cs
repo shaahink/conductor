@@ -150,7 +150,8 @@ public sealed class ClaudeProvider : IAgentProvider
         if (!msg.TryGetProperty("id", out var mid) || mid.ValueKind != JsonValueKind.String) return;
         if (mid.GetString() is not { Length: > 0 } id || !state.TryCountMessageOnce(id)) return;
 
-        var input = Num(u, "input_tokens") + Num(u, "cache_creation_input_tokens");
+        var cacheWrite = Num(u, "cache_creation_input_tokens");
+        var input = Num(u, "input_tokens") + cacheWrite;
         var output = Num(u, "output_tokens");
         var cacheRead = Num(u, "cache_read_input_tokens");
         if (input == 0 && output == 0 && cacheRead == 0) return;
@@ -166,6 +167,7 @@ public sealed class ClaudeProvider : IAgentProvider
         state.TokensInput = (state.TokensInput ?? 0) + input;
         state.TokensOutput = (state.TokensOutput ?? 0) + output;
         state.TokensCacheRead = (state.TokensCacheRead ?? 0) + cacheRead;
+        state.TokensCacheWrite = (state.TokensCacheWrite ?? 0) + cacheWrite;
 
         // K4.1: the same numbers answer a second question the engine never asked. Summed, they are the
         // session's integral; for THIS call, input (which already carries cache_creation) plus cacheRead
@@ -174,7 +176,7 @@ public sealed class ClaudeProvider : IAgentProvider
         // a message is known to be counted exactly once.
         state.ObserveContext(input + cacheRead);
 
-        state.EmitTokenDelta(input, output, reasoning: 0, cacheRead, costUsd: 0m);
+        state.EmitTokenDelta(input, output, reasoning: 0, cacheRead, cacheWrite, costUsd: 0m);
     }
 
     /// <summary>
@@ -187,10 +189,12 @@ public sealed class ClaudeProvider : IAgentProvider
     /// lines carrying the SAME usage), so accumulating per line overcounts by 3-4x. The result
     /// envelope is emitted exactly once.
     /// <para><c>cache_creation_input_tokens</c> folds into <see cref="AgentStreamState.TokensInput"/>:
-    /// the state has four buckets and no cache-write bucket, and
-    /// <c>SessionRecord.TokensTotal</c> sums all four to gate <c>limits.maxSessionTokens</c>. Dropping
-    /// cache-creation would understate the total the rollover cap is measured against. Both are input
-    /// billed at write/fresh rates, as distinct from <c>cache_read_input_tokens</c>.</para>
+    /// <c>SessionRecord.TokensTotal</c> sums the buckets to gate <c>limits.maxSessionTokens</c>, so
+    /// dropping cache-creation would understate the total the rollover cap is measured against. Both are
+    /// input billed at write/fresh rates, as distinct from <c>cache_read_input_tokens</c>. KS7.3 keeps
+    /// that fold and additionally NAMES the folded part in
+    /// <see cref="AgentStreamState.TokensCacheWrite"/> — a subset of <c>TokensInput</c>, so every total
+    /// is unchanged while the four-way split the wire reports is no longer lost on arrival.</para>
     /// <para>Reasoning tokens are left unset: claude's usage has no thinking/reasoning field — that
     /// spend is already inside <c>output_tokens</c>. Synthesising one would double-count it in
     /// TokensTotal and invent a number the wire never reported.</para>
@@ -199,10 +203,14 @@ public sealed class ClaudeProvider : IAgentProvider
     {
         if (!root.TryGetProperty("usage", out var u) || u.ValueKind != JsonValueKind.Object) return;
 
-        var input = Num(u, "input_tokens") + Num(u, "cache_creation_input_tokens");
+        var cacheWrite = Num(u, "cache_creation_input_tokens");
+        var input = Num(u, "input_tokens") + cacheWrite;
         if (input > 0) state.TokensInput = input;
         if (Num(u, "output_tokens") is var output && output > 0) state.TokensOutput = output;
         if (Num(u, "cache_read_input_tokens") is var cacheRead && cacheRead > 0) state.TokensCacheRead = cacheRead;
+        // KS7.3: the authoritative envelope names the write half too. Overwrites rather than accrues,
+        // for the same reason the three above do — this is the CLI's session total, not a delta.
+        if (cacheWrite > 0) state.TokensCacheWrite = cacheWrite;
     }
 
     private static long Num(JsonElement obj, string name) =>

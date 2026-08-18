@@ -4,20 +4,20 @@
 
 ## Handoff (overwrite this block, <=12 lines, no history)
 
-last: KS7.2 DONE (5b8d56e channel+tests+corpus, this commit docs+evidence). The digest is now written
-  by the agent CLI's own PreToolUse/PostToolUse hooks into .conductor/hook-tools/NNN.jsonl and
-  promoted over the transcript at session end; absent/empty = fallback, and the digest stores its
-  source. Bug #19's class is dead: a `conductor task --done` made through Bash is counted.
-gate: scoped 96/96 (KS7_2, Architecture, SF7_1Docs, BudgetRail, SessionDigest, Transcript, Ratchet).
-next: KS7.3 cost/OTel, then 7.4 lifecycle, 7.5 context economics. KS7.5 inherits a named seam and a
-  decision: promptExtra stays for rails, `--plugin-dir` carries the reference half as skills.
-do-not-re-probe: claude 2.1.235 flags in .conductor/evidence/KS7/ks7-2-hooks-as-ground-truth.md -
-  --include-hook-events is LIFECYCLE ONLY (no tool_input), --plugin-dir works with empty
-  --setting-sources, and the six hook events that fire are listed there.
-trap: PostToolUse does NOT fire for a refused or failed call - measured twice. Any design that reads
-  it as "the calls this session made" is counting successes. And never `dotnet run` a rig while a
-  `dotnet build` is in flight: Conductor.Planning fails with analyzer errors that reproduce in
-  neither build alone. Drive src/Conductor/bin/Debug/net10.0/conductor.exe instead. Bug #52 is open.
+last: KS7.3 DONE. `conductor otel` exports a run's event log as an OTLP trace (run > stage > session >
+  gate/tool), gen_ai.* on the session where the convention is actually true, per-turn curve as span
+  events. Official otelcol 0.159.0 rendered 27 spans / 934 turn events of THIS run; 137.4M cache reads
+  against 1.6M input, in somebody else's viewer. No OpenTelemetry SDK dependency.
+reconciles: exact on all 7 finished sessions, span-from-event-fold vs the sessions table written live
+  by the provider's own meter. Table is in the evidence file.
+also: the four-way cache split now survives - TokenDelta.CacheWrite is a SUBSET of Input, never a peer;
+  Input keeps its shipped meaning so no archived total moved. 0 means "not reported".
+next: KS7.4 lifecycle - and do NOT re-probe the model lineup: contextWindow 1000000 / maxOutput 64000
+  for claude-opus-5[1m], plus a second model (haiku-4-5) billed inside one session, are already in
+  .conductor/evidence/KS7/ks7-3-cost-usage-and-otel.md section 1 with the raw capture path.
+trap: building tests/Conductor.Tests/Conductor.Tests.csproj ALONE gives 716 analyzer errors in files
+  you did not touch; the same tree is clean via `dotnet build Conductor.slnx`. Bug #53 filed: the new
+  cache_creation 5m/1h TTL split is dropped, which only bites a future rate-based cost model.
 
 
 ## Baseline numbers (from run.db)
@@ -26,7 +26,7 @@ trap: PostToolUse does NOT fire for a refused or failed call - measured twice. A
 |---|---|
 | Total checkpoints | 24 |
 | Done | 5 |
-| Claimed (unconfirmed) | 1 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -48,7 +48,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | KS7.1 | Permission posture: an allowlist/deny settings profile replaces dangerously-skip-permissions for unattended runs if the installed CLI sustains it - a karvan-class stage runs green under the restricted profile with refusals telemetered, OR a filed finding says precisely why not; blast-radius posture stated honestly in ARCHITECTURE.md | DONE | 0c3380f | .conductor/evidence/KS7/ks7-1-posture.md |
-| KS7.2 | Hooks as ground truth: tool events by hook (extending the hook-budget channel) become the primary source, transcript parsing the fallback; hook-derived digests match transcript-derived on a replay corpus; a hook-less agent still works; digest claim-counting (bug 19 class) fixed; skills-vs-promptExtra decided and recorded | TODO | - | - |
+| KS7.2 | Hooks as ground truth: tool events by hook (extending the hook-budget channel) become the primary source, transcript parsing the fallback; hook-derived digests match transcript-derived on a replay corpus; a hook-less agent still works; digest claim-counting (bug 19 class) fixed; skills-vs-promptExtra decided and recorded | DONE | 5b8d56e | .conductor/evidence/KS7/ks7-2-hooks-as-ground-truth.md |
 | KS7.3 | Cost/usage: per-turn usage with cache split parsed from the stream; OTel emit mirroring gen_ai names from the event log; an OTLP collector renders a run's spans; the per-turn context curve reconciles with K4.1's derivation | TODO | - | - |
 | KS7.4 | Session lifecycle: fork-instead-of-cold-resume for fix/audit sessions where supported, with the measured token delta vs the resume baseline; resume flags re-verified; model lineup and context ceilings re-measured into TOKEN-BUDGET-TUNING | TODO | - | - |
 | KS7.5 | Context economics (B7): gate output truncated in-prompt with full text as an evidence file; RepoMapBattery + definition-of-done recap battery on the IPromptBattery seam; templates teach search-delegation; measured cache-read tokens per session DROP vs the karvan baseline on a comparable stage, reported by conductor budget | TODO | - | - |
