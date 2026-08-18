@@ -4,20 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS11.2 AND KS11.3 both DONE. Profiles enforced at one gate (CommandRouter.Gate - typed verb,
-  armed plain text, AND RouteCallback, which took no profile at all: a confirm keyboard fans out to
-  every chat, so an observer could tap it and write control.json). Then CH-4 onboarding per profile
-  and CH-5's headline / proof / telemetry grammar, money and tokens in monospace.
-stage: KS11 in flight, 3 of 5 done.
-gate: full suite 2737/2737 green; 299/299 over every suite touched after that. The last two files
-  (KS11_3OnWireTests, RecordingBotApi ChatId) landed after the full run - re-run it first thing.
-next: **KS11.4** - evidence on demand. /evidence and /money /tokens /progress are ALREADY in
-  SurfaceCommands.All with Implemented:false, so they answer silence for both profiles today;
-  flipping that flag is the only catalogue edit needed and the matrix picks it up.
-trap: two golden sets now. testdata/ks11/ pins the WIRE (nine of fifteen did NOT move in KS11.3 -
-  that is the proof the admin surface is untouched); testdata/ks11-3/ pins the TEXT per profile.
-  Regenerate either only with CONDUCTOR_GOLDEN_REBASELINE=1, in a commit whose diff you have read.
-
+last: KS11.4 DONE (df5048e feature+tests, cb84b1e goldens, 88ec389 docs+evidence). /evidence lists
+  every claim with an artifact; /evidence <id> uploads it (photo when visual). The argument is a
+  checkpoint ID, never a path - the path comes from the tracker row, and four traversal strings are
+  pinned as refused. Caps are the surface's own: 10MB per artifact, 8 pulls per chat per 10 min,
+  only file-carrying answers charged. An observer pulls note-5.md - the artifact the push budget
+  could only announce - on the real wire.
+stage: KS11 in flight, 4 of 5 done. Next is KS11.5, the last one before the ownerGate park.
+gate: scoped suites 347/347. Full suite 2762/2763 - the one failure is bug #49, passes 5/5 alone.
+next: **KS11.5** - /progress /money /tokens. Flipping their Implemented flag in SurfaceCommands is
+  the only catalogue edit; that moves the SAME six ask-line goldens again (rebaseline in its own
+  commit, read the diff - only the ask line may move). Figures must cross-check to the cent.
+trap: never set CONDUCTOR_TELEGRAM_TOKEN in a test class - xUnit runs classes in parallel and three
+  token-absence assertions elsewhere go red. Both wire rigs now use SecretsStore into their own dir.
 
 ## Baseline numbers (from run.db)
 
@@ -25,7 +24,7 @@ trap: two golden sets now. testdata/ks11/ pins the WIRE (nine of fifteen did NOT
 |---|---|
 | Total checkpoints | 24 |
 | Done | 0 |
-| Claimed (unconfirmed) | 1 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -37,8 +36,8 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | KS11.1 | The messenger seam: composition, chat profiles and evidence browsing extracted channel-agnostic; TelegramService becomes the transport adapter; golden replay proves current pushes byte-identical through the seam; a fake channel drives the full surface in tests; an architecture test forbids Telegram types outside the adapter | DONE | 7e64866 | .conductor/evidence/KS11/ks11-1-messenger-seam.md |
-| KS11.2 | Profiles admin and observer, per chat: old-shape allowedChatIds plans behave byte-identically (pinned); an unknown profile string is refused by name at plan load; the observer surface is closed to status/tasks/progress/evidence/daily, a control or inject attempt refused by name - proven by an exhaustive command-by-profile matrix test | TODO | - | - |
-| KS11.3 | Onboarding + the push grammar: run start and /start post a per-profile onboarding message (what the run is, what will be pushed, what this chat may ask); every push type recomposed to headline / proof / telemetry with money and tokens in monospace; goldens pin both profiles' renderings; a checkpoint push reads standalone | TODO | - | - |
+| KS11.2 | Profiles admin and observer, per chat: old-shape allowedChatIds plans behave byte-identically (pinned); an unknown profile string is refused by name at plan load; the observer surface is closed to status/tasks/progress/evidence/daily, a control or inject attempt refused by name - proven by an exhaustive command-by-profile matrix test | DONE | 1471ef9 | .conductor/evidence/KS11/KS11.2-chat-profiles.md |
+| KS11.3 | Onboarding + the push grammar: run start and /start post a per-profile onboarding message (what the run is, what will be pushed, what this chat may ask); every push type recomposed to headline / proof / telemetry with money and tokens in monospace; goldens pin both profiles' renderings; a checkpoint push reads standalone | DONE | 1471ef9 | .conductor/evidence/KS11/KS11.3-onboarding-and-grammar.md |
 | KS11.4 | Evidence on demand: /evidence lists checkpoints with evidence, /evidence with an id sends the artifact (document upload for files, chunked text otherwise) with size caps and a per-chat rate limit; an observer pulls a real evidence artifact end-to-end in the rig; the clip constants no longer bound what a reader can reach | TODO | - | - |
 | KS11.5 | Metrics on demand: /progress /money /tokens answer with figures that cross-check against status and money on the same run.db to the cent (billed money only, no price table in the diff); the daily digest re-rendered in the same grammar, golden pinned | TODO | - | - |
 
