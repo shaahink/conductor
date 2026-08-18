@@ -134,10 +134,17 @@ public sealed class AgentSession : IDisposable
     /// resolution (SC3.4), which drops an unfilled <c>{model}</c> the same way this does.</summary>
     internal static bool IsModelFlag(string s) => s is "--model" or "-m" or "--model=";
 
-    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null, ProcessSupervisor? supervisor = null, IReadOnlyList<string>? extraArgs = null, string? stageId = null)
+    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null, ProcessSupervisor? supervisor = null, IReadOnlyList<string>? extraArgs = null, string? stageId = null, string? forkBaseId = null)
     {
-        var template = (resumeClaudeId != null && cfg.ResumeArgs is { Count: > 0 }) ? cfg.ResumeArgs : cfg.Args;
-        var args = ResolveArgs(template, prompt, sessionId, resumeClaudeId, cfg.Model);
+        // KS7.4: three templates, and the order matters. A FORK carries an earlier conversation into a
+        // session that keeps its OWN new id ({claudeSessionId} is the base, {sessionId} the new one) —
+        // measured to compose on claude 2.1.235, which is what makes it usable without surrendering id
+        // control. A RESUME reuses the interrupted session's own id. Neither is reachable unless the
+        // plan supplied that template, so an existing plan is byte-for-byte unchanged.
+        var template = (forkBaseId is { Length: > 0 } && cfg.ForkArgs is { Count: > 0 }) ? cfg.ForkArgs
+            : (resumeClaudeId != null && cfg.ResumeArgs is { Count: > 0 }) ? cfg.ResumeArgs
+            : cfg.Args;
+        var args = ResolveArgs(template, prompt, sessionId, forkBaseId ?? resumeClaudeId, cfg.Model);
         // W2.1: orchestrator-supplied flags (claude's --mcp-config) go AFTER the plan's own template so
         // a plan can never accidentally position {prompt} behind them.
         if (extraArgs is { Count: > 0 }) args.AddRange(extraArgs);

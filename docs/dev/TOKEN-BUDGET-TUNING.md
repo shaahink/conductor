@@ -391,3 +391,48 @@ per checkpoint than a green field; that is a finding about *what was left*, not 
 - **Wrap-up 2.28M** measured on n=3 here (1.71M–2.98M). §7's assumed 1.5M is now low on two eras'
   evidence; at 0.85 the headroom is 4.8M, which is 2.1× that measured wrap-up and still inside the
   ≥1.5× rule.
+
+## 11. The model lineup and the context ceilings, re-measured (KS7.4, 2026-08-19)
+
+§9 and §10 bind the 32M / 0.85 pair to `claude-opus-5`, and say a model change re-derives it. That
+statement had never been checked against what the CLI *reports*, only against what the plan asks for.
+It is checked now, on **claude 2.1.235**, from the `modelUsage` block of a real `result` envelope —
+provider-reported, not a spec sheet:
+
+| model id reported | canonical | context window | max output | provider |
+|---|---|---|---|---|
+| `claude-opus-5[1m]` | `claude-opus-5` | **1,000,000** | 64,000 | firstParty |
+| `claude-haiku-4-5-20251001` | `claude-haiku-4-5` | 200,000 | 32,000 | firstParty |
+
+Three things follow, and two of them matter to the budget:
+
+**1 · The sessions in this era run the 1M variant.** The id on the wire is `claude-opus-5[1m]`, not
+`claude-opus-5` — the same canonical model, a 10× larger window. Nothing in the budget assumed a
+window size, so the pair does not move; but the reason the 32M ceiling works is now visible. A session
+is capped by conductor's *integral* long before the model's window binds.
+
+**2 · A session is not one model.** The probe billed **two**: opus for the turn, and
+`claude-haiku-4-5` for 897 input / 8 output tokens of the same request, $0.000937 of a $0.1044 total.
+Conductor takes `total_cost_usd` from the CLI and models no rates, so the ledger is right — but any
+future per-model cost attribution must not assume the session's declared model is the only one billed.
+
+**3 · The measured windows, against the measured ceiling.** From this run's own `sessions` rows
+(context high water per session, K4.1's live meter):
+
+| session | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+|---|---|---|---|---|---|---|---|
+| high water | 91k | 278k | 298k | 213k | 228k | 250k | 218k |
+| mean turn | 64k | 195k | 166k | 139k | 148k | 152k | 135k |
+
+Peak context reached **298k of a 1,000,000-token window — 30%**. So the thing that ends a session here
+is conductor's 32M *cumulative* ceiling, never the model's window: at a 200k mean turn, 32M is ~160
+turns of re-sent prefix. That is the same arithmetic §1 makes, now with the window measured rather
+than assumed, and it is why the era's cost lever is the **size of the carried prefix** (KS7.5) rather
+than the ceiling.
+
+**Fork versus resume, measured** (KS7.4, same rig — the lifecycle half of this): resuming a 30k
+conversation cost 2 fresh / 58 write / 29,995 read; forking it cost 2 / 45 / 30,053 — **0.15% more
+tokens and $0.0001 less**, because the carried prefix lands as a cache read rather than a write. A
+fork is therefore not a more expensive resume, and a fix or audit session that forks its stage's
+delivery session pays cache-read rates for context it would otherwise pay fresh-input rates to
+rediscover.

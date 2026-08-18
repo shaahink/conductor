@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Core.Events;
 using Conductor.Core.Lanes;
@@ -251,8 +251,18 @@ public sealed partial class SessionRunner
             _ctx.Log(Providers.PermissionPosture.Describe(resolvedAgent.Permissions, stripped));
         }
 
+        // KS7.4: a fix or an audit session branches off the stage's last session instead of paying
+        // fresh-input rates to rediscover what it is reacting to. Opt-in per plan; SessionFork.BaseFor
+        // returns null (cold start, exactly as before) unless the plan supplied a fork template AND
+        // named this kind. Computed here, next to the record it belongs to, and LOGGED — an invisible
+        // fork is a session whose context nobody can account for.
+        var forkBase = SessionFork.BaseFor(_ctx.State.History, stage.Id, kind, resolvedAgent);
+        if (forkBase is { Length: > 0 })
+            _ctx.Log($"session #{rec.Number} forks {forkBase[..Math.Min(8, forkBase.Length)]} " +
+                     $"(carried context arrives as cache reads; the base transcript is left as it ended)");
+
         using (var agent = AgentSession.Start(resolvedAgent, _ctx.Plan.Repo, prompt, rec.ClaudeSessionId,
-                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, _ctx.Events, rec.Number.ToString(), extraEnv, supervisor: _ctx.ProcessSupervisor, extraArgs: extraArgs, stageId: stage.Id))
+                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, _ctx.Events, rec.Number.ToString(), extraEnv, supervisor: _ctx.ProcessSupervisor, extraArgs: extraArgs, stageId: stage.Id, forkBaseId: forkBase))
         {
             _ctx.Activity.Clear();
             var lastHeartbeat = DateTime.UtcNow;

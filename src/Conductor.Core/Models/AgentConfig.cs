@@ -1,4 +1,4 @@
-namespace Conductor.Models;
+﻿namespace Conductor.Models;
 
 public sealed class AgentConfig
 {
@@ -9,6 +9,30 @@ public sealed class AgentConfig
     public List<string> Args { get; set; } = new();
     /// <summary>Used to resume a stalled/interrupted agent session. Placeholders: {prompt} {claudeSessionId}</summary>
     public List<string>? ResumeArgs { get; set; }
+
+    /// <summary>
+    /// KS7.4 — the template for a session that FORKS an earlier one instead of starting cold.
+    /// Placeholders: {prompt}, {claudeSessionId} (the session being forked FROM), {sessionId} (the new
+    /// id). Unset = no forking, whatever <see cref="ForkKinds"/> says: the mechanism is opt-in because
+    /// only the plan knows whether its agent CLI supports it.
+    /// </summary>
+    /// <remarks>
+    /// Measured on claude 2.1.235 rather than assumed: <c>--fork-session</c> composes with
+    /// <c>--session-id</c> and the CLI honours the id we ask for, so conductor does not surrender id
+    /// control to fork — crash recovery and transcript correlation keep working. The carried
+    /// conversation arrives as a cache READ (30,098 read / 0 write on a 30k base), which is why a fork
+    /// is not a more expensive resume: it measured 0.15% larger and $0.0001 cheaper than resuming the
+    /// same conversation.
+    /// <para>The failure mode to know: a fork resumes a transcript ON DISK. If the agent CLI has pruned
+    /// the base session, the fork cannot start. That is the second reason this is opt-in.</para>
+    /// </remarks>
+    public List<string>? ForkArgs { get; set; }
+
+    /// <summary>KS7.4 — which session kinds fork the stage's previous session rather than starting
+    /// cold. Names match <c>SessionKind</c>, case-insensitively: <c>["fix","audit"]</c> is the pairing
+    /// the checkpoint asks for — both are sessions ABOUT work another session just did, and both
+    /// otherwise pay full fresh-input rates to rediscover it. Empty or unset = nothing forks.</summary>
+    public List<string>? ForkKinds { get; set; }
     /// <summary>"stream-json" (claude) or "text" (opencode etc.). Legacy selector — kept for back-compat;
     /// when <see cref="Provider"/> is unset the provider is inferred from this (B2.4).</summary>
     public string Output { get; set; } = "stream-json";
@@ -49,6 +73,8 @@ public sealed class AgentConfig
             Command = !string.IsNullOrWhiteSpace(o.Command) && o.Command != def.Command ? o.Command : Command,
             Args = o.Args.Count > 0 ? o.Args : Args,
             ResumeArgs = o.ResumeArgs is { Count: > 0 } ? o.ResumeArgs : ResumeArgs,
+            ForkArgs = o.ForkArgs is { Count: > 0 } ? o.ForkArgs : ForkArgs,
+            ForkKinds = o.ForkKinds is { Count: > 0 } ? o.ForkKinds : ForkKinds,
             Output = !string.IsNullOrWhiteSpace(o.Output) && o.Output != def.Output ? o.Output : Output,
             Provider = !string.IsNullOrWhiteSpace(o.Provider) ? o.Provider : Provider,
             SystemPrompt = o.SystemPrompt ?? SystemPrompt,
