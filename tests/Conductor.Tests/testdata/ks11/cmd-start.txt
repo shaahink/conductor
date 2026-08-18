@@ -7,4 +7,4 @@ sendMessage [silent]
     <b>What arrives here</b>
     A message when a session ends, when evidence lands, and when the run finishes or parks for a decision. Each one says what landed, what proves it, and what it has cost so far. A decision the run needs from you arrives with buttons.
     <b>What you can ask</b>
-    /status, /tasks, /daily, /inject &lt;text&gt; to steer the next session. Control (/pause, /resume, /approve, /skip, /abort, /kill) is off: set telegram.enableTwoWay to turn it on.
+    /status, /tasks, /daily, /evidence, /inject &lt;text&gt; to steer the next session. Control (/pause, /resume, /approve, /skip, /abort, /kill) is off: set telegram.enableTwoWay to turn it on.

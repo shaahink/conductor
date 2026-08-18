@@ -5,4 +5,4 @@ An agent is working through a plan on its own; this is where it reports.
 <b>What arrives here</b>
 A message when a session ends, when evidence lands, and when the run finishes or parks for a decision. Each one says what landed, what proves it, and what it has cost so far. Nothing is filtered — this is the same story the run's owner gets.
 <b>What you can ask</b>
-/status, /tasks, /daily — reading only. Nothing this chat types can move the run.
+/status, /tasks, /daily, /evidence — reading only. Nothing this chat types can move the run.
