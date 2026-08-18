@@ -10,7 +10,11 @@ public sealed partial class SessionRunner
 
     private void TrackActivity(AgentEvent ev, SessionRecord rec)
     {
-        if (ev.Kind is not ("tool" or "text" or "result" or "thinking" or "stderr")) return;
+        // KS7.1: `refusal` is on this list because the list is an ALLOWLIST — a kind the provider
+        // emits and this line does not name reaches no transcript and no Face pane, silently. A
+        // posture that refuses a tool call and shows the operator nothing is the failure mode the
+        // whole checkpoint exists to remove, and it was exactly what the first rig run measured.
+        if (ev.Kind is not ("tool" or "text" or "result" or "thinking" or "stderr" or "refusal")) return;
         // The live transcript feed (/transcript/current → the Face agent pane). This was the
         // disconnected wire of the 2026-07-16 dogfood: TranscriptLog existed but nothing wrote it,
         // so the Face could only ever replay a stale file from an earlier build.

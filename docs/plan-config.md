@@ -102,17 +102,26 @@ already writes for the session and passes `--permission-mode` when the plan's ow
 one; setting any `mode` other than `bypassPermissions` also strips `--dangerously-skip-permissions`
 out of the resolved args, so the posture and the command line cannot say different things.
 
-Measured on the installed CLI rather than assumed, because the difference decides what this key buys:
+Measured on the installed CLI and on a live run, rather than assumed:
 
-- **`deny` is the only enforced boundary, and it is enforced with the bypass flag ON.** A bare tool
-  name (`"WebFetch"`) removes the tool from the set the model is even told about; a specifier
-  (`"Bash(curl:*)"`) refuses the call and emits a refusal conductor records — see below.
-- **`allow` pre-approves; it does not gate.** In an unattended `-p` run the CLI executes anything that
-  is not denied, under every mode. An allow list narrows nothing there; it only decides what an
-  interactive session would have asked about. Write one to express intent, not to contain anything.
-- **So dropping `--dangerously-skip-permissions` on its own buys no containment.** What buys
-  containment is the deny list. `mode` is still worth setting — it makes the posture legible and it
-  takes the escape hatch off the command line — but it is not the boundary.
+- **`deny` is enforced whatever else is set — including under `--dangerously-skip-permissions`.** A
+  bare tool name (`"WebFetch"`) removes the tool from the set the model is even told about; a
+  specifier (`"Bash(curl:*)"`) refuses the call and emits a refusal conductor records.
+- **Dropping the bypass flag turns the CLI's own permission engine back on, and it does gate.**
+  Read-only shell commands still auto-approve, but a mutating command, a multi-operation command and
+  any MCP tool that is not allowlisted come back refused. That is real containment — and it is also
+  the sharp edge below.
+- **`allow` is what re-opens those.** It is a pre-approval list, not a whitelist: it does not narrow
+  what is reachable, it decides what proceeds without being asked about.
+
+**The sharp edge: a restricted posture will shut the run's own claim path unless you allow it.** With
+`mode: "acceptEdits"` and an allow list of `["Read", "Write"]`, a rig session had `conductor task
+--done` refused with *"This command requires approval"* and every `conductor-tasks` MCP tool refused
+with *"you haven't granted it yet"* — both channels a checkpoint can be claimed on. The work landed,
+the gates went green, and the verdict read `newly DONE []` and filed NoProgress. Conductor therefore
+folds `mcp__conductor-tasks` and `Bash(conductor:*)` into the allow list itself whenever a non-bypass
+mode is set, and the run log's posture line says how many rules that added. **Everything else your
+stage needs — the build, the test runner, `git`, the package manager — is still yours to allow.**
 
 Every refusal is telemetered: it lands on the transcript's own `refusal` line, as a `toolRefused` row
 on the run's event log stamped with the session and stage, and as a counted line in the run log when

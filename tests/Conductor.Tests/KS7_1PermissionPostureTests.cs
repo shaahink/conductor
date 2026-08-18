@@ -9,11 +9,13 @@ namespace Conductor.Tests;
 /// KS7.1 gate: the permission posture, asserted against the behaviour MEASURED on the installed CLI
 /// (claude 2.1.235, print mode) rather than against what a settings doc implies.
 ///
-/// <para>The measurements these tests encode, each one a live probe recorded in the KS7.1 evidence
-/// file: <c>permissions.deny</c> is the only enforced boundary; it is enforced with the bypass flag
-/// ON; <c>permissions.allow</c> pre-approves and gates nothing in print mode; a specifier-level deny
-/// emits <c>{"type":"system","subtype":"permission_denied"}</c> on the stream, which is where the
-/// refusal telemetry comes from.</para>
+/// <para>The measurements these tests encode, all recorded in the KS7.1 evidence file:
+/// <c>permissions.deny</c> is enforced even with the bypass flag ON; with the flag OFF the CLI's own
+/// permission engine gates as well — read-only Bash auto-approves, but a mutating command and any
+/// un-allowlisted MCP tool are refused, which is why conductor folds its own claim path into the
+/// allow list; and a refused call arrives as
+/// <c>{"type":"system","subtype":"permission_denied"}</c>, which is where the refusal telemetry
+/// comes from.</para>
 /// </summary>
 public class KS7_1PermissionPostureTests
 {
@@ -95,6 +97,67 @@ public class KS7_1PermissionPostureTests
         Assert.False(frag.ContainsKey("defaultMode"));
     }
 
+    /// <summary>The claim path is folded in under a restricted posture, because it is the only
+    /// channel a checkpoint can be reported on and it is conductor's own plumbing, not the operator's
+    /// to know. Measured need: with an allow list of [Read, Write] and no bypass flag, `conductor task
+    /// --done` came back "This command requires approval" and every conductor-tasks MCP tool came back
+    /// "you haven't granted it yet" — the stage delivered, the gates went green, and the verdict filed
+    /// NoProgress.</summary>
+    [Fact]
+    public void ARestrictedPostureFoldsInConductorsOwnClaimPath()
+    {
+        var allow = PermissionPosture.AllowRulesFor(new PermissionsConfig
+        {
+            Mode = PermissionsConfig.ModeAcceptEdits,
+            Allow = ["Read", "Write"],
+        });
+
+        Assert.Contains("mcp__conductor-tasks", allow, StringComparer.Ordinal);
+        Assert.Contains("Bash(conductor:*)", allow, StringComparer.Ordinal);
+        Assert.Equal(["Read", "Write"], allow.Take(2));
+    }
+
+    /// <summary>A bypass posture is not gated by the CLI at all, so folding rules in would only add
+    /// noise to a profile an auditor reads.</summary>
+    [Fact]
+    public void ABypassPostureFoldsNothing()
+    {
+        var allow = PermissionPosture.AllowRulesFor(new PermissionsConfig
+        {
+            Mode = PermissionsConfig.ModeBypass,
+            Allow = ["Read"],
+        });
+
+        Assert.Equal(["Read"], allow);
+    }
+
+    [Fact]
+    public void TheClaimPathIsNotDuplicatedWhenThePlanAlreadyNamesIt()
+    {
+        var allow = PermissionPosture.AllowRulesFor(new PermissionsConfig
+        {
+            Mode = PermissionsConfig.ModeAcceptEdits,
+            Allow = ["Bash(conductor:*)"],
+        });
+
+        Assert.Equal(1, allow.Count(r => string.Equals(r, "Bash(conductor:*)", StringComparison.Ordinal)));
+    }
+
+    /// <summary>The claim path reaches the WRITTEN profile, not just the helper — this is the assertion
+    /// that would have caught the rig failure.</summary>
+    [Fact]
+    public void TheWrittenProfileCarriesTheClaimPath()
+    {
+        var frag = PermissionPosture.SettingsFragment(new PermissionsConfig
+        {
+            Mode = PermissionsConfig.ModeAcceptEdits,
+            Deny = ["Bash(curl:*)"],
+        });
+
+        Assert.NotNull(frag);
+        Assert.Contains("mcp__conductor-tasks", Assert.IsType<string[]>(frag["allow"]), StringComparer.Ordinal);
+    }
+
     [Fact]
     public void AModeIsWrittenAsDefaultModeInTheFile()
     {
@@ -108,7 +171,8 @@ public class KS7_1PermissionPostureTests
         Assert.NotNull(frag);
         Assert.Equal(PermissionsConfig.ModeAcceptEdits, frag["defaultMode"]);
         Assert.Equal(new[] { "WebFetch", "Bash(curl:*)" }, Assert.IsType<string[]>(frag["deny"]));
-        Assert.Equal(new[] { "Bash(git status:*)" }, Assert.IsType<string[]>(frag["allow"]));
+        // The plan's own rules come first, then conductor's claim path — see AllowRulesFor.
+        Assert.Equal("Bash(git status:*)", Assert.IsType<string[]>(frag["allow"])[0]);
     }
 
     // ── the command line: what it gains

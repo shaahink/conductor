@@ -88,6 +88,55 @@ watchdog thread. Hitting the ceiling takes the rollover branch at `SessionRunner
 claims are recorded, **no attempt is burned and no gate battery runs**, and the next turn of the loop
 starts a fresh session.
 
+### 3b. Blast radius — what actually bounds a session (KS7.1)
+
+An unattended session runs a general-purpose coding agent with a shell on the operator's machine. It
+is worth being exact about what limits that, because the honest answer is narrower than the config
+vocabulary suggests.
+
+**There is no OS sandbox here.** Conductor spawns the agent CLI as an ordinary child process under a
+job object (`JobObject`, so strays die with the run) with the repo as its working directory. That is a
+lifetime boundary, not a security boundary: the child runs as the operator, with the operator's token,
+and can reach anything the operator can. Codex CLI shipped a native Windows sandbox on restricted
+tokens/AppContainer/ACLs, which proves stock Windows primitives suffice — building one is an era of
+its own and is explicitly parked (KARVANSARA plan §8).
+
+**What does bound it is the agent CLI's own permission engine**, driven from `agent.permissions` and
+written into the settings file conductor already owns per session (`SessionRunner.Mcp.cs` →
+`WriteSessionSettings`). Measured against the installed CLI, and against a live rig run:
+
+- `deny` is enforced whatever else is set — **including under `--dangerously-skip-permissions`**. A
+  bare tool name removes the tool from the set the model is told about; a specifier (`Bash(curl:*)`)
+  refuses the call and emits a `permission_denied` envelope.
+- Taking the bypass flag off turns the CLI's own gate back on, and it **does** gate: read-only shell
+  commands auto-approve, but a mutating command and any un-allowlisted MCP tool are refused.
+- `allow` is a pre-approval list, not a whitelist — it re-opens what the gate would otherwise refuse.
+
+So ND-5's recommendation stands, with a correction to its reasoning: an allow/deny profile **can**
+replace the flag, but not because the allow list narrows anything. It works because dropping the flag
+restores the CLI's gate, and the allow list is then what lets the run's own work through.
+`PermissionPosture.StripBypass` takes the flag off the resolved args when a non-bypass mode is set, in
+`AgentSession.Start` — the one seam every session kind passes through.
+
+**Which is the sharp edge, and conductor closes it.** The first rig run under a restricted posture had
+`conductor task --done` refused ("This command requires approval") and every `conductor-tasks` MCP
+tool refused ("you haven't granted it yet") — both channels a checkpoint can be claimed on. The work
+landed, the gates went green, and the verdict read `newly DONE []` and filed NoProgress against a
+stage that had in fact been delivered. `PermissionPosture.AllowRulesFor` therefore folds
+`mcp__conductor-tasks` and `Bash(conductor:*)` into the profile whenever a non-bypass mode is set:
+conductor's own plumbing is not something an operator should have to know to allow. Everything the
+*stage* needs — build, tests, `git` — is still the plan's to allow, and getting that wrong reads as a
+stalled stage rather than a permissions error, which is why the posture line and the refusal count are
+both in the run log.
+
+**Refusals are telemetered, and that is what makes the posture falsifiable.** A profile that failed to
+load and a profile whose rules never matched are indistinguishable from outside the process — and the
+CLI silently ignores a settings file that fails validation in print mode, so a broken profile does not
+announce itself. `ClaudeProvider` parses each `permission_denied` into a `refusal` transcript line, a
+`toolRefused` event stamped with session and stage, and a counted line in the run log. A `toolRefused`
+row can only exist if the rules reached the session.
+
+
 ### 4. Verdict
 
 `VerdictEngine.EvaluateSessionAsync` (`Orchestration/VerdictEngine.cs:116`) judges what happened. It

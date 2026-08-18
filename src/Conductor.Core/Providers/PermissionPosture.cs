@@ -29,6 +29,23 @@ public static class PermissionPosture
     public static readonly IReadOnlyList<string> BypassFlags =
         ["--dangerously-skip-permissions", "--allow-dangerously-skip-permissions"];
 
+    /// <summary>
+    /// The rules conductor adds to its OWN allow list under a restricted posture, because they are
+    /// the channel a session reports progress on and no operator should have to know that.
+    /// </summary>
+    /// <remarks>
+    /// Measured, not assumed (KS7.1 rig, run b1b90d5c session #2): with the bypass flag stripped and
+    /// an allow list of <c>[Read, Write]</c>, <c>conductor task --done</c> came back "This command
+    /// requires approval" and every <c>conductor-tasks</c> MCP tool came back "you haven't granted it
+    /// yet". Both channels of the only way a checkpoint can be claimed were shut — and the failure is
+    /// quiet in the worst way: the work lands, the gates go green, and the verdict reads
+    /// <c>newly DONE []</c> and files NoProgress against a stage that was in fact delivered.
+    /// <para>Folding these is safe: the CLI resolves deny before allow, so a plan that explicitly
+    /// denies one of them still gets its refusal. What it cannot do is forget to grant them.</para>
+    /// </remarks>
+    public static readonly IReadOnlyList<string> ClaimPathAllowRules =
+        ["mcp__conductor-tasks", "Bash(conductor:*)"];
+
     /// <summary>The <c>permissions</c> object for the settings file conductor writes, or null when
     /// the block asks for nothing. Only non-empty members are emitted: a settings file carrying
     /// <c>"deny": []</c> reads, to anyone auditing it, like a posture that was considered and left
@@ -41,9 +58,26 @@ public static class PermissionPosture
         // the command line. Both are set when a mode is configured: the flag wins for the session, and
         // the file makes the profile self-describing when it is read back as evidence.
         if (!string.IsNullOrWhiteSpace(p.Mode)) frag["defaultMode"] = p.Mode!.Trim();
-        if (p.Allow.Count > 0) frag["allow"] = p.Allow.ToArray();
+        var allow = AllowRulesFor(p);
+        if (allow.Count > 0) frag["allow"] = allow.ToArray();
         if (p.Deny.Count > 0) frag["deny"] = p.Deny.ToArray();
         return frag.Count > 0 ? frag : null;
+    }
+
+    /// <summary>The allow list as it reaches the settings file: the plan's own rules, plus
+    /// <see cref="ClaimPathAllowRules"/> when the posture is restricted enough for the CLI's own
+    /// permission engine to start gating. Order is plan-first so an operator reading the written
+    /// profile sees what they asked for at the top; duplicates are dropped rather than repeated.</summary>
+    public static IReadOnlyList<string> AllowRulesFor(PermissionsConfig? p)
+    {
+        if (p is null) return [];
+        if (!p.WantsRestrictedMode) return p.Allow;
+        var allow = new List<string>(p.Allow);
+        foreach (var rule in ClaimPathAllowRules)
+        {
+            if (!allow.Contains(rule, StringComparer.Ordinal)) allow.Add(rule);
+        }
+        return allow;
     }
 
     /// <summary>The flags the orchestrator appends for this posture. Empty when no mode is
@@ -89,6 +123,10 @@ public static class PermissionPosture
         if (p is null || !p.IsConfigured) return "KS7.1: no permission posture configured — the plan's own args decide";
         var mode = string.IsNullOrWhiteSpace(p.Mode) ? "(plan's own)" : p.Mode!.Trim();
         var bypass = strippedBypassFlags > 0 ? $", {strippedBypassFlags} bypass flag(s) stripped" : "";
-        return $"KS7.1: permission posture — mode {mode}, {p.Deny.Count} deny rule(s), {p.Allow.Count} allow rule(s){bypass}";
+        // The allow count is the count that REACHED the file, folded rules included — a line quoting
+        // the plan's own number would understate the profile the session actually ran under.
+        var allow = AllowRulesFor(p).Count;
+        var folded = p.WantsRestrictedMode ? $" (incl. {ClaimPathAllowRules.Count} for the claim path)" : "";
+        return $"KS7.1: permission posture — mode {mode}, {p.Deny.Count} deny rule(s), {allow} allow rule(s){folded}{bypass}";
     }
 }
