@@ -232,7 +232,7 @@ public sealed class KS2_6ParkHygieneTests : IDisposable
     public void ADryRunsTelegramServiceDropsEveryOtherPushPathToo()
     {
         var rig = Rig(dryRun: true, handoff: "last: nothing.");
-        var telegram = rig.Ctx.Telegram;
+        var telegram = rig.Ctx.Messenger;
 
         Assert.NotSame(rig.Telegram, telegram);   // the context wrapped it
         _ = telegram.PushAsync("blocked until 09:00Z");
@@ -254,7 +254,7 @@ public sealed class KS2_6ParkHygieneTests : IDisposable
     public void ADryRunSaysOutLoudThatItWillNotifyNobody()
     {
         var rig = Rig(dryRun: true, handoff: "last: nothing.");
-        Assert.Equal(ParkNotifier.DryRunSilence, rig.Ctx.Telegram.DeliveryBlocker);
+        Assert.Equal(ParkNotifier.DryRunSilence, rig.Ctx.Messenger.DeliveryBlocker);
 
         var real = new ParkNotifier(dryRun: true);
         Assert.True(real.DryRun);
@@ -421,7 +421,7 @@ public sealed class KS2_6ParkHygieneTests : IDisposable
 
         var gates = new GateOrchestrator(plan, state, NullEventSink.Instance, store: null);
         var lanes = new LaneCoordinator(plan, state, sink, NullEventSink.Instance, _ => { });
-        var verdicts = new VerdictEngine(ctx, gates, lanes, ctx.Telegram, webhooks,
+        var verdicts = new VerdictEngine(ctx, gates, lanes, ctx.Messenger, webhooks,
             saveAndReport: () => { }, pushIdleSnapshot: () => { });
         var dispatcher = new ControlDispatcher(plan, state, sink, NullEventSink.Instance, log: _ => { },
             save: () => { }, deleteControlFile: () => { }, skipStage: (_, _) => { },
@@ -433,7 +433,7 @@ public sealed class KS2_6ParkHygieneTests : IDisposable
 
     // ───────────────────────────────── stubs
 
-    private sealed class CountingTelegram : ITelegramService
+    private sealed class CountingTelegram : IRunNotifier
     {
         private readonly Lock _gate = new();
         public List<string> Sent { get; } = new();

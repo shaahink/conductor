@@ -81,14 +81,14 @@ public sealed class FuOwner13ReloadPendingTests : IDisposable
 
     private readonly List<TelegramService> _services = new();
 
-    private (ControlPlaneServer server, int port) StartServer(ITelegramService? telegram = null)
+    private (ControlPlaneServer server, int port) StartServer(IRunNotifier? telegram = null)
     {
         using var tcp = new TcpListener(IPAddress.Loopback, 0);
         tcp.Start();
         var probed = ((IPEndPoint)tcp.LocalEndpoint).Port;
         tcp.Stop();
         var server = new ControlPlaneServer(_plan, new RunState { RunId = "run-fu13" }, _store, _inbox,
-            telegram ?? new NoOpTelegramService(), NullLogger.Instance, probed);
+            telegram ?? new NoOpRunNotifier(), NullLogger.Instance, probed);
         Assert.True(server.Start(), "control plane failed to bind");
         _http.DefaultRequestHeaders.Remove("X-Conductor-Token");
         _http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);

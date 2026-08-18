@@ -167,7 +167,7 @@ public sealed class SC53BoardWritesTests : IDisposable
         var probe = ((IPEndPoint)tcp.LocalEndpoint).Port;
         tcp.Stop();
         var server = new ControlPlaneServer(plan, new RunState { RunId = RunId }, _store, _inbox,
-            new NoOpTelegramService(), NullLogger.Instance, probe);
+            new NoOpRunNotifier(), NullLogger.Instance, probe);
         Assert.True(server.Start(), "control plane failed to bind");
         try
         {

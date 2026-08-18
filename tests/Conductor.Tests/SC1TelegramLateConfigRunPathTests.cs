@@ -17,7 +17,7 @@ namespace Conductor.Tests;
 ///
 /// Nothing here is invoked directly on the service. The run is a real <see cref="RunCommand"/>
 /// execution over a real git repo with a fake agent, started from a plan that has NO telegram block
-/// and no token at all — the state in which the old engine pinned a <c>NoOpTelegramService</c> for
+/// and no token at all — the state in which the old engine pinned a <c>NoOpRunNotifier</c> for
 /// the life of the process. Mid-run the agent writes the telegram block into the plan file, saves a
 /// token, and asks for a plan reload; the assertion is that a later session's push reaches the wire.
 /// </summary>
@@ -126,7 +126,7 @@ public sealed class SC1TelegramLateConfigRunPathTests : IDisposable
             });
 
         // 1. The service that started life with no telegram block is now polling: the reloaded block
-        //    reached it. Before SC1.3 the container held a NoOpTelegramService and this stays 0
+        //    reached it. Before SC1.3 the container held a NoOpRunNotifier and this stays 0
         //    forever, whatever the plan file says.
         Assert.True(bot.GetUpdatesCalls > 0,
             $"getUpdates was never called — the telegram block added mid-run never reached a live service (exit {exit}). Sent: {bot.Describe()}");

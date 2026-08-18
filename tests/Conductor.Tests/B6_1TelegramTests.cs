@@ -15,7 +15,7 @@ public class B6_1TelegramTests
     [Fact]
     public async Task NoOp_push_is_noop()
     {
-        var svc = new NoOpTelegramService();
+        var svc = new NoOpRunNotifier();
         await svc.PushAsync("test");
         await svc.PushWithKeyboardAsync("test", [("btn", "data")]);
     }
@@ -209,12 +209,12 @@ public class B6_1TelegramTests
         Assert.False(resp.Ok);
     }
 
-    // ──────────────────────── ITelegramService contract ────────────────────────
+    // ──────────────────────── IRunNotifier contract ────────────────────────
 
     [Fact]
-    public void ITelegramService_has_push_and_push_with_keyboard()
+    public void IRunNotifier_has_push_and_push_with_keyboard()
     {
-        var methods = typeof(ITelegramService).GetMethods();
+        var methods = typeof(IRunNotifier).GetMethods();
         Assert.Contains(methods, m => m.Name == "PushAsync");
         Assert.Contains(methods, m => m.Name == "PushWithKeyboardAsync");
     }

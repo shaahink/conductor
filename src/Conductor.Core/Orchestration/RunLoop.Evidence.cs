@@ -77,7 +77,7 @@ public sealed partial class RunLoop
                          (fresh.Count > 4 ? $", +{fresh.Count - 4} more" : ""));
                 // Fire-and-forget like every other push, and deliberately NOT cancelled with the
                 // session: a run being torn down is exactly when the last artifact matters most.
-                _ = _ctx.Telegram.PushEvidenceAsync(fresh, CancellationToken.None);
+                _ = _ctx.Messenger.PushEvidenceAsync(fresh, CancellationToken.None);
             }
         }
         // Evidence must never be able to fail a session: a vanished file, a locked directory or a

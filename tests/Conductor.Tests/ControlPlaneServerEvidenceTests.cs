@@ -81,7 +81,7 @@ public sealed class ControlPlaneServerEvidenceTests : IDisposable
         probe.Stop();
 
         var server = new ControlPlaneServer(_plan, new RunState { RunId = RunId }, _store, _inbox,
-            new NoOpTelegramService(), NullLogger.Instance, port);
+            new NoOpRunNotifier(), NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind — cannot run contract tests");
         _http.DefaultRequestHeaders.Remove("X-Conductor-Token");
         _http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);

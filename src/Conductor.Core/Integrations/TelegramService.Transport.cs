@@ -79,12 +79,12 @@ public sealed partial class TelegramService
     private async Task SendTextAsync(OutboundMessage item, CancellationToken ct)
     {
         var stamped = FormattableString.Invariant($"{_composer.Stamp(item.SessionNumber, item.StageId)}\n{item.Text}");
-        var chunks = HtmlChunker.Split(stamped);
+        var chunks = HtmlChunker.Split(stamped, TelegramLimits.MaxMessageChars);
         // The "(2/4)" counter is appended AFTER the split, so it has to be paid for BEFORE it: a
         // chunk that came back exactly at the limit was pushed 13 characters over it by its own
         // marker, and Telegram refused the three chunks that mattered. Only the multi-chunk path
         // pays the reserve, so an ordinary message is still split at the full limit — i.e. not at all.
-        if (chunks.Count > 1) chunks = HtmlChunker.Split(stamped, HtmlChunker.TelegramMaxChars - ChunkCounterReserve);
+        if (chunks.Count > 1) chunks = HtmlChunker.Split(stamped, TelegramLimits.MaxMessageChars - ChunkCounterReserve);
 
         for (var i = 0; i < chunks.Count; i++)
         {
@@ -131,7 +131,7 @@ public sealed partial class TelegramService
             AddField(form, k, Convert.ToString(v, CultureInfo.InvariantCulture) ?? "");
 
         var caption = FormattableString.Invariant($"{_composer.Stamp(item.SessionNumber, item.StageId)}\n{att.Caption}");
-        AddField(form, "caption", MessageComposer.Clip(caption, HtmlChunker.TelegramMaxCaptionChars));
+        AddField(form, "caption", MessageComposer.Clip(caption, TelegramLimits.MaxCaptionChars));
         AddField(form, "parse_mode", "HTML");
         await AddFileAsync(form, method == "sendPhoto" ? "photo" : "document", att.Path, ct).ConfigureAwait(false);
 

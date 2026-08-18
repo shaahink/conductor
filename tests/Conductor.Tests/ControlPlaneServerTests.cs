@@ -89,7 +89,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     {
         var port = FreeLoopbackPort();
         state ??= new RunState { RunId = RunId };
-        var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, port);
+        var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpRunNotifier(), NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind — cannot run contract tests");
         _http.DefaultRequestHeaders.Remove("X-Conductor-Token");
         _http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);
@@ -670,7 +670,7 @@ public sealed class ControlPlaneServerTests : IDisposable
         try
         {
             var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
-            var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, port);
+            var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpRunNotifier(), NullLogger.Instance, port);
             var started = server.Start();
 
             Assert.True(started);                 // a busy port must not cost us the control plane
@@ -688,7 +688,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     public void Start_PublishesDiscoveryFile_AndRemovesItOnDispose()
     {
         var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
-        var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, FreeLoopbackPort());
+        var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpRunNotifier(), NullLogger.Instance, FreeLoopbackPort());
         Assert.True(server.Start());
 
         var discovery = ControlPlaneDiscovery.PathFor(_plan.StateDir);

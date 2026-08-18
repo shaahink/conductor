@@ -330,7 +330,7 @@ public sealed class SC51StateEndpointTests : IDisposable
         _store.FlushEvents();
 
         var server = new ControlPlaneServer(_plan, live, _store, _inbox,
-            new NoOpTelegramService(), NullLogger.Instance, FreeLoopbackPort());
+            new NoOpRunNotifier(), NullLogger.Instance, FreeLoopbackPort());
         Assert.True(server.Start(), "control plane failed to bind");
         try
         {
@@ -357,7 +357,7 @@ public sealed class SC51StateEndpointTests : IDisposable
         _store.FlushEvents();
 
         var server = new ControlPlaneServer(_plan, live, _store, _inbox,
-            new NoOpTelegramService(), NullLogger.Instance, FreeLoopbackPort());
+            new NoOpRunNotifier(), NullLogger.Instance, FreeLoopbackPort());
         Assert.True(server.Start(), "control plane failed to bind");
         try
         {

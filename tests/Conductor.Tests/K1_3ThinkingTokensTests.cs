@@ -124,7 +124,7 @@ public sealed class K1_3ThinkingTokensTests : IDisposable
             Stages = { new StageConfig { Id = "K1", Title = "Stage One", Sessions = 1 } },
         };
         var server = new ControlPlaneServer(plan, new RunState { RunId = RunId, CurrentStage = "K1" },
-            _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, FreeLoopbackPort());
+            _store, _inbox, new NoOpRunNotifier(), NullLogger.Instance, FreeLoopbackPort());
         Assert.True(server.Start(), "control plane failed to bind");
         try
         {

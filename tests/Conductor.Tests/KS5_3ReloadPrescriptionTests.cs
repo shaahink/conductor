@@ -331,7 +331,7 @@ public sealed class KS5_3ReloadPrescriptionTests : IDisposable
             lessons, new CheckpointPlanner(), ProgressProviderFactory.Create(plan),
             AgentProviderFactory.Create(plan.Agent), store,
             processSupervisor: null, controlInbox: null,
-            new NoOpTelegramService(), webhooks,
+            new NoOpRunNotifier(), webhooks,
             workflowResolver: null, NullLogger<KS5_3ReloadPrescriptionTests>.Instance);
 
         var dispatcher = new ControlDispatcher(plan, state, sink, events, log: _ => { }, save: () => { },

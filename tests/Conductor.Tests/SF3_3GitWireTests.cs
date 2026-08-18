@@ -149,7 +149,7 @@ public sealed class SF3_3GitWireTests : IDisposable
     private async Task<JsonDocument> GetJson(string path)
     {
         var server = new ControlPlaneServer(_plan, new RunState { RunId = RunId, CurrentStage = "S1" },
-            _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, FreeLoopbackPort());
+            _store, _inbox, new NoOpRunNotifier(), NullLogger.Instance, FreeLoopbackPort());
         Assert.True(server.Start(), "control plane failed to bind");
         try
         {

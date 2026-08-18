@@ -114,13 +114,13 @@ public sealed class K5_4TransportTests : IDisposable
         // 400 before K5.4 — Telegram does not truncate, it refuses.
         var body = string.Join("\n", Enumerable.Range(0, 300)
             .Select(i => $"line {i.ToString(CultureInfo.InvariantCulture)} of a very long engine notification"));
-        Assert.True(body.Length > 3 * HtmlChunker.TelegramMaxChars - 4000);
+        Assert.True(body.Length > 3 * TelegramLimits.MaxMessageChars - 4000);
 
         var calls = await SendAsync(bot, svc => svc.PushAsync(body));
 
         Assert.True(calls.Count > 1, $"a {body.Length}-character message left as {calls.Count} call(s)");
         Assert.All(calls, c => Assert.Equal("sendMessage", c.Method));
-        Assert.All(calls, c => Assert.True(c.Text!.Length <= HtmlChunker.TelegramMaxChars,
+        Assert.All(calls, c => Assert.True(c.Text!.Length <= TelegramLimits.MaxMessageChars,
             $"a chunk of {c.Text!.Length} characters would be refused by Telegram"));
 
         // Nothing was lost on the way: the first and last lines both arrived.
@@ -137,7 +137,7 @@ public sealed class K5_4TransportTests : IDisposable
         // Markup all the way down, with no long runs of plain text to cut in: every candidate cut
         // point is inside a tag, inside an entity, or between an open tag and its close.
         var body = string.Concat(Enumerable.Repeat("<b>bold &amp; brittle</b> <i>italic &lt;here&gt;</i> ", 260));
-        Assert.True(body.Length > HtmlChunker.TelegramMaxChars);
+        Assert.True(body.Length > TelegramLimits.MaxMessageChars);
 
         var calls = await SendAsync(bot, svc => svc.PushAsync(body));
 
@@ -145,7 +145,7 @@ public sealed class K5_4TransportTests : IDisposable
         foreach (var c in calls)
         {
             var t = c.Text!;
-            Assert.True(t.Length <= HtmlChunker.TelegramMaxChars, $"chunk of {t.Length}");
+            Assert.True(t.Length <= TelegramLimits.MaxMessageChars, $"chunk of {t.Length}");
             // A chunk Telegram's HTML parser would reject: an unbalanced tag, a bare '<' with no
             // '>' after it, or an entity cut in half.
             Assert.Equal(Count(t, "<b>"), Count(t, "</b>"));
@@ -161,16 +161,16 @@ public sealed class K5_4TransportTests : IDisposable
     [Fact]
     public void The_chunker_returns_a_short_message_untouched_and_never_exceeds_the_limit()
     {
-        Assert.Equal(new[] { "short" }, HtmlChunker.Split("short"));
+        Assert.Equal(new[] { "short" }, HtmlChunker.Split("short", TelegramLimits.MaxMessageChars));
 
-        var exact = new string('x', HtmlChunker.TelegramMaxChars);
-        Assert.Same(exact, Assert.Single(HtmlChunker.Split(exact)));
+        var exact = new string('x', TelegramLimits.MaxMessageChars);
+        Assert.Same(exact, Assert.Single(HtmlChunker.Split(exact, TelegramLimits.MaxMessageChars)));
 
         // One character over: two chunks, not a refusal.
-        var over = new string('x', HtmlChunker.TelegramMaxChars + 1);
-        var chunks = HtmlChunker.Split(over);
+        var over = new string('x', TelegramLimits.MaxMessageChars + 1);
+        var chunks = HtmlChunker.Split(over, TelegramLimits.MaxMessageChars);
         Assert.Equal(2, chunks.Count);
-        Assert.All(chunks, c => Assert.True(c.Length <= HtmlChunker.TelegramMaxChars));
+        Assert.All(chunks, c => Assert.True(c.Length <= TelegramLimits.MaxMessageChars));
     }
 
     // ── defect 2: evidence as a path instead of the artifact ──

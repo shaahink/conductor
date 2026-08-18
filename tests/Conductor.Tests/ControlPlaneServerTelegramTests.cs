@@ -59,7 +59,7 @@ public sealed class ControlPlaneServerTelegramTests : IDisposable
         try { TestTemp.DeleteTree(_dir); } catch (IOException) { /* best effort */ }
     }
 
-    private (ControlPlaneServer server, int port) StartServer(ITelegramService telegram)
+    private (ControlPlaneServer server, int port) StartServer(IRunNotifier telegram)
     {
         using var tcp = new TcpListener(IPAddress.Loopback, 0);
         tcp.Start();
@@ -82,7 +82,7 @@ public sealed class ControlPlaneServerTelegramTests : IDisposable
     [Fact]
     public async Task GetTelegramStatus_SaysRestartRequired_WhenTheProcessHasNoTelegramService()
     {
-        var (server, port) = StartServer(new NoOpTelegramService());
+        var (server, port) = StartServer(new NoOpRunNotifier());
         try
         {
             var body = await _http.GetStringAsync($"http://127.0.0.1:{port}/telegram/status");
@@ -135,7 +135,7 @@ public sealed class ControlPlaneServerTelegramTests : IDisposable
     [Fact]
     public async Task PostTelegramTest_RejectsCleanly_WhenNotConfiguredAtAll()
     {
-        var (server, port) = StartServer(new NoOpTelegramService());
+        var (server, port) = StartServer(new NoOpRunNotifier());
         try
         {
             var resp = await PostAsync(port, "/telegram/test", "{}");
@@ -149,7 +149,7 @@ public sealed class ControlPlaneServerTelegramTests : IDisposable
     [Fact]
     public async Task PostTelegramToken_SavesToSecretsFile_NotThePlan()
     {
-        var (server, port) = StartServer(new NoOpTelegramService());
+        var (server, port) = StartServer(new NoOpRunNotifier());
         try
         {
             var before = await File.ReadAllTextAsync(_planPath);
@@ -171,7 +171,7 @@ public sealed class ControlPlaneServerTelegramTests : IDisposable
     [Fact]
     public async Task PostTelegramToken_RejectsEmptyToken()
     {
-        var (server, port) = StartServer(new NoOpTelegramService());
+        var (server, port) = StartServer(new NoOpRunNotifier());
         try
         {
             var resp = await PostAsync(port, "/telegram/token", """{"token":""}""");
@@ -183,7 +183,7 @@ public sealed class ControlPlaneServerTelegramTests : IDisposable
     [Fact]
     public async Task PostPlanEdit_TelegramTarget_PersistsNonSecretSettings()
     {
-        var (server, port) = StartServer(new NoOpTelegramService());
+        var (server, port) = StartServer(new NoOpRunNotifier());
         try
         {
             var resp = await PostAsync(port, "/plan/edit",
@@ -201,7 +201,7 @@ public sealed class ControlPlaneServerTelegramTests : IDisposable
     [Fact]
     public async Task PostPlanEdit_TelegramTarget_RejectsBadPollInterval()
     {
-        var (server, port) = StartServer(new NoOpTelegramService());
+        var (server, port) = StartServer(new NoOpRunNotifier());
         try
         {
             var resp = await PostAsync(port, "/plan/edit",

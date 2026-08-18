@@ -122,17 +122,17 @@ public sealed class ParkNotifier
     }
 }
 
-/// <summary>KS2.6 — an <see cref="ITelegramService"/> that accepts every push and sends none. It
+/// <summary>KS2.6 — an <see cref="IRunNotifier"/> that accepts every push and sends none. It
 /// wraps the real service rather than replacing it so <see cref="DeliveryBlocker"/> keeps answering
 /// with the real reason when there is one (the run-start readiness line reads it), and only falls
 /// back to <see cref="ParkNotifier.DryRunSilence"/> when Telegram would otherwise have delivered.
 /// <para>A decorator, not a flag at each call site: there are ten Telegram push call sites in the
 /// run path and a dry run has to be silent on all of them, including ones written next year.</para></summary>
-internal sealed class MutedTelegramService : ITelegramService
+internal sealed class MutedRunNotifier : IRunNotifier
 {
-    private readonly ITelegramService _inner;
+    private readonly IRunNotifier _inner;
 
-    public MutedTelegramService(ITelegramService inner) => _inner = inner;
+    public MutedRunNotifier(IRunNotifier inner) => _inner = inner;
 
     public string? DeliveryBlocker => _inner.DeliveryBlocker ?? ParkNotifier.DryRunSilence;
 

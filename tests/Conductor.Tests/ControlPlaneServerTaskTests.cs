@@ -57,7 +57,7 @@ public sealed class ControlPlaneServerTaskTests : IDisposable
         var port = ((IPEndPoint)tcp.LocalEndpoint).Port;
         tcp.Stop();
         var state = new RunState { RunId = "run-tasks" };
-        var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, port);
+        var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpRunNotifier(), NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind");
         _http.DefaultRequestHeaders.Remove("X-Conductor-Token");
         _http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);

@@ -25,7 +25,7 @@ namespace Conductor.Tests;
 /// would deliver. What was left is the case the owner actually hits: the token and the telegram block
 /// arrive AFTER the engine started. Both were resolved once, in the constructor, into readonly fields
 /// — and when the plan had no telegram block at all the composition root pinned a
-/// <c>NoOpTelegramService</c> for the life of the process, so a block added later reached a service
+/// <c>NoOpRunNotifier</c> for the life of the process, so a block added later reached a service
 /// that could never exist. Every surface still said "saved".
 ///
 /// These tests hold the live service to the only claim that matters: after the late configuration
@@ -106,7 +106,7 @@ public sealed class SC1TelegramLateConfigTests : IDisposable
         return svc;
     }
 
-    private int StartServer(PlanConfig plan, ITelegramService telegram)
+    private int StartServer(PlanConfig plan, IRunNotifier telegram)
     {
         using var probe = new TcpListener(IPAddress.Loopback, 0);
         probe.Start();
@@ -299,7 +299,7 @@ public sealed class SC1TelegramLateConfigTests : IDisposable
     public async Task WithNoLiveService_BothSurfacesSayRestartRequired_InsteadOfClaimingItWorked()
     {
         var plan = Plan();
-        var port = StartServer(plan, new NoOpTelegramService());
+        var port = StartServer(plan, new NoOpRunNotifier());
 
         var status = await GetStatusAsync(port);
         Assert.True(status.GetProperty("configured").GetBoolean());
@@ -316,7 +316,7 @@ public sealed class SC1TelegramLateConfigTests : IDisposable
 
     /// <summary>
     /// The wiring half of the checkpoint, checked where it broke: the composition root. A plan with no
-    /// telegram block used to register a NoOpTelegramService, which is a permanent answer to a
+    /// telegram block used to register a NoOpRunNotifier, which is a permanent answer to a
     /// question the operator can change at any moment — and the reason "add a telegram block mid-run"
     /// could not have worked no matter how good the reload was.
     /// </summary>
@@ -328,7 +328,7 @@ public sealed class SC1TelegramLateConfigTests : IDisposable
         using var host = ConductorHost.Build(plan, new RunState { RunId = "run-sc13" }, new PlainSink(),
             new RunOptions(DryRun: true, Once: true, MaxSessions: 1), consoleSink: false);
 
-        var telegram = host.Services.GetRequiredService<ITelegramService>();
+        var telegram = host.Services.GetRequiredService<IRunNotifier>();
         Assert.IsType<TelegramService>(telegram);
 
         // And it is on the hosted-service list SC1.1 made the run path start, so the late block lands

@@ -9,9 +9,9 @@ namespace Conductor.Http;
 
 /// <summary>M8.2: Telegram setup/status/test for the Face's guided onboarding tab — "configure it
 /// through the app" instead of hand-editing plan.json/env vars. Status/test read the live
-/// <see cref="Integrations.ITelegramService"/> instance, pattern-matched to the concrete
+/// <see cref="Integrations.IRunNotifier"/> instance, pattern-matched to the concrete
 /// <see cref="TelegramService"/> for its extra internal status surface; a
-/// <see cref="NoOpTelegramService"/> (or no <c>Telegram</c> block on the plan) means Telegram
+/// <see cref="NoOpRunNotifier"/> (or no <c>Telegram</c> block on the plan) means Telegram
 /// simply isn't configured on this plan yet — not an error. The bot token itself is never
 /// round-tripped through the versioned plan file; it is saved to the local secrets store
 /// (<see cref="SecretsStore"/>), the same file the token env var it complements would otherwise

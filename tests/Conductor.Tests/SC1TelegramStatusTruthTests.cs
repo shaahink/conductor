@@ -96,7 +96,7 @@ public sealed class SC1TelegramStatusTruthTests : IDisposable
         return svc;
     }
 
-    private int StartServer(PlanConfig plan, ITelegramService telegram)
+    private int StartServer(PlanConfig plan, IRunNotifier telegram)
     {
         using var probe = new TcpListener(IPAddress.Loopback, 0);
         probe.Start();
@@ -136,8 +136,8 @@ public sealed class SC1TelegramStatusTruthTests : IDisposable
     [Fact]
     public async Task TelegramStatus_WillDeliverIsFalse_AndNamesTheMissingHalf_ForEveryMissingHalf()
     {
-        // 1. no telegram block at all — the NoOpTelegramService path
-        var port = StartServer(Plan(telegramBlock: false, token: false), new NoOpTelegramService());
+        // 1. no telegram block at all — the NoOpRunNotifier path
+        var port = StartServer(Plan(telegramBlock: false, token: false), new NoOpRunNotifier());
         var status = await GetStatusAsync(port);
         Assert.False(status.GetProperty("willDeliver").GetBoolean());
         Assert.Contains("not configured", Str(status, "willDeliverReason"), StringComparison.Ordinal);

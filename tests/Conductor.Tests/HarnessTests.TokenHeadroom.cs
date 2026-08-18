@@ -93,7 +93,7 @@ public sealed partial class HarnessTests
         //    wrote - reports the ceiling against the number the rail would have acted on.
         var store = host.Services.GetRequiredService<IRunStore>();
         var server = new ControlPlaneServer(plan, state, store, new ConcurrentQueue<ControlCommand>(),
-            new NoOpTelegramService(), NullLogger.Instance, FreePort());
+            new NoOpRunNotifier(), NullLogger.Instance, FreePort());
         Assert.True(server.Start(), "control plane failed to bind");
         try
         {

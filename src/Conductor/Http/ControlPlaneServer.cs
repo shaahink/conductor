@@ -37,7 +37,7 @@ public sealed partial class ControlPlaneServer : IDisposable
     private readonly RunState _state;
     private readonly IRunStore _store;
     private readonly ConcurrentQueue<ControlCommand> _inbox;
-    private readonly ITelegramService _telegram;
+    private readonly IRunNotifier _telegram;
     private readonly ILogger _logger;
     private readonly int _preferredPort;
     private HttpListener _listener = new();
@@ -63,7 +63,7 @@ public sealed partial class ControlPlaneServer : IDisposable
     public string Token { get; } = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
 
     public ControlPlaneServer(PlanConfig plan, RunState state, IRunStore store, ConcurrentQueue<ControlCommand> inbox,
-        ITelegramService telegram, ILogger logger, int port)
+        IRunNotifier telegram, ILogger logger, int port)
     {
         _plan = plan;
         _state = state;

@@ -109,7 +109,7 @@ public static class ConductorHost
 
         // B6: Telegram bot.
         // SC1.3: registered whether or not the plan has a telegram block today. The old `else` branch
-        // pinned a NoOpTelegramService for the life of the process, so a telegram block added later —
+        // pinned a NoOpRunNotifier for the life of the process, so a telegram block added later —
         // by the Face's setup tab, by `plan set`, by any /plan/edit — reached a service that could
         // never exist, and every surface still reported the setup as saved. The real service is a
         // no-op too when there is no block (StartAsync says so and returns), the difference being
@@ -117,7 +117,7 @@ public static class ConductorHost
         builder.Services.AddSingleton<TelegramService>(sp =>
             new TelegramService(plan, state, sp.GetRequiredService<ILogger<TelegramService>>(),
                 store: opts.DryRun ? null : sp.GetRequiredService<IRunStore>()));
-        builder.Services.AddSingleton<ITelegramService>(sp => sp.GetRequiredService<TelegramService>());
+        builder.Services.AddSingleton<IRunNotifier>(sp => sp.GetRequiredService<TelegramService>());
         builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<TelegramService>());
 
         // B6.4: Webhook notifier (generic/Discord/Slack) — fire-and-forget HTTP POST.
@@ -190,7 +190,7 @@ public static class ConductorHost
                 state,
                 sp.GetRequiredService<IRunStore>(),
                 sp.GetRequiredService<ConcurrentQueue<ControlCommand>>(),
-                sp.GetRequiredService<ITelegramService>(),
+                sp.GetRequiredService<IRunNotifier>(),
                 sp.GetRequiredService<ILogger<ControlPlaneServer>>(),
                 opts.ControlPlanePort));
         }
@@ -203,7 +203,7 @@ public static class ConductorHost
             sp.GetRequiredService<IEventSink>(),
             sp.GetRequiredService<RunOptions>(),
             sp.GetRequiredService<ILogger<Orchestrator>>(),
-            sp.GetRequiredService<ITelegramService>(),
+            sp.GetRequiredService<IRunNotifier>(),
             sp.GetRequiredService<WebhookNotifier>(),
             planner: null,
             store: sp.GetService<IRunStore>(),

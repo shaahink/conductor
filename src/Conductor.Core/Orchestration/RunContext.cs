@@ -35,10 +35,10 @@ public sealed partial class RunContext
     public IRunStore? Store { get; }
     public ProcessSupervisor? ProcessSupervisor { get; }
     public ConcurrentQueue<ControlCommand>? ControlInbox { get; }
-    /// <summary>KS2.6: under <c>--dry-run</c> this is a <c>MutedTelegramService</c> wrapping the real
+    /// <summary>KS2.6: under <c>--dry-run</c> this is a <c>MutedRunNotifier</c> wrapping the real
     /// one — every push in the run path goes through this property, so a preview run cannot reach a
     /// phone through a call site nobody remembered to guard.</summary>
-    public ITelegramService Telegram { get; }
+    public IRunNotifier Messenger { get; }
     public WebhookNotifier Webhooks { get; }
 
     /// <summary>KS2.6: the gate every notification passes through — dry-run silence and the
@@ -188,7 +188,7 @@ public sealed partial class RunContext
         IRunStore? store,
         ProcessSupervisor? processSupervisor,
         ConcurrentQueue<ControlCommand>? controlInbox,
-        ITelegramService telegram,
+        IRunNotifier telegram,
         WebhookNotifier webhooks,
         IWorkflowResolver? workflowResolver,
         ILogger logger,
@@ -212,7 +212,7 @@ public sealed partial class RunContext
         // KS2.6: derived from the run's own options unless a caller hands one in (the replay harness
         // does, to drive a dry-run LOOP with a live notifier and count what the flood used to send).
         Notifier = notifier ?? new ParkNotifier(options.DryRun, plan.Limits.MaxPushesPerIncident);
-        Telegram = Notifier.DryRun ? new MutedTelegramService(telegram) : telegram;
+        Messenger = Notifier.DryRun ? new MutedRunNotifier(telegram) : telegram;
         Webhooks = webhooks;
         Workflows = workflowResolver ?? new WorkflowEngine();
         Assignments = assignmentPolicy ?? new DefaultAssignmentPolicy();
@@ -431,7 +431,7 @@ public sealed partial class RunContext
         }
 
         Log($"owner queue: {items.Count} new item(s) — {string.Join("; ", items.Select(i => i.Title))}");
-        _ = Telegram.PushAsync(sb.ToString().TrimEnd());
+        _ = Messenger.PushAsync(sb.ToString().TrimEnd());
     }
 
     private static string EscapeHtml(string s)

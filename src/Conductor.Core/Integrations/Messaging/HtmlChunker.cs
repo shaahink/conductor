@@ -11,18 +11,12 @@ namespace Conductor.Core.Integrations.Messaging;
 /// is zero and the scanner is inside neither a tag nor an entity.</para></summary>
 public static class HtmlChunker
 {
-    /// <summary>Telegram's documented limit for <c>sendMessage</c> text.</summary>
-    public const int TelegramMaxChars = 4096;
 
-    /// <summary>Telegram's documented limit for a <c>sendPhoto</c>/<c>sendDocument</c> caption — a
-    /// quarter of the message limit, which is why an evidence caption is composed short rather than
-    /// clipped from a message body.</summary>
-    public const int TelegramMaxCaptionChars = 1024;
 
     /// <summary>Splits <paramref name="text"/> into chunks no longer than <paramref name="max"/>,
     /// each of which is independently valid HTML for Telegram's parser. Returns a single-element list
     /// unchanged when the text already fits, which is the overwhelmingly common case.</summary>
-    public static IReadOnlyList<string> Split(string text, int max = TelegramMaxChars)
+    public static IReadOnlyList<string> Split(string text, int max)
     {
         ArgumentNullException.ThrowIfNull(text);
         if (max <= 0) throw new ArgumentOutOfRangeException(nameof(max));

@@ -265,7 +265,7 @@ public sealed class KS1_1ReloadRunRowTests : IDisposable
             lessons, new CheckpointPlanner(), ProgressProviderFactory.Create(plan),
             AgentProviderFactory.Create(plan.Agent), store,
             processSupervisor: null, controlInbox: null,
-            new NoOpTelegramService(), webhooks,
+            new NoOpRunNotifier(), webhooks,
             workflowResolver: null, NullLogger<KS1_1ReloadRunRowTests>.Instance);
 
         var dispatcher = new ControlDispatcher(plan, state, sink, store, log: _ => { }, save: () => { },

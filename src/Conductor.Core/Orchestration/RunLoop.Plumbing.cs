@@ -215,7 +215,7 @@ public sealed partial class RunLoop
         // and nothing rendered. The notifier bounds it once (a Verify ResultSummary can run to
         // several KB of verdict JSON); cutting it here as well is how the same paragraph came to be
         // cut twice.
-        _ = _ctx.Telegram.PushSessionEndAsync(new SessionEndPush(
+        _ = _ctx.Messenger.PushSessionEndAsync(new SessionEndPush(
             rec.Number, rec.Stage, rec.Outcome?.ToString() ?? "Unknown", rec.GateSummary,
             rec.ResultSummary, rec.CostUsd, _ctx.State.PendingFix?.VerifierScore,
             SessionProgress.WorkCommits(rec).Count, rec.NewlyDone,
@@ -273,7 +273,7 @@ public sealed partial class RunLoop
     private void Notify(string message, PushSeverity severity = PushSeverity.Quiet)
     {
         if (!_ctx.Notifier.AllowOneOff()) return;   // KS2.6: a dry run reaches nobody, on every leg
-        _ = _ctx.Telegram.PushAsync(message, severity);
+        _ = _ctx.Messenger.PushAsync(message, severity);
         _ctx.Webhooks.FireAsync(message);
 
         var n = _ctx.Plan.Notify;

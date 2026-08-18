@@ -349,7 +349,7 @@ public sealed class OwnerQueueTests : IDisposable
         var probe = ((IPEndPoint)tcp.LocalEndpoint).Port;
         tcp.Stop();
         using var server = new ControlPlaneServer(_plan, state, store, new ConcurrentQueue<ControlCommand>(),
-            new NoOpTelegramService(), NullLogger.Instance, probe);
+            new NoOpRunNotifier(), NullLogger.Instance, probe);
         Assert.True(server.Start(), "control plane failed to bind");
 
         using var http = new HttpClient();

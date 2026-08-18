@@ -152,7 +152,7 @@ public sealed partial class RunLoop
     /// voice (SC1.2).</summary>
     private void LogNotificationReadiness()
     {
-        _ctx.Log(_ctx.Telegram.DeliveryBlocker is { } blocker
+        _ctx.Log(_ctx.Messenger.DeliveryBlocker is { } blocker
             ? $"notifications: telegram will NOT deliver — {blocker}"
             : "notifications: telegram will deliver this run's pushes");
     }
@@ -245,7 +245,7 @@ public sealed partial class RunLoop
             : FormattableString.Invariant($"{backoffSeconds} seconds");
         Notify($"Conductor {_ctx.Plan.Name}: preflight failed (×{consecutiveFailures}) — {detail}. " +
                $"PARKED, backing off {window} before the next check.", PushSeverity.Alert);
-        _ = _ctx.Telegram.PushWithKeyboardAsync(
+        _ = _ctx.Messenger.PushWithKeyboardAsync(
             $"Conductor {_ctx.Plan.Name}: parked on preflight — {detail} (backing off {window})",
             [("Resume", "resume"), ("Skip", "skip")], CancellationToken.None);
     }

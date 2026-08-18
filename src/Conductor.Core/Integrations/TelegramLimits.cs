@@ -1,4 +1,4 @@
-namespace Conductor.Core.Integrations.Messaging;
+namespace Conductor.Core.Integrations;
 
 /// <summary>K5.4 — the Bot API's own ceilings, in one place, because every one of them is a silent
 /// failure when crossed: Telegram answers HTTP 400 and the message is simply never delivered. The
@@ -22,4 +22,14 @@ public static class TelegramLimits
         _ when visual && bytes <= MaxPhotoBytes => "sendPhoto",
         _ => "sendDocument",
     };
+
+    /// <summary>KS11.1 — Telegram's own message and caption ceilings, moved out of
+    /// <c>HtmlChunker</c>. The chunker splits HTML at a limit; WHICH limit is a fact about one
+    /// messenger, and leaving it as a constant named <c>TelegramMaxChars</c> in the middle of the
+    /// channel-agnostic seam is exactly the confusion CH-1 exists to remove.</summary>
+    public const int MaxMessageChars = 4096;
+
+    /// <summary>A caption is a quarter of a message, which is why an evidence caption is composed
+    /// short rather than clipped from a body.</summary>
+    public const int MaxCaptionChars = 1024;
 }

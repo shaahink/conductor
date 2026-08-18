@@ -140,7 +140,7 @@ public sealed class KS2_2TimelineProjectionTests : IDisposable
         };
 
         using var server = new ControlPlaneServer(plan, new RunState { RunId = RunId }, store, _inbox,
-            new NoOpTelegramService(), NullLogger.Instance, FreeLoopbackPort());
+            new NoOpRunNotifier(), NullLogger.Instance, FreeLoopbackPort());
         Assert.True(server.Start(), "the live control plane failed to bind");
 
         var timeline = await TimelineFromAsync($"http://127.0.0.1:{server.Port}");
@@ -187,7 +187,7 @@ public sealed class KS2_2TimelineProjectionTests : IDisposable
             store.SetRunId(RunId);
             var plan = new PlanConfig { Name = "tl-plan", Repo = _dir, Tracker = "TRACKER.md" };
             using var server = new ControlPlaneServer(plan, new RunState { RunId = RunId }, store, _inbox,
-                new NoOpTelegramService(), NullLogger.Instance, FreeLoopbackPort());
+                new NoOpRunNotifier(), NullLogger.Instance, FreeLoopbackPort());
             Assert.True(server.Start());
             live = await _http.GetStringAsync(new Uri($"http://127.0.0.1:{server.Port}/timeline"));
         }

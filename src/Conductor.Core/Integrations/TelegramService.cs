@@ -19,7 +19,7 @@ namespace Conductor.Core.Integrations;
 /// callbacks that write control.json. Registered as an <see cref="IHostedService"/> so long-polling
 /// starts with the host and stops on disposal. If no <see cref="TelegramConfig"/> is configured
 /// or the bot token env-var is missing, the service is a no-op.</summary>
-public interface ITelegramService
+public interface IRunNotifier
 {
     /// <summary>SF0.1 / FU-OWNER-12: <c>null</c> when a push from this run will actually be
     /// delivered, else the missing half in <see cref="TelegramReadiness"/>' own words — the same
@@ -51,7 +51,7 @@ public interface ITelegramService
 }
 
 public sealed partial class TelegramService
-    : IHostedService, ITelegramService, IMessageChannel, IReportsStartOutcome, IDisposable
+    : IHostedService, IRunNotifier, IMessageChannel, IReportsStartOutcome, IDisposable
 {
     internal static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -288,7 +288,7 @@ public sealed partial class TelegramService
         _http.Dispose();
     }
 
-    // ── ITelegramService: every one of these belongs to the seam now ──
+    // ── IRunNotifier: every one of these belongs to the seam now ──
 
     public Task PushAsync(string message, PushSeverity severity = PushSeverity.Quiet,
         CancellationToken ct = default) => _surface.PushAsync(message, severity, ct);

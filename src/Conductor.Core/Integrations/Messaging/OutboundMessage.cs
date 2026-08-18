@@ -23,7 +23,7 @@ public enum PushSeverity
 /// <param name="Path">Absolute path to the artifact on the machine running the engine.</param>
 /// <param name="AsPhoto">True for an image Telegram will render inline.</param>
 /// <param name="Caption">Caption text, already HTML-escaped and already within
-/// <see cref="HtmlChunker.TelegramMaxCaptionChars"/>.</param>
+/// the sending channel's caption limit.</param>
 public sealed record OutboundAttachment(string Path, bool AsPhoto, string Caption);
 
 /// <summary>One item on the send queue. This was a five-field tuple repeated at every declaration

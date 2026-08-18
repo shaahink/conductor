@@ -14,7 +14,7 @@ public sealed partial class VerdictEngine
     private readonly RunContext _ctx;
     private readonly GateOrchestrator _gates;
     private readonly LaneCoordinator _lanes;
-    private readonly ITelegramService _telegram;
+    private readonly IRunNotifier _telegram;
     private readonly WebhookNotifier _webhooks;
     private readonly Action _saveAndReport;
     private readonly Action _pushIdleSnapshot;
@@ -23,7 +23,7 @@ public sealed partial class VerdictEngine
         RunContext ctx,
         GateOrchestrator gates,
         LaneCoordinator lanes,
-        ITelegramService telegram,
+        IRunNotifier telegram,
         WebhookNotifier webhooks,
         Action saveAndReport,
         Action pushIdleSnapshot)

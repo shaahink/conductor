@@ -166,7 +166,7 @@ public sealed class P5RolloverTests : IDisposable
         var port = ((IPEndPoint)tcp.LocalEndpoint).Port;
         tcp.Stop();
         var server = new ControlPlaneServer(plan, new RunState { RunId = "run-rollover" }, _store,
-            new ConcurrentQueue<ControlCommand>(), new NoOpTelegramService(), NullLogger.Instance, port);
+            new ConcurrentQueue<ControlCommand>(), new NoOpRunNotifier(), NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind");
         _http.DefaultRequestHeaders.Remove("X-Conductor-Token");
         _http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);

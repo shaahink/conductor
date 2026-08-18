@@ -37,7 +37,7 @@ public sealed class Orchestrator
         IEventSink events,
         RunOptions opts,
         ILogger<Orchestrator> logger,
-        ITelegramService telegram,
+        IRunNotifier telegram,
         WebhookNotifier webhooks,
         IPlanner? planner = null,
         IRunStore? store = null,
@@ -73,7 +73,7 @@ public sealed class Orchestrator
 
     private SessionRunner Sessions => _sessions ??= CreateSessions();
     private VerdictEngine Verdicts => _verdictEngine ??= new VerdictEngine(
-        _ctx, _gates, _lanes, _ctx.Telegram, _ctx.Webhooks, SaveAndReport, PushIdleSnapshot);
+        _ctx, _gates, _lanes, _ctx.Messenger, _ctx.Webhooks, SaveAndReport, PushIdleSnapshot);
     private RunLoop Loop => _loop ??= new RunLoop(
         _ctx, Sessions, Verdicts, _gates, _lanes,
         dispatcher: null,

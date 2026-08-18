@@ -910,13 +910,13 @@ public sealed class KS5_4ApproveRaisesTheCeilingTests : IDisposable
             lessons, new CheckpointPlanner(), ProgressProviderFactory.Create(plan),
             AgentProviderFactory.Create(plan.Agent), store: null,
             processSupervisor: null, controlInbox: null,
-            new NoOpTelegramService(), webhooks,
+            new NoOpRunNotifier(), webhooks,
             workflowResolver: null, NullLogger<KS5_4ApproveRaisesTheCeilingTests>.Instance);
 
         var verdicts = new VerdictEngine(ctx,
             new GateOrchestrator(plan, runState, NullEventSink.Instance, store: null),
             new LaneCoordinator(plan, runState, sink, NullEventSink.Instance, _ => { }),
-            new NoOpTelegramService(), webhooks, saveAndReport: () => { }, pushIdleSnapshot: () => { });
+            new NoOpRunNotifier(), webhooks, saveAndReport: () => { }, pushIdleSnapshot: () => { });
 
         return new ApprovalRig(repo, plan, runState, ctx, verdicts, sink);
     }
