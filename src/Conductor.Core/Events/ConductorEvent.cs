@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Conductor.Core.Events;
 
@@ -36,6 +36,7 @@ namespace Conductor.Core.Events;
 [JsonDerivedType(typeof(SoftBreakRequested),    "softBreakRequested")]
 [JsonDerivedType(typeof(BlockedUntilRequested), "blockedUntilRequested")]
 [JsonDerivedType(typeof(RunBlockedUntil),       "runBlockedUntil")]
+[JsonDerivedType(typeof(ToolRefused),           "toolRefused")]
         [JsonDerivedType(typeof(LaneStarted),           "laneStarted")]
         [JsonDerivedType(typeof(LaneFinished),          "laneFinished")]
         [JsonDerivedType(typeof(MutatingLaneStarted),   "mutatingLaneStarted")]

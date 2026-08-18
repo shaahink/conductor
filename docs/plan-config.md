@@ -80,6 +80,7 @@ whose deliverable lives partly in a sibling checkout: one such stage was deliver
 | `temperature` | double | Sampling temperature (0.0–2.0). |
 | `env` | object | Extra environment variables for the agent process. |
 | `inheritMcpServers` | bool | Default true. Whether a session also gets the MCP servers configured on this machine — see below. |
+| `permissions` | object | The permission posture the session runs under: `mode`, `allow`, `deny` — see below. Absent means the plan's own `args` decide, exactly as before this key existed. |
 
 **`inheritMcpServers` — the session's tools are conductor's plus the operator's.** Every session is
 launched against a config conductor writes itself, holding the `conductor-tasks` server that carries
@@ -93,6 +94,31 @@ spawned session. `conductor-tasks` is conductor's name and an operator entry usi
 the claim path cannot be taken over; an unreadable or malformed operator config is skipped with a line
 in the session log rather than failing the run. Set `inheritMcpServers: false` when a run must not
 depend on the local machine's setup at all — conductor's own server is wired either way.
+
+**`permissions` — blast radius, and what it is honestly worth (KS7.1).** The block has three fields:
+`mode` (one of `acceptEdits`, `auto`, `bypassPermissions`, `manual`, `dontAsk`, `plan` — anything else
+is refused BY NAME at plan load), `allow` and `deny`. Conductor folds them into the settings file it
+already writes for the session and passes `--permission-mode` when the plan's own `args` do not name
+one; setting any `mode` other than `bypassPermissions` also strips `--dangerously-skip-permissions`
+out of the resolved args, so the posture and the command line cannot say different things.
+
+Measured on the installed CLI rather than assumed, because the difference decides what this key buys:
+
+- **`deny` is the only enforced boundary, and it is enforced with the bypass flag ON.** A bare tool
+  name (`"WebFetch"`) removes the tool from the set the model is even told about; a specifier
+  (`"Bash(curl:*)"`) refuses the call and emits a refusal conductor records — see below.
+- **`allow` pre-approves; it does not gate.** In an unattended `-p` run the CLI executes anything that
+  is not denied, under every mode. An allow list narrows nothing there; it only decides what an
+  interactive session would have asked about. Write one to express intent, not to contain anything.
+- **So dropping `--dangerously-skip-permissions` on its own buys no containment.** What buys
+  containment is the deny list. `mode` is still worth setting — it makes the posture legible and it
+  takes the escape hatch off the command line — but it is not the boundary.
+
+Every refusal is telemetered: it lands on the transcript's own `refusal` line, as a `toolRefused` row
+on the run's event log stamped with the session and stage, and as a counted line in the run log when
+the session ends. That is what makes a deny list falsifiable — a profile that failed to load and a
+profile whose rules never matched look identical from outside the process, and print mode silently
+ignores a settings file that fails validation.
 
 **`model` needs a `{model}` placeholder, in both templates.** The model is substituted, never appended:
 a plan that sets `model` but whose `args` have no `{model}` runs the CLI's own default model while the

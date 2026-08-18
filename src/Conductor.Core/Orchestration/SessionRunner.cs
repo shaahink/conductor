@@ -236,9 +236,19 @@ public sealed partial class SessionRunner
         {
             extraEnv["OPENCODE_CONFIG"] = mcpWiring.OpencodeConfigPath;
             var provider = Providers.AgentProviderFactory.ResolveName(resolvedAgent);
-            extraArgs = McpArgsFor(provider, resolvedAgent.Args, mcpWiring.ClaudeConfigPath, mcpWiring.ClaudeSettingsPath);
+            extraArgs = McpArgsFor(provider, resolvedAgent.Args, mcpWiring.ClaudeConfigPath, mcpWiring.ClaudeSettingsPath, resolvedAgent.Permissions);
             _ctx.Log($"I1: MCP task server wired ({provider}) — opencode config {mcpWiring.OpencodeConfigPath}" +
                      (extraArgs.Count > 0 ? $", claude --mcp-config {mcpWiring.ClaudeConfigPath}" : ""));
+        }
+        // KS7.1: state the posture that was APPLIED, in the run log, next to the flags it produced —
+        // measured against the resolved args rather than read off the plan, because the two disagree
+        // exactly when it matters (a stage override, a resume template with its own flags).
+        if (resolvedAgent.Permissions is { IsConfigured: true })
+        {
+            var stripped = resolvedAgent.Permissions.WantsRestrictedMode
+                ? Providers.PermissionPosture.BypassFlagCount(resolvedAgent.Args)
+                : 0;
+            _ctx.Log(Providers.PermissionPosture.Describe(resolvedAgent.Permissions, stripped));
         }
 
         using (var agent = AgentSession.Start(resolvedAgent, _ctx.Plan.Repo, prompt, rec.ClaudeSessionId,
@@ -323,6 +333,16 @@ public sealed partial class SessionRunner
                 (agent.CostUsd.HasValue ? $", ${agent.CostUsd:0.00}" : "") + ")");
             // SC7.2: the digest at a glance, in the log, beside the exit it describes.
             if (!rec.Digest.IsEmpty) _ctx.Log($"session #{rec.Number} digest: {rec.Digest.Summary()}");
+            // KS7.1: what the posture actually stopped. Logged only when it stopped something, so a
+            // clean session stays quiet — but when it fires, every distinct refusal is named, because
+            // "3 refusals" without the rules that fired is a number nobody can act on.
+            if (agent.Refusals.Count > 0)
+            {
+                var byRule = agent.Refusals.GroupBy(r => r.Line, StringComparer.Ordinal)
+                    .Select(g => g.Count() > 1 ? $"{g.Key} (x{g.Count()})" : g.Key);
+                _ctx.Log($"session #{rec.Number} posture refused {agent.Refusals.Count} tool call(s): " +
+                         string.Join(" · ", byRule), "warn");
+            }
             _ctx.Transcript.Append(rec.Number.ToString(), "system",
                 $"Session #{rec.Number} exited · code {exit} · {(rec.EndedUtc - rec.StartedUtc).Value.TotalMinutes:0}m" +
                 (agent.CostUsd.HasValue ? $" · ${agent.CostUsd:0.00}" : ""));

@@ -1,31 +1,32 @@
 ﻿# Conductor — Karvansara edge - gates that can't be gamed, and the courier run report
 
-_Updated 2026-08-18 18:56 UTC · branch `feat/karvansara-edge` · HEAD `003dfe7`_
+_Updated 2026-08-18 21:02 UTC · branch `feat/karvansara-edge` · HEAD `cfbcb3e`_
 
 **Status:** Idle
-**Stage:** KS11 — Chapar - the remote surface: profiles, onboarding, evidence on demand · attempts used 0 · working ▸ KS11.2
-**Checkpoints:** 1/24 done · **Sessions run:** 2 · **Cost:** $15.3812 (agent $15.3716 + gates $0.0096) · **Tokens:** 328,319 in / 112,062 out
+**Stage:** KS11 — Chapar - the remote surface: profiles, onboarding, evidence on demand · attempts used 0
+**Checkpoints:** 5/24 done · **Sessions run:** 5 · **Cost:** $61.3734 (agent $61.3367 + gates $0.0367) · **Tokens:** 1,007,080 in / 400,393 out
+**Confirmed phases:** KS11
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| KS11 | Chapar - the remote surface: profiles, onboarding, evidence on demand | ██░░░░░░░░ 1/5 | **← active** |
+| KS11 | Chapar - the remote surface: profiles, onboarding, evidence on demand | ██████████ 5/5 | confirmed ✓ |
 | KS7 | Platform catch-up - posture, hooks, usage, lifecycle, context economics | ░░░░░░░░░░ 0/5 | todo |
 | KS6 | Quality lane - hygiene that buys design | ░░░░░░░░░░ 0/4 | todo |
 | KS4 | Verification that can't be gamed | ░░░░░░░░░░ 0/5 | todo |
 | KS8 | Interop - the run as a readable artifact (cut-first) | ░░░░░░░░░░ 0/2 | todo |
 | KS12 | Ship edge - close the era | ░░░░░░░░░░ 0/3 | todo |
 
-<details><summary>KS11 — Chapar - the remote surface: profiles, onboarding, evidence on demand (1/5)</summary>
+<details> ✅<summary>KS11 — Chapar - the remote surface: profiles, onboarding, evidence on demand (5/5)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| KS11.1 | The messenger seam: composition, chat profiles and evidence browsing extracted channel-agnostic; TelegramService becomes the transport adapter; golden replay proves current pushes byte-identical through the seam; a fake channel drives the full surface in tests; an architecture test forbids Telegram types outside the adapter | ✅ DONE | - |
-| KS11.2 | Profiles admin and observer, per chat: old-shape allowedChatIds plans behave byte-identically (pinned); an unknown profile string is refused by name at plan load; the observer surface is closed to status/tasks/progress/evidence/daily, a control or inject attempt refused by name - proven by an exhaustive command-by-profile matrix test | ⬜ TODO | - |
-| KS11.3 | Onboarding + the push grammar: run start and /start post a per-profile onboarding message (what the run is, what will be pushed, what this chat may ask); every push type recomposed to headline / proof / telemetry with money and tokens in monospace; goldens pin both profiles' renderings; a checkpoint push reads standalone | ⬜ TODO | - |
-| KS11.4 | Evidence on demand: /evidence lists checkpoints with evidence, /evidence with an id sends the artifact (document upload for files, chunked text otherwise) with size caps and a per-chat rate limit; an observer pulls a real evidence artifact end-to-end in the rig; the clip constants no longer bound what a reader can reach | ⬜ TODO | - |
-| KS11.5 | Metrics on demand: /progress /money /tokens answer with figures that cross-check against status and money on the same run.db to the cent (billed money only, no price table in the diff); the daily digest re-rendered in the same grammar, golden pinned | ⬜ TODO | - |
+| KS11.1 | The messenger seam: composition, chat profiles and evidence browsing extracted channel-agnostic; TelegramService becomes the transport adapter; golden replay proves current pushes byte-identical through the seam; a fake channel drives the full surface in tests; an architecture test forbids Telegram types outside the adapter | ✅ DONE | [`7e64866`](https://github.com/shaahink/conductor/commit/7e64866) |
+| KS11.2 | Profiles admin and observer, per chat: old-shape allowedChatIds plans behave byte-identically (pinned); an unknown profile string is refused by name at plan load; the observer surface is closed to status/tasks/progress/evidence/daily, a control or inject attempt refused by name - proven by an exhaustive command-by-profile matrix test | ✅ DONE | [`1471ef9`](https://github.com/shaahink/conductor/commit/1471ef9) |
+| KS11.3 | Onboarding + the push grammar: run start and /start post a per-profile onboarding message (what the run is, what will be pushed, what this chat may ask); every push type recomposed to headline / proof / telemetry with money and tokens in monospace; goldens pin both profiles' renderings; a checkpoint push reads standalone | ✅ DONE | [`1471ef9`](https://github.com/shaahink/conductor/commit/1471ef9) |
+| KS11.4 | Evidence on demand: /evidence lists checkpoints with evidence, /evidence with an id sends the artifact (document upload for files, chunked text otherwise) with size caps and a per-chat rate limit; an observer pulls a real evidence artifact end-to-end in the rig; the clip constants no longer bound what a reader can reach | ✅ DONE | [`df5048e`](https://github.com/shaahink/conductor/commit/df5048e) |
+| KS11.5 | Metrics on demand: /progress /money /tokens answer with figures that cross-check against status and money on the same run.db to the cent (billed money only, no price table in the diff); the daily digest re-rendered in the same grammar, golden pinned | ✅ DONE | [`d6be308`](https://github.com/shaahink/conductor/commit/d6be308) |
 
 </details>
 
@@ -89,6 +90,21 @@ _Updated 2026-08-18 18:56 UTC · branch `feat/karvansara-edge` · HEAD `003dfe7`
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | KS11 | Deliver | 1 | 08-18 18:09 | 0:03 | Interrupted |  | 0 |  |  |  | 70,721/104 |
 | 2 | KS11 | Resume | 1r1 | 08-18 18:17 | 0:37 | Advanced | KS11.1 | 4 | engine-fast:OK · face-fast:OK | $15.3716 | $0.0096 | 257,598/111,958 |
+| 3 | KS11 | Deliver | 1 | 08-18 18:56 | 0:49 | Advanced | KS11.2 KS11.3 | 3 | engine-fast:OK · face-fast:OK | $21.1372 | $0.0090 | 278,057/137,875 |
+| 4 | KS11 | Deliver | 1 | 08-18 19:47 | 0:26 | Advanced | KS11.4 | 4 | engine-fast:OK · face-fast:OK | $11.2847 | $0.0089 | 192,517/70,099 |
+| 5 | KS11 | Deliver | 1 | 08-18 20:15 | 0:39 | Advanced | KS11.5 | 6 | engine-fast:OK · face-fast:OK | $13.5431 | $0.0092 | 208,187/80,357 |
+
+## Money
+
+_What this run has cost, from its own `costs` rows. Same numbers as `conductor money`._
+
+| scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
+|---|---|---|---|---|---|---|---|
+| **run total** | 5 | 83.9M | 98.4% | $61.37 | 5 | 16.8M | $12.27 |
+| stage KS11 | 5 | 83.9M | 98.4% | $61.37 | 5 | 16.8M | $12.27 |
+| 2026-08 | 5 | 83.9M | 98.4% | $61.37 | 5 | 16.8M | $12.27 |
+
+_Where the money goes: agent $61.34 (100%) · gate $0.04 (0%) · blended $0.73/M tokens._
 
 ## Timeline
 
@@ -103,6 +119,30 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-18 19:17:04  • session #2 KS11 Resume started (attempt 1/10)
 08-18 19:56:04  ▪ gate engine-fast pass [session]  (58.0s)
 08-18 19:56:04  ▪ gate face-fast pass [session]  (38.0s)
+08-18 19:56:05  • session #2 KS11 → Advanced · done KS11.1 · 4 commit(s)  (39m00s)
+08-18 19:56:06  • session #3 KS11 Deliver started (attempt 1/10)
+08-18 20:47:20  ▪ gate engine-fast pass [session]  (1m03s)
+08-18 20:47:20  ▪ gate face-fast pass [session]  (27.1s)
+08-18 20:47:20  • session #3 KS11 → Advanced · done KS11.2,KS11.3 · 3 commit(s)  (51m14s)
+08-18 20:47:21  • session #4 KS11 Deliver started (attempt 1/10)
+08-18 21:15:41  ▪ gate engine-fast pass [session]  (57.2s)
+08-18 21:15:41  ▪ gate face-fast pass [session]  (31.5s)
+08-18 21:15:41  • session #4 KS11 → Advanced · done KS11.4 · 4 commit(s)  (28m19s)
+08-18 21:15:43  • session #5 KS11 Deliver started (attempt 1/10)
+08-18 21:56:18  ▪ gate engine-fast pass [session]  (59.6s)
+08-18 21:56:18  ▪ gate face-fast pass [session]  (32.6s)
+08-18 21:56:19  • session #5 KS11 → Advanced · done KS11.5 · 6 commit(s)  (40m35s)
+08-18 22:00:10  ▪ gate engine-fast pass [phase]  (0.0s)
+08-18 22:00:10  ▪ gate face-fast pass [phase]  (0.0s)
+08-18 22:00:10  ▪ gate engine-full pass [phase]  (3m20s)
+08-18 22:00:10  ▪ gate face-full pass [phase]  (25.6s)
+08-18 22:00:10  § owner approval requested — KS11
+08-18 22:02:47  § owner approval granted — KS11
+08-18 22:02:47  ✓ checkpoint KS11.1 confirmed
+08-18 22:02:47  ✓ checkpoint KS11.2 confirmed
+08-18 22:02:47  ✓ checkpoint KS11.3 confirmed
+08-18 22:02:47  ✓ checkpoint KS11.4 confirmed
+08-18 22:02:47  ✓ checkpoint KS11.5 confirmed
 ```
 
 ## Health
@@ -110,8 +150,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 2 · retries 0 (0 %) · overall Ok
-✓ no health concerns detected
+sessions 5 · retries 0 (0 %) · overall Warn
+⚠ [context-saturation] session #3: 28,433,638 context tokens (≥ 20,000,000)
 ```
 
 ## Repo
@@ -120,7 +160,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvansara-edge
-working tree: clean
+working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
 ```
 
 ### Commits by session
@@ -130,6 +170,22 @@ working tree: clean
   - [`ffbff68`](https://github.com/shaahink/conductor/commit/ffbff68) test(ks11): the fake channel and the boundary that keeps the seam a boundary
   - [`897e295`](https://github.com/shaahink/conductor/commit/897e295) refactor(ks11): the messenger seam - composition, routing and browsing leave the transport
   - [`7e64866`](https://github.com/shaahink/conductor/commit/7e64866) test(ks11): the pre-seam goldens - fifteen cases of what the wire carries today
+- **s3 (KS11 Deliver)** — 3 commit(s):
+  - [`278602d`](https://github.com/shaahink/conductor/commit/278602d) feat(ks11): onboarding per profile, and pushes that read like evidence
+  - [`7641396`](https://github.com/shaahink/conductor/commit/7641396) docs(tracker): KS11.2 - the handoff, pointing KS11.3 at the browse list
+  - [`1471ef9`](https://github.com/shaahink/conductor/commit/1471ef9) feat(ks11): chat profiles - one gate, and the closed observer surface
+- **s4 (KS11 Deliver)** — 4 commit(s):
+  - [`192d287`](https://github.com/shaahink/conductor/commit/192d287) docs(tracker): KS11.4 - the handoff, pointing KS11.5 at the same six goldens
+  - [`88ec389`](https://github.com/shaahink/conductor/commit/88ec389) docs(ks11): /evidence in operating.md, and CH-6's caveat said out loud
+  - [`cb84b1e`](https://github.com/shaahink/conductor/commit/cb84b1e) test(ks11): rebaseline the six ask-line goldens for /evidence
+  - [`df5048e`](https://github.com/shaahink/conductor/commit/df5048e) feat(ks11): evidence on demand - a reader asks, and the artifact arrives
+- **s5 (KS11 Deliver)** — 6 commit(s):
+  - [`cfbcb3e`](https://github.com/shaahink/conductor/commit/cfbcb3e) docs(ks11): correct the wire rig's per-checkpoint figure in the KS11.5 evidence
+  - [`acfc042`](https://github.com/shaahink/conductor/commit/acfc042) test(ks11): the full suite behind the KS11.5 claim - 2787/2787, nothing red
+  - [`63a1bdb`](https://github.com/shaahink/conductor/commit/63a1bdb) docs(tracker): KS11.5 - the handoff, and a stage that is complete
+  - [`2230ccc`](https://github.com/shaahink/conductor/commit/2230ccc) docs(ks11): the KS11.5 evidence - three paths to one figure, and the wire
+  - [`7d461bb`](https://github.com/shaahink/conductor/commit/7d461bb) test(ks11): rebaseline the goldens KS11.5 moved - the ask line, and the digest
+  - [`d6be308`](https://github.com/shaahink/conductor/commit/d6be308) feat(ks11): the figures tier - /progress, /money, /tokens, and a digest that reads like a message
 
 ## Phase handovers (audit)
 
@@ -152,34 +208,35 @@ working tree: clean
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> **messenger seam extracted, proven byte-identical, boundary enforced with no allowlist**
-> - KS11.1 done: 15 pre-seam goldens pass unchanged through the seam, zero diff to the golden files
-> - fake channel drives the whole surface in 17 tests; 3 boundary rules, incl. ITelegramService renamed to IRunNotifier across 37 files
-> - full suite 2690/2691; the one red predated this session (CHANGELOG [Unreleased] gone since KS10.3) and is now fixed
+> **KS11.5 landed - /progress /money /tokens and the digest, figures cross-checked to the cent**
+> - Money and tokens read through MoneySection.Read, the same RunArchive+MoneyAnalyzer path conductor money uses; cross-check proven three ways including SQLite's own SUM
+> - Live wire proof: an observer asks /money and /tokens through the Bot API stub and the departing message carries the archive's figures; /pause from the same chat still refused
+> - Full suite 2787/2787 zero failures; seven goldens rebaselined in their own commit, six of them the ask line alone
 >
-> artefacts: 7e64866, 897e295, ffbff68, 003dfe7, src/Conductor.Core/Integrations/Messaging/, tests/Conductor.Tests/testdata/ks11/
+> artefacts: src/Conductor.Core/Integrations/Messaging/MessageComposer.Metrics.cs, MessageComposer.Views.cs, CommandRouter.cs, SurfaceCommands.cs, tests/Conductor.Tests/KS11_5MetricsOnDemandTests.cs, KS11_5OnWireTests.cs, tests/Conductor.Tests/testdata/ks11-5/, docs/operating.md
 >
-> evidence: .conductor/evidence/KS11/ks11-1-messenger-seam.md
+> evidence: .conductor/evidence/KS11/KS11.5-metrics-on-demand.md, .conductor/evidence/KS11/ks11-5-full-suite.txt
 >
-> gaps: ChatProfile defined but every chat still resolves Admin - KS11.2 owns plan-read profiles and the observer matrix; WatchRemote still names TelegramService outside the seam, recorded in the boundary test's list rather than fixed
+> gaps: none — KS11 complete, next is the ownerGate park then KS12
 
 ## Tracker handoff
 
 ```
-last: KS11.1 DONE (ffbff68). The messenger seam is real: Messaging/{IMessageChannel, MessageComposer
-  (+.Views), CommandRouter, RemoteSurface}; TelegramService is now the transport adapter. And
-  byte-identical is MEASURED - 15 goldens generated by the pre-seam engine (7e64866) pass unchanged.
-stage: KS11 in flight, 1 of 5 done.
-gate: full suite 2690/2691 at 897e295; the one red was CHANGELOG missing [Unreleased] since KS10.3 -
-  unrelated to the seam, now written, SC8_2Versioning 3/3 after it.
-next: **KS11.2** - profiles. CommandRouter.Route already TAKES a ChatProfile and ignores it: that is
-  the one place to enforce CH-3, and the command-by-profile matrix belongs against the router (pure,
-  no channel, no HTTP) rather than TelegramService. TelegramService.ProfileFor(chatId) is the stub
-  that always answers Admin. TelegramConfig still has only allowedChatIds; no `chats` block yet.
-trap: the ks11 goldens came from an OLD-SHAPE allowedChatIds plan, so keeping them green IS KS11.2's
-  back-compat proof - never regenerate them. Scratch bot and scratch chats only for live proofs.
+last: KS11.5 DONE (d6be308 feature+tests+docs, 7d461bb goldens, 2230ccc evidence). /progress /money
+  /tokens answer, and none of the figures is computed in the composer: it calls MoneySection.Read,
+  which is the four calls conductor money makes in the same order, so the cross-check is by
+  construction. Proven three ways - analyzer, rendered answer, SQLite SUM - plus an observer asking
+  /money and /tokens through the Bot API stub. The digest now reads in the CH-5 grammar.
+stage: KS11 COMPLETE - all five checkpoints claimed. The stage parks on its ownerGate next; the park
+  is the owner's window to reinstall the mid-era engine for the BookToCourse run, not an error.
+gate: scoped suites 236/236 (KS11_*, Telegram, Messaging, Notify, Money, K5_2, K4_3); full suite
+  2787/2787, zero failures - bug #49's parallel-load flake did not fire this run.
+next: KS12 - the record (ARCHITECTURE.md + docs/dev), then the field-guide harvest re-run. Nothing
+  before KS12 touches C:/code/conductor-site, and work there is a branch + PR, never a push to main.
+trap: a python heredoc replacement containing a backslash-b writes a literal BACKSPACE into the C#
+  file - the code looks right in every editor and the regex silently never matches. Use raw strings.
 ```

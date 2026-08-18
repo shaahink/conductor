@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using Conductor.Core.Events;
@@ -57,7 +57,12 @@ public sealed class AgentSession : IDisposable
     public Conductor.Core.Events.ContextWindowStats Context => _stream.Context;
     public bool WasKilled { get; private set; }
 
-    private AgentSession(Process proc, StreamWriter raw, IAgentProvider provider, IEventSink? eventSink, string? conductorSessionId, IDisposable? supervisorTrack)
+    /// <summary>KS7.1: every tool call the permission posture refused during this session, in order.
+    /// Empty on a session with no posture, and empty on a posture whose rules never matched — the two
+    /// are distinguished by the run log's posture line, which states the rules that were applied.</summary>
+    public IReadOnlyList<ToolRefusal> Refusals => _stream.Refusals;
+
+    private AgentSession(Process proc, StreamWriter raw, IAgentProvider provider, IEventSink? eventSink, string? conductorSessionId, IDisposable? supervisorTrack, string? stageId = null)
     {
         _proc = proc;
         _raw = raw;
@@ -80,6 +85,20 @@ public sealed class AgentSession : IDisposable
         {
             _events.Enqueue(new AgentEvent { Kind = "tool", Text = text, Tool = call });
             Interlocked.Exchange(ref _lastToolCallTicks, DateTime.UtcNow.Ticks);
+        },
+        // KS7.1: a refusal reaches the event log the moment the wire reports it, stamped with the
+        // session that hit it, so `run_query` can answer "did the deny list ever bite" without
+        // re-parsing a transcript. It deliberately does NOT stamp the tool clock — see EmitRefusal.
+        onRefusal: refusal =>
+        {
+            eventSink?.Emit(new ToolRefused
+            {
+                SessionId = conductorSessionId,
+                StageId = stageId,
+                ToolName = refusal.ToolName,
+                Message = refusal.Message,
+                ReasonType = refusal.ReasonType,
+            });
         });
     }
 
@@ -118,6 +137,11 @@ public sealed class AgentSession : IDisposable
         // W2.1: orchestrator-supplied flags (claude's --mcp-config) go AFTER the plan's own template so
         // a plan can never accidentally position {prompt} behind them.
         if (extraArgs is { Count: > 0 }) args.AddRange(extraArgs);
+        // KS7.1: and the posture gets the LAST word on the bypass flag. Stripping here rather than at
+        // the plan level covers every session kind through one seam — work, fix, audit, advisor — so a
+        // plan cannot declare a restricted posture and still hand one class of session the escape
+        // hatch. A posture that names no mode strips nothing: an existing plan is untouched.
+        args = PermissionPosture.StripBypass(args, cfg.Permissions);
 
         var psi = new ProcessStartInfo(cfg.Command)
         {
@@ -142,7 +166,7 @@ public sealed class AgentSession : IDisposable
         var raw = new StreamWriter(rawLogPath, append: false, Encoding.UTF8) { AutoFlush = true };
 
         var proc = new Process { StartInfo = psi };
-        var session = new AgentSession(proc, raw, AgentProviderFactory.Create(cfg), eventSink, conductorSessionId, supervisorTrack: null);
+        var session = new AgentSession(proc, raw, AgentProviderFactory.Create(cfg), eventSink, conductorSessionId, supervisorTrack: null, stageId: stageId);
         proc.OutputDataReceived += (_, e) => session.OnLine(e.Data, stderr: false);
         proc.ErrorDataReceived += (_, e) => session.OnLine(e.Data, stderr: true);
         proc.Start();

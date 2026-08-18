@@ -50,6 +50,23 @@ public sealed class ClaudeProvider : IAgentProvider
                 // (`{"subtype":"api_retry","error_status":401,"error":"authentication_failed"}`).
                 // Flattening it to the bare subtype threw that away — session #13 retried a dead
                 // OAuth token ten times and the run only ever saw the word "api_retry".
+                // KS7.1: the posture's own event. The CLI reports a refused call as a system envelope
+                // carrying the tool, the tool_use_id and its sentence — measured on 2.1.235, not read
+                // off a doc. Flattening it to the bare subtype (what the line below does for every
+                // other system event) threw away the only field that says WHAT was refused, so a run
+                // could not tell "the deny list bit twice" from "the deny list never loaded".
+                if (string.Equals(subtype, "permission_denied", StringComparison.Ordinal))
+                {
+                    var toolName = root.TryGetProperty("tool_name", out var tn) && tn.ValueKind == JsonValueKind.String
+                        ? tn.GetString() ?? "tool" : "tool";
+                    var reason = root.TryGetProperty("decision_reason_type", out var dr) && dr.ValueKind == JsonValueKind.String
+                        ? dr.GetString() : null;
+                    var why = root.TryGetProperty("message", out var pm) && pm.ValueKind == JsonValueKind.String
+                        ? pm.GetString() ?? "" : "";
+                    state.EmitRefusal(new ToolRefusal(toolName, ProviderText.Trunc(why, 220), reason));
+                    break;
+                }
+
                 var errStatus = root.TryGetProperty("error_status", out var es) && es.ValueKind == JsonValueKind.Number
                     ? es.GetInt32() : (int?)null;
                 var errText = root.TryGetProperty("error", out var er) && er.ValueKind == JsonValueKind.String

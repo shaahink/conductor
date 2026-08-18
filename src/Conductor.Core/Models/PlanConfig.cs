@@ -221,6 +221,17 @@ public sealed class PlanConfig
         else if (!Directory.Exists(Repo)) errors.Add($"plan.repo '{Repo}' does not exist — create the dir or correct the path");
         else if (!File.Exists(TrackerPath)) errors.Add($"plan.tracker '{Tracker}' not found at {TrackerPath} — create the file or correct path/repo");
 
+        // KS7.1: a permission mode that is not one of the CLI's six spellings is refused BY NAME at
+        // plan load, plan-wide and per stage. It cannot be allowed to fall through: the CLI ignores an
+        // unknown --permission-mode value, so a typo yields a run that reports a posture it is not
+        // under — and print mode already makes an unloaded profile invisible.
+        if (Agent.Permissions?.ModeRefusal() is { } planModeError) errors.Add(planModeError);
+        foreach (var s in Stages)
+        {
+            if (s.Agent?.Permissions?.ModeRefusal() is { } stageModeError)
+                errors.Add($"stage '{s.Id}': {stageModeError}");
+        }
+
         if (Stages.Count == 0) errors.Add("plan.stages is empty — define at least one stage with id, title, and sessions");
         else
         {

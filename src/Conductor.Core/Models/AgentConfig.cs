@@ -31,6 +31,11 @@ public sealed class AgentConfig
     /// field bug. Set false when a run must not depend on the local setup at all; conductor-tasks is
     /// wired either way.</summary>
     public bool? InheritMcpServers { get; set; }
+    /// <summary>KS7.1: the permission posture this agent runs under — the deny rules that bound its
+    /// blast radius, and the <c>--permission-mode</c> it is launched with. Null (the default) means
+    /// the plan's own <see cref="Args"/> decide exactly as they did before this field existed, so no
+    /// existing plan changes behaviour by upgrading.</summary>
+    public PermissionsConfig? Permissions { get; set; }
     /// <summary>Merges an optional override into this config, returning a new instance.
     /// A field whose value equals the C# default (e.g. "claude" for Command) is treated as unset
     /// and falls back to the base value — so a JSON override like {"systemPrompt":"x"} won't
@@ -50,6 +55,7 @@ public sealed class AgentConfig
             Model = o.Model ?? Model,
             Temperature = o.Temperature ?? Temperature,
             InheritMcpServers = o.InheritMcpServers ?? InheritMcpServers,
+            Permissions = Permissions == null ? o.Permissions : Permissions.Merge(o.Permissions),
         };
         return m;
     }

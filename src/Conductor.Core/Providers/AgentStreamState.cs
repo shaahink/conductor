@@ -6,8 +6,10 @@ namespace Conductor.Core.Providers;
 public sealed class AgentStreamState(
     Action<string, string> emit,
     Action<long, long, long, long, decimal>? onTokenDelta = null,
-    Action<ToolCall, string>? onTool = null)
+    Action<ToolCall, string>? onTool = null,
+    Action<ToolRefusal>? onRefusal = null)
 {
+    private readonly List<ToolRefusal> _refusals = new();
     private readonly Lock _lock = new();
     private readonly StringBuilder _buffer = new();
     private readonly HashSet<string> _countedMessageIds = new(StringComparer.Ordinal);
@@ -25,6 +27,25 @@ public sealed class AgentStreamState(
     {
         if (onTool != null) onTool(tool, text);
         else emit("tool", text);
+    }
+
+    /// <summary>KS7.1 — the permission posture refused a tool call. Kept as a THIRD channel beside
+    /// <c>tool</c> for the same reason that one exists: a refusal is not a tool call that happened,
+    /// and folding it into the tool stream would make the watchdog's "last tool call" clock tick on a
+    /// session that is being blocked rather than working. The line still reaches the transcript on
+    /// its own <c>refusal</c> kind, so a run with no refusal sink loses nothing readable.</summary>
+    public void EmitRefusal(ToolRefusal refusal)
+    {
+        lock (_lock) _refusals.Add(refusal);
+        emit("refusal", refusal.Line);
+        onRefusal?.Invoke(refusal);
+    }
+
+    /// <summary>Every refusal this session hit, in order. The count is what a session report quotes;
+    /// the list is what the evidence file carries.</summary>
+    public IReadOnlyList<ToolRefusal> Refusals
+    {
+        get { lock (_lock) return _refusals.ToArray(); }
     }
 
     public void EmitTokenDelta(long input, long output, long reasoning, long cacheRead, decimal costUsd)

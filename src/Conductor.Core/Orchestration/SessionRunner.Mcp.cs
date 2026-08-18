@@ -1,7 +1,8 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
 using Conductor.Core.Lanes;
+using Conductor.Core.Providers;
 using Conductor.Models;
 
 namespace Conductor.Core.Orchestration;
@@ -134,27 +135,39 @@ public sealed partial class SessionRunner
     /// which one the child actually reads is decided by how it is launched (env var vs CLI flag), and
     /// writing both keeps that decision at the launch site instead of inside the config writer.</summary>
     internal sealed record McpWiring(string OpencodeConfigPath, string ClaudeConfigPath, string? ClaudeSettingsPath = null);
-
-    /// <summary>B13.3: writes the per-session claude settings file carrying the budget hook, and returns
-    /// its path (null when the session has no token ceiling, so no notice can ever be due). Written
-    /// beside the MCP configs and deleted with them.</summary>
-    private string? WriteBudgetHookSettings()
+    /// <summary>B13.3 + KS7.1: writes the per-session claude settings file conductor owns, and returns
+    /// its path. It carries two independent sections and is written when EITHER is due — the budget
+    /// hook (when the session has a token ceiling, so a soft break can be delivered) and the
+    /// permission posture (when the plan configures one). Null when neither applies, so a plan that
+    /// asks for nothing still gets no <c>--settings</c> flag at all. Written beside the MCP configs
+    /// and deleted with them.</summary>
+    /// <remarks>
+    /// The file is named for what it is rather than for the first thing that needed it: it stopped
+    /// being "the budget settings" the moment posture moved in, and a settings file whose name says
+    /// budget while it also decides blast radius is the kind of half-true label this project has
+    /// been burned by before.
+    /// </remarks>
+    private string? WriteSessionSettings(StageConfig stage)
     {
-        if (_ctx.EffectiveMaxSessionTokens is null) return null;
+        var permissions = PermissionPosture.SettingsFragment(_ctx.Plan.ResolveAgent(stage).Permissions);
         var conductorExe = Environment.ProcessPath;
-        if (string.IsNullOrEmpty(conductorExe) || !File.Exists(conductorExe)) return null;
+        var wantsHook = _ctx.EffectiveMaxSessionTokens is not null
+            && !string.IsNullOrEmpty(conductorExe) && File.Exists(conductorExe);
+        if (!wantsHook && permissions is null) return null;
         try
         {
-            // Forward slashes, on Windows, deliberately. The agent CLI runs a hook command through a
-            // shell, and that shell reads `\` as an escape: the same command with native separators
-            // parses to a mangled path, the hook silently never runs, and the only symptom is a
-            // cooperative rail that appears wired and does nothing — which is the exact failure this
-            // whole change exists to remove. Windows accepts forward slashes in both positions.
-            var exe = conductorExe.Replace('\\', '/');
-            var stateDir = _ctx.Plan.StateDir.Replace('\\', '/');
-            var settings = new
+            var settings = new Dictionary<string, object>(StringComparer.Ordinal);
+            if (wantsHook)
             {
-                hooks = new Dictionary<string, object>(StringComparer.Ordinal)
+                // Forward slashes, on Windows, deliberately. The agent CLI runs a hook command through
+                // a shell, and that shell reads `\` as an escape: the same command with native
+                // separators parses to a mangled path, the hook silently never runs, and the only
+                // symptom is a cooperative rail that appears wired and does nothing — which is the
+                // exact failure this whole change exists to remove. Windows accepts forward slashes
+                // in both positions.
+                var exe = conductorExe!.Replace('\\', '/');
+                var stateDir = _ctx.Plan.StateDir.Replace('\\', '/');
+                settings["hooks"] = new Dictionary<string, object>(StringComparer.Ordinal)
                 {
                     ["PostToolUse"] = new[]
                     {
@@ -172,15 +185,16 @@ public sealed partial class SessionRunner
                             },
                         },
                     },
-                },
-            };
-            var path = Path.Combine(_ctx.Plan.StateDir, "settings.budget.json");
+                };
+            }
+            if (permissions is not null) settings["permissions"] = permissions;
+            var path = Path.Combine(_ctx.Plan.StateDir, "settings.session.json");
             File.WriteAllText(path, JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true }));
             return path;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _ctx.Log($"B13.3: could not write the budget hook settings: {ex.Message}");
+            _ctx.Log($"B13.3/KS7.1: could not write the session settings: {ex.Message}");
             return null;
         }
     }
@@ -255,7 +269,7 @@ public sealed partial class SessionRunner
             var claudePath = Path.Combine(_ctx.Plan.StateDir, "mcp-config.claude.json");
             await File.WriteAllTextAsync(opencodePath, JsonSerializer.Serialize(opencodeConfig, opts), ct).ConfigureAwait(false);
             await File.WriteAllTextAsync(claudePath, JsonSerializer.Serialize(claudeConfig, opts), ct).ConfigureAwait(false);
-            return new McpWiring(opencodePath, claudePath, WriteBudgetHookSettings());
+            return new McpWiring(opencodePath, claudePath, WriteSessionSettings(stage));
         }
         catch (Exception ex)
         {
@@ -302,6 +316,13 @@ public sealed partial class SessionRunner
 
     internal static IReadOnlyList<string> McpArgsFor(string providerName, IReadOnlyList<string>? plannedArgs,
         string claudeConfigPath, string? budgetSettingsPath)
+        => McpArgsFor(providerName, plannedArgs, claudeConfigPath, budgetSettingsPath, null);
+
+    /// <summary>KS7.1 overload: the same flags plus the permission mode the posture asks for. Kept as
+    /// an overload rather than a widened signature so the two existing call shapes stay valid and the
+    /// posture is visibly an addition, not a rewrite of the MCP wiring.</summary>
+    internal static IReadOnlyList<string> McpArgsFor(string providerName, IReadOnlyList<string>? plannedArgs,
+        string claudeConfigPath, string? budgetSettingsPath, PermissionsConfig? permissions)
     {
         if (!string.Equals(providerName, "claude", StringComparison.Ordinal)) return [];
         var args = new List<string>();
@@ -317,6 +338,9 @@ public sealed partial class SessionRunner
         if (budgetSettingsPath is { Length: > 0 }
             && (plannedArgs == null || !plannedArgs.Any(a => a.Contains("--settings", StringComparison.Ordinal))))
             args.AddRange(["--settings", budgetSettingsPath]);
+        // KS7.1: and the same rule a third time for the permission mode — a plan that already names
+        // one on its own command line keeps it.
+        args.AddRange(PermissionPosture.ExtraArgs(permissions, plannedArgs));
         return args;
     }
 

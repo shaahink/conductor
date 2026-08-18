@@ -18,13 +18,14 @@ next: KS12 - the record (ARCHITECTURE.md + docs/dev), then the field-guide harve
 trap: a python heredoc replacement containing a backslash-b writes a literal BACKSPACE into the C#
   file - the code looks right in every editor and the regex silently never matches. Use raw strings.
 
+
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 24 |
 | Done | 0 |
-| Claimed (unconfirmed) | 4 |
+| Claimed (unconfirmed) | 5 |
 
 ## Checkpoints
 
@@ -39,7 +40,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | KS11.2 | Profiles admin and observer, per chat: old-shape allowedChatIds plans behave byte-identically (pinned); an unknown profile string is refused by name at plan load; the observer surface is closed to status/tasks/progress/evidence/daily, a control or inject attempt refused by name - proven by an exhaustive command-by-profile matrix test | DONE | 1471ef9 | .conductor/evidence/KS11/KS11.2-chat-profiles.md |
 | KS11.3 | Onboarding + the push grammar: run start and /start post a per-profile onboarding message (what the run is, what will be pushed, what this chat may ask); every push type recomposed to headline / proof / telemetry with money and tokens in monospace; goldens pin both profiles' renderings; a checkpoint push reads standalone | DONE | 1471ef9 | .conductor/evidence/KS11/KS11.3-onboarding-and-grammar.md |
 | KS11.4 | Evidence on demand: /evidence lists checkpoints with evidence, /evidence with an id sends the artifact (document upload for files, chunked text otherwise) with size caps and a per-chat rate limit; an observer pulls a real evidence artifact end-to-end in the rig; the clip constants no longer bound what a reader can reach | DONE | df5048e | .conductor/evidence/KS11/KS11.4-evidence-on-demand.md |
-| KS11.5 | Metrics on demand: /progress /money /tokens answer with figures that cross-check against status and money on the same run.db to the cent (billed money only, no price table in the diff); the daily digest re-rendered in the same grammar, golden pinned | TODO | - | - |
+| KS11.5 | Metrics on demand: /progress /money /tokens answer with figures that cross-check against status and money on the same run.db to the cent (billed money only, no price table in the diff); the daily digest re-rendered in the same grammar, golden pinned | DONE | d6be308 | .conductor/evidence/KS11/KS11.5-metrics-on-demand.md |
 
 ### KS7 — Platform catch-up - posture, hooks, usage, lifecycle, context economics
 
