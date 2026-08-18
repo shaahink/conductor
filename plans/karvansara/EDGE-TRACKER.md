@@ -2,22 +2,21 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, ≤ 12 lines, no history)
 
-last: KS11.5 DONE (d6be308 feature+tests+docs, 7d461bb goldens, 2230ccc evidence). /progress /money
-  /tokens answer, and none of the figures is computed in the composer: it calls MoneySection.Read,
-  which is the four calls conductor money makes in the same order, so the cross-check is by
-  construction. Proven three ways - analyzer, rendered answer, SQLite SUM - plus an observer asking
-  /money and /tokens through the Bot API stub. The digest now reads in the CH-5 grammar.
-stage: KS11 COMPLETE - all five checkpoints claimed. The stage parks on its ownerGate next; the park
-  is the owner's window to reinstall the mid-era engine for the BookToCourse run, not an error.
-gate: scoped suites 236/236 (KS11_*, Telegram, Messaging, Notify, Money, K5_2, K4_3); full suite
-  2787/2787, zero failures - bug #49's parallel-load flake did not fire this run.
-next: KS12 - the record (ARCHITECTURE.md + docs/dev), then the field-guide harvest re-run. Nothing
-  before KS12 touches C:/code/conductor-site, and work there is a branch + PR, never a push to main.
-trap: a python heredoc replacement containing a backslash-b writes a literal BACKSPACE into the C#
-  file - the code looks right in every editor and the regex silently never matches. Use raw strings.
-
+last: KS7.1 DONE (0c3380f posture+refusal telemetry, efe1e69 the claim-path fix, 4bc1fff evidence).
+  A stage ran GREEN under the restricted profile on a scratch rig - gates green, newly DONE [R1.1],
+  six refusals telemetered on three surfaces. agent.permissions {mode,allow,deny} is real config.
+stage: KS7 - 7.2 hooks, 7.3 cost/OTel, 7.4 lifecycle, 7.5 context economics are still TODO.
+gate: scoped 213/213 (KS7_1, Architecture, SF7_1Docs, PlanConfig, BudgetRail, Provider, AgentConfig,
+  ResolveArgs, Transcript). Two suites went red first and were FIXED, not relaxed - the docs gate
+  because agent.permissions was undocumented, the ratchet because PlanConfig.cs passed 500 lines.
+next: KS7.2. Every checkpoint still opens by verifying its flags against the installed claude
+  (2.1.235) - the six --permission-mode spellings and the settings keys are already verified in
+  .conductor/evidence/KS7/ks7-1-posture.md, do not re-probe those.
+trap: a probe that only runs READ-ONLY shell commands will tell you print mode approves everything;
+  it does not. Bug #51 is open and worth reading before any posture work: the CLI gate refuses
+  git add/git commit too, so a plan whose delivery is commits must allowlist them.
 
 ## Baseline numbers (from run.db)
 
