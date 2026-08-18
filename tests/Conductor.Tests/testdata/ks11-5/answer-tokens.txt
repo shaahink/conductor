@@ -1,0 +1,8 @@
+<b>Metrics rig — tokens</b>
+
+3.5M tokens over 3 sessions
+Cache reads 3.5M (97.5%) — the prompt being re-sent, charged at the cache rate.
+Input 38k · output 51.5k
+1.8M per delivered checkpoint
+
+<code>progress: 2/4 checkpoints · KS11 2/3 · cost: $20.75 of $50.00 (42%, $29.25 left) · tokens 3.5M</code>

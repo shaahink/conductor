@@ -268,9 +268,11 @@ public sealed class KS11_4EvidenceOnDemandTests : IDisposable
         Assert.Contains("/evidence", SurfaceCommands.BrowseList, StringComparison.Ordinal);
         Assert.Contains("/evidence", SurfaceCommands.AskLine(ChatProfile.Observer, twoWay: false),
             StringComparison.Ordinal);
-        // /progress, /money and /tokens are still KS11.5's, and still answer silence rather than a
-        // promise — the flag is what keeps those two facts in step.
-        Assert.DoesNotContain("/money", SurfaceCommands.BrowseList, StringComparison.Ordinal);
+        // KS11.5 landed /progress, /money and /tokens, and the same flag is what put them in the
+        // list: every verb the list promises has a handler, which is the invariant, not the count.
+        foreach (var promised in SurfaceCommands.BrowseList.Split(", "))
+            Assert.True(SurfaceCommands.Find(promised)?.Implemented == true,
+                $"the ask-line promises {promised}, which has no handler");
     }
 
     // ────────────────────────────── the limiter itself ──────────────────────────────

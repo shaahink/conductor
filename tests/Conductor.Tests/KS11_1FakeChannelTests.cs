@@ -150,7 +150,8 @@ public sealed class KS11_1FakeChannelTests : IDisposable
     // KS11.3 / CH-4: /start answers with the chat's onboarding message now, not one static
     // sentence. The admin version opens by saying what this chat IS.
     [InlineData("/start", "the control surface for a conductor run")]
-    [InlineData("/daily", "Daily Digest")]
+    // KS11.5 / CH-5: the digest reads in the push grammar now — same answer, same chat, new header.
+    [InlineData("/daily", "daily digest")]
     [InlineData("/chat", "conductor chat")]
     public async Task Every_read_command_answers_the_chat_that_asked(string command, string expected)
     {

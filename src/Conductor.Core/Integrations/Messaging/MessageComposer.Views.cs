@@ -96,14 +96,21 @@ public sealed partial class MessageComposer
         return sb.ToString().TrimEnd();
     }
 
-    /// <summary>The once-a-day summary, and what <c>/daily</c> answers on demand.</summary>
+    /// <summary>The once-a-day summary, and what <c>/daily</c> answers on demand.
+    ///
+    /// <para>KS11.5 / CH-5: recomposed into the grammar every other message uses — a headline that
+    /// says where the run is, the day's work under it, a proof line carrying the gate verdict, and
+    /// the telemetry in monospace. It used to open with <c>Cost: $0.4242</c> and no progress, no cap
+    /// and no tokens at all: the one message a day a reader is guaranteed to see said less about the
+    /// run than every push around it.</para></summary>
     public string DailyDigestText()
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"<b>Conductor Daily Digest — {_plan.Name}</b>");
-        sb.AppendLine($"Status: <b>{_state.Status}</b> | Stage: {_state.CurrentStage ?? "-"}");
-        sb.AppendLine($"Sessions: {_state.SessionCounter} | Cost: ${_state.TotalCostUsd:0.0000}");
+        sb.AppendLine($"<b>{EscapeHtml(PlanName())} — daily digest</b>");
+        sb.AppendLine(EscapeHtml($"{_state.Status} · stage {StageLabel(_state.CurrentStage ?? "")} · "
+                               + $"{_state.SessionCounter} session{(_state.SessionCounter == 1 ? "" : "s")} so far"));
 
+        var gates = "";
         if (_store != null)
         {
             try
@@ -112,34 +119,29 @@ public sealed partial class MessageComposer
                 if (outcomes.Count > 0)
                 {
                     sb.AppendLine();
-                    sb.AppendLine("<b>Session outcomes by stage:</b>");
+                    sb.AppendLine("<b>Sessions by stage</b>");
                     foreach (var r in outcomes)
-                    {
-                        sb.AppendLine($"  {r.StageId}: {r.Outcome} ×{r.Count}");
-                    }
+                        sb.AppendLine(EscapeHtml($"  {r.StageId}: {r.Outcome} ×{r.Count}"));
                 }
 
-                var gates = _store.QueryRecentGateFailures(_state.RunId, 5);
-                if (gates.Count > 0)
-                {
-                    sb.AppendLine();
-                    sb.AppendLine("<b>Recent gate failures:</b>");
-                    foreach (var g in gates)
-                    {
-                        sb.AppendLine($"  FAIL: {g.Name} ({g.StageId})");
-                    }
-                }
-                else
-                {
-                    sb.AppendLine();
-                    sb.AppendLine("All recent gates passed.");
-                }
+                var failures = _store.QueryRecentGateFailures(_state.RunId, 5);
+                gates = failures.Count == 0
+                    ? "all recent gates passed"
+                    : string.Join(", ", failures.Select(g => $"FAIL {g.Name} ({g.StageId})"));
             }
 #pragma warning disable CA1031
             catch { /* best-effort: digest is advisory */ }
 #pragma warning restore CA1031
         }
 
+        if (ProofLine(gates, []) is { Length: > 0 } proof)
+        {
+            sb.AppendLine();
+            sb.AppendLine(proof);
+        }
+
+        sb.AppendLine();
+        sb.Append(Telemetry(PulledFacts()));
         return sb.ToString().TrimEnd();
     }
 }

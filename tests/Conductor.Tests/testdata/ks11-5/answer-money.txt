@@ -1,0 +1,8 @@
+<b>Metrics rig — money</b>
+
+Billed $20.75 of $50.00 (42%, $29.25 left) · 3 sessions
+$10.38 per delivered checkpoint (2 closed by these sessions)
+Where it goes: agent $20.00 (96.4%) · advisor $0.5000 (2.4%) · lane $0.2500 (1.2%)
+Blended $5.85 per million tokens — billed dollars over billed tokens, not a price list.
+
+<code>progress: 2/4 checkpoints · KS11 2/3 · cost: $20.75 of $50.00 (42%, $29.25 left) · tokens 3.5M</code>

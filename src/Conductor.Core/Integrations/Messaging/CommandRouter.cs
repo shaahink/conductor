@@ -119,6 +119,18 @@ public sealed class CommandRouter
         if (text.Equals("/daily", StringComparison.OrdinalIgnoreCase))
             return CommandOutcome.Reply(_composer.DailyDigestText());
 
+        // KS11.5 / CH-6: the figures tier. Three verbs rather than one because they are three
+        // questions — where is it, what has it cost, what is it burning — and a reader who wanted
+        // one of them had, until now, to read the last push and hope it was recent.
+        if (text.Equals("/progress", StringComparison.OrdinalIgnoreCase))
+            return CommandOutcome.Reply(_composer.ProgressText());
+
+        if (text.Equals("/money", StringComparison.OrdinalIgnoreCase))
+            return CommandOutcome.Reply(_composer.MoneyText());
+
+        if (text.Equals("/tokens", StringComparison.OrdinalIgnoreCase))
+            return CommandOutcome.Reply(_composer.TokensText());
+
         // KS11.4 / CH-6: the bare verb is a list, and a list is just text — but naming a checkpoint
         // is a PULL, and a pull is an effect. Both arrive here; only the second leaves as an action.
         if (text.Equals("/evidence", StringComparison.OrdinalIgnoreCase))

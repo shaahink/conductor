@@ -1,0 +1,9 @@
+<b>Metrics rig — progress</b>
+
+<code>[here] KS11   2/3</code>  Chapar — the remote surface
+<code>[    ] KS12   0/1</code>  The record
+
+<b>In flight</b>
+  KS11.5 — metrics on demand
+
+<code>progress: 2/4 checkpoints · KS11 2/3 · cost: $20.75 of $50.00 (42%, $29.25 left) · tokens 3.5M</code>

@@ -196,9 +196,10 @@ any chat the bot served could `/inject` and, with `enableTwoWay`, `/abort`.
 }
 ```
 
-Both chats get every push. The observer chat may ask `/status`, `/tasks`, `/daily`, `/evidence` and
-`/start`; a control verb, `/inject`, `/chat` or a tap on a confirmation button gets one named line
-saying so and nothing happens. An unknown command is met with silence, as it always has been.
+Both chats get every push. The observer chat may ask `/status`, `/tasks`, `/daily`, `/progress`,
+`/evidence`, `/money`, `/tokens` and `/start`; a control verb, `/inject`, `/chat` or a tap on a
+confirmation button gets one named line saying so and nothing happens. An unknown command is met
+with silence, as it always has been.
 
 Each chat is introduced before the run's first word: what this run is (plan, stage map, budget
 ceiling), what will arrive here and when, and exactly what this chat may ask. A chat added by a
@@ -227,6 +228,25 @@ instead of uploaded (it is still on the engine's machine at the path shown), and
 **8 artifacts per 10 minutes**. The limit is per chat, so a group reader working through the list
 cannot use up the owner's budget, and only an answer that actually carries a file is counted — a
 mistyped id costs nothing. A refusal says when to ask again.
+
+### Asking for the figures — `/progress`, `/money`, `/tokens` (KS11.5)
+
+The push tier is the checkpoint-with-cost view. These three are the rest of it, and every figure in
+them is read the way the terminal reads it, so a phone and a laptop cannot quote one run two ways.
+
+* `/progress` — the road: every stage with its share of the checkpoints, which one the run is on,
+  and what is in flight. The counts are the same tracker snapshot `/status` counts.
+* `/money` — **billed dollars only**. The total against the run's cap, dollars per delivered
+  checkpoint, where the money goes by lane (agent, gate, advisor, lanes), and the blended rate that
+  falls out of dividing the two. The engine has no price table by design and this answer is not one:
+  every dollar was reported by the provider and written to the run's `costs` table, which is the
+  same table `conductor money` reads. When the run's own counter and the record disagree — a session
+  in flight is not billed until it ends — the answer names both rather than picking one.
+* `/tokens` — every token including cache reads, and the cache-read share, which in an era like this
+  one is around 98%. A total without that split reads as if the run wrote millions of tokens of code.
+
+The daily digest is composed in the same grammar as the pushes now: where the run is, the day's
+sessions by stage, the gate verdict as a proof line, and the same telemetry line in monospace.
 
 **Three things about group chats specifically:**
 

@@ -1,0 +1,10 @@
+<b>Metrics rig — daily digest</b>
+Running · stage KS11 — Chapar — the remote surface · 3 sessions so far
+
+<b>Sessions by stage</b>
+  KS11: Unknown ×1
+  KS11: Advanced ×2
+
+proof: gates all recent gates passed
+
+<code>progress: 2/4 checkpoints · KS11 2/3 · cost: $20.75 of $50.00 (42%, $29.25 left) · tokens 3.5M</code>
