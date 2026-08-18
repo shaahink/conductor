@@ -49,7 +49,7 @@ public static class SurfaceCommands
         new("/daily", SurfaceScope.Browse),
         new("/start", SurfaceScope.Browse),
         new("/progress", SurfaceScope.Browse, Implemented: false),   // KS11.5
-        new("/evidence", SurfaceScope.Browse, Implemented: false),   // KS11.4
+        new("/evidence", SurfaceScope.Browse),                       // KS11.4
         new("/money", SurfaceScope.Browse, Implemented: false),      // KS11.5
         new("/tokens", SurfaceScope.Browse, Implemented: false),     // KS11.5
         new("/inject", SurfaceScope.Steer),

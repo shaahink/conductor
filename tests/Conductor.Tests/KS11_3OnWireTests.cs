@@ -34,12 +34,16 @@ public sealed class KS11_3OnWireTests : IDisposable
             "# Wire rig\n\n## Checkpoints\n\n| # | Checkpoint | Status | Commit | Evidence |\n|---|---|---|---|---|\n"
             + "| KS11.1 | the seam | DONE | abc1234 | seam.md |\n"
             + "| KS11.3 | the grammar | IN PROGRESS | | |\n");
-        Environment.SetEnvironmentVariable("CONDUCTOR_TELEGRAM_TOKEN", "111111:scratch-bot-token");
+        // KS11.4: this rig's token lives in its OWN secrets file, not in the process environment.
+        // xUnit runs test classes in parallel and an env var set here is read by every other test in
+        // the assembly - including the three that assert what a run with NO token says, which failed
+        // exactly this way when a second wire rig widened the window.
+        Directory.CreateDirectory(Path.Combine(_repo, ".conductor"));
+        SecretsStore.WriteTelegramToken(Path.Combine(_repo, ".conductor"), "111111:scratch-bot-token");
     }
 
     public void Dispose()
     {
-        Environment.SetEnvironmentVariable("CONDUCTOR_TELEGRAM_TOKEN", null);
         try { TestTemp.DeleteTree(Directory.GetParent(_repo)!.FullName); } catch (Exception) { }
     }
 

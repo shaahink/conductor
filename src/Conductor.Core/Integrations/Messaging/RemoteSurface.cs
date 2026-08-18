@@ -36,13 +36,22 @@ public sealed class RemoteSurface
     /// need it hear anything.</summary>
     private readonly HashSet<string> _onboarded = new(StringComparer.Ordinal);
 
+    /// <summary>KS11.4 / CH-6 — how many artifacts each chat may pull per window. Per CHAT rather
+    /// than per run: one reader hammering <c>/evidence</c> must not use up the budget of the chat
+    /// where the owner is trying to read the run.</summary>
+    private readonly PullRateLimiter _pulls;
+
     /// <param name="writeControl">(action, confirmed, intentId) → the control file. An engine
     /// concern, handed in rather than reached for, so this class has no state directory of its own.</param>
     /// <param name="log">(message, argument) for the one line the inject path has always written.</param>
+    /// <param name="pulls">KS11.4 / CH-6 — the per-chat evidence budget. Handed in rather than
+    /// constructed here so a test can drive its clock; the default is the surface's own policy.</param>
     public RemoteSurface(IMessageChannel channel, MessageComposer composer, CommandRouter router,
         RunState state, IRunStore? store, Func<string, bool, string?, Task> writeControl,
-        Action<string, string?> log)
+        Action<string, string?> log, PullRateLimiter? pulls = null)
     {
+        _pulls = pulls ?? new PullRateLimiter(
+            MessageComposer.EvidencePullsPerWindow, MessageComposer.EvidencePullWindow);
         _channel = channel;
         _composer = composer;
         _router = router;
@@ -234,6 +243,10 @@ public sealed class RemoteSurface
                 await ReplyAsync(chatId, outcome.Text!, null, ct).ConfigureAwait(false);
                 return;
 
+            case SurfaceAction.Evidence:
+                await SendEvidenceAsync(chatId, outcome.Text!, ct).ConfigureAwait(false);
+                return;
+
             case SurfaceAction.ArmInjection:
                 _injectionArmed[chatId] = true;
                 await ReplyAsync(chatId, outcome.Text!, null, ct).ConfigureAwait(false);
@@ -254,6 +267,33 @@ public sealed class RemoteSurface
 
             default:
                 return;
+        }
+    }
+
+    /// <summary>KS11.4 / CHAPAR CH-6 — what <c>/evidence &lt;id&gt;</c> actually does.
+    ///
+    /// <para>The composer decides what each artifact of that checkpoint IS — an upload, or a line
+    /// saying why it could not be one — and this is where those answers meet the chat's budget and
+    /// the wire. Only an answer that carries a file is charged for: a reader who mistypes an id, or
+    /// asks for a checkpoint whose artifact has been moved, has cost the engine a tracker read, and
+    /// charging for that would let three typos lock them out of the artifact they wanted.</para>
+    ///
+    /// <para>It leaves by <see cref="ReplyAsync"/>, like every other answer to a typed command: an
+    /// upload routed through the push queue would arrive behind the run's backlog, which for a
+    /// reader who just asked a question is indistinguishable from the bot ignoring them.</para></summary>
+    private async Task SendEvidenceAsync(string chatId, string id, CancellationToken ct)
+    {
+        foreach (var answer in _composer.EvidenceFor(id))
+        {
+            if (answer.CostsBudget && !_pulls.TryTake(chatId, out var retryAfter))
+            {
+                await ReplyAsync(chatId, MessageComposer.PullBudgetRefusal(retryAfter), null, ct)
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            await _channel.SendAsync(
+                new OutboundMessage(chatId, answer.Text, Attachment: answer.Attachment), ct).ConfigureAwait(false);
         }
     }
 

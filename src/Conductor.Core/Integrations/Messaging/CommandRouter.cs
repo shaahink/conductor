@@ -38,6 +38,12 @@ public enum SurfaceAction
     /// <see cref="Reply"/>; it is a separate action so that "an observer was refused" is a fact the
     /// command-by-profile matrix can assert, rather than a string it has to pattern-match.</summary>
     Refuse = 6,
+
+    /// <summary>KS11.4 / CH-6 — send this chat the artifact a checkpoint claimed, named by
+    /// <see cref="CommandOutcome.Text"/>. A separate action because a pull is the one answer with an
+    /// EFFECT behind it: it reads the disk, it charges the chat's rate-limit budget, and it can leave
+    /// as an upload rather than as text — none of which a router that only decides may do.</summary>
+    Evidence = 8,
 }
 
 /// <param name="Text">The reply body, or the instruction for <see cref="SurfaceAction.Inject"/>.</param>
@@ -112,6 +118,21 @@ public sealed class CommandRouter
 
         if (text.Equals("/daily", StringComparison.OrdinalIgnoreCase))
             return CommandOutcome.Reply(_composer.DailyDigestText());
+
+        // KS11.4 / CH-6: the bare verb is a list, and a list is just text — but naming a checkpoint
+        // is a PULL, and a pull is an effect. Both arrive here; only the second leaves as an action.
+        if (text.Equals("/evidence", StringComparison.OrdinalIgnoreCase))
+            return CommandOutcome.Reply(_composer.EvidenceListText());
+
+        // Verb-then-space, exactly as SurfaceCommands.Find matches it: "/evidencex" is not this verb,
+        // and a gate that does not recognise it must not be followed by a router that does.
+        if (text.StartsWith("/evidence ", StringComparison.OrdinalIgnoreCase))
+        {
+            var id = text["/evidence ".Length..].Trim();
+            return id.Length == 0
+                ? CommandOutcome.Reply(_composer.EvidenceListText())
+                : new CommandOutcome(SurfaceAction.Evidence, id);
+        }
 
         if (text.StartsWith("/inject ", StringComparison.OrdinalIgnoreCase))
             return new CommandOutcome(SurfaceAction.Inject, text[8..].Trim());
