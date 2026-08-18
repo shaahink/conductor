@@ -11,8 +11,8 @@ last: KS11.5 DONE (d6be308 feature+tests+docs, 7d461bb goldens, 2230ccc evidence
   /money and /tokens through the Bot API stub. The digest now reads in the CH-5 grammar.
 stage: KS11 COMPLETE - all five checkpoints claimed. The stage parks on its ownerGate next; the park
   is the owner's window to reinstall the mid-era engine for the BookToCourse run, not an error.
-gate: scoped suites 236/236 (KS11_*, Telegram, Messaging, Notify, Money, K5_2, K4_3). Full suite ran
-  clean apart from the known parallel-load flake class (bug #49).
+gate: scoped suites 236/236 (KS11_*, Telegram, Messaging, Notify, Money, K5_2, K4_3); full suite
+  2787/2787, zero failures - bug #49's parallel-load flake did not fire this run.
 next: KS12 - the record (ARCHITECTURE.md + docs/dev), then the field-guide harvest re-run. Nothing
   before KS12 touches C:/code/conductor-site, and work there is a branch + PR, never a push to main.
 trap: a python heredoc replacement containing a backslash-b writes a literal BACKSPACE into the C#

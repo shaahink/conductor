@@ -1,0 +1,14 @@
+  Determining projects to restore...
+  Restored C:\Code\conductor\tools\plan-lint\plan-lint.csproj (in 408 ms).
+  Restored C:\Code\conductor\src\Conductor.Core\Conductor.Core.csproj (in 423 ms).
+  Restored C:\Code\conductor\src\Conductor\Conductor.csproj (in 426 ms).
+  Restored C:\Code\conductor\tests\Conductor.Tests\Conductor.Tests.csproj (in 430 ms).
+  Restored C:\Code\conductor\src\Conductor.Planning\Conductor.Planning.csproj (in 408 ms).
+  Conductor.Planning -> C:\Code\conductor\src\Conductor.Planning\bin\Debug\net10.0\Conductor.Planning.dll
+  Conductor.Core -> C:\Code\conductor\src\Conductor.Core\bin\Debug\net10.0\Conductor.Core.dll
+  Conductor -> C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.dll
+  Conductor.Tests -> C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+Test run for C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:  2787, Skipped:     0, Total:  2787, Duration: 2 m 51 s - Conductor.Tests.dll (net10.0)
