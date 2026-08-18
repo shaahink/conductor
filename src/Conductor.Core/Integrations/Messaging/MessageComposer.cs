@@ -65,17 +65,25 @@ public sealed partial class MessageComposer
         // headroom, and the composition itself is a template the owner can replace.
         var cost = MoneyLine.ForSession(push.CostUsd, _state.TotalCostUsd, CostCeiling())
                  + (push.Score is { } score ? " · score " + EscapeHtml($"{score:0}/100") : "");
+        var result = SessionResult.Parse(push.ResultSummary);
 
         return ComposeAsync("session-end", NotifyDefaults.SessionEnd, new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["outcome"] = EscapeHtml(push.Outcome),
             ["duration"] = push.Duration is { } d ? " · " + EscapeHtml(Elapsed(d)) : "",
-            ["progress"] = EscapeHtml(ProgressLine(push.Stage)),
             ["landed"] = LandedLine(push),
-            ["gates"] = EscapeHtml(GatesLine(push)),
             ["result"] = RemoteLinks.LinkifyPullRequests(ResultLines(push.ResultSummary), Remote()),
-            ["cost"] = cost,
+            // KS11.3 / CH-5: the proof line — the gate verdict and the artifact that shows it,
+            // together, because "what landed" and "what proves it" are the two halves of a claim and
+            // reading them three lines apart is how a reader stops checking the second one.
+            ["proof"] = ProofLine(GatesLine(push), result.Evidence),
+            ["telemetry"] = Telemetry(TelemetryFacts(push.Stage, push.CostUsd, push.Score)),
             ["report"] = ReportLink(),
+            // Kept for owner templates written against K5.4's shape. Nothing in the built-in uses
+            // them any more; an override that names one still renders instead of being refused.
+            ["progress"] = EscapeHtml(ProgressLine(push.Stage)),
+            ["gates"] = EscapeHtml(GatesLine(push)),
+            ["cost"] = cost,
         });
     }
 
@@ -97,8 +105,9 @@ public sealed partial class MessageComposer
                 $"{push.CheckpointsDone}/{push.CheckpointsTotal} checkpoints · {push.Sessions} session"
                 + (push.Sessions == 1 ? "" : "s")),
             ["skipped"] = clean ? "" : EscapeHtml($"skipped: {string.Join(", ", push.SkippedStages)}"),
-            ["cost"] = MoneyLine.ForRun(_state.TotalCostUsd, CostCeiling()),
+            ["telemetry"] = Telemetry(RunTelemetryFacts()),
             ["report"] = ReportLink(),
+            ["cost"] = MoneyLine.ForRun(_state.TotalCostUsd, CostCeiling()),
         });
     }
 
@@ -111,6 +120,7 @@ public sealed partial class MessageComposer
         {
             ["batch"] = batchSize > 1 ? $" ({batchSize.ToString(CultureInfo.InvariantCulture)} new)" : "",
             ["artifact"] = EvidenceLine(a),
+            ["telemetry"] = Telemetry(TelemetryFacts(a.StageId, null, null)),
             ["progress"] = EscapeHtml(ProgressLine(a.StageId)),
         });
     }
@@ -331,7 +341,8 @@ public sealed partial class MessageComposer
         sb.Append("result: <b>").Append(EscapeHtml(parsed.Headline)).Append("</b>");
         foreach (var o in parsed.Outcomes) sb.Append("\n  • ").Append(EscapeHtml(o));
         if (parsed.Gaps.Length > 0) sb.Append("\ngaps: ").Append(EscapeHtml(parsed.Gaps));
-        if (parsed.Evidence.Count > 0) sb.Append("\nevidence: ").Append(EscapeHtml(string.Join(", ", parsed.Evidence)));
+        // KS11.3 / CH-5: evidence is not part of the result block any more — it is half the PROOF
+        // line, beside the gate verdict, where a reader looking for "what shows this" finds both.
         return Clip(sb.ToString(), ResultMaxChars);
     }
 

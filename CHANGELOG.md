@@ -20,6 +20,20 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ## [Unreleased]
 
+### Added
+
+- **Chat profiles — `admin` and `observer`.** `telegram.chats` gives each chat a profile, so a
+  stakeholder can be put in a chat the bot serves without also being handed `/inject` and the
+  control verbs. A plan carrying only `allowedChatIds` behaves exactly as before; an unknown profile
+  string fails plan load by name rather than defaulting to admin. The observer surface is a closed
+  list enforced at one gate, and every verb is checked against both profiles by an exhaustive matrix
+  test rather than a sample.
+- **Onboarding.** Every configured chat is told what this run is (plan, stage map, budget ceiling),
+  what will arrive and when, and exactly what it may ask — before the run's first word, again after
+  a plan reload adds a chat mid-run, and on `/start`, which until now answered one static sentence.
+  The message is composed per profile, and the "what you can ask" list is derived from the same
+  catalogue the gate enforces, so the promise cannot drift from the permission.
+
 ### Changed
 
 - **The messenger seam.** Message composition, chat profiles and the command surface are now defined
@@ -29,6 +43,18 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
   the previous engine pass byte-identical through the new one. Internally, `ITelegramService` is now
   `IRunNotifier` and `RunContext.Telegram` is `RunContext.Messenger`, so the run loop no longer names
   a messenger it does not depend on.
+- **Every push now reads headline / proof / telemetry.** What landed, then what proves it (the gate
+  verdict and the evidence artifact, together on one line), then the numbers — progress, money
+  against the cap and tokens — in monospace. A session-end push reads standalone: previously it was
+  a status line plus clipped result text, with the artifact buried under the gaps and the cost below
+  the prose where a phone cuts it off. Owner `notify/` templates written against the old fact names
+  (`progress`, `gates`, `cost`) still render; the new facts are `proof` and `telemetry`.
+- **A confirmation keyboard is only sent to admin chats.** An observer still gets the news that the
+  run is asking for a decision — it is the text half of the same push — but is not offered a button
+  it would be refused for pressing.
+- **Telegram readiness counts every configured chat.** `doctor`, `/telegram/status` and the reload
+  message counted `allowedChatIds` alone, so a plan configuring its chats the new way reported
+  "push-only to nobody" while delivering perfectly.
 
 ## [0.4.1] - 2026-08-15
 

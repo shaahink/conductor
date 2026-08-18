@@ -39,6 +39,13 @@ public interface IRunNotifier
         CancellationToken ct = default);
     Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default);
 
+    /// <summary>KS11.3 / CHAPAR CH-4: tell every configured chat what this run is, what will arrive
+    /// and what it may ask, before the run's first word. Idempotent per chat, so the run loop can
+    /// also call it after a live plan reload and only a newly-added chat hears anything.
+    /// <para>Defaulted rather than required: a notifier that reaches nobody (the no-op, a dry run)
+    /// has nobody to introduce, and making every implementer say so would be noise.</para></summary>
+    Task PushOnboardingAsync(CancellationToken ct = default) => Task.CompletedTask;
+
     /// <summary>K5.4: the run-end push, composed from facts rather than assembled as prose at the
     /// call site — which is how it came to name the plan twice and give the engine build string more
     /// room than anything the run had delivered.</summary>
@@ -300,6 +307,8 @@ public sealed partial class TelegramService
 
     public Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default) =>
         _surface.PushSessionEndAsync(push, ct);
+
+    public Task PushOnboardingAsync(CancellationToken ct = default) => _surface.PushOnboardingAsync(ct);
 
     public Task PushRunCompleteAsync(RunCompletePush push, CancellationToken ct = default) =>
         _surface.PushRunCompleteAsync(push, ct);

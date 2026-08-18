@@ -100,6 +100,11 @@ public sealed partial class TelegramService
         {
             var outcome = await ReloadAsync(freshPlan, ct).ConfigureAwait(false);
             if (outcome.Changed) _log.LogInformation("Telegram reloaded with the swapped plan: {Message}", outcome.Message);
+
+            // KS11.3 / CH-4: a chat ADDED by this reload is the case the onboarding message exists
+            // for - it starts receiving session-end pushes mid-run with no frame at all. The call is
+            // idempotent per chat, so the ones that were already here hear nothing.
+            await _surface.PushOnboardingAsync(ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -115,7 +120,7 @@ public sealed partial class TelegramService
             hasBlock: _cfg is not null, hasToken: _token is not null,
             allowedChatIds: _cfg?.ChatCount ?? 0, started: _started);
         var message = overrideMessage ?? (missing is null
-            ? $"the running engine picked it up — Telegram is delivering to {_cfg!.AllowedChatIds.Count} chat id(s) now, no restart needed"
+            ? $"the running engine picked it up — Telegram is delivering to {_cfg!.ChatCount} chat id(s) now, no restart needed"
             : $"saved, but this run still will not deliver: {missing}");
         return new TelegramReloadOutcome(changed, _started, missing is null, message);
     }

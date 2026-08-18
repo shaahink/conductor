@@ -72,8 +72,12 @@ public sealed class KS11_2CommandMatrixTests : IDisposable
             }
 
             // A browse verb is never refused. An implemented one answers; one CH-3 names but no
-            // checkpoint has built yet is silent, exactly as it is for an admin today.
-            var expected = cmd.Implemented ? SurfaceAction.Reply : SurfaceAction.None;
+            // checkpoint has built yet is silent, exactly as it is for an admin today. /start
+            // answers with KS11.3's onboarding, which is composed asynchronously and so has an
+            // action of its own — it is still an answer, and still never a refusal.
+            var expected = !cmd.Implemented ? SurfaceAction.None
+                : cmd.Verb == "/start" ? SurfaceAction.Onboard
+                : SurfaceAction.Reply;
             if (outcome.Action != expected)
                 wrong.Add($"{cmd.Verb} (browse, implemented={cmd.Implemented}) gave {outcome.Action}, expected {expected}");
         }
@@ -137,6 +141,7 @@ public sealed class KS11_2CommandMatrixTests : IDisposable
                 var expected = (cmd.Scope, cmd.Implemented, twoWay) switch
                 {
                     (SurfaceScope.Browse, false, _) => SurfaceAction.None,
+                    (SurfaceScope.Browse, true, _) when cmd.Verb == "/start" => SurfaceAction.Onboard,
                     (SurfaceScope.Browse, true, _) => SurfaceAction.Reply,
                     (SurfaceScope.Steer, _, _) when cmd.Verb == "/chat" => SurfaceAction.Reply,
                     // Bare "/inject" is not the "/inject <text>" prefix, so it falls through to the

@@ -1,4 +1,10 @@
 sendMessage [silent]
     <i>Karvansara edge · s12</i>
     <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
-    Conductor bot is running. Use /status to see the current state.
+    <b>Karvansara edge</b> — this chat is now the control surface for a conductor run.
+    2 stages: KS11 → KS12 · 1/4 checkpoints done
+    <code>budget $42.00 of $50.00 (84%, $8.00 left)</code>
+    <b>What arrives here</b>
+    A message when a session ends, when evidence lands, and when the run finishes or parks for a decision. Each one says what landed, what proves it, and what it has cost so far. A decision the run needs from you arrives with buttons.
+    <b>What you can ask</b>
+    /status, /tasks, /daily, /inject &lt;text&gt; to steer the next session. Control (/pause, /resume, /approve, /skip, /abort, /kill) is off: set telegram.enableTwoWay to turn it on.

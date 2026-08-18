@@ -2,7 +2,6 @@ sendMessage [silent]
     <i>Karvansara edge · s8</i>
     <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
     <b>Rollover</b> · 47s
-    progress: 1/4 checkpoints · KS11 1/4
-    gates: deferred — the session rolled over, no attempt burned
-    cost: $0.4242 · run $42.00 of $50.00 (84%, $8.00 left)
+    proof: gates deferred — the session rolled over, no attempt burned
+    <code>progress: 1/4 checkpoints · KS11 1/4 · cost: $0.4242 · run $42.00 of $50.00 (84%, $8.00 left)</code>
     <a href="https://github.com/acme/widgets/blob/feat%2Fkarvansara-edge/.conductor/REPORT.md">the run's report</a>

@@ -147,7 +147,9 @@ public sealed class KS11_1FakeChannelTests : IDisposable
     [Theory]
     [InlineData("/status", "Conductor —")]
     [InlineData("/tasks", "Task Graph")]
-    [InlineData("/start", "Conductor bot is running")]
+    // KS11.3 / CH-4: /start answers with the chat's onboarding message now, not one static
+    // sentence. The admin version opens by saying what this chat IS.
+    [InlineData("/start", "the control surface for a conductor run")]
     [InlineData("/daily", "Daily Digest")]
     [InlineData("/chat", "conductor chat")]
     public async Task Every_read_command_answers_the_chat_that_asked(string command, string expected)
@@ -241,7 +243,8 @@ public sealed class KS11_1FakeChannelTests : IDisposable
 
         await surface.HandleMessageAsync("77", ChatProfile.Admin, "/start", CancellationToken.None);
 
-        Assert.Contains("Conductor bot is running", _channel.Sent[1].Text, StringComparison.Ordinal);
+        Assert.Contains("the control surface for a conductor run", _channel.Sent[1].Text,
+            StringComparison.Ordinal);
     }
 
     // ────────────────────────────── the rig ──────────────────────────────

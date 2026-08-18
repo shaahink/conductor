@@ -4,19 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS11.2 DONE. telegram.chats = [{chatId, profile}]; admin/observer enforced at ONE gate,
-  CommandRouter.Gate - typed verb, plain text while armed, AND RouteCallback, which took no profile
-  at all before (a live hole: a confirm keyboard fans out to every chat, so an observer could tap it
-  and write control.json). Evidence: .conductor/evidence/KS11/KS11.2-chat-profiles.md
-stage: KS11 in flight, 2 of 5 done.
-gate: 659 green across every suite touched (KS11*, Telegram*, Architecture*, Plan*, Doctor*,
-  ControlPlane*, SF7_1*, SC1*, Notif*). The matrix was mutation-checked: gate removed -> 8 of 14 red.
-next: **KS11.3** - onboarding + the push grammar. Compose the observer onboarding from
-  SurfaceCommands.BrowseList, never a second hand-written list, or it drifts from the gate.
-  SurfaceCommands.All is the catalogue; /progress /evidence /money /tokens are already in it with
-  Implemented:false, so KS11.4/11.5 flip a flag rather than edit the matrix.
-trap: the fifteen ks11 goldens came from an OLD-SHAPE plan and are the back-compat pin - never
-  regenerate them. Readiness now counts TelegramConfig.ChatCount, not AllowedChatIds.Count.
+last: KS11.2 AND KS11.3 both DONE. Profiles enforced at one gate (CommandRouter.Gate - typed verb,
+  armed plain text, AND RouteCallback, which took no profile at all: a confirm keyboard fans out to
+  every chat, so an observer could tap it and write control.json). Then CH-4 onboarding per profile
+  and CH-5's headline / proof / telemetry grammar, money and tokens in monospace.
+stage: KS11 in flight, 3 of 5 done.
+gate: full suite 2737/2737 green; 299/299 over every suite touched after that. The last two files
+  (KS11_3OnWireTests, RecordingBotApi ChatId) landed after the full run - re-run it first thing.
+next: **KS11.4** - evidence on demand. /evidence and /money /tokens /progress are ALREADY in
+  SurfaceCommands.All with Implemented:false, so they answer silence for both profiles today;
+  flipping that flag is the only catalogue edit needed and the matrix picks it up.
+trap: two golden sets now. testdata/ks11/ pins the WIRE (nine of fifteen did NOT move in KS11.3 -
+  that is the proof the admin surface is untouched); testdata/ks11-3/ pins the TEXT per profile.
+  Regenerate either only with CONDUCTOR_GOLDEN_REBASELINE=1, in a commit whose diff you have read.
 
 
 ## Baseline numbers (from run.db)

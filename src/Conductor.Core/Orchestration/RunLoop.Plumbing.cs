@@ -243,6 +243,11 @@ public sealed partial class RunLoop
     /// engine had already replaced.</summary>
     private void NotifyRunStart()
     {
+        // KS11.3 / CHAPAR CH-4: the rules first, then the news. A chat that has not been told what
+        // this run is, what will arrive and what it may ask cannot read anything that follows —
+        // and the very next line is the first thing that follows.
+        if (_ctx.Notifier.AllowOneOff()) _ = _ctx.Messenger.PushOnboardingAsync();
+
         var verb = _ctx.State.SessionCounter > 0 ? "resumed" : "started";
         Notify($"Conductor {_ctx.Plan.Name}: run {verb} — repo {_ctx.Plan.Repo} " +
                $"(branch {Git.Branch(_ctx.Plan.Repo)}) · engine {BuildInfo.Current.Full}");

@@ -24,6 +24,11 @@ public static class MoneyLine
             ? amount.ToString("$0.00", CultureInfo.InvariantCulture)
             : amount.ToString("$0.0000", CultureInfo.InvariantCulture);
 
+    /// <summary>KS11.3 — the same figures with no label, for a line that is not about a bill: an
+    /// onboarding message says <c>budget …</c>, because what a new reader needs is the ceiling the
+    /// run is governed by, not what it has been charged.</summary>
+    public static string Spend(decimal runCost, decimal? cap) => Headroom(runCost, cap);
+
     private static string Headroom(decimal runCost, decimal? cap)
     {
         if (cap is not { } limit || limit <= 0m) return Usd(runCost) + " (no cap set)";

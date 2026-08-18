@@ -1,0 +1,8 @@
+<b>RolledOver</b> · 1h 23m
+landed: 2 commits (a1b2c3d) · claimed KS11.3
+result: <b>the push grammar and per-profile onboarding</b>
+  • every push type recomposed to headline / proof / telemetry
+  • onboarding composed from the same list the gate enforces
+gaps: none
+proof: gates deferred — the session rolled over, no attempt burned · evidence .conductor/evidence/KS11/KS11.3-grammar.md
+<code>progress: 2/4 checkpoints · KS11 2/4 · cost: $0.4242 · run $42.00 of $50.00 (84%, $8.00 left) · tokens 3.5M</code>

@@ -10,6 +10,9 @@ namespace Conductor.Tests;
 /// (<c>FakeBotApi</c>, in the FU-OWNER-11 and K5.2 suites) record only the <c>text</c> field of a
 /// <c>sendMessage</c>, which cannot answer any of K5.4's questions: whether a push buzzed, which
 /// thread it belongs to, or whether a PNG was UPLOADED rather than named.</summary>
+/// <param name="ChatId">KS11.3: WHICH chat the call was addressed to. Deliberately absent from
+/// <see cref="BotCall.Describe"/> and therefore from every golden — a per-profile test needs the
+/// field, and the goldens do not need to move to give it one.</param>
 public sealed record BotCall(
     string Method,
     string? Text,
@@ -20,7 +23,8 @@ public sealed record BotCall(
     long? MessageThreadId,
     string? FileField,
     string? FileName,
-    long FileBytes)
+    long FileBytes,
+    string? ChatId = null)
 {
     public string Describe()
     {
@@ -175,7 +179,7 @@ public sealed class RecordingBotApi : IDisposable
             Num(root, "reply_to_message_id"),
             Bool(root, "allow_sending_without_reply"),
             Num(root, "message_thread_id"),
-            null, null, 0);
+            null, null, 0, Str(root, "chat_id"));
     }
 
     /// <summary>A hand-rolled multipart reader, deliberately: the point of this stub is to see the
@@ -214,7 +218,7 @@ public sealed class RecordingBotApi : IDisposable
             Parse(fields.GetValueOrDefault("reply_to_message_id")),
             string.Equals(fields.GetValueOrDefault("allow_sending_without_reply"), "True", StringComparison.OrdinalIgnoreCase),
             Parse(fields.GetValueOrDefault("message_thread_id")),
-            fileField, fileName, fileBytes);
+            fileField, fileName, fileBytes, fields.GetValueOrDefault("chat_id"));
     }
 
     /// <summary>Reads <c>key=value</c> or <c>key="value"</c> out of a Content-Disposition header.

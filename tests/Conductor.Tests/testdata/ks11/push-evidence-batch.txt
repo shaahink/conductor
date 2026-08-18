@@ -3,28 +3,28 @@ sendDocument [silent] [document=note-1.md, 40 B]
     <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
     <b>evidence</b> (6 new)
     • .conductor/evidence/KS11/note-1.md (text, 40 B) — KS11.1
-    progress: 1/4 checkpoints · KS11 1/4
+    <code>progress: 1/4 checkpoints · KS11 1/4 · cost: $42.00 of $50.00 (84%, $8.00 left)</code>
 
 sendPhoto [silent] [reply to 4242] [photo=shot-2.png, 80 B]
     <i>Karvansara edge · s7</i>
     <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
     <b>evidence</b> (6 new)
     • .conductor/evidence/KS11/shot-2.png (image, 80 B) — KS11.2
-    progress: 1/4 checkpoints · KS11 1/4
+    <code>progress: 1/4 checkpoints · KS11 1/4 · cost: $42.00 of $50.00 (84%, $8.00 left)</code>
 
 sendDocument [silent] [reply to 4242] [document=note-3.md, 120 B]
     <i>Karvansara edge · s7</i>
     <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
     <b>evidence</b> (6 new)
     • .conductor/evidence/KS11/note-3.md (text, 120 B) — KS11.3
-    progress: 1/4 checkpoints · KS11 1/4
+    <code>progress: 1/4 checkpoints · KS11 1/4 · cost: $42.00 of $50.00 (84%, $8.00 left)</code>
 
 sendDocument [silent] [reply to 4242] [document=note-4.md, 160 B]
     <i>Karvansara edge · s7</i>
     <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
     <b>evidence</b> (6 new)
     • .conductor/evidence/KS11/note-4.md (text, 160 B) — KS11.4
-    progress: 1/4 checkpoints · KS11 1/4
+    <code>progress: 1/4 checkpoints · KS11 1/4 · cost: $42.00 of $50.00 (84%, $8.00 left)</code>
 
 sendMessage [silent] [reply to 4242]
     <i>Karvansara edge · s12</i>

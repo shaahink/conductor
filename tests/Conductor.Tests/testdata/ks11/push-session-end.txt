@@ -2,13 +2,11 @@ sendMessage [silent]
     <i>Karvansara edge · s7</i>
     <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
     <b>Advanced</b> · 1h 23m
-    progress: 1/4 checkpoints · KS11 1/4
     landed: 2 commits (<a href="https://github.com/acme/widgets/commit/a1b2c3d4e5f60718293a4b5c6d7e8f9012345678">a1b2c3d</a>, <a href="https://github.com/acme/widgets/commit/0f1e2d3c4b5a69788796a5b4c3d2e1f012345678">0f1e2d3</a>) · claimed KS11.1
-    gates: build:OK gates:6/6
     result: <b>the messenger seam extracted, composition proven byte-identical</b>
       • composition, profiles and browsing now sit behind one channel-agnostic seam
       • a fake channel drives the whole surface with no Telegram type in the test
     gaps: raised <a href="https://github.com/acme/widgets/pull/412">#412</a> for the observer profile
-    evidence: .conductor/evidence/KS11/ks11-1-seam.md
-    cost: $1.25 · run $42.00 of $50.00 (84%, $8.00 left) · score 88/100
+    proof: gates build:OK gates:6/6 · evidence .conductor/evidence/KS11/ks11-1-seam.md
+    <code>progress: 1/4 checkpoints · KS11 1/4 · cost: $1.25 · run $42.00 of $50.00 (84%, $8.00 left) · score 88/100</code>
     <a href="https://github.com/acme/widgets/blob/feat%2Fkarvansara-edge/.conductor/REPORT.md">the run's report</a>

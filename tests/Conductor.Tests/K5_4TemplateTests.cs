@@ -105,7 +105,7 @@ public sealed class K5_4TemplateTests : IDisposable
         // literal "{sandwiches}" reaching the owner's chat is the failure this check exists for.
         Assert.DoesNotContain("{sandwiches}", text, StringComparison.Ordinal);
         Assert.DoesNotContain("sandwiches", text, StringComparison.Ordinal);
-        Assert.Contains("gates: engine-fast:OK", text, StringComparison.Ordinal);
+        Assert.Contains("proof: gates engine-fast:OK", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public sealed class K5_4TemplateTests : IDisposable
         Assert.DoesNotContain("result:", text, StringComparison.Ordinal);
         Assert.DoesNotContain("\n\n", text, StringComparison.Ordinal);
         // A fact sharing its line with a label keeps the label — that is the whole distinction.
-        Assert.Contains("gates: engine-fast:OK", text, StringComparison.Ordinal);
+        Assert.Contains("proof: gates engine-fast:OK", text, StringComparison.Ordinal);
     }
 
     // ── the template language, without a socket ──

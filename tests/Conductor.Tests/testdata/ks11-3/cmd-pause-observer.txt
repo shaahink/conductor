@@ -1,0 +1,1 @@
+/pause is a control command and this chat is an observer. Observers can ask: /status, /tasks, /daily.

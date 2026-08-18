@@ -169,7 +169,10 @@ public sealed class K5_2TelegramFeedTests : IDisposable
         Assert.Contains("result: <b>K5.2 made the feed readable again</b>", msg, StringComparison.Ordinal);
         Assert.Contains("• a second, ordinary outcome bullet", msg, StringComparison.Ordinal);
         Assert.Contains("gaps: the 4096-character chunking is K5.4", msg, StringComparison.Ordinal);
-        Assert.Contains("evidence: .conductor/evidence/K5/K5.2-telegram.md", msg, StringComparison.Ordinal);
+        // KS11.3 / CH-5: the artifact is half the PROOF line now, beside the gate verdict, rather
+        // than the last line of the result block below the gaps.
+        Assert.Contains("proof: gates ", msg, StringComparison.Ordinal);
+        Assert.Contains("evidence .conductor/evidence/K5/K5.2-telegram.md", msg, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -198,7 +201,7 @@ public sealed class K5_2TelegramFeedTests : IDisposable
 
         var msg = Assert.Single(sent);
         Assert.DoesNotContain("(not recorded)", msg, StringComparison.Ordinal);
-        Assert.Contains("gates: deferred", msg, StringComparison.Ordinal);
+        Assert.Contains("proof: gates deferred", msg, StringComparison.Ordinal);
         Assert.Contains("landed: 3 commits · claimed K9.1", msg, StringComparison.Ordinal);
     }
 
@@ -210,7 +213,7 @@ public sealed class K5_2TelegramFeedTests : IDisposable
         var sent = await SendAsync(bot, new RunState(),
             svc => svc.PushSessionEndAsync(Push(outcome: "AgentError", gates: null)));
 
-        Assert.Contains("gates: (not recorded)", Assert.Single(sent), StringComparison.Ordinal);
+        Assert.Contains("proof: gates (not recorded)", Assert.Single(sent), StringComparison.Ordinal);
     }
 
     // ── defect 5: no progress, ever ──
@@ -322,7 +325,9 @@ public sealed class K5_2TelegramFeedTests : IDisposable
             foreach (var m in sent) _out.WriteLine(m.Replace("\n", "\n    ", StringComparison.Ordinal));
             _out.WriteLine("---- end transcript ----");
 
-            var end = sent.Find(m => m.Contains("cost: $", StringComparison.Ordinal));
+            // KS11.3: the run's onboarding message also carries money, so the session-end push is
+            // found by the fact only IT has — the result block.
+            var end = sent.Find(m => m.Contains("result: ", StringComparison.Ordinal));
             Assert.True(end is not null, "no session-end push reached the wire: " + string.Join(" || ", sent));
 
             Assert.StartsWith($"<i>{PlanName} · s1</i>\n", end!, StringComparison.Ordinal);

@@ -31,6 +31,11 @@ public sealed class RemoteSurface
     /// therefore an instruction rather than a command.</summary>
     private readonly Dictionary<string, bool> _injectionArmed = new(StringComparer.Ordinal);
 
+    /// <summary>KS11.3 / CH-4 — chats that have already been told the rules, so that the run-start
+    /// call and the after-a-reload call can both be made unconditionally and only the chats that
+    /// need it hear anything.</summary>
+    private readonly HashSet<string> _onboarded = new(StringComparer.Ordinal);
+
     /// <param name="writeControl">(action, confirmed, intentId) → the control file. An engine
     /// concern, handed in rather than reached for, so this class has no state directory of its own.</param>
     /// <param name="log">(message, argument) for the one line the inject path has always written.</param>
@@ -128,7 +133,11 @@ public sealed class RemoteSurface
     {
         if (!_channel.IsLive || !_channel.AllowsControl || _channel.Targets.Count == 0) return;
 
-        foreach (var target in _channel.Targets)
+        // KS11.3 / CH-3: a keyboard is the engine ASKING for a decision, so it goes only to chats
+        // that can make one. KS11.2 closed the callback an observer could press; this stops the
+        // button being offered at all, which is the difference between a refusal and a surface that
+        // never pretended. The observer still gets the news — the text half rides PushAsync.
+        foreach (var target in _channel.Targets.Where(t => t.Profile == ChatProfile.Admin))
             await _channel.EnqueueAsync(
                 new OutboundMessage(target.ChatId, message, buttons, Severity: PushSeverity.Alert), ct)
                 .ConfigureAwait(false);
@@ -144,6 +153,44 @@ public sealed class RemoteSurface
                 ct).ConfigureAwait(false);
     }
 
+    /// <summary>KS11.3 / CHAPAR CH-4 — every configured chat that has not been told the rules gets
+    /// told them, in its own profile's voice.
+    ///
+    /// <para>Called at run start, before the run's first word, and again after a live plan reload —
+    /// which is the case CH-4 actually names: a chat added MID-RUN used to start receiving
+    /// session-end pushes with no frame at all. The set below is what makes the second call cost
+    /// nothing for chats that were already here.</para></summary>
+    public async Task PushOnboardingAsync(CancellationToken ct)
+    {
+        if (!_channel.IsLive) return;
+
+        foreach (var target in _channel.Targets)
+        {
+            if (!_onboarded.Add(target.ChatId)) continue;
+            await SendOnboardingAsync(target.ChatId, target.Profile, ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>What <c>/start</c> does: the rules again, on request, whether or not this chat has
+    /// already been told them. It leaves by <see cref="ReplyAsync"/> — the door every other answer
+    /// to a typed command uses — because an ANSWER that queues behind the run's pushes is an answer
+    /// that arrives minutes after the question.</summary>
+    private async Task ForceOnboardAsync(string chatId, ChatProfile profile, CancellationToken ct)
+    {
+        _onboarded.Add(chatId);
+        var body = await _composer.OnboardingAsync(profile, _channel.AllowsControl).ConfigureAwait(false);
+        await ReplyAsync(chatId, body, null, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>The unprompted half: onboarding as a push, on the run's own queue with everything
+    /// else the run says.</summary>
+    private async Task SendOnboardingAsync(string chatId, ChatProfile profile, CancellationToken ct)
+    {
+        var body = await _composer.OnboardingAsync(profile, _channel.AllowsControl).ConfigureAwait(false);
+        await _channel.EnqueueAsync(
+            new OutboundMessage(chatId, body, null, null, null, PushSeverity.Quiet), ct).ConfigureAwait(false);
+    }
+
     // ────────────────────────────── inbound ──────────────────────────────
 
     /// <summary>One message from one chat, routed and acted on.</summary>
@@ -155,19 +202,24 @@ public sealed class RemoteSurface
         var armed = _injectionArmed.TryGetValue(chatId, out var pending) && pending;
         if (armed && !text.Trim().StartsWith('/')) _injectionArmed.Remove(chatId);
 
-        return ApplyAsync(chatId, _router.Route(text, profile, _channel.AllowsControl, armed), ct);
+        return ApplyAsync(chatId, _router.Route(text, profile, _channel.AllowsControl, armed), ct, profile);
     }
 
     /// <summary>One button press, routed and acted on. <paramref name="chatId"/> is where the answer
     /// goes — for a callback that is the user who pressed it, which is not always the chat the
     /// keyboard was posted in.</summary>
     public Task HandleCallbackAsync(string chatId, ChatProfile profile, string data, CancellationToken ct)
-        => ApplyAsync(chatId, _router.RouteCallback(data, profile), ct);
+        => ApplyAsync(chatId, _router.RouteCallback(data, profile), ct, profile);
 
-    private async Task ApplyAsync(string chatId, CommandOutcome outcome, CancellationToken ct)
+    private async Task ApplyAsync(string chatId, CommandOutcome outcome, CancellationToken ct,
+        ChatProfile profile = ChatProfile.Admin)
     {
         switch (outcome.Action)
         {
+            case SurfaceAction.Onboard:
+                await ForceOnboardAsync(chatId, profile, ct).ConfigureAwait(false);
+                return;
+
             case SurfaceAction.None:
                 return;
 

@@ -3,5 +3,5 @@ sendMessage [notify]
     <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
     <b>run complete</b> · 9h 30m
     38/40 checkpoints · 20 sessions
-    cost: $42.00 of $50.00 (84%, $8.00 left)
+    <code>cost: $42.00 of $50.00 (84%, $8.00 left)</code>
     <a href="https://github.com/acme/widgets/blob/feat%2Fkarvansara-edge/.conductor/REPORT.md">the run's report</a>

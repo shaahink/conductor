@@ -206,6 +206,13 @@ public sealed class RunState
     public long TotalTokensOutput => History.Sum(h => h.TokensOutput ?? 0);
     public long TotalTokensReasoning => History.Sum(h => h.TokensReasoning ?? 0);
 
+    /// <summary>KS11.3: every token this run has spent, cache reads included, using
+    /// <see cref="SessionRecord.TokensTotal"/>'s own definition rather than a second sum that could
+    /// disagree with it. The three totals above deliberately EXCLUDE cache reads, which is about 98%
+    /// of what an era like this one actually spends — so a telemetry line built from them would
+    /// report a fiftieth of the truth.</summary>
+    public long TotalTokens => History.Sum(h => h.TokensTotal);
+
     public static RunState LoadOrNew(string path, string planName)
     {
         if (File.Exists(path))

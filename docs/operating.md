@@ -200,6 +200,12 @@ Both chats get every push. The observer chat may ask `/status`, `/tasks`, `/dail
 control verb, `/inject`, `/chat` or a tap on a confirmation button gets one named line saying so and
 nothing happens. An unknown command is met with silence, as it always has been.
 
+Each chat is introduced before the run's first word: what this run is (plan, stage map, budget
+ceiling), what will arrive here and when, and exactly what this chat may ask. A chat added by a
+plan reload mid-run gets the same introduction at the reload, and `/start` re-sends it on request.
+The "what you can ask" list is built from the same catalogue that enforces the permission, so it
+cannot promise a verb the bot would refuse.
+
 **Three things about group chats specifically:**
 
 1. **Privacy mode.** A bot added to a group sees only messages addressed to it — commands like

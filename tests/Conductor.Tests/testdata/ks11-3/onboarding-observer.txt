@@ -1,0 +1,8 @@
+<b>Karvansara edge</b> — this chat is now following a conductor run.
+An agent is working through a plan on its own; this is where it reports.
+2 stages: KS11 → KS12 · 2/4 checkpoints done
+<code>budget $42.00 of $50.00 (84%, $8.00 left) · tokens 3.5M</code>
+<b>What arrives here</b>
+A message when a session ends, when evidence lands, and when the run finishes or parks for a decision. Each one says what landed, what proves it, and what it has cost so far. Nothing is filtered — this is the same story the run's owner gets.
+<b>What you can ask</b>
+/status, /tasks, /daily — reading only. Nothing this chat types can move the run.

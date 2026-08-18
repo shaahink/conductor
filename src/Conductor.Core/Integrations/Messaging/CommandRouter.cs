@@ -29,6 +29,11 @@ public enum SurfaceAction
     /// <summary>Remember that this chat's NEXT plain message is an injection, and say so.</summary>
     ArmInjection = 5,
 
+    /// <summary>KS11.3 / CH-4 — send this chat its onboarding message. A separate action because
+    /// the onboarding body is composed asynchronously (it reads the tracker and the plan) and
+    /// because it is the one reply whose content depends on the asking chat's profile.</summary>
+    Onboard = 7,
+
     /// <summary>KS11.2 / CH-3 — the verb exists and this chat may not use it. Delivered exactly like
     /// <see cref="Reply"/>; it is a separate action so that "an observer was refused" is a fact the
     /// command-by-profile matrix can assert, rather than a string it has to pattern-match.</summary>
@@ -100,8 +105,10 @@ public sealed class CommandRouter
         if (text.Equals("/tasks", StringComparison.OrdinalIgnoreCase))
             return CommandOutcome.Reply(_composer.TasksText());
 
+        // KS11.3 / CH-4: /start answered one static sentence — "Conductor bot is running" — which
+        // told a new reader nothing about what run this is, what will arrive, or what they may ask.
         if (text.Equals("/start", StringComparison.OrdinalIgnoreCase))
-            return CommandOutcome.Reply("Conductor bot is running. Use /status to see the current state.");
+            return new CommandOutcome(SurfaceAction.Onboard);
 
         if (text.Equals("/daily", StringComparison.OrdinalIgnoreCase))
             return CommandOutcome.Reply(_composer.DailyDigestText());

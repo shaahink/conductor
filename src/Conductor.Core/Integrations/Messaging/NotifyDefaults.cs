@@ -11,34 +11,69 @@ namespace Conductor.Core.Integrations.Messaging;
 /// a message attributable.</para></summary>
 public static class NotifyDefaults
 {
-    /// <summary>Facts: outcome, duration, progress, landed, gates, result, cost, report.</summary>
+    /// <summary>KS11.3 / CHAPAR CH-5 — headline, then what landed, then what PROVES it, then the
+    /// numbers. Facts: outcome, duration, landed, result, proof, telemetry, report — and the K5.4
+    /// facts progress, gates and cost, kept so an owner override written against the old shape still
+    /// renders instead of being refused.
+    /// <para>The push used to be a status line plus clipped result text: it said what happened and
+    /// never said what showed it, and the cost sat below the prose where a phone cuts it off. Now a
+    /// checkpoint push reads standalone — what landed, what proves it, what it has cost.</para></summary>
     public const string SessionEnd = """
 <b>{outcome}</b>{duration}
-{progress}
 {landed}
-gates: {gates}
 {result}
-{cost}
+{proof}
+{telemetry}
 {report}
 """;
 
-    /// <summary>Facts: outcome, duration, checkpoints, skipped, cost, report. The order is the ask —
+    /// <summary>Facts: outcome, duration, checkpoints, skipped, telemetry, report (and cost, kept
+/// for overrides). The order is the ask —
     /// outcome, cost, checkpoint count, duration, report — rather than the engine build string the
     /// old message led with.</summary>
     public const string RunComplete = """
 <b>{outcome}</b>{duration}
 {checkpoints}
 {skipped}
-{cost}
+{telemetry}
 {report}
 """;
 
-    /// <summary>Facts: batch, artifact, progress. Rendered as the CAPTION on the artifact itself, so
+    /// <summary>Facts: batch, artifact, telemetry (and progress, kept for overrides). Rendered as
+/// the CAPTION on the artifact itself, so
     /// it is bounded by Telegram's 1024-character caption limit rather than the message limit.</summary>
     public const string Evidence = """
 <b>evidence</b>{batch}
 • {artifact}
-{progress}
+{telemetry}
+""";
+
+    /// <summary>KS11.3 / CHAPAR CH-4 — the bot's FIRST message, in the admin's voice. Facts: name,
+    /// plan, budget, arrivals, asks.
+    /// <para>No chat should ever receive its first push without having been told the rules. A chat
+    /// added mid-run used to get a session-end message with no frame at all — what run, whose
+    /// machine, why it is being told.</para></summary>
+    public const string OnboardingAdmin = """
+<b>{name}</b> — this chat is now the control surface for a conductor run.
+{plan}
+{budget}
+<b>What arrives here</b>
+{arrivals}
+<b>What you can ask</b>
+{asks}
+""";
+
+    /// <summary>KS11.3 / CHAPAR CH-4 — the same message in the observer's voice: a welcome to a
+    /// project dashboard rather than a console. Facts: name, plan, budget, arrivals, asks.</summary>
+    public const string OnboardingObserver = """
+<b>{name}</b> — this chat is now following a conductor run.
+An agent is working through a plan on its own; this is where it reports.
+{plan}
+{budget}
+<b>What arrives here</b>
+{arrivals}
+<b>What you can ask</b>
+{asks}
 """;
 
     /// <summary>Facts: count, noun, lines. What a batch too large to attach is announced as.</summary>

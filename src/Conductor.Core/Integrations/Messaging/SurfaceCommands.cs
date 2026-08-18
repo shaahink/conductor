@@ -62,10 +62,31 @@ public static class SurfaceCommands
         new("/kill", SurfaceScope.Control),
     ];
 
-    /// <summary>What an observer may ask for, written the way a refusal should list it.</summary>
+    /// <summary>What an observer may ask for, written the way a refusal and an onboarding message
+    /// should list it.
+    ///
+    /// <para>KS11.3: only verbs that ANSWER. A list that promises <c>/evidence</c> before KS11.4
+    /// builds it is a bot that ignores the reader the first time they take it at its word — so the
+    /// list is derived from <see cref="SurfaceCommand.Implemented"/> and grows by itself as the
+    /// handlers land. <c>/start</c> is left out because it is how a reader GOT this list.</para></summary>
     public static string BrowseList =>
-        string.Join(", ", All.Where(c => c.Scope == SurfaceScope.Browse && c.Verb != "/start")
+        string.Join(", ", All.Where(c => c.Scope == SurfaceScope.Browse && c.Implemented && c.Verb != "/start")
                              .Select(c => c.Verb));
+
+    /// <summary>The whole surface a profile may use, as one sentence for an onboarding message. The
+    /// admin version says what the chat can do about the run; the observer version is
+    /// <see cref="BrowseList"/> and stops there, because that is the point of the profile.</summary>
+    public static string AskLine(ChatProfile profile, bool twoWay)
+    {
+        if (profile != ChatProfile.Admin)
+            return BrowseList + " — reading only. Nothing this chat types can move the run.";
+
+        var line = BrowseList + ", /inject &lt;text&gt; to steer the next session";
+        var control = string.Join(", ", All.Where(c => c.Scope == SurfaceScope.Control).Select(c => c.Verb));
+        return twoWay
+            ? line + $", and {control} to control it — the destructive ones ask first."
+            : line + $". Control ({control}) is off: set telegram.enableTwoWay to turn it on.";
+    }
 
     /// <summary>The verb a message begins with, or null. Matches the router exactly: the whole text
     /// is the verb, or the verb followed by an argument.</summary>
