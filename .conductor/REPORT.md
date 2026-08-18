@@ -1,27 +1,27 @@
 ﻿# Conductor — Karvansara edge - gates that can't be gamed, and the courier run report
 
-_Updated 2026-08-18 18:13 UTC · branch `feat/karvansara-edge` · HEAD `7ef8cba`_
+_Updated 2026-08-18 18:56 UTC · branch `feat/karvansara-edge` · HEAD `003dfe7`_
 
-**Status:** Running
-**Stage:** KS11 — Chapar - the remote surface: profiles, onboarding, evidence on demand · attempts used 0 · working ▸ KS11.1
-**Checkpoints:** 0/24 done · **Sessions run:** 1 · **Cost:** $0.0000 (agent $0.0000 + gates $0.0000) · **Tokens:** 70,721 in / 104 out
+**Status:** Idle
+**Stage:** KS11 — Chapar - the remote surface: profiles, onboarding, evidence on demand · attempts used 0 · working ▸ KS11.2
+**Checkpoints:** 1/24 done · **Sessions run:** 2 · **Cost:** $15.3812 (agent $15.3716 + gates $0.0096) · **Tokens:** 328,319 in / 112,062 out
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| KS11 | Chapar - the remote surface: profiles, onboarding, evidence on demand | ░░░░░░░░░░ 0/5 | **← active** |
+| KS11 | Chapar - the remote surface: profiles, onboarding, evidence on demand | ██░░░░░░░░ 1/5 | **← active** |
 | KS7 | Platform catch-up - posture, hooks, usage, lifecycle, context economics | ░░░░░░░░░░ 0/5 | todo |
 | KS6 | Quality lane - hygiene that buys design | ░░░░░░░░░░ 0/4 | todo |
 | KS4 | Verification that can't be gamed | ░░░░░░░░░░ 0/5 | todo |
 | KS8 | Interop - the run as a readable artifact (cut-first) | ░░░░░░░░░░ 0/2 | todo |
 | KS12 | Ship edge - close the era | ░░░░░░░░░░ 0/3 | todo |
 
-<details><summary>KS11 — Chapar - the remote surface: profiles, onboarding, evidence on demand (0/5)</summary>
+<details><summary>KS11 — Chapar - the remote surface: profiles, onboarding, evidence on demand (1/5)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| KS11.1 | The messenger seam: composition, chat profiles and evidence browsing extracted channel-agnostic; TelegramService becomes the transport adapter; golden replay proves current pushes byte-identical through the seam; a fake channel drives the full surface in tests; an architecture test forbids Telegram types outside the adapter | 🔄 IN PROGRESS | - |
+| KS11.1 | The messenger seam: composition, chat profiles and evidence browsing extracted channel-agnostic; TelegramService becomes the transport adapter; golden replay proves current pushes byte-identical through the seam; a fake channel drives the full surface in tests; an architecture test forbids Telegram types outside the adapter | ✅ DONE | - |
 | KS11.2 | Profiles admin and observer, per chat: old-shape allowedChatIds plans behave byte-identically (pinned); an unknown profile string is refused by name at plan load; the observer surface is closed to status/tasks/progress/evidence/daily, a control or inject attempt refused by name - proven by an exhaustive command-by-profile matrix test | ⬜ TODO | - |
 | KS11.3 | Onboarding + the push grammar: run start and /start post a per-profile onboarding message (what the run is, what will be pushed, what this chat may ask); every push type recomposed to headline / proof / telemetry with money and tokens in monospace; goldens pin both profiles' renderings; a checkpoint push reads standalone | ⬜ TODO | - |
 | KS11.4 | Evidence on demand: /evidence lists checkpoints with evidence, /evidence with an id sends the artifact (document upload for files, chunked text otherwise) with size caps and a per-chat rate limit; an observer pulls a real evidence artifact end-to-end in the rig; the clip constants no longer bound what a reader can reach | ⬜ TODO | - |
@@ -88,6 +88,7 @@ _Updated 2026-08-18 18:13 UTC · branch `feat/karvansara-edge` · HEAD `7ef8cba`
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | KS11 | Deliver | 1 | 08-18 18:09 | 0:03 | Interrupted |  | 0 |  |  |  | 70,721/104 |
+| 2 | KS11 | Resume | 1r1 | 08-18 18:17 | 0:37 | Advanced | KS11.1 | 4 | engine-fast:OK · face-fast:OK | $15.3716 | $0.0096 | 257,598/111,958 |
 
 ## Timeline
 
@@ -98,6 +99,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-18 19:09:26  ▸ stage KS11 entered — Chapar - the remote surface: profiles, onboarding, evidence on demand
 08-18 19:09:26  • session #1 KS11 Deliver started (attempt 1/10)
 08-18 19:13:13  • session #1 KS11 → Interrupted  (3m46s)
+08-18 19:17:03  ◆ run resumed · Karvansara edge - gates that can't be gamed, and the courier
+08-18 19:17:04  • session #2 KS11 Resume started (attempt 1/10)
+08-18 19:56:04  ▪ gate engine-fast pass [session]  (58.0s)
+08-18 19:56:04  ▪ gate face-fast pass [session]  (38.0s)
 ```
 
 ## Health
@@ -105,7 +110,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 1 · retries 0 (0 %) · overall Ok
+sessions 2 · retries 0 (0 %) · overall Ok
 ✓ no health concerns detected
 ```
 
@@ -115,8 +120,16 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvansara-edge
-working tree: M plans/karvansara/EDGE-TRACKER.md
+working tree: clean
 ```
+
+### Commits by session
+
+- **s2 (KS11 Resume)** — 4 commit(s):
+  - [`003dfe7`](https://github.com/shaahink/conductor/commit/003dfe7) docs(tracker): KS11.1 - the handoff, pointing KS11.2 at the router
+  - [`ffbff68`](https://github.com/shaahink/conductor/commit/ffbff68) test(ks11): the fake channel and the boundary that keeps the seam a boundary
+  - [`897e295`](https://github.com/shaahink/conductor/commit/897e295) refactor(ks11): the messenger seam - composition, routing and browsing leave the transport
+  - [`7e64866`](https://github.com/shaahink/conductor/commit/7e64866) test(ks11): the pre-seam goldens - fifteen cases of what the wire carries today
 
 ## Phase handovers (audit)
 
@@ -137,15 +150,36 @@ working tree: M plans/karvansara/EDGE-TRACKER.md
 - `.conductor/handovers/F2.md`
 - `.conductor/handovers/F4.md`
 
+## Last gate run
+
+engine-fast:OK · face-fast:OK
+
+## Last session result
+
+> **messenger seam extracted, proven byte-identical, boundary enforced with no allowlist**
+> - KS11.1 done: 15 pre-seam goldens pass unchanged through the seam, zero diff to the golden files
+> - fake channel drives the whole surface in 17 tests; 3 boundary rules, incl. ITelegramService renamed to IRunNotifier across 37 files
+> - full suite 2690/2691; the one red predated this session (CHANGELOG [Unreleased] gone since KS10.3) and is now fixed
+>
+> artefacts: 7e64866, 897e295, ffbff68, 003dfe7, src/Conductor.Core/Integrations/Messaging/, tests/Conductor.Tests/testdata/ks11/
+>
+> evidence: .conductor/evidence/KS11/ks11-1-messenger-seam.md
+>
+> gaps: ChatProfile defined but every chat still resolves Admin - KS11.2 owns plan-read profiles and the observer matrix; WatchRemote still names TelegramService outside the seam, recorded in the boundary test's list rather than fixed
+
 ## Tracker handoff
 
 ```
-last: plan authored 2026-08-18; nothing has run. Core shipped as v0.4.1 on 2026-08-15 (32/32);
-  edge is the era's second half - KS11 remote surface added on the owner's ask, spec'd in the
-  Chapar doc; KS12 closes the era and moves both trackers to docs/history.
-stage: **KS11 not started**.
-gate: never run (branch feat/karvansara-edge not yet created; create it from master at launch).
-next: **KS11.1** - the messenger seam extraction, behaviour-preserving, golden replay as the proof.
-trap: KS11 live proofs use a scratch bot token and scratch chats ONLY - the owner's chat and the
-  BookToCourse group are production. The BookToCourse run shares this machine; promptExtra trap 3.
+last: KS11.1 DONE (ffbff68). The messenger seam is real: Messaging/{IMessageChannel, MessageComposer
+  (+.Views), CommandRouter, RemoteSurface}; TelegramService is now the transport adapter. And
+  byte-identical is MEASURED - 15 goldens generated by the pre-seam engine (7e64866) pass unchanged.
+stage: KS11 in flight, 1 of 5 done.
+gate: full suite 2690/2691 at 897e295; the one red was CHANGELOG missing [Unreleased] since KS10.3 -
+  unrelated to the seam, now written, SC8_2Versioning 3/3 after it.
+next: **KS11.2** - profiles. CommandRouter.Route already TAKES a ChatProfile and ignores it: that is
+  the one place to enforce CH-3, and the command-by-profile matrix belongs against the router (pure,
+  no channel, no HTTP) rather than TelegramService. TelegramService.ProfileFor(chatId) is the stub
+  that always answers Admin. TelegramConfig still has only allowedChatIds; no `chats` block yet.
+trap: the ks11 goldens came from an OLD-SHAPE allowedChatIds plan, so keeping them green IS KS11.2's
+  back-compat proof - never regenerate them. Scratch bot and scratch chats only for live proofs.
 ```
