@@ -256,9 +256,12 @@ if (-not (Test-Path $budgetScript)) {
 }
 else {
     Write-Host ""
+    # NO -Anchor, unlike the call above, and the difference is deliberate. $base here is origin/<branch>,
+    # and by the time conductor runs this battery the session has already committed AND PUSHED, so
+    # origin/<branch> IS HEAD - handing it over as the anchor would collapse the budget window to a single
+    # commit and compare the tree with itself. The child picks its own window of history instead.
     $hostExe2 = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
-    if ($base) { & $hostExe2 -NoProfile -ExecutionPolicy Bypass -File $budgetScript -Anchor $base }
-    else       { & $hostExe2 -NoProfile -ExecutionPolicy Bypass -File $budgetScript }
+    & $hostExe2 -NoProfile -ExecutionPolicy Bypass -File $budgetScript
     if ($LASTEXITCODE -ne 0) {
         $failures.Add("THE COMPLEXITY-BUDGET GATE FAILED - see its named reasons above. A budget raised to fit the code is the code deciding the bar.")
     }

@@ -136,32 +136,43 @@ function Read-Budget {
 # is judging, and a tracked one that somebody deleted from disk still has to answer for its budget.
 function Get-ProjectDirs {
     param([string]$Ref)
-    if ($Ref) { $gitArgs = @("ls-tree", "-r", "--name-only", $Ref) }
-    else      { $gitArgs = @("ls-files") }
-    $files = Invoke-GitLines ($gitArgs + @("--", "*.csproj"))
+    # NO PATHSPEC ON ls-tree, and this is not tidiness. Measured while building this gate: 'git ls-tree -r
+    # --name-only HEAD -- *.csproj' returns NOTHING on this repo while 'git ls-files -- *.csproj' returns
+    # five - ls-tree matches a path PREFIX, not a glob, and it says so by exiting 0 with no output. The
+    # first draft used it and every historical bar came back empty, so the gate reported OK on a loosening
+    # it had simply never measured. The whole tree is listed and filtered here instead.
+    if ($Ref) { $files = Invoke-GitLines @("ls-tree", "-r", "--name-only", $Ref) }
+    else      { $files = Invoke-GitLines @("ls-files", "--", "*.csproj") }
     $dirs = New-Object System.Collections.Generic.List[string]
     foreach ($f in $files) {
         $norm = ([string]$f).Replace("\", "/").Trim()
         if ($norm -eq "") { continue }
+        if (-not $norm.EndsWith(".csproj", [System.StringComparison]::OrdinalIgnoreCase)) { continue }
         $slash = $norm.LastIndexOf("/")
         if ($slash -gt 0) { $dirs.Add($norm.Substring(0, $slash)) }
     }
     return @($dirs | Select-Object -Unique | Sort-Object)
 }
 
+# CONDUCTOR_BASE_REF IS DELIBERATELY NOT CONSULTED HERE, and that is a difference from analyzer-debt.ps1
+# rather than an oversight. The run sets it to origin/<branch>, and KS6.2 measured what that is worth at
+# gate time: a session commits and pushes before conductor runs the battery, so origin/<branch> IS HEAD and
+# a single-commit anchor compares the tree with itself. Collapsing this window to one commit would void
+# every loosening check in the file. Only a human naming -Anchor, or CONDUCTOR_COMPLEXITY_ANCHOR set on
+# purpose, can do that - and both are visible in the output when they do.
 function Get-AnchorCommits {
     if ($Anchor) { return @($Anchor) }
     if ($env:CONDUCTOR_COMPLEXITY_ANCHOR) { return @($env:CONDUCTOR_COMPLEXITY_ANCHOR) }
-    if ($env:CONDUCTOR_BASE_REF) { return @($env:CONDUCTOR_BASE_REF) }
     return Invoke-GitLines @("log", "--format=%H", "-n", "$Window", "--", ("*" + $BUDGET_FILE), ".editorconfig", $PROPS_FILE)
 }
 
-$anchorCommits = @(Get-AnchorCommits | Where-Object { $_ -match "^[0-9a-f]{7,}$" })
+$anchorCommits = @(Get-AnchorCommits | Where-Object { ([string]$_).Trim() -ne "" })
+$anchorIsExplicit = ($Anchor -ne "" -or $env:CONDUCTOR_COMPLEXITY_ANCHOR)
 if (-not $Quiet) {
-    if ($anchorCommits.Count -eq 1) {
-        Write-Host ("complexity-budget: anchor is {0} (named explicitly)" -f $anchorCommits[0])
+    if ($anchorIsExplicit -and $anchorCommits.Count -ge 1) {
+        Write-Host ("complexity-budget: anchor is {0} (named explicitly - the window is off)" -f $anchorCommits[0])
     }
-    elseif ($anchorCommits.Count -gt 1) {
+    elseif ($anchorCommits.Count -ge 1) {
         Write-Host ("complexity-budget: bar is the STRICTEST value over the last {0} commits that touched a budget ({1} found) - no single commit moves it" -f $Window, $anchorCommits.Count)
     }
     else {
