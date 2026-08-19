@@ -2,29 +2,28 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, <=12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS12.2 IS DONE and claimed (7ad41d8), evidence .conductor/evidence/KS12/ks12-2-published-surface.md.
-  README carried NONE of edge - grep for mcp-observe/atif/otel/holdout/observer hit zero - so it now has
-  the gate-class table, the Telegram browse/steer/control split with all 14 verbs from SurfaceCommands.cs,
-  admin-vs-observer chats, and the three read-only exits. One correction: the front page claimed battery
-  collapse saves "30-50% of output tokens" when plan-config.md:41 already retracted that as unmeasured.
-  operating.md section 7 re-dated to the edge close; its "anti-cheat ratchet green" line is DELETED as
-  false and replaced with the measurement - analyzer-debt exits 1, pragma-src 33 vs bar 31 (bug 60), and
-  the bar may not be moved. Build re-measured 0w/0e. docs/README.md, quickstart.md done; tracker.md needed
-  nothing - its runtime-file tree is pinned by the docs suite, which is 41/41 green.
-  The README pin was WRONG and caught me: it resolved a verb from the first word, so `conductor history
-  export --atif` read as `history`. It now applies the engine's own argv rewrite by reflection; seeded red
-  proven; 35/35. Payesh: PR shaahink/payesh#2 on ks12/harvest-era-close, NOT merged - the re-harvest broke
-  the site's corpus test because three runs are now `closed` in the store, which means closed BY HAND and
-  says nothing about finishing; `closed` now resolves through anonymise.json like `running`.
-next: KS12.3 is OWNER-ONLY - merge to master, tag with the CHANGELOG [Unreleased] section as the body,
-  reinstall (check no other conductor run is live first), github sync --backfill of this run, merge
-  payesh PR #2, and move CORE-TRACKER.md + EDGE-TRACKER.md + the era brief to docs/history. A session
-  cannot do any of it. Carry into it: analyzer-debt is RED (bug 60, stated in docs, not fixed, bar not
-  raised); payesh `npm run anonymity` is red on the word "website" (bug 41, pre-existing); and the two
-  Karvansara runs are still excluded from the published corpus by anonymise.json - publishing them is
-  an editorial call, not a session's.
+last: KS12.3 is PARKED ON THE OWNER, not claimed - and that was verified, not inherited:
+  edge.plan.json:142 sets ownerGate true on KS12, and each sub-action has its own owner-only trap
+  (1 merge/tag/reinstall, 0+5 the backfill of an unfinished run, 15 the payesh merge, 13+0 the
+  tracker move, which needs the forbidden plan reload). So I pre-flighted it instead:
+  .conductor/evidence/KS12/ks12-3-owner-runbook.md, five preconditions measured, TWO RED.
+  RED 1 - a tag pushed today is REFUSED before any platform compiles: tools/changelog-section.sh
+  0.5.0 exits 1 because CHANGELOG.md:22 is still `## [Unreleased]`. The rename is the owner's, it
+  carries the version number; the section extracts 112 clean lines and quotes no dated run figure.
+  RED 2 - the tracker move is NOT a git mv: SF7_1DocsMatchRealityTests.Karvansara.cs:116 and
+  :119-127 pin both old paths, so it is one commit of git mv + docs/dev/README.md table + that test
+  + edge.plan.json:39,40,229-230 + core.plan.json:36,37,225-226. GREEN: master is an ancestor
+  (0 behind/76 ahead, fast-forward, no conflict possible); `github sync --backfill` exists in the
+  fresh build - pass run id 9491891fe700463ba0d876c06280cce2, the slug is shared with core; no
+  foreign conductor run is live, though that must be re-checked before the reinstall.
+next: nothing is left for a session. Every remaining action is KS12.3 and the runbook has the order.
+HUMAN: two calls are yours before the release can run - the version number for the CHANGELOG rename
+  (v0.4.1 is latest; edge is features-only, which reads v0.5.0, but nothing in the repo states it),
+  and whether the two Karvansara runs join the published payesh corpus, which anonymise.json still
+  excludes. Still red and stated, not fixed: analyzer-debt (bug 60, pragma-src 33 vs bar 31, bar may
+  not be moved) and payesh `npm run anonymity` on the word "website" (bug 41, pre-existing).
 
 ## Baseline numbers (from run.db)
 
@@ -32,7 +31,7 @@ next: KS12.3 is OWNER-ONLY - merge to master, tag with the CHANGELOG [Unreleased
 |---|---|
 | Total checkpoints | 24 |
 | Done | 21 |
-| Claimed (unconfirmed) | 1 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -90,7 +89,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | KS12.1 | Internal record: ARCHITECTURE.md + docs/dev reconciled for everything edge changed; closure ledger naming every bug/followup row closed here or its living owner (bug 44 and the KS10.1 inherited gaps included); conductor budget re-measured into TOKEN-BUDGET-TUNING - the number the next era compiles against | DONE | eb87ad4 | .conductor/evidence/KS12/ks12-1-closure-ledger.md,.conductor/evidence/KS12/ks12-1-architecture-reconcile.md,.conductor/evidence/KS12/ks12-1-budget-remeasure.json |
-| KS12.2 | Published surface: README + docs user set (operating.md carries the observer-profile and group-chat setup; plan-config.md carries the telegram chats shape and every key edge added) + CHANGELOG Unreleased written as the release body; docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushed to main | IN PROGRESS | - | - |
+| KS12.2 | Published surface: README + docs user set (operating.md carries the observer-profile and group-chat setup; plan-config.md carries the telegram chats shape and every key edge added) + CHANGELOG Unreleased written as the release body; docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushed to main | DONE | 7ad41d8 | .conductor/evidence/KS12/ks12-2-published-surface.md |
 | KS12.3 | OWNER-ONLY: merge feat/karvansara-edge to master, tag and release through the pipeline with KS12.2's CHANGELOG section as the body, reinstall (no other live run on the machine first), github sync --backfill of THIS run, merge the payesh PR, and move CORE-TRACKER.md + EDGE-TRACKER.md + the era brief to docs/history - the Karvansara era closes | TODO | - | - |
 
 ## Dependencies
