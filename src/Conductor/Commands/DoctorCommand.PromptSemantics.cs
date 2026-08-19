@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Conductor.Core;
 using Conductor.Models;
 using Conductor.Planning;
@@ -44,6 +44,11 @@ public sealed partial class DoctorCommand
             ("verify.md", () => prompts.Verify(stage, 1, verify)),
             ("audit.md", () => prompts.Audit(stage, 1, "HEAD")),
             ("review.md", () => prompts.Review(stage, 1, 1, 1, "(doctor)")),
+            // KS4.5: the judge is not a session kind, but its prompt is composed the same way and
+            // travels the same road — as an ARGUMENT to a CLI — so it is linted and measured with the
+            // rest. Left out, its two new placeholders were unresolvable by construction and a
+            // scaffolded templates dir was doctor-red on a template the operator had never touched.
+            ("judge.md", () => prompts.Judge(stage, "(doctor)", "(doctor)", "(doctor)", "(doctor)", "(doctor)", "(doctor)")),
         ];
     }
 

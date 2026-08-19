@@ -1,4 +1,4 @@
-namespace Conductor.Core.Accounting;
+﻿namespace Conductor.Core.Accounting;
 
 /// <summary>
 /// KS5.2 — the <c>costs.category</c> vocabulary, in one place.
@@ -23,6 +23,11 @@ public static class SpendCategory
 
     /// <summary>The second-brain consult at an ambiguous session end.</summary>
     public const string Advisor = "advisor";
+
+    /// <summary>KS4.5 — the advisory second-model review of a delivered session. Billed like the
+    /// advisor and separate from it, because a run that pays for a review it never acts on should be
+    /// able to see exactly what that cost.</summary>
+    public const string Judge = "judge";
 
     /// <summary>A read-only analysis lane (B12.1/B12.2).</summary>
     public const string Lane = "lane";
@@ -55,7 +60,7 @@ public static class SpendCategory
     /// operator. Used by the tests that assert the vocabulary is distinct — a duplicate constant
     /// would silently merge two spenders into one row.</summary>
     public static IReadOnlyList<string> All { get; } =
-        [Agent, Gate, Advisor, Lane, FixLane, Audit, Supervisor, AuthProbe, AuditReplay, Status];
+        [Agent, Gate, Advisor, Judge, Lane, FixLane, Audit, Supervisor, AuthProbe, AuditReplay, Status];
 
     /// <summary>True when this category's dollars came off a provider's wire. False for
     /// <see cref="Gate"/> alone, and a surface that mixes the two should say which is which.</summary>

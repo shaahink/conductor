@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Conductor.Core.Events;
 using Conductor.Core.Evidence;
 using Conductor.Models;
@@ -53,6 +53,18 @@ public sealed partial class RunLoop
             {
                 var artifact = await EvidenceReader
                     .ReadAsync(attemptDiff, repo, null, rec.Number, EvidenceArtifact.AttemptSource, ct: ct)
+                    .ConfigureAwait(false);
+                if (artifact is not null && registry.Add(artifact)) fresh.Add(artifact);
+            }
+
+            // 1c. KS4.5: the advisory judge's review, if a judge ran. Registered on the same terms as
+            //     the attempt diff and with its own source, so a reader can tell a MEASUREMENT from a
+            //     JUDGEMENT without opening the file. It carries no checkpoint id for the same reason
+            //     the diff does not: an opinion is not a claim.
+            if (rec.JudgeReviewPath is { Length: > 0 } judgeReview)
+            {
+                var artifact = await EvidenceReader
+                    .ReadAsync(judgeReview, repo, null, rec.Number, EvidenceArtifact.JudgeSource, ct: ct)
                     .ConfigureAwait(false);
                 if (artifact is not null && registry.Add(artifact)) fresh.Add(artifact);
             }

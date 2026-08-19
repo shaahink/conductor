@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
 namespace Conductor.Core.Evidence;
@@ -45,6 +45,13 @@ public sealed record EvidenceArtifact(
     /// It lives here, on the record whose field it fills, rather than on the writer, so the run loop's
     /// registration leg can name it without taking on a coupling it has no budget for.</summary>
     public const string AttemptSource = "attempt";
+
+    /// <summary>KS4.5: the <see cref="Source"/> an advisory judge review carries. Its own word, beside
+    /// "attempt", because a reader must be able to tell a MEASUREMENT from a JUDGEMENT without opening
+    /// the file — an artifact whose contents are one model's opinion is not the same kind of thing as a
+    /// diff, and a surface that presented them identically would be inviting the confusion this
+    /// checkpoint exists to prevent.</summary>
+    public const string JudgeSource = "judge";
 }
 
 /// <summary>The kind vocabulary. Non-text kinds are first-class here because a screenshot is the case

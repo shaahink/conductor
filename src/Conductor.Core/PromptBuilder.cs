@@ -69,6 +69,25 @@ public sealed partial class PromptBuilder
         return Render("advisor.md", vars);
     }
 
+    /// <summary>KS4.5 — the advisory reviewer's prompt. Two things it is not, and both are load-bearing:
+    /// it is not asked what the run should DO (that is <see cref="Advisor"/>, whose answer moves the
+    /// run), and it is not shown a decision it could overturn — the deterministic outcome is handed to
+    /// it as settled fact, so a disagreement is recorded as a disagreement instead of read as an appeal.
+    /// <para>The gate summary is safe to hand over because KS4.1's redaction is structural: a holdout
+    /// gate leaves <c>GateRunner</c> already anonymous, so nothing composed from a
+    /// <see cref="GateResult"/> can name one.</para></summary>
+    public string Judge(StageConfig stage, string outcome, string gates, string commits, string diff, string tail, string? focus)
+    {
+        var vars = Vars(stage, 0, 1, 1);
+        vars["outcome"] = outcome;
+        vars["gates"] = gates;
+        vars["commits"] = commits;
+        vars["diff"] = diff;
+        vars["tail"] = tail;
+        vars["focus"] = string.IsNullOrWhiteSpace(focus) ? "" : "What this plan wants looked at hardest: " + focus;
+        return Render("judge.md", vars);
+    }
+
     public string Verify(StageConfig stage, int sessionNumber, PendingVerify verify, string? personaOverride = null)
     {
         var vars = Vars(stage, sessionNumber, 1, 1, personaOverride);

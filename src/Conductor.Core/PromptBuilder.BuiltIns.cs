@@ -17,7 +17,7 @@ public sealed partial class PromptBuilder
     /// the failure mode this closes is a user editing <c>session.md</c>, assuming the rest are there
     /// too, and never learning that audit and verify still render from a C# string literal.</summary>
     internal static readonly string[] BuiltInNames =
-        ["session.md", "fix.md", "resume.md", "verify.md", "review.md", "audit.md", "advisor.md", "chat.md"];
+        ["session.md", "fix.md", "resume.md", "verify.md", "review.md", "audit.md", "advisor.md", "judge.md", "chat.md"];
 
     /// <summary>KS3.1 (promptExtra trap 9) — none of these bodies SPELLS the escalation token, they
     /// describe it. <c>ProgressConventions.MentionsHuman</c> matches <c>conventions.humanToken</c> as a
@@ -113,6 +113,23 @@ public sealed partial class PromptBuilder
             - retry: a fresh fix-session is likely to succeed (legacy: maps to fresh attempt)
             - resume: resume the interrupted agent session to finish in-flight work (legacy: maps to resume)
             - skip: park this stage for human review later and move on (legacy: maps to skip)
+            """,
+        "judge.md" => """
+            You are a SECOND REVIEWER for an autonomous engineering run, and you are not its decision maker. The run's deterministic gates have already settled this session — the outcome below is final and nothing you write can move it. Your review is recorded as evidence for the humans and for the next session, so be specific, terse and honest.
+
+            What was delivered:
+            - Plan: {planName}, stage {stage} ({stageTitle})
+            - Deterministic outcome (already settled): {outcome}
+            - Gate results: {gates}
+            - Commits this session: {commits}
+            - The session's own result: {tail}
+            {focus}
+            The attempt's diff (may be truncated):
+            {diff}
+
+            Judge the WORK, not the run's decision. Look for what a gate cannot see: shallow or stubbed implementations, tests that assert nothing, a checkpoint claimed wider than it was delivered, a fix that moves the problem. If you think the gates got it wrong — in either direction — say so plainly; a recorded disagreement is the most valuable thing you can leave behind, and it costs the session nothing.
+
+            Reply with ONLY a JSON object, no prose: {"verdict":"pass|fail|concerns","score":0-100,"findings":["one per line, most important first"],"summary":"one sentence"}
             """,
         "audit.md" => """
             You are an AUDIT session inside the "{planName}" mega plan, launched by the Conductor orchestrator after stage {stage} — {stageTitle} passed its full gate battery (session #{sessionNumber}).

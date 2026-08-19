@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Conductor.Core.Events;
 using Conductor.Core.Store;
 using Conductor.Models;
@@ -160,6 +160,13 @@ public sealed partial class VerdictEngine
 
         var (workEvidence, pass) = WorkEvidence(evidence, gates, rec, stage, preTrack, startHead, ct);
         decision = SessionVerdict.Decide(workEvidence);
+
+        // KS4.5: the judge is consulted HERE, after the decision exists and before anything applies it,
+        // and it is handed that decision as settled fact. The rows it returns are recorded and reported;
+        // the decision is never recomputed, which is what makes "evidence, never verdict" a property of
+        // the control flow rather than a promise in a comment.
+        workEvidence = await JudgeSessionAsync(workEvidence, decision, rec, stage, pass, ct).ConfigureAwait(false);
+
         await ApplyDeliveryAsync(decision, workEvidence, pass, rec, stage, preTrack, startHead, ct).ConfigureAwait(false);
     }
 
@@ -420,6 +427,12 @@ public sealed partial class VerdictEngine
             : "";
         var bookkeepingNote = w.Bookkeeping > 0 ? $" (+{w.Bookkeeping} conductor bookkeeping, not counted)" : "";
         _ctx.Log($"verdict inputs: {GateRunner.Token(w.Gates)} · commits {w.WorkCommits.Count}{satelliteNote}{bookkeepingNote} · newly DONE [{string.Join(",", rec.NewlyDone)}] · dirty {(e.WorkingTreeDirty ? "YES" : "no")}", e.GatesGreen ? "pass" : "fail");
+
+        // KS4.5: the advisory rows are REPORTED beside the inputs and are not among them — printed
+        // after the line that says what decided, on its own line, so a reader can see at a glance that
+        // the judge spoke and that the verdict did not depend on it. Silent when no judge ran, which
+        // keeps every existing run's log byte-identical.
+        if (AdvisoryNote(e) is { } advisory) _ctx.Log(advisory);
 
         if (d.Disposition == VerdictDisposition.ParkForHuman)
         {

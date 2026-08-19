@@ -192,6 +192,37 @@ all fail the plan the way SC3.1's model gap does, and `doctor` reports them as t
 a warn when the CLI named in `command` is not installed — that one is survivable (the consult fails
 to spawn and the deterministic default takes over) but you should know before the run, not after.
 
+## `judge` — Advisory second-model review (evidence, never verdict)
+
+A second model that reviews what a session delivered and whose answer **decides nothing**. It is
+recorded: the review lands in the evidence taxonomy as its own artifact (source `judge`, under
+`<stateDir>/judge/`), as an advisory row beside the verdict inputs, and — the row worth having — with
+its agreement or DISAGREEMENT with the deterministic signals stated explicitly.
+
+Off unless you add the block and enable it, because a judge costs a model spawn per delivery and buys
+no decision. It is deliberately not part of `advisor`: the advisor is asked what the run should DO and
+its answer moves the run; the judge is asked what the work is WORTH and its answer is only ever filed.
+
+| Field | Type | Description |
+|---|---|---|
+| `enabled` | bool | Default **false** — a judge is opt-in. |
+| `command` | string | CLI exe. Default `"claude"`. Pick a different model from the one doing the work: a model reviewing itself produces confident praise of mediocre work. |
+| `args` | string[] | Args with a `{prompt}` placeholder. Default `["-p", "{prompt}"]`. |
+| `output` | string | How to unwrap the answer: `"text"` (default), `"json"`, or `"stream-json"` — same vocabulary as `advisor.output`. |
+| `timeoutMinutes` | int | Judge timeout. Default 6. Minimum 1. |
+| `focus` | string | Optional sentence naming what this plan wants looked at hardest. Spliced into the prompt as prose, so it is brace-checked like stage `notes`. |
+
+The judge is asked for one JSON object — `verdict` (`pass`/`fail`/`concerns`), an optional `score`
+0-100, `findings` and a one-line `summary` — and is TOLD the deterministic outcome as settled fact, so
+that a disagreement is recorded as a disagreement rather than read as an appeal. A review that cannot
+be parsed is recorded as unavailable and never defaulted into an opinion.
+
+**There is no `judge.threshold`, and there will not be one.** A score the judge produced cannot fail a
+session, cannot fail a gate and cannot move a checkpoint; the deterministic signals decide, exactly as
+they did before the block existed. A key that looks like a bar is refused at plan load, by name, for
+that reason. The same refusals as `advisor` apply to the rest: an unknown key, an empty `args`, `args`
+with no `{prompt}`, an unknown `output` kind and a `timeoutMinutes` below 1 all fail the plan at load.
+
 ## `statusAgent` — On-demand LLM status reporter
 
 | Field | Type | Description |
@@ -694,7 +725,7 @@ tracker parses.
 ## `templatesDir` — Prompt template directory
 
 Path (relative to plan file) to custom `session.md`, `fix.md`, `resume.md`, `audit.md`, `advisor.md`,
-`review.md` templates. Falls back to built-in defaults when files are missing. `conductor init` drops
+`judge.md`, `review.md` templates. Falls back to built-in defaults when files are missing. `conductor init` drops
 editable copies of `session.md` and `fix.md` so "templates as content" works the moment you run.
 
 ## `readOrder` — Session reading list

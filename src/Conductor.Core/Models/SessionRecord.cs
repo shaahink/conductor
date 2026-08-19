@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Conductor.Models;
 
@@ -36,6 +36,12 @@ public sealed class SessionRecord
     /// evidence taxonomy at the session boundary, so the verdict and every later reader see the SHAPE of
     /// an attempt rather than only its commit count.</summary>
     public string? AttemptDiffPath { get; set; }
+
+    /// <summary>KS4.5: the file holding this session's advisory judge review, under
+    /// <c>&lt;stateDir&gt;/judge/</c>. Null when no judge is configured, it could not be read, or the
+    /// session was never graded. Registered in the evidence taxonomy with its own source; read by
+    /// nothing that decides anything.</summary>
+    public string? JudgeReviewPath { get; set; }
     public string ResultSummary { get; set; } = "";
 
     /// <summary>K4.1: how full the context window ran, per turn — high water, mean and the number of

@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 namespace Conductor.Models;
 
 /// <summary>The per-mega-plan configuration file (e.g. plans/loom.plan.json).</summary>
-public sealed class PlanConfig
+public sealed partial class PlanConfig
 {
     /// <summary>Schema version. Currently only "1.0" is supported; a plan without a version or
     /// with an unsupported version is rejected with a clear diagnostic (B1.6).</summary>
@@ -28,6 +28,10 @@ public sealed class PlanConfig
     public bool PauseOnBlocked { get; set; } = true;
     public AgentConfig Agent { get; set; } = new();
     public AdvisorConfig? Advisor { get; set; }
+    /// <summary>KS4.5: the optional advisory second-model review. Off unless present and enabled, and
+    /// deliberately NOT part of <see cref="Advisor"/>: the advisor's answer moves the run, the judge's
+    /// answer is only ever recorded.</summary>
+    public JudgeConfig? Judge { get; set; }
     /// <summary>Optional clean-slate command run before each agent session and before each gate battery.</summary>
     public HookConfig? Setup { get; set; }
     /// <summary>Optional command run after each gate battery to stop anything the session/gates left running.</summary>
@@ -357,6 +361,10 @@ public sealed class PlanConfig
         // as the run lasts. Judge it here, where the author can still fix it for free.
         ValidateAdvisor(Advisor, errors);
 
+        // KS4.5: the same judgement, for the judge block — a review nobody can read is worth exactly
+        // what an advisor nobody can hear is worth, and both are found for free here.
+        ValidateJudge(Judge, errors);
+
         // KS11.2 / CHAPAR CH-2: a chat profile the engine cannot read is refused BY NAME here, at
         // plan load, and never quietly read as admin. Getting this wrong means an outsider holding
         // the steering wheel, so it fails the same way an unknown github.board does.
@@ -364,63 +372,6 @@ public sealed class PlanConfig
 
         return errors;
     }
-
-    private static void ValidateAdvisor(AdvisorConfig? a, List<string> errors)
-    {
-        if (a is null) return; // no advisor block is a supported choice — ambiguity takes the default
-
-        // bug 7: an inert key that looks like agent.provider is a lie about which model answers.
-        foreach (var key in (a.UnknownFields?.Keys ?? Enumerable.Empty<string>()).OrderBy(k => k, StringComparer.Ordinal))
-        {
-            var hint = key.Equals("provider", StringComparison.OrdinalIgnoreCase)
-                ? " The advisor has no provider adapter: advisor.command plus its args pick the CLI and the model, and advisor.output only says how to unwrap the answer."
-                : "";
-            errors.Add($"plan.advisor.{key} is not an advisor field — nothing reads it, so it cannot do what it looks like it does. " +
-                       $"Known fields: {string.Join(", ", AdvisorConfig.KnownFields)}.{hint}");
-        }
-
-        if (!a.Enabled) return; // a disabled advisor is never spawned, so its invocation is moot
-
-        if (string.IsNullOrWhiteSpace(a.Command))
-            errors.Add("plan.advisor.command is empty — name the CLI that answers, or set advisor.enabled false");
-
-        if (a.Args.Count == 0)
-            errors.Add("plan.advisor.args is empty — a CLI spawned with no arguments is handed no question: it waits on " +
-                       $"stdin until advisor.timeoutMinutes expires and answers nothing. Use [\"{string.Join("\", \"", AdvisorConfig.DefaultArgs)}\"] " +
-                       "(the shipped default), or set advisor.enabled false");
-        else if (!a.Args.Any(x => x.Contains("{prompt}", StringComparison.Ordinal)))
-            errors.Add("plan.advisor.args carries no {prompt} placeholder — the advisor would be spawned without the question it is being asked");
-
-        if (!AdvisorConfig.IsKnownOutput(a.Output))
-            errors.Add($"plan.advisor.output is '{a.Output}' — use {string.Join(", ", AdvisorConfig.OutputKinds)}. An unknown kind is passed " +
-                       "through raw, so a JSON envelope reaches the parser still wrapped and every answer reads as unparseable");
-
-        if (a.TimeoutMinutes < 1)
-            errors.Add($"plan.advisor.timeoutMinutes must be >= 1 (was {a.TimeoutMinutes}) — a zero timeout kills the advisor before it can answer");
-    }
-
-    /// <summary>SF0.1 / bug 6: the general form of the advisor block's bug-7 check — a key the type
-    /// does not declare is named and refused rather than parsed into a bucket nobody reads. The hint
-    /// exists because "unknown key" is not the useful half of the message; "here is the key that
-    /// really does this" is.</summary>
-    private static void ValidateInertKeys(string where, Dictionary<string, JsonElement>? unknown,
-        IReadOnlyList<string> known, Func<string, string> hint, List<string> errors)
-    {
-        foreach (var key in (unknown?.Keys ?? Enumerable.Empty<string>()).OrderBy(k => k, StringComparer.Ordinal))
-        {
-            errors.Add($"{where}.{key} is not a field here — nothing reads it, so it cannot do what it " +
-                       $"looks like it does. Known fields: {string.Join(", ", known)}.{hint(key)}");
-        }
-    }
-
-    /// <summary>The one inert key both deleted blocks shared, and the only one worth a sentence: a
-    /// pinned model that never reached the agent is a plan claiming one model answered while another
-    /// one did.</summary>
-    private static string InertModelHint(string key) =>
-        key.Equals("model", StringComparison.OrdinalIgnoreCase)
-            ? " A session's model comes from pipeline.roles.<role>.model, else stage.agent.model, else plan.agent.model —" +
-              " set it in one of those."
-            : "";
 
     private static void ValidateProse(string where, string? prose, List<string> errors)
     {

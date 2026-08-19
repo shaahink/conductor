@@ -102,6 +102,7 @@ public sealed class SF6_3InitScaffoldTests : IDisposable
         "review.md" => p.Review(s, 1, 1, 1, "review.md"),
         "audit.md" => p.Audit(s, 1, "HEAD"),
         "advisor.md" => p.Advisor(s, "o", "g", "c", "h", "t", 1, 1),
+        "judge.md" => p.Judge(s, "o", "g", "c", "d", "t", "f"),
         "chat.md" => p.Chat("how much has this run cost?"),
         _ => throw new ArgumentException($"SF6.3: {template} is scaffolded but this test knows no way to " +
             "render it — wire it to an entry point or drop it from BuiltInNames", nameof(template)),
