@@ -4,22 +4,20 @@
 
 ## Handoff (overwrite this block, <=12 lines, no history)
 
-last: KS6.1 DONE - Roslynator 4.16.1 pinned, 33 rules adopted at error each with the design property it
-  buys, RCS1233 refused with its measurement, 113 violations FIXED (no pragma added). Build clean, suite
-  2886/2886 (.conductor/bg-logs/ks61-suite-20260819-012127950.log). Evidence:
-  .conductor/evidence/KS6/KS6.1-curated-roslynator.md.
+last: KS6.1 DONE and committed (af6d93e). Roslynator 4.16.1 pinned, 33 rules at error each with the
+  design property it buys, RCS1233 refused with its measurement, 113 violations FIXED - no pragma added.
+  Suite 2886/2886. Evidence: .conductor/evidence/KS6/KS6.1-curated-roslynator.md.
 THE FINDING KS6.2 INHERITS: roslynator_analyzers.enabled_by_default = false DOES NOTHING here - not from
   .editorconfig, not from a repo-root .globalconfig reaching the compiler through EditorConfigFiles
-  (proven three ways in the ks61-seed2/3/4 logs). 15 of 217 rules ship enabled at Warning and this repo
-  makes warnings errors, so "everything else off" is now enforced by KS6_1AnalyzerCurationTests, which
-  asks the analyzer assemblies which rules can fail this build and reds on any that is not a written
-  decision. Do not re-add the switch; a test asserts it stays out.
-FOR THE KS6.2 REFEREE, learned the hard way this session: a checker that parses the SHAPE it expects
-  cannot see the malformed case. The first curation test missed RCS1O43 (letter O for zero) entirely -
-  invisible to compiler and checker alike. Seed a break into your referee before you trust it. Parse
-  permissively, judge strictly.
-bug 44 is untouched and still KS6.2's: 43 pragmas against a ceiling of 38. Bugs #53/#54/#55 still open.
-next: KS6.2 - the analyzer-debt ratchet, referee not editable by the agent.
+  (three ways, ks61-seed2/3/4 logs). "Everything else off" is now enforced by KS6_1AnalyzerCurationTests,
+  which asks the analyzer assemblies which rules can fail this build. Do not re-add the switch - a test
+  asserts it stays out. And seed a break into your own referee before trusting it: my first version
+  missed RCS1O43 (letter O for zero) entirely, invisible to compiler and checker alike.
+KS6.2 IS BACK ON TODO WITH THE MEASUREMENT ALREADY TAKEN - read the card's amendment and the ledger, do
+  not re-measure. Short version: 45 pragmas against a ceiling of 38 (bug 44 said 43; KS7 added two), but
+  41 of the 45 carry an inline justification naming a real sync boundary and only 4 are bare, so the
+  ceiling counts sync boundaries, not debt. CA1031's pragmas are dead - it sits at suggestion.
+next: KS6.2, the analyzer-debt ratchet. Bugs #53/#54/#55 still open.
 
 ## Baseline numbers (from run.db)
 
