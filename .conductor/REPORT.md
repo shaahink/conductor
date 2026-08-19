@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvansara edge - gates that can't be gamed, and the courier run report
 
-_Updated 2026-08-19 18:04 UTC · branch `feat/karvansara-edge` · HEAD `e0244e0`_
+_Updated 2026-08-19 18:53 UTC · branch `feat/karvansara-edge` · HEAD `19d9ab1`_
 
 **Status:** Idle
-**Stage:** KS8 — Interop - the run as a readable artifact (cut-first) · attempts used 0
-**Checkpoints:** 21/24 done · **Sessions run:** 20 · **Cost:** $290.0738 (agent $289.8837 + gates $0.1901) · **Tokens:** 3,936,245 in / 1,878,298 out
+**Stage:** KS12 — Ship edge - close the era · attempts used 0 · working ▸ KS12.2
+**Checkpoints:** 22/24 done · **Sessions run:** 21 · **Cost:** $310.9959 (agent $310.7895 + gates $0.2064) · **Tokens:** 4,229,321 in / 2,005,863 out
 **Confirmed phases:** KS11, KS7, KS6, KS4, KS8
 
 ## Stage progress
@@ -16,7 +16,7 @@ _Updated 2026-08-19 18:04 UTC · branch `feat/karvansara-edge` · HEAD `e0244e0`
 | KS6 | Quality lane - hygiene that buys design | ██████████ 4/4 | confirmed ✓ |
 | KS4 | Verification that can't be gamed | ██████████ 5/5 | confirmed ✓ |
 | KS8 | Interop - the run as a readable artifact (cut-first) | ██████████ 2/2 | confirmed ✓ |
-| KS12 | Ship edge - close the era | ░░░░░░░░░░ 0/3 | todo |
+| KS12 | Ship edge - close the era | ███░░░░░░░ 1/3 | **← active** |
 
 <details> ✅<summary>KS11 — Chapar - the remote surface: profiles, onboarding, evidence on demand (5/5)</summary>
 
@@ -74,12 +74,12 @@ _Updated 2026-08-19 18:04 UTC · branch `feat/karvansara-edge` · HEAD `e0244e0`
 
 </details>
 
-<details><summary>KS12 — Ship edge - close the era (0/3)</summary>
+<details><summary>KS12 — Ship edge - close the era (1/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| KS12.1 | Internal record: ARCHITECTURE.md + docs/dev reconciled for everything edge changed; closure ledger naming every bug/followup row closed here or its living owner (bug 44 and the KS10.1 inherited gaps included); conductor budget re-measured into TOKEN-BUDGET-TUNING - the number the next era compiles against | ⬜ TODO | - |
-| KS12.2 | Published surface: README + docs user set (operating.md carries the observer-profile and group-chat setup; plan-config.md carries the telegram chats shape and every key edge added) + CHANGELOG Unreleased written as the release body; docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushed to main | ⬜ TODO | - |
+| KS12.1 | Internal record: ARCHITECTURE.md + docs/dev reconciled for everything edge changed; closure ledger naming every bug/followup row closed here or its living owner (bug 44 and the KS10.1 inherited gaps included); conductor budget re-measured into TOKEN-BUDGET-TUNING - the number the next era compiles against | ✅ DONE | - |
+| KS12.2 | Published surface: README + docs user set (operating.md carries the observer-profile and group-chat setup; plan-config.md carries the telegram chats shape and every key edge added) + CHANGELOG Unreleased written as the release body; docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushed to main | 🔄 IN PROGRESS | - |
 | KS12.3 | OWNER-ONLY: merge feat/karvansara-edge to master, tag and release through the pipeline with KS12.2's CHANGELOG section as the body, reinstall (no other live run on the machine first), github sync --backfill of THIS run, merge the payesh PR, and move CORE-TRACKER.md + EDGE-TRACKER.md + the era brief to docs/history - the Karvansara era closes | ⬜ TODO | - |
 
 </details>
@@ -108,6 +108,7 @@ _Updated 2026-08-19 18:04 UTC · branch `feat/karvansara-edge` · HEAD `e0244e0`
 | 18 | KS4 | Deliver | 1 | 08-19 15:26 | 0:46 | Advanced | KS4.4 | 4 | engine-fast:OK · face-fast:OK | $19.5469 | $0.0097 | 245,770/110,550 |
 | 19 | KS4 | Deliver | 1 | 08-19 16:14 | 0:48 | Advanced | KS4.5 | 3 | engine-fast:OK · face-fast:OK | $17.0380 | $0.0100 | 240,844/93,758 |
 | 20 | KS8 | Deliver | 1 | 08-19 17:09 | 0:47 | Advanced | KS8.1 KS8.2 | 3 | engine-fast:OK · face-fast:OK | $18.6817 | $0.0100 | 242,899/124,524 |
+| 21 | KS12 | Deliver | 1 | 08-19 18:04 | 0:46 | Advanced | KS12.1 | 4 | engine-fast:OK · face-fast:OK | $20.9057 | $0.0164 | 293,076/127,565 |
 
 ## Money
 
@@ -130,11 +131,6 @@ _Where the money goes: agent $289.88 (100%) · gate $0.19 (0%) · blended $0.79/
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-19 14:42:18  ▪ gate engine-fast pass [session]  (1m11s)
-08-19 14:42:18  ▪ gate face-fast pass [session]  (29.5s)
-08-19 14:42:19  • session #15 KS4 → Advanced · done KS4.1 · 3 commit(s)  (45m19s)
-08-19 14:42:24  • session #16 KS4 Deliver started (attempt 1/10)
-08-19 15:27:28  ▪ gate engine-fast pass [session]  (1m12s)
 08-19 15:27:28  ▪ gate face-fast pass [session]  (34.6s)
 08-19 15:27:29  • session #16 KS4 → Advanced · done KS4.2 · 3 commit(s)  (45m05s)
 08-19 15:27:34  • session #17 KS4 Deliver started (attempt 1/10)
@@ -170,6 +166,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-19 19:04:45  ▪ gate face-full pass [phase]  (3.3s)
 08-19 19:04:45  ✓ checkpoint KS8.1 confirmed
 08-19 19:04:45  ✓ checkpoint KS8.2 confirmed
+08-19 19:04:45  ▸ stage KS8 confirmed  (55m02s)
+08-19 19:04:46  ▸ stage KS12 entered — Ship edge - close the era
+08-19 19:04:46  • session #21 KS12 Deliver started (attempt 1/6)
+08-19 19:53:39  ▪ gate engine-fast pass [session]  (1m47s)
+08-19 19:53:39  ▪ gate face-fast pass [session]  (56.7s)
 ```
 
 ## Health
@@ -177,7 +178,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 20 · retries 1 (5 %) · overall Warn
+sessions 21 · retries 1 (5 %) · overall Warn
 ⚠ [context-saturation] session #11: 28,600,968 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 20,892,539 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 28,639,251 context tokens (≥ 20,000,000)
@@ -194,16 +195,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvansara-edge
-working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
+working tree: clean
 ```
 
 ### Commits by session
 
-- **s13 (KS6 Deliver)** — 4 commit(s):
-  - [`f830e88`](https://github.com/shaahink/conductor/commit/f830e88) docs(ks6): the handoff for KS6.4 - the surface it was aimed at is not the one that binds
-  - [`3901ac1`](https://github.com/shaahink/conductor/commit/3901ac1) docs(ks6): the KS6.3 evidence - what binds, what does not, and what it hands KS6.4
-  - [`71c1e64`](https://github.com/shaahink/conductor/commit/71c1e64) test(ks6): fourteen seeded loosenings, and the one that proved the gate blind
-  - [`094c5c3`](https://github.com/shaahink/conductor/commit/094c5c3) feat(ks6): complexity budgets that bind, and the config typo that voids them in silence
 - **s14 (KS6 Deliver)** — 4 commit(s):
   - [`20e1eab`](https://github.com/shaahink/conductor/commit/20e1eab) docs(ks6): the KS6.4 handoff - the seam KS4.5 needs is already built and already asserted
   - [`67be608`](https://github.com/shaahink/conductor/commit/67be608) docs(ks6): the KS6.4 evidence - what moved, and the metric that cannot reward it
@@ -239,6 +235,11 @@ working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
   - [`e0244e0`](https://github.com/shaahink/conductor/commit/e0244e0) docs(ks8): the handoff for the next session - KS8 closes, KS12 is what is left
   - [`9af9339`](https://github.com/shaahink/conductor/commit/9af9339) feat(ks8): the run leaves as an ATIF trajectory, and AGENTS.md gets read
   - [`e9fcfa5`](https://github.com/shaahink/conductor/commit/e9fcfa5) feat(ks8): the run becomes readable to an outside client, and stays unwritable
+- **s21 (KS12 Deliver)** — 4 commit(s):
+  - [`19d9ab1`](https://github.com/shaahink/conductor/commit/19d9ab1) docs(ks12): the flags nobody was told about, and the pin that found them
+  - [`e08c8dd`](https://github.com/shaahink/conductor/commit/e08c8dd) docs(ks12): the closure ledger - 34 rows, and the diff that proves none is missing
+  - [`914113c`](https://github.com/shaahink/conductor/commit/914113c) docs(ks12): the map catches up with the engine, measured line by line
+  - [`eb87ad4`](https://github.com/shaahink/conductor/commit/eb87ad4) docs(ks12): the era's own numbers - 0.85 held, and the ceiling is what moves
 
 ## Phase handovers (audit)
 
@@ -261,45 +262,46 @@ working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> **KS8 complete — read-only MCP resource surface, and runs export as validated ATIF trajectories**
-> - KS8.1: mcp-observe serves history/status/money as resources, zero tools; refusal battery scanned off McpTaskServer.cs; read-only enforced by SQLite Mode=ReadOnly; live proof lists 35 runs, 3 reconciled to orphaned. ADR-0007.
-> - KS8.2: history export --atif; 30/30 trajectories validate against Harbor's own extra="forbid" pydantic model (734 steps, $4598.75); init writes AGENTS.md + CLAUDE.md import, proved idempotent by md5. 23 new tests.
-> - Found and fixed: history resource named the CATALOGUE's plan, mislabelling this very run; and a text-mode script edit flips .cs to LF, going red only in KS3_1PlanNew while git diff shows nothing.
+> **KS12.1 done — budget re-measured, 27 stale citations fixed, closure ledger complete**
+> - KS12.1 claimed DONE (eb87ad4, 914113c, e08c8dd): 32M/0.85 held (0 rollovers, 5 nudged all clean); `budget` prescribes 35M/0.9 for the next era; per-checkpoint outturn 17.47M/$13.81, +4% on the karvan basis.
+> - ARCHITECTURE.md reconciled by opening every citation: 27 had drifted, and "exactly nine public interfaces" was wrong — ten since KS11 added `IMessageChannel`. Closure ledger names all 34 bug rows with an owner; bug 44 closed by KS6.2, bug 6…
+> - KS12.2 partial (19d9ab1, not claimed): cli.md now names all 82 long options behind a new derived pin that went red on its first run and was right — the rollback row conflated `--yes` with `--force`. CHANGELOG Unreleased written as the relea…
 >
-> artefacts: e9fcfa5, 9af9339, e0244e0, src/Conductor.Core/Integrations/McpObserveServer.cs, src/Conductor.Core/Interop/AtifExport.cs, src/Conductor.Core/Interop/AgentsFile.cs, src/Conductor/Commands/HistoryExportCommand.cs, src/Conductor/VerbRewrites.cs
+> artefacts: eb87ad4, 914113c, e08c8dd, 19d9ab1, ARCHITECTURE.md, docs/dev/TOKEN-BUDGET-TUNING.md, docs/dev/README.md, docs/cli.md
 >
-> evidence: .conductor/evidence/KS8/KS8.1-read-only-mcp-surface.md, .conductor/evidence/KS8/KS8.2-atif-and-agents.md
+> evidence: .conductor/evidence/KS12/ks12-1-closure-ledger.md, .conductor/evidence/KS12/ks12-1-architecture-reconcile.md, .conductor/evidence/KS12/ks12-1-budget-remeasure.json, .conductor/evidence/KS12/ks12-2-docs-pin.md
 >
-> gaps: KS12 is all that remains. Program.cs now sits at CA1505's maintainability bar (MI 19) — further argv rewrites must go in VerbRewrites.cs. analyzer-debt.ps1 still red from KS4.4 (pragma-src 33 vs bar 31, bug #60); KS8 added none. This repo's own AGENTS.md is still unimported — owner's call, raised in the handoff.
+> gaps: KS12.2 owes README.md, docs/README.md, operating.md §7 (still dated 2026-08-15 and claims the ratchet green, which is false), and the payesh harvest+PR, untouched. analyzer-debt is RED: pragma-src 33 vs bar 31, both MA0045 from KS4.4 (bug 60) — stated in the ledger, not fixed, and the bar may not be raised. KS12.3 is owner-only.
 
 ## Tracker handoff
 
 ```
-last: STAGE KS8 IS COMPLETE - KS8.1 (e9fcfa5) and KS8.2 (9af9339), both with evidence under
-  .conductor/evidence/KS8/. `conductor mcp-observe` serves history/status/money as MCP RESOURCES and
-  no tools: initialize declares no tools capability, tools/list is empty, tools/call is refused -32601
-  for all sixteen agent-surface tools (the list is SCANNED off McpTaskServer.cs, so a new one joins
-  the battery automatically), and read-only is enforced by RunArchive's Mode=ReadOnly connection, not
-  by discipline. ADR-0007 records why. `conductor history export <run> --atif` (and `--all -o DIR`)
-  writes runs as ATIF-v1.7 trajectories; 30/30 validate against HARBOR'S OWN pydantic model, which is
-  extra="forbid", so a misspelled field would have been a hard rejection. `conductor init` now writes
-  AGENTS.md plus a CLAUDE.md that imports it, clobbering neither. 23 new tests.
-TRAP THAT COST ME A CONFUSING RED: editing a .cs file with a text-mode script flips the WORKING TREE
-  from CRLF to LF. autocrlf=true means git diff shows NOTHING, the build is clean, and exactly one
-  test goes red - KS3_1PlanNewTests.InitStillWritesExactlyWhatItWroteBefore, which separates the live
-  advisor block from the commented one by a raw string literal's line ending. Re-normalise before you
-  run the suite. Also: Program.cs is AT CA1505's maintainability bar - a third argv rewrite pushed it
-  to MI 19, so new rewrites go in VerbRewrites.cs. And MA0045 exempts an override, not a helper you
-  factor out of one - keep sync file I/O inside Execute.
-OPEN QUESTION FOR THE OWNER, not blocking: this repo has a 28KB AGENTS.md and no CLAUDE.md, so every
-  session in this run reads none of it. The import is one file; it also adds ~7k tokens to every
-  remaining session's prefix. That is a live-run spend call, so KS8.2 shipped the mechanism and left
-  this repo alone.
-next: KS12 only (KS12.1 docs, KS12.2 published surface + the payesh harvest re-run, KS12.3 is the
-  owner's merge/reinstall). Bugs #53/#54/#55/#57/#58/#59/#60 open; analyzer-debt.ps1 still red at
-  pragma-src 33 vs bar 31 from KS4.4 (bug #60) - KS8 added none.
+last: KS12.1 IS DONE (eb87ad4, 914113c, e08c8dd), evidence in .conductor/evidence/KS12/. Budget
+  re-measured: the era ran at 32M/0.85 and it HELD - realised nudgeRatio 0.8541, 0 rollovers in 19
+  costed sessions, 5 nudged and all 5 clean. `budget` now prescribes 35M / 0.9 (nudge 31.5M) for the
+  NEXT era; the per-checkpoint outturn is 17.47M / $13.81, only +4% on the karvan basis this era
+  planned against. TOKEN-BUDGET-TUNING section 12 and the plan doc carry it. ARCHITECTURE.md: 27
+  drifted citations corrected by opening every one, and the "exactly nine public interfaces" line was
+  wrong (ten - KS11 added IMessageChannel). Closure ledger in .conductor/followups.md names all 34
+  bug rows with an owner; bug 44 closed by KS6.2, bug 61 filed by me.
+KS12.2 IS IN PROGRESS, NOT CLAIMED - three of its five parts landed (uncommitted work is in this
+  commit): docs/cli.md now names all 82 long options with a NEW derived pin
+  (SF7_1DocsMatchRealityTests.Flags.cs, 35/35 green - it went red on its first run and was right: the
+  rollback row conflated --yes with --force); CHANGELOG [Unreleased] written as the release body for
+  KS4/6/7/8 (tools/changelog-section.sh Unreleased, 112 lines, exit 0); troubleshooting.md gained the
+  classed-gate section and a run.db-location correction. STILL OWED: README.md and docs/README.md
+  (neither mentions gate classes, mcp-observe, ATIF, otel or chat profiles); operating.md section 7
+  still says "as of 2026-08-15" and claims "the anti-cheat ratchet green" which is FALSE; and the
+  payesh harvest re-run + PR, which is untouched.
+TRAP THAT WOULD HAVE COST THE RUN: MigrationRunner.CurrentVersion is 15 on this branch and 14 on
+  master, so `dotnet run -- budget` against the LIVE run.db migrates it and locks the 0.4.1 engine
+  driving this run out of its own store (bug 45, it happened at KS10.1). Take a sqlite3.backup copy
+  and pass it as budget's POSITIONAL db path. CONDUCTOR_RUN_DB does not work for that verb (bug 61).
+next: finish KS12.2 (README, docs/README.md, operating.md section 7, then payesh on a branch with a
+  PR - never that repo's main). analyzer-debt is RED: pragma-src 33 vs bar 31, both MA0045 from
+  KS4.4, bug 60 - stated in the ledger, not fixed, and the bar may not be raised.
 ```

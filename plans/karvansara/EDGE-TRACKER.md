@@ -4,38 +4,35 @@
 
 ## Handoff (overwrite this block, <=12 lines, no history)
 
-last: KS12.1 IS DONE (eb87ad4, 914113c, e08c8dd), evidence in .conductor/evidence/KS12/. Budget
-  re-measured: the era ran at 32M/0.85 and it HELD - realised nudgeRatio 0.8541, 0 rollovers in 19
-  costed sessions, 5 nudged and all 5 clean. `budget` now prescribes 35M / 0.9 (nudge 31.5M) for the
-  NEXT era; the per-checkpoint outturn is 17.47M / $13.81, only +4% on the karvan basis this era
-  planned against. TOKEN-BUDGET-TUNING section 12 and the plan doc carry it. ARCHITECTURE.md: 27
-  drifted citations corrected by opening every one, and the "exactly nine public interfaces" line was
-  wrong (ten - KS11 added IMessageChannel). Closure ledger in .conductor/followups.md names all 34
-  bug rows with an owner; bug 44 closed by KS6.2, bug 61 filed by me.
-KS12.2 IS IN PROGRESS, NOT CLAIMED - three of its five parts landed (uncommitted work is in this
-  commit): docs/cli.md now names all 82 long options with a NEW derived pin
-  (SF7_1DocsMatchRealityTests.Flags.cs, 35/35 green - it went red on its first run and was right: the
-  rollback row conflated --yes with --force); CHANGELOG [Unreleased] written as the release body for
-  KS4/6/7/8 (tools/changelog-section.sh Unreleased, 112 lines, exit 0); troubleshooting.md gained the
-  classed-gate section and a run.db-location correction. STILL OWED: README.md and docs/README.md
-  (neither mentions gate classes, mcp-observe, ATIF, otel or chat profiles); operating.md section 7
-  still says "as of 2026-08-15" and claims "the anti-cheat ratchet green" which is FALSE; and the
-  payesh harvest re-run + PR, which is untouched.
-TRAP THAT WOULD HAVE COST THE RUN: MigrationRunner.CurrentVersion is 15 on this branch and 14 on
-  master, so `dotnet run -- budget` against the LIVE run.db migrates it and locks the 0.4.1 engine
-  driving this run out of its own store (bug 45, it happened at KS10.1). Take a sqlite3.backup copy
-  and pass it as budget's POSITIONAL db path. CONDUCTOR_RUN_DB does not work for that verb (bug 61).
-next: finish KS12.2 (README, docs/README.md, operating.md section 7, then payesh on a branch with a
-  PR - never that repo's main). analyzer-debt is RED: pragma-src 33 vs bar 31, both MA0045 from
-  KS4.4, bug 60 - stated in the ledger, not fixed, and the bar may not be raised.
+last: KS12.2 IS DONE and claimed (7ad41d8), evidence .conductor/evidence/KS12/ks12-2-published-surface.md.
+  README carried NONE of edge - grep for mcp-observe/atif/otel/holdout/observer hit zero - so it now has
+  the gate-class table, the Telegram browse/steer/control split with all 14 verbs from SurfaceCommands.cs,
+  admin-vs-observer chats, and the three read-only exits. One correction: the front page claimed battery
+  collapse saves "30-50% of output tokens" when plan-config.md:41 already retracted that as unmeasured.
+  operating.md section 7 re-dated to the edge close; its "anti-cheat ratchet green" line is DELETED as
+  false and replaced with the measurement - analyzer-debt exits 1, pragma-src 33 vs bar 31 (bug 60), and
+  the bar may not be moved. Build re-measured 0w/0e. docs/README.md, quickstart.md done; tracker.md needed
+  nothing - its runtime-file tree is pinned by the docs suite, which is 41/41 green.
+  The README pin was WRONG and caught me: it resolved a verb from the first word, so `conductor history
+  export --atif` read as `history`. It now applies the engine's own argv rewrite by reflection; seeded red
+  proven; 35/35. Payesh: PR shaahink/payesh#2 on ks12/harvest-era-close, NOT merged - the re-harvest broke
+  the site's corpus test because three runs are now `closed` in the store, which means closed BY HAND and
+  says nothing about finishing; `closed` now resolves through anonymise.json like `running`.
+next: KS12.3 is OWNER-ONLY - merge to master, tag with the CHANGELOG [Unreleased] section as the body,
+  reinstall (check no other conductor run is live first), github sync --backfill of this run, merge
+  payesh PR #2, and move CORE-TRACKER.md + EDGE-TRACKER.md + the era brief to docs/history. A session
+  cannot do any of it. Carry into it: analyzer-debt is RED (bug 60, stated in docs, not fixed, bar not
+  raised); payesh `npm run anonymity` is red on the word "website" (bug 41, pre-existing); and the two
+  Karvansara runs are still excluded from the published corpus by anonymise.json - publishing them is
+  an editorial call, not a session's.
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 24 |
-| Done | 19 |
-| Claimed (unconfirmed) | 2 |
+| Done | 21 |
+| Claimed (unconfirmed) | 1 |
 
 ## Checkpoints
 
@@ -85,15 +82,15 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS8.1 | Read-only MCP surface: history/status/money as MCP resources, control ops excluded by design with the ADR citing MCP's 2026 attack record; an MCP client lists runs and quotes reconciled status; no write tool exists on the surface | DONE | e9fcfa5 | .conductor/evidence/KS8/KS8.1-read-only-mcp-surface.md |
-| KS8.2 | ATIF trajectory export from the fold (history export, billed costs included) validating against the ATIF schema on the karvan-core run; AGENTS.md generated/honored via the CLAUDE.md-import pattern | DONE | e9fcfa5 | .conductor/evidence/KS8/KS8.2-atif-and-agents.md |
+| KS8.1 | Read-only MCP surface: history/status/money as MCP resources, control ops excluded by design with the ADR citing MCP's 2026 attack record; an MCP client lists runs and quotes reconciled status; no write tool exists on the surface | DONE ✓ | e9fcfa5 | .conductor/evidence/KS8/KS8.1-read-only-mcp-surface.md |
+| KS8.2 | ATIF trajectory export from the fold (history export, billed costs included) validating against the ATIF schema on the karvan-core run; AGENTS.md generated/honored via the CLAUDE.md-import pattern | DONE ✓ | e9fcfa5 | .conductor/evidence/KS8/KS8.2-atif-and-agents.md |
 
 ### KS12 — Ship edge - close the era
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS12.1 | Internal record: ARCHITECTURE.md + docs/dev reconciled for everything edge changed; closure ledger naming every bug/followup row closed here or its living owner (bug 44 and the KS10.1 inherited gaps included); conductor budget re-measured into TOKEN-BUDGET-TUNING - the number the next era compiles against | TODO | - | - |
-| KS12.2 | Published surface: README + docs user set (operating.md carries the observer-profile and group-chat setup; plan-config.md carries the telegram chats shape and every key edge added) + CHANGELOG Unreleased written as the release body; docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushed to main | TODO | - | - |
+| KS12.1 | Internal record: ARCHITECTURE.md + docs/dev reconciled for everything edge changed; closure ledger naming every bug/followup row closed here or its living owner (bug 44 and the KS10.1 inherited gaps included); conductor budget re-measured into TOKEN-BUDGET-TUNING - the number the next era compiles against | DONE | eb87ad4 | .conductor/evidence/KS12/ks12-1-closure-ledger.md,.conductor/evidence/KS12/ks12-1-architecture-reconcile.md,.conductor/evidence/KS12/ks12-1-budget-remeasure.json |
+| KS12.2 | Published surface: README + docs user set (operating.md carries the observer-profile and group-chat setup; plan-config.md carries the telegram chats shape and every key edge added) + CHANGELOG Unreleased written as the release body; docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushed to main | IN PROGRESS | - | - |
 | KS12.3 | OWNER-ONLY: merge feat/karvansara-edge to master, tag and release through the pipeline with KS12.2's CHANGELOG section as the body, reinstall (no other live run on the machine first), github sync --backfill of THIS run, merge the payesh PR, and move CORE-TRACKER.md + EDGE-TRACKER.md + the era brief to docs/history - the Karvansara era closes | TODO | - | - |
 
 ## Dependencies
