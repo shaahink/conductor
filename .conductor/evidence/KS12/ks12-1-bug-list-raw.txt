@@ -1,0 +1,210 @@
+╭────┬────────┬────────┬───────┬───────────────────────┬───────────────────────╮
+│ #  │ sev    │ status │ stage │ title                 │ filed by              │
+├────┼────────┼────────┼───────┼───────────────────────┼───────────────────────┤
+│ 60 │ medium │ open   │ KS4   │ analyzer-debt ratchet │ this run              │
+│    │        │        │       │ is RED on             │                       │
+│    │        │        │       │ feat/karvansara-edge: │                       │
+│    │        │        │       │ pragma-src 33 against │                       │
+│    │        │        │       │ a bar of 31, both     │                       │
+│    │        │        │       │ added by KS4.4        │                       │
+│    │        │        │       │ (05696d4)             │                       │
+│ 59 │ medium │ open   │ KS4   │ dotnet run --project  │ this run              │
+│    │        │        │       │ src/Conductor inside  │                       │
+│    │        │        │       │ a bg child fails with │                       │
+│    │        │        │       │ MA0016/MA0051/MA0006  │                       │
+│    │        │        │       │ in Conductor.Planning │                       │
+│    │        │        │       │ that dotnet build     │                       │
+│    │        │        │       │ never produces        │                       │
+│ 58 │ medium │ open   │ KS4   │ FailureCircuitBreaker │ this run              │
+│    │        │        │       │ .ParseFailingGates    │                       │
+│    │        │        │       │ matches glyphs the    │                       │
+│    │        │        │       │ summary never emits   │                       │
+│ 57 │ medium │ open   │ KS4   │ dotnet build flaps    │ this run              │
+│    │        │        │       │ red on reused MSBuild │                       │
+│    │        │        │       │ nodes -               │                       │
+│    │        │        │       │ case-sensitive        │                       │
+│    │        │        │       │ .editorconfig match   │                       │
+│    │        │        │       │ drops analyzer        │                       │
+│    │        │        │       │ severity overrides;   │                       │
+│    │        │        │       │ -nr:false fixes it    │                       │
+│ 56 │ medium │ open   │ KS6   │ ControlPlaneServer    │ this run              │
+│    │        │        │       │ coupling 240 is the   │                       │
+│    │        │        │       │ largest single        │                       │
+│    │        │        │       │ tightening available  │                       │
+│    │        │        │       │ (CA1506 240 -> 134 in │                       │
+│    │        │        │       │ one split)            │                       │
+│ 55 │ medium │ open   │ KS7   │ [KS7] doctor's argv   │ this run              │
+│    │        │        │       │ lint under-measures   │                       │
+│    │        │        │       │ the real spawn by     │                       │
+│    │        │        │       │ 350-500 chars - it    │                       │
+│    │        │        │       │ misses the battery,   │                       │
+│    │        │        │       │ the tail sections and │                       │
+│    │        │        │       │ the orchestrator's    │                       │
+│    │        │        │       │ own flags             │                       │
+│ 54 │ medium │ open   │ KS7   │ MSBuild node reuse    │ this run              │
+│    │        │        │       │ serves a stale        │                       │
+│    │        │        │       │ analyzer config:      │                       │
+│    │        │        │       │ Conductor.Planning    │                       │
+│    │        │        │       │ fails with MA00xx     │                       │
+│    │        │        │       │ errors that           │                       │
+│    │        │        │       │ contradict            │                       │
+│    │        │        │       │ .editorconfig         │                       │
+│ 53 │ medium │ open   │ KS7   │ cache_creation TTL    │ this run              │
+│    │        │        │       │ split (5m vs 1h) is   │                       │
+│    │        │        │       │ dropped - a           │                       │
+│    │        │        │       │ rate-based cost model │                       │
+│    │        │        │       │ would misprice the    │                       │
+│    │        │        │       │ write half            │                       │
+│ 52 │ medium │ open   │ KS7   │ [KS7.2] digest Claims │ this run              │
+│    │        │        │       │ counts a claim        │                       │
+│    │        │        │       │ attempt that FAILED - │                       │
+│    │        │        │       │ the outcome data now  │                       │
+│    │        │        │       │ exists to filter it   │                       │
+│ 51 │ high   │ open   │ KS7   │ [KS7] A restricted    │ this run              │
+│    │        │        │       │ permission posture    │                       │
+│    │        │        │       │ silently breaks the   │                       │
+│    │        │        │       │ run's own claim path  │                       │
+│    │        │        │       │ unless the allow list │                       │
+│    │        │        │       │ names it              │                       │
+│ 50 │ medium │ fixed  │ KS7   │ [KS7] ND-5's premise  │ this run              │
+│    │        │        │       │ is false on claude    │                       │
+│    │        │        │       │ 2.1.235: an allowlist │                       │
+│    │        │        │       │ profile cannot        │                       │
+│    │        │        │       │ replace               │                       │
+│    │        │        │       │ --dangerously-skip-pe │                       │
+│    │        │        │       │ rmissions             │                       │
+│ 49 │ medium │ open   │ KS11  │ KS1_2StagesFromFoldTe │ this run              │
+│    │        │        │       │ sts.DerivedStatusMatc │                       │
+│    │        │        │       │ hesTheStatusSurface_F │                       │
+│    │        │        │       │ orEverySeededRun      │                       │
+│    │        │        │       │ flakes under          │                       │
+│    │        │        │       │ full-suite parallel   │                       │
+│    │        │        │       │ load                  │                       │
+│ 48 │ medium │ open   │ KS10  │ conductor face with   │ Karvansara core - the │
+│    │        │        │       │ no live run in this   │ o…                    │
+│    │        │        │       │ directory silently    │                       │
+│    │        │        │       │ attaches to another   │                       │
+│    │        │        │       │ repo's run            │                       │
+│ 47 │ high   │ open   │ KS10  │ payesh anonymity: a   │ Karvansara core - the │
+│    │        │        │       │ private repo whose    │ o…                    │
+│    │        │        │       │ whole name is an      │                       │
+│    │        │        │       │ ordinary noun makes   │                       │
+│    │        │        │       │ the check             │                       │
+│    │        │        │       │ unfalsifiable         │                       │
+│ 46 │ medium │ open   │ KS10  │ Bugs do not survive a │ Karvansara core - the │
+│    │        │        │       │ state-home split:     │ o…                    │
+│    │        │        │       │ karvan's              │                       │
+│    │        │        │       │ #24/#27/#31/#35 never │                       │
+│    │        │        │       │ reached this era's    │                       │
+│    │        │        │       │ store, so no          │                       │
+│    │        │        │       │ karvansara prompt     │                       │
+│    │        │        │       │ ever saw them         │                       │
+│ 45 │ high   │ open   │ KS10  │ Any verb from a newer │ Karvansara core - the │
+│    │        │        │       │ build silently        │ o…                    │
+│    │        │        │       │ migrates the live     │                       │
+│    │        │        │       │ run.db and locks the  │                       │
+│    │        │        │       │ RUNNING engine out of │                       │
+│    │        │        │       │ its own store         │                       │
+│ 43 │ medium │ open   │ KS3   │ Import bridges: a     │ Karvansara core - the │
+│    │        │        │       │ 4-digit phase/task    │ o…                    │
+│    │        │        │       │ count mints ids that  │                       │
+│    │        │        │       │ pass the progress     │                       │
+│    │        │        │       │ provider but fail     │                       │
+│    │        │        │       │ EvidenceArtifact's [  │                       │
+│    │        │        │       │ A-Za-z]{1,4}\d{1,3}[  │                       │
+│    │        │        │       │ ._]\d{1,3} reader     │                       │
+│    │        │        │       │ (EvidenceArtifact.cs: │                       │
+│    │        │        │       │ 87) - a fourth id     │                       │
+│    │        │        │       │ shape, stricter than  │                       │
+│    │        │        │       │ the intersection      │                       │
+│    │        │        │       │ KS3.5 measured. No    │                       │
+│    │        │        │       │ fixture hits it; a    │                       │
+│    │        │        │       │ spec-kit board with   │                       │
+│    │        │        │       │ 1000+ tasks or a      │                       │
+│    │        │        │       │ Phase 1000 would.     │                       │
+│ 42 │ low    │ open   │ KS10  │ catalogue repair can  │ Karvansara core - the │
+│    │        │        │       │ never collapse a      │ o…                    │
+│    │        │        │       │ duplicate that lands  │                       │
+│    │        │        │       │ in the LIVE store:    │                       │
+│    │        │        │       │ refusing a live store │                       │
+│    │        │        │       │ is correct, but it    │                       │
+│    │        │        │       │ leaves the only fix   │                       │
+│    │        │        │       │ out-of-band (an owner │                       │
+│    │        │        │       │ run at an idle        │                       │
+│    │        │        │       │ moment), which parked │                       │
+│    │        │        │       │ KS0.1 for two days    │                       │
+│ 41 │ medium │ open   │ KS10  │ payesh anonymity gate │ Karvansara core - the │
+│    │        │        │       │ fails closed on the   │ o…                    │
+│    │        │        │       │ generic word          │                       │
+│    │        │        │       │ 'website': a          │                       │
+│    │        │        │       │ catalogued repo named │                       │
+│    │        │        │       │ 'website' makes every │                       │
+│    │        │        │       │ page with ordinary    │                       │
+│    │        │        │       │ prose or schema.org   │                       │
+│    │        │        │       │ @type=WebSite a leak  │                       │
+│    │        │        │       │ report                │                       │
+│ 40 │ medium │ open   │ KS0   │ Verdict counts        │ Karvansara core - the │
+│    │        │        │       │ satellite-repo        │ o…                    │
+│    │        │        │       │ commits made by       │                       │
+│    │        │        │       │ anyone as the         │                       │
+│    │        │        │       │ session's own work    │                       │
+│ 39 │ low    │ open   │ KS1   │ An interrupted        │ Karvansara core - the │
+│    │        │        │       │ session leaves a      │ o…                    │
+│    │        │        │       │ non-terminal          │                       │
+│    │        │        │       │ 'running' session row │                       │
+│    │        │        │       │ at $0.00 that no verb │                       │
+│    │        │        │       │ can close             │                       │
+│ 38 │ medium │ open   │ KS2   │ Telegram getUpdates   │ Karvansara core - the │
+│    │        │        │       │ 409 conflict loop:    │ o…                    │
+│    │        │        │       │ two engines share one │                       │
+│    │        │        │       │ bot token, inbound    │                       │
+│    │        │        │       │ Telegram control is   │                       │
+│    │        │        │       │ dead for the live run │                       │
+│ 37 │ medium │ open   │ KS0   │ history --json does   │ Karvansara core - the │
+│    │        │        │       │ not list every        │ o…                    │
+│    │        │        │       │ catalogued run: three │                       │
+│    │        │        │       │ non-terminal baton    │                       │
+│    │        │        │       │ rows were invisible   │                       │
+│    │        │        │       │ to it while a direct  │                       │
+│    │        │        │       │ read of the same      │                       │
+│    │        │        │       │ stores found them     │                       │
+│ 23 │ medium │ open   │ SF7   │ CI Windows gate       │ Sarban face - the     │
+│    │        │        │       │ battery flakes on     │ watch…                │
+│    │        │        │       │ SF0_3PidsAndBackgroun │                       │
+│    │        │        │       │ dWorkTests.McpBgStatu │                       │
+│    │        │        │       │ s_CallsAnUninspectabl │                       │
+│    │        │        │       │ ePidRunning_NotDead - │                       │
+│    │        │        │       │ expects Unverifiable, │                       │
+│    │        │        │       │ GH runner answers     │                       │
+│    │        │        │       │ Ours/Recycled         │                       │
+│ 21 │ medium │ open   │ SF6   │ Nothing warns when a  │ Sarban face - the     │
+│    │        │        │       │ plan's packs push the │ watch…                │
+│    │        │        │       │ composed prompt past  │                       │
+│    │        │        │       │ the argv ceiling -    │                       │
+│    │        │        │       │ conductor-maestro.pla │                       │
+│    │        │        │       │ n.json declares 5974  │                       │
+│    │        │        │       │ chars of packs on top │                       │
+│    │        │        │       │ of a ~7900-char base  │                       │
+│    │        │        │       │ prompt                │                       │
+│ 19 │ medium │ open   │ SF3   │ SC7.2 session digest  │ Sarban face - the     │
+│    │        │        │       │ never records a       │ watch…                │
+│    │        │        │       │ claim: Claims needs   │                       │
+│    │        │        │       │ an MCP task_update,   │                       │
+│    │        │        │       │ but every session     │                       │
+│    │        │        │       │ claims through the    │                       │
+│    │        │        │       │ conductor CLI         │                       │
+│ 18 │ low    │ open   │ SF1   │ The bottom bar        │ Sarban face - the     │
+│    │        │        │       │ hard-clips a pane's   │ watch…                │
+│    │        │        │       │ contextual help with  │                       │
+│    │        │        │       │ no ellipsis, so the   │                       │
+│    │        │        │       │ last hint is silently │                       │
+│    │        │        │       │ deleted               │                       │
+│ 15 │ medium │ open   │ SF0   │ A composed prompt     │ Sarban face - the     │
+│    │        │        │       │ over ~8191 chars      │ watch…                │
+│    │        │        │       │ silently stops a      │                       │
+│    │        │        │       │ cmd.exe-based agent   │                       │
+│    │        │        │       │ from running, and the │                       │
+│    │        │        │       │ run reports success   │                       │
+╰────┴────────┴────────┴───────┴───────────────────────┴───────────────────────╯
+16 open bug(s) carried forward from an earlier run in this repo. They are still 
+yours: fix and close them with conductor bug fix <id>.

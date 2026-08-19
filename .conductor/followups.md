@@ -596,3 +596,145 @@ The run survived because `ConductorHost.cs:160` registers `IRunStore` as a **sin
 supervisor holds the connection it opened at v13 and never re-migrates. **If that engine is restarted
 before the owner installs a newer build, it cannot reopen its own store.** That is bug #45, it is
 filed `high`, and KS10.3's reinstall is what clears it.
+
+## KS12.1 closure ledger — 2026-08-19 (the Karvansara EDGE era's final reconciliation)
+
+Same contract as SF7.1's, K7.1's and KS10.1's: **no row whose state is unstated, and nothing silently
+dropped.** Every line below was checked on 2026-08-19 against the tree, against a read-only open of
+both stores, or by running the gate — and the check is named beside the claim rather than left as
+"verified". Mechanical proof of completeness: `.conductor/evidence/KS12/ks12-1-closure-ledger.md`.
+
+### Where the bugs live — two stores, and the split KS10.1 found is unchanged
+
+| store | bug ids | open | schema |
+|---|---|---|---|
+| `%LOCALAPPDATA%/conductor/runs/conductor-karvansara-core---the-open-door-308cfb9b/run.db` — **live**, holds sarban ×2, karvansara-core and karvansara-edge | 1–23, 36–60 (48 rows) | **27** | v14 |
+| `%LOCALAPPDATA%/conductor/runs/conductor-karvan-core-…-b4640aef/run.db` | 24–35 (12 rows) | **4** — #24, #27, #31, #35 | v12 |
+
+**Bug #46 is unchanged and still open**: karvan's four open rows are in a store no karvansara session
+opens, so `conductor bug list` in this repo has never seen them and no edge prompt carried them. The
+only thing carrying them forward is this table, exactly as KS10.1 said. The pre-K3.1 leftover at
+`C:/code/conductor/.conductor/run.db` still exists on disk and is still written by nothing.
+
+### Bugs closed by the edge era — two, and one of them is not what it looks like
+
+| bug | closed | what closed it |
+|---|---|---|
+| **#44** — *ratchet gate red before the era began: 43 analyzer suppressions against a ceiling of 38* | **FIXED 2026-08-19 02:04 by KS6.2** (`0cb514d`, "the analyzer-debt ratchet, and 14 pragmas that were guarding nothing") | KS10.1 handed this to **the owner** on the grounds that raising the ceiling is the one move a session may not make. KS6.2 did not raise it: it retired fourteen suppressions that were guarding nothing, which took the count under the bar and then **tightened the bar to 31**. The right resolution of an "owner decides" row is to make the decision unnecessary. |
+| **#50** — *ND-5's premise is false: an allowlist profile cannot replace `--dangerously-skip-permissions`* | **CLOSED 2026-08-18 21:34, session 6** — *as superseded, not as fixed* | KS7.1 re-ran the probe properly and found #50's premise was an artefact of a probe that only ever ran read-only Bash. It was replaced by **#51**, which is the real finding and is open. Recorded here because "fixed" in the store means "this row is done", and a reader deserves to know which kind of done. |
+
+### Bugs open at the close — all 31, every one with a name against it
+
+**The 27 in the live store reach the next run's prompts. The 4 in karvan's store do not.**
+
+*Carried in from earlier eras, re-checked today and unchanged by edge:*
+
+| bug | what | owner from here |
+|---|---|---|
+| #15 | a composed prompt over ~8191 chars silently stops a cmd.exe-based agent, and the run reports success | next era, engine lane — fix with #21 and #55, one root |
+| #18 | the bottom bar hard-clips a pane's contextual help with no ellipsis | next era, face lane |
+| #19 | the session digest never records a claim: it counts MCP `task_update`, every session claims through the CLI | next era — and **#52 is its other half**: the digest also counts claims that *failed* |
+| #21 | nothing warns when a plan's packs push the composed prompt past the argv ceiling | next era — fix with #15 and #55 |
+| #23 | CI Windows gate battery flakes on `SF0_3PidsAndBackgroundWorkTests` | next era, CI lane — **#49 is the same class**, a different test |
+| #37 | `history --json` does not list every catalogued run | next era, store lane |
+| #38 | Telegram `getUpdates` 409 conflict loop — two engines share one bot token | **the owner** (one token per engine). KS11 built the whole courier around this constraint and did not remove it |
+| #39 | an interrupted session leaves a non-terminal `running` session row at $0.00 that no verb can close | next era, store lane |
+| #40 | Verdict counts satellite-repo commits made by anyone as the session's own work | next era, verdict lane — **live for KS12.2**, whose payesh PR is a satellite commit |
+| #41 | payesh's anonymity gate fails closed on the generic word "website" | **KS12.2 hits this**; the fix is the site's own repo |
+| #42 | `catalogue repair` can never collapse a duplicate that lands in the LIVE store | next era, store lane |
+| #43 | import bridges: a 4-digit phase/task count mints ids that pass the progress provider but fail plan validation | next era, planning lane |
+| #45 | **any verb from a newer build silently migrates the live `run.db` and locks the RUNNING engine out of its own store** | **the owner, at KS12.3.** It is still live and it bit this session too — see the section below |
+| #46 | bugs do not survive a state-home split | next era, store lane — and it is why the four rows below are in markdown at all |
+| #47 | payesh anonymity: a private repo whose whole name is an ordinary noun makes the check unfalsifiable | **KS12.2 hits this**, same lane as #41 |
+| #48 | `conductor face` with no live run in this directory silently attaches to another repo's run | next era, face lane |
+| #24 | `AgentConfig.Merge` silently drops `Env` | next era, engine lane — **karvan's store only** |
+| #27 | a brand-new `run.db` logs `FOREIGN KEY constraint failed` on the first `run_state` write | next era, store lane — **karvan's store only** |
+| #31 | `bubbles/textarea` cannot replace `widgets.TextArea` until key dispatch stops being a string | next era, face lane — **karvan's store only** |
+| #35 | `tools/w3/window-close.ps1` and `tools/sf1/sf1-2-live-proof.ps1` read `run.db` from the pre-K3.1 path and write scratch runs into the operator's real state home | next era, tooling lane — **karvan's store only** |
+
+*Filed by the edge era itself — eleven, and they are the shape of what this era touched:*
+
+| bug | what | owner from here |
+|---|---|---|
+| #49 | `KS1_2StagesFromFoldTests.DerivedStatusMatchesTheStatusSurface_ForEverySeededRun` flakes under full-suite parallel load (1 of 2763 at `cb84b1e`; 5/5 green run alone) | next era, test-infra lane — with #23 |
+| #51 | **high** — a restricted permission posture silently breaks the run's own claim path unless the allow list names it. Supersedes #50 | **the owner**, before any unattended run adopts a restricted profile. KS7.1 shipped this run's allow-list entry (`efe1e69`); the hazard is general |
+| #52 | digest `Claims` counts a claim attempt that FAILED — KS7.2's per-call outcome data now makes filtering possible | next era, telemetry lane — with #19 |
+| #53 | `cache_creation` TTL split (5m vs 1h) is dropped; a rate-based cost model would misprice the write half | next era, accounting lane. **Not urgent**: conductor takes `total_cost_usd` from the CLI and models no rates |
+| #54 | MSBuild node reuse serves a stale analyzer config: `Conductor.Planning` fails with MA00xx errors that contradict `.editorconfig` | next era, build lane — with #57 and #59, all one root |
+| #55 | `doctor`'s argv lint under-measures the real spawn by 350–500 chars | next era, engine lane — with #15 and #21 |
+| #56 | `ControlPlaneServer` coupling 240 is the largest single tightening available (CA1506 240 → 134 in one split) | next era, quality lane — the named next move after KS6.3 |
+| #57 | `dotnet build` flaps red on reused MSBuild nodes; `-nr:false` fixes it | next era, build lane — with #54, #59 |
+| #58 | `FailureCircuitBreaker.ParseFailingGates` matches glyphs the summary never emits, so the same-failure comparison degrades to comparing empty sets | next era, engine lane. **Worth prioritising**: a silently inert circuit breaker is a rail that reports armed |
+| #59 | `dotnet run --project src/Conductor` inside a bg child fails with MA00xx that `dotnet build` never produces | next era, build lane — with #54, #57 |
+| #60 | **the analyzer-debt bar is red on this branch** — see the next section, which measures it rather than restating it | **stated, not fixed, and deliberately so** |
+| #61 | `CONDUCTOR_RUN_DB` does not redirect the measuring verbs — `budget` resolves by repo path first and answers *"no runs to measure"*, so the documented highest-precedence override does not hold. **Filed by this checkpoint**, because working around it is what made a safe re-measure possible at all | next era, CLI/store lane — or correct `StateHome.cs:27-29`'s doc comment, which currently promises something the verbs do not honour |
+
+### The one gate this era leaves red, measured today rather than described
+
+Run at 2026-08-19 on `feat/karvansara-edge`. Neither script is a gate in `edge.plan.json` — the plan's
+battery is build/test for engine and face — so this is a **repo bar the PR template names**, not a
+failing run. Both are reproduced verbatim in the evidence file.
+
+    analyzer-debt: pragma-src           bar=31   now=33   unjustified=0
+    analyzer-debt: severity-downgrade   bar=15   now=17   unjustified=0  (count not ratcheted)
+    analyzer-debt: TOTAL                bar=46   now=50   unjustified=0
+    analyzer-debt: rules-enforced       bar=50   now=50   un-enforced=0
+    ratchet.ps1:   ANALYZER SUPPRESSIONS ABOVE CEILING (33 > 31)
+
+The two suppressions above the bar are **both `MA0045`**, both added by KS4.4 (`05696d4`), and both
+carry a written justification — `unjustified=0` on every kind:
+
+    #pragma warning disable MA0045 // one small sidecar written at attempt creation; async buys
+                                   // nothing and the caller is sync
+    #pragma warning disable MA0045 // teardown is a synchronous finally-block concern; the sleep is
+                                   // injectable and bounded
+
+`complexity-budget.ps1` is **green** — all three rules enforced, every project budgeted, nothing
+loosened. The bar of 31 was set by `9707af7a1` and by the tool's own rule no single commit moves it.
+**The only legitimate close is to make the two helpers genuinely async**, which is KS4's code and not
+this checkpoint's; raising the bar is the one move a session may not make. Whoever takes it starts
+with the two lines above. Note that the era shipped this way **on purpose**: bug #44's predecessor
+sat at 43 against 38, and this branch is at 33 against 31 — the debt fell by ten while the bar
+tightened by seven.
+
+### The three KS5 gaps KS10.1 handed forward — re-measured today, not restated
+
+| gap | measured 2026-08-19 | owner from here |
+|---|---|---|
+| the Face's `tokens cap` row quotes the plan **file** rather than the run's effective ceiling | **STILL OPEN, unchanged by edge.** `face-go/internal/tui/tab_home.go:662-664` still reads `m.plan.doc.Limits.MaxRunTokens`; the cost row at `:609` reads `MaxRunCostUsd` from the same document | next era, face lane |
+| `approve` lost `CtlCommand`'s `--yes` and `--force` | **STILL OPEN, unchanged by edge.** `ApproveCommand.Settings` declares exactly two options, `--amount <USD>` and `--tokens <N>` | next era, CLI lane |
+| one owner-gate-plus-lowered-cap path spends a session before parking | **STILL AS DESIGNED, and the design is written down.** `RunLoop.Budget.cs:49` — `if (_ctx.State.Status == RunStatus.AwaitingOwner) return true;` with the comment above it stating that any other awaiting-owner reason outranks the cap deliberately, so the check cannot rewrite somebody's decision into a request for money | closed as a decision, not a defect |
+
+### Followup rows — state at the edge era's end
+
+| row | state at 2026-08-19 | owner from here |
+|---|---|---|
+| the 43 rows closed by the 2026-07-28 triage and the SF0.4 disposition | **CLOSED**, unchanged | — |
+| FU-OWNER-10, FU-OWNER-11, FU-OWNER-13 | **CLOSED** by SF7.1, unchanged | — |
+| FU-F1-06 | **CLOSED at KS0.2** (`15627b9`), unchanged | — |
+| FU-B2-3 | **PARTIAL**, unchanged by KS4–KS11: the decision is implemented, the live gate still wants a recovery lane | the owner |
+| FU-B11-2 | **PARTIAL is the final answer**, unchanged — running the engine on Linux needs a Linux host | the owner |
+| FU-B11-3 | **OPEN, owner-gated**, unchanged — real cTrader credentials and real money | the owner |
+| FU-OWNER-14 (the reinstall) | **re-homed once more, KS10.3 → KS12.3.** KS10.3 performed it for v0.4.1; the edge era's engine is not installed, so the clause lives again and KS12.3 carries it | KS12.3 |
+
+**The edge era wrote to this file exactly once — this ledger.** Everything else was filed as a bug,
+which is the third era running that the same conclusion holds: the followup ledger and the bug ledger
+are one ledger in two file formats, and the bug half is the one with a store behind it.
+
+### What this session did NOT do to the run, and why that is the point
+
+KS10.1's own closing section records that it broke the driving engine: running `budget --json` through
+the fresh build migrated the live store v13 → v14, the PATH engine's `CurrentVersion` was 13, and
+`conductor note`, `task` and `bug` all died mid-session. That is bug **#45** and it is still open.
+
+**It would have happened again today.** `MigrationRunner.CurrentVersion` is **15** on this branch
+(`src/Conductor.Core/Store/MigrationRunner.cs:11`, raised by KS4's `8d649ea`) and **14** on master,
+which is what the installed `0.4.1` engine driving this run supports. KS12.1's acceptance requires the
+same two verbs through the same fresh build.
+
+The workaround, and it costs nothing: measure against a **`sqlite3.backup` copy** of the store and
+pass it as `budget`'s positional db argument. The live file is never opened for write, the copy is
+migrated to v15 and thrown away, and `conductor task`/`note`/`bug` keep working for the rest of the
+session. One trap for whoever repeats it: **`CONDUCTOR_RUN_DB` does not redirect `budget`** — that
+verb resolves the run by repo path first and answers *"no runs to measure for C:\Code\conductor"*.
+The positional path is the only seam that works.
