@@ -162,7 +162,7 @@ public static class GateRunner
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(gate);
         var cwd = ResolveCwd(plan, gate);
-        var parts = new List<string>(4) { headSha, "cwd:" + CwdMarker(plan, cwd) };
+        var parts = new List<string>(4) { headSha, "cwd:" + CwdMarker(cwd) };
         if (gate.WatchPaths is { Count: > 0 })
             parts.Add("watch:" + WatchMarker(plan, gate));
         parts.Add("cmd:" + CommandDigest([gate]));
@@ -172,7 +172,7 @@ public static class GateRunner
     /// <summary>The gate's working directory HEAD, or a marker that cannot match a stale key. When the
     /// cwd is inside the primary repo this is simply the primary HEAD, so single-repo plans keep the
     /// behaviour they had.</summary>
-    private static string CwdMarker(PlanConfig plan, string cwd)
+    private static string CwdMarker(string cwd)
     {
         if (!Directory.Exists(cwd)) return "absent";
         var r = Git.Exec(cwd, "rev-parse", "HEAD");

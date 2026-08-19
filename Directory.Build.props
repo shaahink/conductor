@@ -29,6 +29,14 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <!-- Roslynator (KS6.1). The package enables ~200 rules by default; .editorconfig sets
+         roslynator_analyzers.enabled_by_default = false and re-enables a curated design-shaped set
+         by name. Curation is the deliverable - see AnalyzerCurationTests, which is what stops it
+         drifting back into a wall of noise. -->
+    <PackageReference Include="Roslynator.Analyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

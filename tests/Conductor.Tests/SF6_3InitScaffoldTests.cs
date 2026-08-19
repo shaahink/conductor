@@ -100,7 +100,7 @@ public sealed class SF6_3InitScaffoldTests : IDisposable
         "resume.md" => p.Resume(s, 1, 1, 1, new PendingResume { FromSession = 1, Reason = "r" }),
         "verify.md" => p.Verify(s, 1, new PendingVerify { FromSession = 1, StageStartHead = "HEAD" }),
         "review.md" => p.Review(s, 1, 1, 1, "review.md"),
-        "audit.md" => p.Audit(s, 1, new PendingAudit { StageId = s.Id, StageStartHead = "HEAD" }, "HEAD"),
+        "audit.md" => p.Audit(s, 1, "HEAD"),
         "advisor.md" => p.Advisor(s, "o", "g", "c", "h", "t", 1, 1),
         "chat.md" => p.Chat("how much has this run cost?"),
         _ => throw new ArgumentException($"SF6.3: {template} is scaffolded but this test knows no way to " +

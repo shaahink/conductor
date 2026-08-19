@@ -358,6 +358,6 @@ public sealed class W3ProcessRailsTests
     {
         public FakeRemainingArgs(IReadOnlyList<string> raw) => Raw = raw;
         public IReadOnlyList<string> Raw { get; }
-        public ILookup<string, string?> Parsed { get; } = Array.Empty<string>().ToLookup(x => x, x => (string?)null, StringComparer.Ordinal);
+        public ILookup<string, string?> Parsed { get; } = Array.Empty<string>().ToLookup(x => x, _ => (string?)null, StringComparer.Ordinal);
     }
 }

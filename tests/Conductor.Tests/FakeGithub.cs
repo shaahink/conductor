@@ -113,9 +113,9 @@ internal sealed class FakeGithub : HttpMessageHandler
     /// through, which is exactly the shape that produced two copies of one board.</summary>
     public bool ListsAreStale { get; set; }
 
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         var path = request.RequestUri!.AbsolutePath;
         Requests.Add(new Recorded(
             request.Method.Method, path, body,
@@ -125,10 +125,10 @@ internal sealed class FakeGithub : HttpMessageHandler
         if (Interlocked.Exchange(ref _holdArmed, 0) == 1)
         {
             _arrived!.TrySetResult();
-            await _release!.Task.WaitAsync(ct).ConfigureAwait(false);
+            await _release!.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        if (Latency > TimeSpan.Zero) await Task.Delay(Latency, ct).ConfigureAwait(false);
+        if (Latency > TimeSpan.Zero) await Task.Delay(Latency, cancellationToken).ConfigureAwait(false);
         if (Outage is { } why) throw new HttpRequestException(why);
 
         var json = Route(request.Method.Method, path, request.RequestUri.Query, body);

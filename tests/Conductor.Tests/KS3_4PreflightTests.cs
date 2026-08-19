@@ -2109,7 +2109,7 @@ public sealed class KS3_4PreflightTests : IDisposable
     {
         public IReadOnlyList<string> Raw { get; } = [];
         public ILookup<string, string?> Parsed { get; } =
-            Array.Empty<string>().ToLookup(x => x, x => (string?)null, StringComparer.Ordinal);
+            Array.Empty<string>().ToLookup(x => x, _ => (string?)null, StringComparer.Ordinal);
     }
 
     /// <summary>A loopback release feed serving one GitHub-shaped document — the stand-in

@@ -80,8 +80,8 @@ public static class FaceLauncher
 
         public void Dispose()
         {
-            try { if (!Process.HasExited) Process.Kill(entireProcessTree: true); }
-            catch (Exception) { /* already gone, or we lost the right to signal it — either way, nothing to do */ }
+            // Already gone, or we lost the right to signal it — either way, nothing to do.
+            BestEffort.Run(() => { if (!Process.HasExited) Process.Kill(entireProcessTree: true); });
             supervisorTrack?.Dispose();
             Process.Dispose();
         }

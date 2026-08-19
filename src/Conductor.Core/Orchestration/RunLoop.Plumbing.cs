@@ -101,7 +101,7 @@ public sealed partial class RunLoop
 
     private void PushIdleSnapshot() => _ctx.Sink.Snapshot(BaseSnapshot(_ctx.ReadWork()));
 
-    private void PushSessionSnapshot(AgentSession agent, SessionRecord rec, StageConfig stage, int attempt, int maxAttempts, TrackerSnapshot track)
+    private void PushSessionSnapshot(AgentSession agent, SessionRecord rec, StageConfig _, int attempt, int maxAttempts, TrackerSnapshot track)
         => _ctx.Sink.Snapshot(BaseSnapshot(track) with
         {
             SessionNumber = rec.Number,

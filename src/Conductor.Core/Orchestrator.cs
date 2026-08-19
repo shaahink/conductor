@@ -42,7 +42,6 @@ public sealed class Orchestrator
         IPlanner? planner = null,
         IRunStore? store = null,
         ProcessSupervisor? processSupervisor = null,
-        ControlDispatcher? dispatcher = null,
         ConcurrentQueue<ControlCommand>? controlInbox = null,
         IWorkflowResolver? workflowResolver = null,
         IAssignmentPolicy? assignmentPolicy = null,
@@ -105,16 +104,11 @@ public sealed class Orchestrator
 
     // ── thin facade methods (delegated from RunLoop to avoid exposing it) ──
 
-    private void Save() => _ctx.Save();
     private void SaveAndReport()
     {
         _ctx.Save();
-        try
-        {
-            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log, store: _ctx.Store,
-                onNewOwnerItems: _ctx.NotifyNewOwnerQueueItems);
-        }
-        catch (Exception) { }
+        BestEffort.Run(() => Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log,
+            store: _ctx.Store, onNewOwnerItems: _ctx.NotifyNewOwnerQueueItems));
         PushIdleSnapshot();
     }
 
@@ -122,7 +116,7 @@ public sealed class Orchestrator
         => _ctx.Sink.Snapshot(SnapshotBuilder.Build(_ctx.Plan, _ctx.State, _ctx.ReadWork(),
             _ctx.LastGates != null ? GateRunner.Summary(_ctx.LastGates) : "", _ctx.BackoffUntil));
 
-    private void PushSessionSnapshot(AgentSession agent, SessionRecord rec, StageConfig stage, int attempt, int maxAttempts, TrackerSnapshot track)
+    private void PushSessionSnapshot(AgentSession agent, SessionRecord rec, StageConfig _, int attempt, int maxAttempts, TrackerSnapshot track)
         => _ctx.Sink.Snapshot(SnapshotBuilder.Build(_ctx.Plan, _ctx.State, track,
             _ctx.LastGates != null ? GateRunner.Summary(_ctx.LastGates) : "", _ctx.BackoffUntil) with
         {
@@ -139,12 +133,6 @@ public sealed class Orchestrator
             LastActivityAgoSec = (DateTime.UtcNow - agent.LastActivityUtc).TotalSeconds,
             AgentActive = true,
         });
-
-    private TrackerSnapshot ReadTrackerSafe()
-    {
-        try { return _ctx.Progress.Read(_ctx.Plan, CancellationToken.None); }
-        catch (Exception) { return new TrackerSnapshot(); }
-    }
 
     private static PromptBuilder BuildPromptBuilder(PlanConfig plan, IQaPolicy qa)
     {

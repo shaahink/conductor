@@ -32,7 +32,7 @@ internal static class BgStartHandler
             var state = RunState.LoadOrNew(statePath, plan.Name);
             runId = state.RunId ?? "bg-standalone";
         }
-        var currentStage = GetCurrentStage(store, runId, plan);
+        var currentStage = GetCurrentStage(store, runId);
         var sessionCounter = GetSessionCounter(store, runId);
 
         var exe = cmdArgs[0];
@@ -96,7 +96,7 @@ internal static class BgStartHandler
 
     public static string SanitizeFileName(string name) => BgLogs.Sanitize(name);
 
-    private static string? GetCurrentStage(IRunStore? store, string? runId, PlanConfig plan)
+    private static string? GetCurrentStage(IRunStore? store, string? runId)
     {
         if (store == null || string.IsNullOrEmpty(runId)) return null;
         try

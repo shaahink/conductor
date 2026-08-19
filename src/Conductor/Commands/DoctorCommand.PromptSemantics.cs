@@ -42,7 +42,7 @@ public sealed partial class DoctorCommand
             ("fix.md", () => prompts.Fix(stage, 1, 1, 1, fix)),
             ("resume.md", () => prompts.Resume(stage, 1, 1, 1, resume)),
             ("verify.md", () => prompts.Verify(stage, 1, verify)),
-            ("audit.md", () => prompts.Audit(stage, 1, audit, "HEAD")),
+            ("audit.md", () => prompts.Audit(stage, 1, "HEAD")),
             ("review.md", () => prompts.Review(stage, 1, 1, 1, "(doctor)")),
         ];
     }

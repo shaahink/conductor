@@ -32,10 +32,10 @@ public sealed class KS9_2NetworkFailureDoesNotBlockTheLoopTests
     {
         public int Started;
 
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref Started);
-            await Task.Delay(TimeSpan.FromSeconds(30), ct).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
             return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
         }
     }
@@ -59,7 +59,7 @@ public sealed class KS9_2NetworkFailureDoesNotBlockTheLoopTests
 
     /// <summary>One run's worth of boundaries, with or without a mirror wired in. Returns the event
     /// log the run left behind — the thing that must not depend on GitHub.</summary>
-    private static async Task<List<string>> DriveAsync(string dir, GithubMirror? mirror, SqliteRunStore store, string runId)
+    private static async Task<List<string>> DriveAsync(GithubMirror? mirror, SqliteRunStore store, string runId)
     {
         for (var n = 1; n <= 3; n++)
         {
@@ -81,7 +81,7 @@ public sealed class KS9_2NetworkFailureDoesNotBlockTheLoopTests
         {
             List<string> withoutMirror;
             using (var store = Store(quiet, "run-quiet00000"))
-                withoutMirror = await DriveAsync(quiet, null, store, "run-quiet00000").ConfigureAwait(true);
+                withoutMirror = await DriveAsync(null, store, "run-quiet00000").ConfigureAwait(true);
 
             List<string> withDeadMirror;
             var log = new List<string>();
@@ -89,7 +89,7 @@ public sealed class KS9_2NetworkFailureDoesNotBlockTheLoopTests
             using (var fake = new FakeGithub { Outage = "No connection could be made because the target machine actively refused it" })
             using (var mirror = new GithubMirror(store, "run-dead000000", Repo, "t", "conductor", true, log.Add, fake))
             {
-                withDeadMirror = await DriveAsync(dead, mirror, store, "run-dead000000").ConfigureAwait(true);
+                withDeadMirror = await DriveAsync(mirror, store, "run-dead000000").ConfigureAwait(true);
 
                 // The designed difference, and the whole of it: the cursor never moved, and every
                 // failed pass said so out loud exactly once.

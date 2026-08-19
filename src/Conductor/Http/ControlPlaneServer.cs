@@ -248,7 +248,7 @@ public sealed partial class ControlPlaneServer : IDisposable
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogWarning(ex, "control plane: request handling failed for {Path}", ctx.Request.Url);
-            try { ctx.Response.StatusCode = 500; ctx.Response.Close(); } catch (Exception) { /* best effort */ }
+            BestEffort.Run(() => { ctx.Response.StatusCode = 500; ctx.Response.Close(); }, _logger);
         }
     }
 
@@ -266,9 +266,9 @@ public sealed partial class ControlPlaneServer : IDisposable
         _running = false;
         _cts.Cancel();
         // Remove the discovery file first: a client that reads it must never be pointed at a dead port.
-        try { File.Delete(ControlPlaneDiscovery.PathFor(_plan.StateDir)); } catch (Exception) { /* best effort */ }
-        try { _listener.Stop(); } catch (Exception) { /* best effort */ }
-        try { _listener.Close(); } catch (Exception) { /* best effort */ }
+        BestEffort.Run(() => File.Delete(ControlPlaneDiscovery.PathFor(_plan.StateDir)), _logger);
+        BestEffort.Run(() => _listener.Stop(), _logger);
+        BestEffort.Run(() => _listener.Close(), _logger);
         _acceptThread?.Join(TimeSpan.FromSeconds(2));
         _cts.Dispose();
     }

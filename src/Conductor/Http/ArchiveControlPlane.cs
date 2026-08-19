@@ -231,7 +231,7 @@ public sealed class ArchiveControlPlane : IDisposable
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogWarning(ex, "archive plane: request handling failed for {Path}", ctx.Request.Url);
-            try { ctx.Response.StatusCode = 500; ctx.Response.Close(); } catch (Exception) { /* best effort */ }
+            BestEffort.Run(() => { ctx.Response.StatusCode = 500; ctx.Response.Close(); }, _logger);
         }
     }
 
@@ -278,7 +278,7 @@ public sealed class ArchiveControlPlane : IDisposable
         }
         finally
         {
-            try { ctx.Response.Close(); } catch (Exception) { /* best effort */ }
+            BestEffort.Run(() => ctx.Response.Close(), _logger);
         }
     }
 
@@ -297,7 +297,7 @@ public sealed class ArchiveControlPlane : IDisposable
         }
         finally
         {
-            try { ctx.Response.Close(); } catch (Exception) { /* best effort */ }
+            BestEffort.Run(() => ctx.Response.Close());
         }
     }
 
@@ -323,8 +323,8 @@ public sealed class ArchiveControlPlane : IDisposable
         if (!_running) { _cts.Dispose(); return; }
         _running = false;
         _cts.Cancel();
-        try { _listener.Stop(); } catch (Exception) { /* best effort */ }
-        try { _listener.Close(); } catch (Exception) { /* best effort */ }
+        BestEffort.Run(() => _listener.Stop(), _logger);
+        BestEffort.Run(() => _listener.Close(), _logger);
         _acceptThread?.Join(TimeSpan.FromSeconds(2));
         _cts.Dispose();
     }

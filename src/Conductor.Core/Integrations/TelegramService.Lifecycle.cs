@@ -15,9 +15,9 @@ public sealed partial class TelegramService
     /// so nowhere. Not-started names the missing half in doctor's own words; started names the poll
     /// interval and how many chat ids it will actually reach, because "started" with an empty
     /// allowedChatIds is push-only to nobody and would otherwise read as success.</summary>
-    public async Task StartAsync(CancellationToken ct)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try { StartCore(); }
         finally { _gate.Release(); }
     }
@@ -145,9 +145,9 @@ public sealed partial class TelegramService
     /// instant the loop exits is how "the push arrives" quietly degrades into "the push was queued".</summary>
     internal static readonly TimeSpan DrainGrace = TimeSpan.FromSeconds(10);
 
-    public async Task StopAsync(CancellationToken ct)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try { await StopCoreAsync().ConfigureAwait(false); }
         finally { _gate.Release(); }
     }

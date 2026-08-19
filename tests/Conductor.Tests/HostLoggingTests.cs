@@ -174,7 +174,6 @@ public sealed class HostLoggingTests : IDisposable
         Assert.True(new FileInfo(textFile).Length > 0, "binary text log must still be written");
     }
 
-    private string StatePath => Path.Combine(_dir, ".conductor", "state.json");
 
     private PlanConfig ValidPlan() => new()
     {

@@ -111,7 +111,7 @@ public static class SessionComposer
             SessionKind.Resume => prompts.Resume(stage, sessionNumber, attempt, maxAttempts, pendingResume!),
             // The diff base rides PendingAudit (P2: a phaseGate dial with auditCoversPriorSessions=false
             // scopes it to the latest delivery session; classically it equals the stage start head).
-            SessionKind.Audit => prompts.Audit(stage, sessionNumber, pendingAudit!,
+            SessionKind.Audit => prompts.Audit(stage, sessionNumber,
                 pendingAudit!.StageStartHead is { Length: > 0 } auditBase ? auditBase : state.CurrentStageStartHead ?? "HEAD~1", assignment.Persona),
             SessionKind.Verify => prompts.Verify(stage, sessionNumber, pendingVerify!, assignment.Persona),
             SessionKind.Fix => prompts.Fix(stage, sessionNumber, attempt, maxAttempts, pendingFix!, assignment.Persona),

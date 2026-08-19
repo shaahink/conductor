@@ -59,7 +59,7 @@ public sealed partial class ControlPlaneServer
         }
         finally
         {
-            try { ctx.Response.Close(); } catch (Exception) { /* best effort */ }
+            BestEffort.Run(() => ctx.Response.Close(), _logger);
         }
     }
 
@@ -103,7 +103,7 @@ public sealed partial class ControlPlaneServer
         }
         finally
         {
-            try { ctx.Response.Close(); } catch (Exception) { /* best effort */ }
+            BestEffort.Run(() => ctx.Response.Close(), _logger);
         }
     }
 
@@ -159,7 +159,7 @@ public sealed partial class ControlPlaneServer
         }
         finally
         {
-            try { ctx.Response.Close(); } catch (Exception) { /* best effort */ }
+            BestEffort.Run(() => ctx.Response.Close(), _logger);
         }
     }
 
@@ -374,7 +374,7 @@ public sealed partial class ControlPlaneServer
             : kind.Equals("Verify", StringComparison.OrdinalIgnoreCase)
             ? prompts.Verify(stage, 0, new PendingVerify { FromSession = 0, StageStartHead = "HEAD" })
             : kind.Equals("Audit", StringComparison.OrdinalIgnoreCase)
-            ? prompts.Audit(stage, 0, new PendingAudit { StageId = stage.Id, StageStartHead = "HEAD" }, "HEAD")
+            ? prompts.Audit(stage, 0, "HEAD")
             : prompts.Deliver(stage, 0, 1, 1);
         await WriteJsonAsync(ctx, new PromptPreviewDto(prompt, model, kind),
             ControlPlaneJsonContext.Default.PromptPreviewDto).ConfigureAwait(false);

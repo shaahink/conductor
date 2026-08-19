@@ -223,7 +223,7 @@ public sealed class SF5_3RemoteTests : IDisposable
     [Fact]
     public async Task Notify_override_beats_the_plan_and_is_not_bound_by_the_fuse()
     {
-        await File.WriteAllLinesAsync(RemoteFires, Enumerable.Range(0, 20).Select(i =>
+        await File.WriteAllLinesAsync(RemoteFires, Enumerable.Range(0, 20).Select(_ =>
             Now.AddMinutes(-1).UtcDateTime.ToString("O", CultureInfo.InvariantCulture)));
 
         using var planSink = new StubEndpoint();

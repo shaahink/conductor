@@ -6,6 +6,10 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
+    <!-- KS6.1: KS6_1AnalyzerCurationTests loads the pinned Roslynator assemblies and asks them, rather
+         than a committed list, which rules can fail this build. Reading SupportedDiagnostics needs the
+         Roslyn types the analyzers are written against. Test-only; nothing ships with it. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />

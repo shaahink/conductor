@@ -65,7 +65,7 @@ public sealed partial class VerdictEngine
                 break;
             case AdvisorAction.ApplyFix:
                 _ctx.Log($"advisor apply-fix: {verdict?.Reason}");
-                await RunRemediationAsync(verdict?.Reason ?? "advisor requested remediation").ConfigureAwait(false);
+                await RunRemediationAsync().ConfigureAwait(false);
                 _ctx.State.AttemptsThisStage = Math.Max(0, _ctx.State.AttemptsThisStage - 1);
                 break;
             case AdvisorAction.RerunGates:
@@ -79,7 +79,7 @@ public sealed partial class VerdictEngine
         }
     }
 
-    private async Task RunRemediationAsync(string reason)
+    private async Task RunRemediationAsync()
     {
         var script = _ctx.Plan.Advisor?.RemediationScript;
         if (string.IsNullOrWhiteSpace(script))

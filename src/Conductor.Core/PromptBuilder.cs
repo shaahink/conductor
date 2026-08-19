@@ -50,7 +50,7 @@ public sealed partial class PromptBuilder
         return Render("resume.md", vars);
     }
 
-    public string Audit(StageConfig stage, int sessionNumber, Models.PendingAudit audit, string stageStartHead, string? personaOverride = null)
+    public string Audit(StageConfig stage, int sessionNumber, string stageStartHead, string? personaOverride = null)
     {
         var vars = Vars(stage, sessionNumber, 1, 1, personaOverride);
         vars["diffBase"] = stageStartHead;

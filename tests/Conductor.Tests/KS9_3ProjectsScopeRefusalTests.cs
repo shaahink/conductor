@@ -313,7 +313,7 @@ public sealed class KS9_3ProjectsScopeRefusalTests
     {
         public List<(HttpMethod Method, string Path)> Seen { get; } = [];
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(request);
             Seen.Add((request.Method, request.RequestUri?.AbsolutePath ?? ""));

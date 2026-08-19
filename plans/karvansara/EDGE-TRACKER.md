@@ -2,24 +2,24 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, <=12 lines, no history)
 
-last: fix session #10 - the KS7 battery is GREEN, 2878/2878 in 2m33s
-  (.conductor/bg-logs/full-suite-green-20260819-002850258.log, commit a36ea6d). Nine reds, none of
-  them the known flake, all of them KS7.3-7.5 landing code without landing its record. KS7.3/7.4/7.5
-  re-claimed on .conductor/evidence/KS7/KS7-fix-s10-gates-green.md.
-WHAT THE NINE WERE, so you do not repeat the shape: one unregistered verb (otel) is FOUR reds -
-  completion, cli.md, operating.md S2, and the three-way agreement test all read the verb list off
-  Program.cs. A new config property is a DOCS obligation - PlanKeySchema derives the expectation, so
-  five KS7.4/7.5 keys with no row in plan-config.md were two more. Ship a verb or a key: update the
-  record in the same commit.
-THE ARGV NUMBER IN THE OLD HANDOFF WAS THE WRONG PROMPT. doctor's lint renders the SINGLE-repo
-  prompt; SF6_1's budget renders the MULTI-repo one, ~400 chars bigger, and that is the one that was
-  over (deliver 7942 / fix 7909 against 7900). After compressing five ToolContract paragraphs it
-  measures deliver=7808, fix=7775 - 92 chars of margin. Check BOTH before adding prose.
-preflight's rebuild leg goes red if you edit src/ while a bg suite is running - your own hand, not a
-  defect. Bugs #53 (cache TTL split), #54 (nodeReuse:false), #55 (lint under-measures) still open.
-next: KS8. Stage KS7 is closed and confirmed green.
+last: KS6.1 DONE - Roslynator 4.16.1 pinned, 33 rules adopted at error each with the design property it
+  buys, RCS1233 refused with its measurement, 113 violations FIXED (no pragma added). Build clean, suite
+  2886/2886 (.conductor/bg-logs/ks61-suite-20260819-012127950.log). Evidence:
+  .conductor/evidence/KS6/KS6.1-curated-roslynator.md.
+THE FINDING KS6.2 INHERITS: roslynator_analyzers.enabled_by_default = false DOES NOTHING here - not from
+  .editorconfig, not from a repo-root .globalconfig reaching the compiler through EditorConfigFiles
+  (proven three ways in the ks61-seed2/3/4 logs). 15 of 217 rules ship enabled at Warning and this repo
+  makes warnings errors, so "everything else off" is now enforced by KS6_1AnalyzerCurationTests, which
+  asks the analyzer assemblies which rules can fail this build and reds on any that is not a written
+  decision. Do not re-add the switch; a test asserts it stays out.
+FOR THE KS6.2 REFEREE, learned the hard way this session: a checker that parses the SHAPE it expects
+  cannot see the malformed case. The first curation test missed RCS1O43 (letter O for zero) entirely -
+  invisible to compiler and checker alike. Seed a break into your referee before you trust it. Parse
+  permissively, judge strictly.
+bug 44 is untouched and still KS6.2's: 43 pragmas against a ceiling of 38. Bugs #53/#54/#55 still open.
+next: KS6.2 - the analyzer-debt ratchet, referee not editable by the agent.
 
 ## Baseline numbers (from run.db)
 
@@ -50,9 +50,9 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | KS7.1 | Permission posture: an allowlist/deny settings profile replaces dangerously-skip-permissions for unattended runs if the installed CLI sustains it - a karvan-class stage runs green under the restricted profile with refusals telemetered, OR a filed finding says precisely why not; blast-radius posture stated honestly in ARCHITECTURE.md | DONE | 0c3380f | .conductor/evidence/KS7/ks7-1-posture.md |
 | KS7.2 | Hooks as ground truth: tool events by hook (extending the hook-budget channel) become the primary source, transcript parsing the fallback; hook-derived digests match transcript-derived on a replay corpus; a hook-less agent still works; digest claim-counting (bug 19 class) fixed; skills-vs-promptExtra decided and recorded | DONE | 5b8d56e | .conductor/evidence/KS7/ks7-2-hooks-as-ground-truth.md |
-| KS7.3 | Cost/usage: per-turn usage with cache split parsed from the stream; OTel emit mirroring gen_ai names from the event log; an OTLP collector renders a run's spans; the per-turn context curve reconciles with K4.1's derivation | DONE | 5794417 | .conductor/evidence/KS7/ks7-3-cost-usage-and-otel.md |
-| KS7.4 | Session lifecycle: fork-instead-of-cold-resume for fix/audit sessions where supported, with the measured token delta vs the resume baseline; resume flags re-verified; model lineup and context ceilings re-measured into TOKEN-BUDGET-TUNING | DONE | 5794417 | .conductor/evidence/KS7/ks7-4-fork-lifecycle.md |
-| KS7.5 | Context economics (B7): gate output truncated in-prompt with full text as an evidence file; RepoMapBattery + definition-of-done recap battery on the IPromptBattery seam; templates teach search-delegation; measured cache-read tokens per session DROP vs the karvan baseline on a comparable stage, reported by conductor budget | DONE | 3d7414a | .conductor/evidence/KS7/KS7.5-context-economics.md |
+| KS7.3 | Cost/usage: per-turn usage with cache split parsed from the stream; OTel emit mirroring gen_ai names from the event log; an OTLP collector renders a run's spans; the per-turn context curve reconciles with K4.1's derivation | DONE | 5794417 | .conductor/evidence/KS7/KS7-fix-s10-gates-green.md |
+| KS7.4 | Session lifecycle: fork-instead-of-cold-resume for fix/audit sessions where supported, with the measured token delta vs the resume baseline; resume flags re-verified; model lineup and context ceilings re-measured into TOKEN-BUDGET-TUNING | DONE | 5794417 | .conductor/evidence/KS7/KS7-fix-s10-gates-green.md |
+| KS7.5 | Context economics (B7): gate output truncated in-prompt with full text as an evidence file; RepoMapBattery + definition-of-done recap battery on the IPromptBattery seam; templates teach search-delegation; measured cache-read tokens per session DROP vs the karvan baseline on a comparable stage, reported by conductor budget | DONE | 3d7414a | .conductor/evidence/KS7/KS7-fix-s10-gates-green.md |
 
 ### KS6 — Quality lane - hygiene that buys design
 

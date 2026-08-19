@@ -1,5 +1,6 @@
 using System.Diagnostics;
 
+using Conductor.Core;
 using Conductor.Core.Fleet;
 using Conductor.Core.History;
 using Conductor.Core.Store;
@@ -148,7 +149,7 @@ public sealed partial class FaceCommand
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
         finally
         {
-            try { File.Delete(path); } catch (Exception) { /* best effort */ }
+            BestEffort.Run(() => File.Delete(path));
         }
     }
 }

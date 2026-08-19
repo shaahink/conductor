@@ -41,9 +41,9 @@ public sealed class KS2_3HubLaunchTests
         public Task<int> RunAsync(string planPath = @"C:\rig\demo.plan.json") =>
             HubLaunch.StartFlowAsync(
                 planPath,
-                p => { Calls.Add("preview"); return Task.FromResult(PreviewExit); },
+                _ => { Calls.Add("preview"); return Task.FromResult(PreviewExit); },
                 () => { Calls.Add("confirm"); return Confirmed; },
-                p => { Calls.Add("launch"); return Task.FromResult(Launch); },
+                _ => { Calls.Add("launch"); return Task.FromResult(Launch); },
                 (url, token) => { Calls.Add("attach"); Attached = (url, token); return Task.FromResult(AttachExit); },
                 Said.Add);
     }

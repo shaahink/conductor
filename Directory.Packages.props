@@ -10,6 +10,8 @@
   <ItemGroup>
     <!-- Analyzers (B0.2) -->
     <PackageVersion Include="Meziantou.Analyzer" Version="2.0.207" />
+    <!-- Roslynator (KS6.1): shipped OFF by default, ~25 design-shaped rules turned on by name in .editorconfig. -->
+    <PackageVersion Include="Roslynator.Analyzers" Version="4.16.1" />
 
     <!-- Versioning (SC8.2): tag height decides the version, no human types one. Build-only. -->
     <PackageVersion Include="MinVer" Version="7.0.0" />
@@ -29,6 +31,7 @@
 
     <!-- Test -->
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />

@@ -233,13 +233,13 @@ public class KS9_1GithubBackfillTests
 
     private sealed class DeadHandler : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
             throw new HttpRequestException("connection refused");
     }
 
     private sealed class StatusHandler(HttpStatusCode status, string body) : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
             Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body) });
     }
 

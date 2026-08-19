@@ -113,9 +113,18 @@ public static partial class HealthMetrics
         return new HealthReport(sessions, retries, retryRate, flags);
     }
 
+    /// <summary>Renders a report as display lines.</summary>
+    /// <remarks>KS6.1/RCS1227: the eager wrapper is not ceremony. An iterator body does not run until the
+    /// first MoveNext, so a null check written inside one throws at the foreach — a stack away from the
+    /// caller that actually passed null, and only if anybody enumerates at all.</remarks>
     public static IEnumerable<string> Format(HealthReport report)
     {
         ArgumentNullException.ThrowIfNull(report);
+        return FormatCore(report);
+    }
+
+    private static IEnumerable<string> FormatCore(HealthReport report)
+    {
         yield return $"sessions {report.Sessions} · retries {report.Retries} " +
                      $"({report.RetryRate.ToString("P0", CultureInfo.InvariantCulture)}) · overall {report.Worst}";
         if (report.Flags.Count == 0)

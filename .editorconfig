@@ -54,6 +54,60 @@ dotnet_diagnostic.MA0016.severity = suggestion # prefer returning collection abs
 dotnet_diagnostic.MA0051.severity = suggestion # method is too long (advisory)
 dotnet_diagnostic.MA0048.severity = suggestion # file name must match type name
 
+# --- Roslynator (KS6.1): a curated design-shaped set, adopted BY NAME ---
+# The package ships 217 rules; 15 of them are enabled at Warning or above, and this repo turns warnings
+# into errors, so those 15 are the ones that can fail a build without anybody choosing them. Every one is
+# a decision below - adopted at error with the design property it buys, or refused with the reason.
+#
+# THE MASTER SWITCH DOES NOT WORK - measured 2026-08-19, do not re-add it. With
+# roslynator_analyzers.enabled_by_default = false written here, a seeded probe still failed the build on
+# RCS1102, a rule this repo never adopted; moving it to a repo-root .globalconfig reaching the compiler
+# through EditorConfigFiles changed nothing either (.conductor/evidence/KS6/KS6.1-curated-roslynator.md).
+# A config line that reads correct and is read by nobody is worse than no line, so what keeps this set
+# curated is tests/Conductor.Tests/KS6_1AnalyzerCurationTests.cs: it asks the pinned analyzer assemblies
+# which rules can fail this build, and fails if any of them is not decided here, in writing.
+dotnet_diagnostic.RCS1044.severity = error    # 'throw ex' resets the stack trace - the one thing a post-mortem needs
+dotnet_diagnostic.RCS1075.severity = error    # empty catch of System.Exception: a failure the run can never report
+dotnet_diagnostic.RCS1165.severity = error    # unconstrained T checked for null - silently never true for a value type
+dotnet_diagnostic.RCS1166.severity = error    # a value type is never equal to null; the check is dead and hides the real one
+dotnet_diagnostic.RCS1215.severity = error    # an expression always true or false is a condition that stopped meaning anything
+dotnet_diagnostic.RCS1202.severity = error    # conditional access that still dereferences - the NRE the '?' looked like it fixed
+dotnet_diagnostic.RCS1227.severity = error    # iterators defer argument validation to first MoveNext; the throw lands nowhere near the caller
+dotnet_diagnostic.RCS1256.severity = error    # an argument null check that cannot fire is a contract asserted but not enforced
+dotnet_diagnostic.RCS1210.severity = error    # a null Task NREs inside the caller's await, far from the method that returned it
+dotnet_diagnostic.RCS1229.severity = error    # returning a task from inside 'using' disposes the resource before the task completes
+dotnet_diagnostic.RCS1236.severity = error    # an exception filter keeps the stack intact where catch-and-rethrow destroys it
+dotnet_diagnostic.RCS1234.severity = error    # duplicate enum value: two names, one number, and the switch silently merges them
+dotnet_diagnostic.RCS1157.severity = error    # a composite flag naming an undefined member is a set that can never round-trip
+dotnet_diagnostic.RCS1130.severity = error    # bitwise arithmetic on an enum without [Flags] produces values with no name
+dotnet_diagnostic.RCS1059.severity = error    # locking on a publicly reachable instance lets a stranger deadlock this process
+dotnet_diagnostic.RCS1155.severity = error    # ordinal-vs-culture comparison decides whether a plan key matches; say which
+dotnet_diagnostic.RCS1158.severity = error    # a static member in a generic type is one field PER closed type - shared state that is not
+dotnet_diagnostic.RCS1160.severity = error    # a public constructor on an abstract type advertises a construction that cannot happen
+dotnet_diagnostic.RCS1194.severity = error    # an exception without the standard constructors cannot be wrapped or rethrown properly
+dotnet_diagnostic.RCS1203.severity = error    # an attribute without AttributeUsage is legal everywhere, including where it means nothing
+dotnet_diagnostic.RCS1193.severity = error    # changing 'params' on an override splits behaviour by static type; the caller cannot see it
+dotnet_diagnostic.RCS1168.severity = error    # a renamed override parameter breaks every named argument at the call site
+dotnet_diagnostic.RCS1242.severity = error    # 'in' on a non-readonly struct makes a defensive copy at every member access
+dotnet_diagnostic.RCS1169.severity = error    # a field never written outside the constructor should say so - the cheapest invariant
+dotnet_diagnostic.RCS1170.severity = error    # same for auto-properties: a private setter nobody calls is a door left open
+dotnet_diagnostic.RCS1163.severity = error    # an unused parameter is a signature that lies about what the method depends on
+dotnet_diagnostic.RCS1213.severity = error    # an unused member is design nobody removed - dead weight the next reader must still read
+dotnet_diagnostic.RCS1043.severity = error    # 'partial' on a single-part type is a split that never happened; KS6.3 counts the real ones
+
+# The five the package forces a decision on - enabled at Warning upstream, measured clean here, kept:
+dotnet_diagnostic.RCS1102.severity = error    # a type with only static members says so, or somebody instantiates it and wonders why nothing sticks
+dotnet_diagnostic.RCS1138.severity = error    # an empty <summary> is a doc comment that outlived the thing it documented
+dotnet_diagnostic.RCS1139.severity = error    # a doc comment with no <summary> at all still reads as documented in every tool that lists it
+dotnet_diagnostic.RCS1172.severity = error    # 'as' plus a null check is one null check that can drift; 'is' cannot come apart
+dotnet_diagnostic.RCS1263.severity = error    # a broken see-cref rots silently and still reads as authoritative, and this repo cross-references heavily
+
+# Refused - at none rather than absent, so the decision is visible and the completeness test is satisfied:
+dotnet_diagnostic.RCS1233.severity = none     # short-circuiting operator: its only two hits use '|' ON PURPOSE, and '||' there is a data-loss bug
+# SqliteRunStore.RunKeys and StateRepair.RunKeys need BOTH ReadKeys calls to run so both tables
+# contribute to the key set. A rule that cannot tell a deliberate '|' from a careless one costs more
+# than it buys, and a per-site suppression would spend pragmas this repo is already over budget on (44).
+
 # --- Test project: relax library-only + culture rules (xUnit asserts on ASCII literals) ---
 [tests/**/*.cs]
 dotnet_diagnostic.CA2007.severity = none       # ConfigureAwait not required in test code
@@ -61,3 +115,4 @@ dotnet_diagnostic.MA0004.severity = none
 dotnet_diagnostic.MA0045.severity = none       # sync file I/O is fine in test helpers
 dotnet_diagnostic.MA0002.severity = none       # test string comparisons don't need explicit comparers
 dotnet_diagnostic.MA0074.severity = none       # Assert.Contains on literals: culture-invariant by construction
+dotnet_diagnostic.RCS1075.severity = none      # a test's cleanup swallow is not the engine losing a failure it should report

@@ -254,7 +254,7 @@ public partial class McpTaskServer
         return JsonSerializer.SerializeToElement(new { ok = true, pid = proc.Id, purpose, log = logPath });
     }
 
-    private JsonElement HandleBgStatus(JsonElement? args)
+    private JsonElement HandleBgStatus(JsonElement? _)
     {
         if (_store == null)
             return JsonSerializer.SerializeToElement(new { ok = false, error = "bg_status requires store (no plan state available)." });

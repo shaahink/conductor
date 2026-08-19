@@ -43,7 +43,7 @@ public sealed partial class RunLoop
 
     // ---------------------------------------------------------------- activity tracking
 
-    private void TrackActivity(AgentEvent ev, int sessionNumber)
+    private void TrackActivity(AgentEvent ev, int _)
     {
         if (ev.Kind is not ("tool" or "text" or "result" or "thinking")) return;
         _ctx.Activity.Add((ev.Kind, ev.Text, ev.Utc));

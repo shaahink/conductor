@@ -1,18 +1,18 @@
 ﻿# Conductor — Karvansara edge - gates that can't be gamed, and the courier run report
 
-_Updated 2026-08-19 00:11 UTC · branch `feat/karvansara-edge` · HEAD `52a2b79`_
+_Updated 2026-08-19 00:39 UTC · branch `feat/karvansara-edge` · HEAD `f16780d`_
 
 **Status:** Idle
-**Stage:** KS7 — Platform catch-up - posture, hooks, usage, lifecycle, context economics · attempts used 1
-**Checkpoints:** 10/24 done · **Sessions run:** 9 · **Cost:** $125.0018 (agent $124.9267 + gates $0.0751) · **Tokens:** 1,856,170 in / 818,377 out
-**Confirmed phases:** KS11
+**Stage:** KS7 — Platform catch-up - posture, hooks, usage, lifecycle, context economics · attempts used 0
+**Checkpoints:** 10/24 done · **Sessions run:** 10 · **Cost:** $130.4079 (agent $130.3214 + gates $0.0865) · **Tokens:** 1,969,234 in / 859,316 out
+**Confirmed phases:** KS11, KS7
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | KS11 | Chapar - the remote surface: profiles, onboarding, evidence on demand | ██████████ 5/5 | confirmed ✓ |
-| KS7 | Platform catch-up - posture, hooks, usage, lifecycle, context economics | ██████████ 5/5 | gating… |
+| KS7 | Platform catch-up - posture, hooks, usage, lifecycle, context economics | ██████████ 5/5 | confirmed ✓ |
 | KS6 | Quality lane - hygiene that buys design | ░░░░░░░░░░ 0/4 | todo |
 | KS4 | Verification that can't be gamed | ░░░░░░░░░░ 0/5 | todo |
 | KS8 | Interop - the run as a readable artifact (cut-first) | ░░░░░░░░░░ 0/2 | todo |
@@ -97,6 +97,7 @@ _Updated 2026-08-19 00:11 UTC · branch `feat/karvansara-edge` · HEAD `52a2b79`
 | 7 | KS7 | Deliver | 1 | 08-18 21:46 | 0:37 | Advanced | KS7.2 | 2 | engine-fast:OK · face-fast:OK | $14.4092 | $0.0119 | 197,912/102,671 |
 | 8 | KS7 | Deliver | 1 | 08-18 22:25 | 0:47 | Advanced | KS7.3 KS7.4 | 3 | engine-fast:OK · face-fast:OK | $20.2494 | $0.0092 | 249,486/130,261 |
 | 9 | KS7 | Deliver | 1 | 08-18 23:14 | 0:46 | Advanced | KS7.5 | 2 | engine-fast:OK · face-fast:OK | $10.9477 | $0.0083 | 171,145/78,053 |
+| 10 | KS7 | Fix | 2 | 08-19 00:11 | 0:22 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $5.3947 | $0.0114 | 113,064/40,939 |
 
 ## Money
 
@@ -104,31 +105,18 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 9 | 174.4M | 98.5% | $125.00 | 10 | 17.4M | $12.50 |
+| **run total** | 10 | 181M | 98.5% | $130.41 | 10 | 18.1M | $13.04 |
 | stage KS11 | 5 | 83.9M | 98.4% | $61.37 | 5 | 16.8M | $12.27 |
-| stage KS7 | 4 | 90.5M | 98.6% | $63.63 | 5 | 18.1M | $12.73 |
-| 2026-08 | 9 | 174.4M | 98.5% | $125.00 | 10 | 17.4M | $12.50 |
+| stage KS7 | 5 | 97.1M | 98.5% | $69.03 | 5 | 19.4M | $13.81 |
+| 2026-08 | 10 | 181M | 98.5% | $130.41 | 10 | 18.1M | $13.04 |
 
-_Where the money goes: agent $124.93 (100%) · gate $0.08 (0%) · blended $0.72/M tokens._
+_Where the money goes: agent $130.32 (100%) · gate $0.09 (0%) · blended $0.72/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-18 21:15:41  ▪ gate engine-fast pass [session]  (57.2s)
-08-18 21:15:41  ▪ gate face-fast pass [session]  (31.5s)
-08-18 21:15:41  • session #4 KS11 → Advanced · done KS11.4 · 4 commit(s)  (28m19s)
-08-18 21:15:43  • session #5 KS11 Deliver started (attempt 1/10)
-08-18 21:56:18  ▪ gate engine-fast pass [session]  (59.6s)
-08-18 21:56:18  ▪ gate face-fast pass [session]  (32.6s)
-08-18 21:56:19  • session #5 KS11 → Advanced · done KS11.5 · 6 commit(s)  (40m35s)
-08-18 22:00:10  ▪ gate engine-fast pass [phase]  (0.0s)
-08-18 22:00:10  ▪ gate face-fast pass [phase]  (0.0s)
-08-18 22:00:10  ▪ gate engine-full pass [phase]  (3m20s)
-08-18 22:00:10  ▪ gate face-full pass [phase]  (25.6s)
-08-18 22:00:10  § owner approval requested — KS11
-08-18 22:02:47  § owner approval granted — KS11
 08-18 22:02:47  ✓ checkpoint KS11.1 confirmed
 08-18 22:02:47  ✓ checkpoint KS11.2 confirmed
 08-18 22:02:47  ✓ checkpoint KS11.3 confirmed
@@ -156,6 +144,19 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-19 01:11:23  ▪ gate face-fast pass [phase]  (0.0s)
 08-19 01:11:23  ▪ gate engine-full FAIL [phase]  (4m18s)
 08-19 01:11:23  ▪ gate face-full pass [phase]  (5.1s)
+08-19 01:11:23  • session #10 KS7 Fix started (attempt 2/10)
+08-19 01:35:49  ▪ gate engine-fast pass [session]  (1m28s)
+08-19 01:35:49  ▪ gate face-fast pass [session]  (25.4s)
+08-19 01:35:50  • session #10 KS7 → Progress · 2 commit(s)  (24m26s)
+08-19 01:39:49  ▪ gate engine-fast pass [phase]  (0.0s)
+08-19 01:39:49  ▪ gate face-fast pass [phase]  (0.0s)
+08-19 01:39:49  ▪ gate engine-full pass [phase]  (3m50s)
+08-19 01:39:49  ▪ gate face-full pass [phase]  (2.5s)
+08-19 01:39:50  ✓ checkpoint KS7.1 confirmed
+08-19 01:39:50  ✓ checkpoint KS7.2 confirmed
+08-19 01:39:50  ✓ checkpoint KS7.3 confirmed
+08-19 01:39:50  ✓ checkpoint KS7.4 confirmed
+08-19 01:39:50  ✓ checkpoint KS7.5 confirmed
 ```
 
 ## Health
@@ -163,7 +164,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 9 · retries 0 (0 %) · overall Warn
+sessions 10 · retries 1 (10 %) · overall Warn
 ⚠ [context-saturation] session #3: 28,433,638 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 25,994,603 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #8: 28,984,293 context tokens (≥ 20,000,000)
@@ -180,11 +181,6 @@ working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
 
 ### Commits by session
 
-- **s2 (KS11 Resume)** — 4 commit(s):
-  - [`003dfe7`](https://github.com/shaahink/conductor/commit/003dfe7) docs(tracker): KS11.1 - the handoff, pointing KS11.2 at the router
-  - [`ffbff68`](https://github.com/shaahink/conductor/commit/ffbff68) test(ks11): the fake channel and the boundary that keeps the seam a boundary
-  - [`897e295`](https://github.com/shaahink/conductor/commit/897e295) refactor(ks11): the messenger seam - composition, routing and browsing leave the transport
-  - [`7e64866`](https://github.com/shaahink/conductor/commit/7e64866) test(ks11): the pre-seam goldens - fifteen cases of what the wire carries today
 - **s3 (KS11 Deliver)** — 3 commit(s):
   - [`278602d`](https://github.com/shaahink/conductor/commit/278602d) feat(ks11): onboarding per profile, and pushes that read like evidence
   - [`7641396`](https://github.com/shaahink/conductor/commit/7641396) docs(tracker): KS11.2 - the handoff, pointing KS11.3 at the browse list
@@ -216,6 +212,9 @@ working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
 - **s9 (KS7 Deliver)** — 2 commit(s):
   - [`52a2b79`](https://github.com/shaahink/conductor/commit/52a2b79) docs(ks7): the handoff for the next session - stage KS7 closed, and the argv ceiling
   - [`3d7414a`](https://github.com/shaahink/conductor/commit/3d7414a) feat(ks7): the two batteries reach a prompt, and the ceiling a prompt has to live under
+- **s10 (KS7 Fix)** — 2 commit(s):
+  - [`f16780d`](https://github.com/shaahink/conductor/commit/f16780d) docs(ks7): the handoff for the next session - the battery is green, and the argv number that was measured on the wrong prompt
+  - [`a36ea6d`](https://github.com/shaahink/conductor/commit/a36ea6d) fix(ks7): the record catches up with the code, and the prompt gets back under its ceiling
 
 ## Phase handovers (audit)
 
@@ -238,81 +237,38 @@ working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:FAIL-retry · face-full:OK
-
-<details><summary>engine-full — exit 1</summary>
-
-```
-Failed Conductor.Tests.SF6_1TemplateLessonsTests.TheLessonsFitTheCommandLineBudgetEvenOnAMultiRepoPlan [1 ms]
-  Error Message:
-   built-in deliver prompt is 7942 chars, over the 7900 budget (cliff ~8191, bug #15). Measured this run: deliver=7942, fix=7909. Pay for new prose by cutting old prose.
-  Stack Trace:
-     at Conductor.Tests.SF6_1TemplateLessonsTests.TheLessonsFitTheCommandLineBudgetEvenOnAMultiRepoPlan() in C:\code\conductor\tests\Conductor.Tests\SF6_1TemplateLessonsTests.cs:line 184
-   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
-   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
-  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.NothingTheBacklogCallsStillOpenHasQuietlyBeenBuilt [177 ms]
-  Error Message:
-   docs/dev/NEXT-FEATURES.md still lists RepoMapBattery, DefinitionOfDoneBattery as unbuilt work, but the engine now contains it. Move the item to the shipped section and name what shipped it — a backlog that lists finished work gets someone to build it twice.
-  Stack Trace:
-     at Conductor.Tests.SF7_1DocsMatchRealityTests.NothingTheBacklogCallsStillOpenHasQuietlyBeenBuilt() in C:\code\conductor\tests\Conductor.Tests\SF7_1DocsMatchRealityTests.Backlog.cs:line 87
-   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
-   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
-  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.DeletingOneDocumentedRowMakesTheDerivationNameThatExactKey [28 ms]
-  Error Message:
-   Assert.Empty() Failure: Collection was not empty
-Collection: ["agent.forkArgs", "agent.forkKinds", "batteries.repoMap", "batteries.definitionOfDone", "batteries.repoMapMaxEntries"]
-  Stack Trace:
-     at Conductor.Tests.SF7_1DocsMatchRealityTests.DeletingOneDocumentedRowMakesTheDerivationNameThatExactKey() in C:\code\conductor\tests\Conductor.Tests\SF7_1DocsMatchRealityTests.PlanKeys.cs:line 44
-   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
-   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
-  Failed Conductor.Tests.K7_2DocsVerbCoverageTests.CliReference_NamesEveryShippedVerb [6 ms]
-  Error Message:
-   docs/cli.md does not name these shipped verbs: otel - document them there, or hide the command in Program.cs if it is not a verb to reach for.
-  Stack Trace:
-     at Conductor.Tests.K7_2DocsVerbCoverageTests.CliReference_NamesEveryShippedVerb() in C:\code\conductor\tests\Conductor.Tests\K7_2DocsVerbCoverageTests.cs:line 28
-   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
-   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
-  Failed Conductor.Tests.B11_2DoctorAndCompletionTests.Completion_ContainsAllRegisteredVerbs_Exhaustive [8 ms]
-  Error Message:
-   Assert.Contains() Failure: Item not found in collection
-Collection: ["run", "journey", "preflight", "face", "status", ···]
-Not found:  "otel"
-  Stack Trace:
-     at Conductor.Tests.B11_2DoctorAndCompletionTests.Completion_ContainsAllRegisteredVerbs_Exhaustive() in C:\code\conductor\tests\Conductor.Tests\B11_2Tests.cs:line 132
-   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
-   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
-
-Failed!  - Failed:     8, Passed:  2870, Skipped:     0, Total:  2878, Duration: 3 m 10 s - Conductor.Tests.dll (net10.0)
-```
-</details>
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> **KS7.5 landed; both batteries registered, delegation guidance shipped, argv ceiling measured**
-> - Registered RepoMapBattery + DefinitionOfDoneBattery behind opt-in flags; recap pinned to not duplicate the acceptance the work-items section already carries
-> - Measured the prompt's hard argv ceiling (8191 via cmd shim, shipped prompt 7545→7598); a 640-char addition killed two live rigs, so a ratchet test now guards it
-> - 171 tests green in the affected slice, 12 new facts; bug #55 filed for doctor's lint under-measuring the real spawn
+> **KS7 battery green - nine reds fixed, no gate weakened**
+> - One unregistered verb (`otel`) was four of the nine; five undocumented plan keys were two more — record now matches code in `cli.md`, `operating.md`, `plan-config.md`, `NEXT-FEATURES.md` and `CompletionCommand.Verbs`
+> - The argv budget was paid, not raised: five `ToolContract` paragraphs compressed, deliver 7942→7808 and fix 7909→7775 against the 7900 ceiling, every pinned phrase intact
+> - The ninth red (preflight `rebuild`) was this session editing `src/` mid-suite, not a defect — recorded in the ledger so nobody chases it
 >
-> artefacts: 3d7414a, 52a2b79, src/Conductor.Core/PromptBuilder.cs, src/Conductor.Core/PromptBattery.Context.cs, src/Conductor.Core/ToolContract.cs, src/Conductor.Core/Models/BatteriesConfig.cs, src/Conductor.Core/Orchestration/SessionComposer.cs, tests/Conductor.Tests/KS7_5ContextEconomicsTests.cs
+> artefacts: a36ea6d, f16780d, src/Conductor.Core/ToolContract.cs, src/Conductor/Commands/CompletionCommand.cs, docs/cli.md, docs/operating.md, docs/plan-config.md, docs/dev/NEXT-FEATURES.md
 >
-> evidence: .conductor/evidence/KS7/KS7.5-context-economics.md
+> evidence: .conductor/evidence/KS7/KS7-fix-s10-gates-green.md, .conductor/bg-logs/full-suite-green-20260819-002850258.log
 >
-> gaps: the card's stated exit (a measured cache-read drop per session from conductor budget) needs N future sessions running under these prompts on a comparable stage — no single session can produce it. Neither battery is switched on in this plan; that is a live-plan edit and the owner's call. Bugs #55 and #53 open.
+> gaps: none
 
 ## Tracker handoff
 
 ```
-last: KS7.5 DONE (3d7414a) - stage KS7 is complete. RepoMapBattery and DefinitionOfDoneBattery are
-  now REGISTERED in PromptBuilder.BatterySection (which takes the folded board + effective stage), both
-  opt-in via batteries.repoMap / batteries.definitionOfDone; the search-delegation guidance is in
-  ToolContract so it reaches session/fix/resume/verify/audit. 12 new facts, suite slice 171 green.
-BEFORE YOU ADD ANY PROMPT TEXT, read this: a prompt is also an ARGUMENT. 8191 chars through a cmd/bat
-  shim; the shipped prompt measures 7598 (doctor argv lint, scratch plan) and 28 test files spawn their
-  fake agent through cmd.exe. A 640-char addition took it to 8207 and killed two live-run rigs with
-  "the fake agent never started" - nothing mentions length. Ratchet test
-  KS7_5ContextEconomicsTests.ShippedPromptStaysUnderTheCmdExeArgvCeiling now fails first instead.
-  Pay for a new paragraph by trimming an old one. Bug #55: the lint under-measures the live spawn by
-  350-500 chars (battery, tail sections, --mcp-config).
-build: MSBuild switches nodeReuse:false and UseSharedCompilation=false (bug #54) or you get 9 bogus
-  Conductor.Planning analyzer errors. Bug #53: cache_creation 5m/1h TTL split still dropped.
+last: fix session #10 - the KS7 battery is GREEN, 2878/2878 in 2m33s
+  (.conductor/bg-logs/full-suite-green-20260819-002850258.log, commit a36ea6d). Nine reds, none of
+  them the known flake, all of them KS7.3-7.5 landing code without landing its record. KS7.3/7.4/7.5
+  re-claimed on .conductor/evidence/KS7/KS7-fix-s10-gates-green.md.
+WHAT THE NINE WERE, so you do not repeat the shape: one unregistered verb (otel) is FOUR reds -
+  completion, cli.md, operating.md S2, and the three-way agreement test all read the verb list off
+  Program.cs. A new config property is a DOCS obligation - PlanKeySchema derives the expectation, so
+  five KS7.4/7.5 keys with no row in plan-config.md were two more. Ship a verb or a key: update the
+  record in the same commit.
+THE ARGV NUMBER IN THE OLD HANDOFF WAS THE WRONG PROMPT. doctor's lint renders the SINGLE-repo
+  prompt; SF6_1's budget renders the MULTI-repo one, ~400 chars bigger, and that is the one that was
+  over (deliver 7942 / fix 7909 against 7900). After compressing five ToolContract paragraphs it
+  measures deliver=7808, fix=7775 - 92 chars of margin. Check BOTH before adding prose.
+preflight's rebuild leg goes red if you edit src/ while a bg suite is running - your own hand, not a
+  defect. Bugs #53 (cache TTL split), #54 (nodeReuse:false), #55 (lint under-measures) still open.
+next: KS8. Stage KS7 is closed and confirmed green.
 ```

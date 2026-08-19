@@ -96,7 +96,7 @@ public sealed class BugCommand : Command<BugCommand.Settings>
               ?? new RunState { PlanName = plan.Name, RunId = runId };
     }
 
-    private static int New(SqliteRunStore store, PlanConfig plan, RunState state, Settings settings)
+    private static int New(SqliteRunStore store, PlanConfig _, RunState state, Settings settings)
     {
         var title = settings.TitleOrId?.Trim() ?? "";
         if (string.IsNullOrWhiteSpace(title))
