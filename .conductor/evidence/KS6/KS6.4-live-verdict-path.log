@@ -1,0 +1,24 @@
+Test run for C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   121, Skipped:     0, Total:   121, Duration: 32 s - Conductor.Tests.dll (net10.0)
+
+=== full solution suite, same build (bg child ks64full, PID 15736) ===
+
+Passed!  - Failed:     0, Passed:  2941, Skipped:     0, Total:  2941, Duration: 3 m 16 s - Conductor.Tests.dll (net10.0)
+
+=== code-metrics probe: src/Conductor.Core/CodeMetricsConfig.txt wound down to 5/40/20, config restored after ===
+CA1502: 'ApplyControlAsync' has a cyclomatic complexity of '13'. Rewrite or refactor the code to decrease its complexity below '6'.
+CA1502: 'ApplyDeliveryAsync' has a cyclomatic complexity of '24'. Rewrite or refactor the code to decrease its complexity below '6'.
+CA1502: 'ControlEvidence' has a cyclomatic complexity of '9'. Rewrite or refactor the code to decrease its complexity below '6'.
+CA1502: 'Delivery' has a cyclomatic complexity of '14'. Rewrite or refactor the code to decrease its complexity below '6'.
+CA1502: 'EvaluateSessionAsync' has a cyclomatic complexity of '11'. Rewrite or refactor the code to decrease its complexity below '6'.
+CA1502: 'StallOrTimeout' has a cyclomatic complexity of '12'. Rewrite or refactor the code to decrease its complexity below '6'.
+CA1502: 'Triage' has a cyclomatic complexity of '7'. Rewrite or refactor the code to decrease its complexity below '6'.
+CA1502: 'WorkEvidence' has a cyclomatic complexity of '6'. Rewrite or refactor the code to decrease its complexity below '6'.
+CA1506: 'ApplyDeliveryAsync' is coupled with '27' different types from '10' different namespaces. Rewrite or refactor the code to decrease its class coupling below '21'.
+CA1506: 'EvaluateSessionAsync' is coupled with '23' different types from '10' different namespaces. Rewrite or refactor the code to decrease its class coupling below '21'.
+CA1506: 'RunLoop' is coupled with '182' different types from '34' different namespaces. Rewrite or refactor the code to decrease its class coupling below '21'.
+CA1506: 'SessionRunner' is coupled with '138' different types from '22' different namespaces. Rewrite or refactor the code to decrease its class coupling below '21'.
+CA1506: 'VerdictEngine' is coupled with '152' different types from '23' different namespaces. Rewrite or refactor the code to decrease its class coupling below '21'.
+CA1506: 'WorkEvidence' is coupled with '23' different types from '9' different namespaces. Rewrite or refactor the code to decrease its class coupling below '21'.
