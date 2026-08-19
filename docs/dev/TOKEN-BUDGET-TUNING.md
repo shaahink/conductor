@@ -436,3 +436,92 @@ tokens and $0.0001 less**, because the carried prefix lands as a cache read rath
 fork is therefore not a more expensive resume, and a fix or audit session that forks its stage's
 delivery session pays cache-read rates for context it would otherwise pay fresh-input rates to
 rediscover.
+
+## 12. The karvansara-**edge** era's own numbers — 0.85 held, **35M / 0.9** prescribed (KS12.1, 2026-08-19)
+
+§10 prescribed `32M / 0.85` and edge is the first era to have *run* under it. This section is the
+verdict on that pair and the number the **next** era compiles against.
+
+Produced by `dotnet run --project src/Conductor -- budget --json <db>` and `… money --json <db>`
+through the fresh build, raw output committed at `.conductor/evidence/KS12/ks12-1-budget-remeasure.json`
+and `…/ks12-1-money-remeasure.json`. Nothing below is typed by hand.
+
+> **Why a `<db>` argument and not the live store.** `MigrationRunner.CurrentVersion` is **15** on this
+> branch (`src/Conductor.Core/Store/MigrationRunner.cs:11`) and **14** on master, which is what the
+> installed `0.4.1` engine driving this run supports. Opening the live `run.db` with the fresh build
+> migrates it to 15, after which the driving engine refuses it at `MigrationRunner.cs:27-29` and
+> `conductor task` / `note` / `bug` die for the rest of the era — that is bug **#45**, filed at KS10.1
+> when exactly this happened. So the measurement runs against a `sqlite3.backup` **copy** of the store
+> and the live file is never opened for write. Note that `CONDUCTOR_RUN_DB` does **not** redirect
+> `budget`: it resolves the run by repo path first and answers *"no runs to measure"*. The positional
+> db path is the working seam.
+
+### The measurement — as of session 20, mid-KS12
+
+| run | ceiling | costed sess | tokens | ckpt | tok/ckpt | floor | median closer | max closer | rollover | nudged / clean | wrap-up |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| karvansara-core (§10) | 32M / nudge 22.4M | 12 of 21 | 155.2M | 28 ⚠ | 5.54M ⚠ | 2.95M | 22.08M | 25.56M | **0** | 3 / 3 | 2.28M (n=3) |
+| **karvansara-edge** | **32M / nudge 27.3M** | **19 of 20** | **366.8M** | **21** | **17.47M** | **0.79M** | **20.19M** | **29.36M** | **0** | **5 / 5** | **1.74M (n=4)** |
+
+Money, same store: edge is **$290.07** over 20 sessions at **$0.7908/M** and **98.43% cache reads**.
+Per stage — `money`'s own table, which is where the variance lives:
+
+| stage | sessions | ckpt | tokens/ckpt | $/ckpt |
+|---|---|---|---|---|
+| KS4 (gates that can't be gamed) | 5 | 5 | 19.16M | **$17.93** |
+| KS7 (agent-side catch-up) | 5 | 5 | 19.43M | $13.81 |
+| KS11 (the courier) | 5 | 5 | 16.77M | $12.27 |
+| KS6 (analyzer set + ratchets) | 4 | 4 | 15.88M | $12.83 |
+| KS8 (MCP + ATIF, the cut-first stage) | 1 | 2 | 13.26M | $9.35 |
+
+### The count needs no correction this time — checked, not assumed
+
+§10 had to correct a 28-checkpoint denominator that was really 7. The same check on edge **passes**:
+`budget` reports `checkpoints: 21` and, independently, `closers: 18` — and `money`'s stage table sums
+to the same 21 (5+5+4+5+2). Every one of the 21 was closed by a session inside this run; there is no
+lane-era phase-gate bulk confirmation in the window. **17.47M / $13.81 per checkpoint is the honest
+figure**, not an artefact.
+
+### The prescription — 32M held, and it is now the *ceiling* that is loose
+
+`budget`'s verdict for karvansara-edge, verbatim from the JSON, `findings` array **empty**:
+
+> set maxSessionTokens to 35M at softBreakRatio 0.9 - nudge 31.5M clears the 29.4M largest closer,
+> headroom 3.5M is 2.0x the measured 1.74M wrap-up.
+
+Three things this window proves, and they are the reason the prescription moved:
+
+1. **0.85 was right.** The realised ratio is `nudgeRatio: 0.8541` — the pair §10 prescribed is the
+   pair that ran. Under it: **zero rollovers in 19 costed sessions**, and **five sessions nudged, all
+   five ended clean** (`nudged: 5, nudgedAndEndedClean: 5`). §10's complaint — a nudge landing *on*
+   the median closer at 1.02× — is gone: 27.33M against a 20.19M median closer is **1.35×**.
+2. **Wrap-up is cheaper than two eras assumed.** Measured on n=4 here: **1.52M–1.98M, median 1.74M**,
+   against karvansara-core's 2.28M (n=3) and §7's assumed 1.5M. Three eras of evidence now put the
+   real figure between 1.7M and 2.3M; §7 step 2's 1.5M assumption should be read as a floor.
+3. **The ceiling is now the binding constraint, not the ratio.** The largest closer is **29.36M**
+   against a 27.33M nudge — i.e. the biggest sessions are already running *past* the nudge and
+   finishing anyway, using 2M of the 4.67M headroom. Raising to 35M/0.9 puts the nudge at 31.5M,
+   which clears that 29.36M with 3.5M left, still 2.0× the measured wrap-up and inside §7 step 4's
+   ≥1.5× rule.
+
+**Where this doc's earlier estimate and the prescription disagree, the prescription wins.** The
+plan doc's `32M / 0.85` line is corrected in place at `KARVANSARA-PLAN-2026-08-13.md`
+§"Budget prescription".
+
+### What the next era compiles against
+
+- **Ceiling 35M, softBreakRatio 0.9** (nudge 31.5M, headroom 3.5M). Still bound to `claude-opus-5`
+  — §9, §10 and §11 all say a model change re-derives the pair, and nothing here changes that.
+- **Per-checkpoint basis: 17.47M / $13.81.** The karvan basis this era planned against was
+  **16.8M / $13.24**; the outturn is **+4.0% tokens / +4.3% cost**. That is the first time a
+  per-checkpoint estimate in this project has been checked against a full era's outturn and held.
+  Use 17.5M / $13.80 for the next plan and stop rounding it down.
+- **Budget the variance, not the mean.** KS4's $17.93/ckpt is +30% on the era mean and it is the
+  shape of an *adversarial* stage — one where the deliverable is a gate that must go red on purpose,
+  so every checkpoint pays for a rig as well as the feature. §10 said the same thing about fix
+  rounds; this run says it about the work's *kind*.
+- **KS7.5 did not show up as a cache-read saving, and should not have been expected to.** Edge's
+  cache-read share is **98.43%**, against core's 98.29% and karvan's 98.3% — the share is a constant
+  of this architecture, not a lever. What KS7.5 moves is the *size of the carried prefix* within a
+  session (§11), which lands in tokens-per-checkpoint, and there the era came in +4% on an estimate
+  built from a *less* engine-deep era. Read that as the saving paying for the extra depth.

@@ -410,6 +410,18 @@ Basis: karvan-core at the tag — 24 checkpoints × **16.8M tokens** × **$13.24
 > budget for, not the mean it should plan against (§10 shows the arithmetic and why `budget`'s own
 > `tokensPerCheckpoint: 5.54M` for this run is a denominator artefact).
 
+> ⚠ **Corrected again in place at KS12.1 (2026-08-19), and this time the ceiling moves — for the
+> era *after* this one.** `32M / 0.85` is the pair edge actually ran under, and it held: realised
+> `nudgeRatio` **0.8541**, **zero rollovers in 19 costed sessions**, **five sessions nudged and all
+> five ended clean**, nudge 27.33M against a 20.19M median closer (**1.35×** — KS10.1's 1.02×
+> complaint is answered). What the outturn exposes is the *ceiling*: the largest closer is **29.36M**
+> against a 27.33M nudge, so the biggest sessions already run past the nudge and finish anyway.
+> `budget`'s verdict, verbatim and with an empty `findings` array: *"set maxSessionTokens to 35M at
+> softBreakRatio 0.9 - nudge 31.5M clears the 29.4M largest closer, headroom 3.5M is 2.0x the
+> measured 1.74M wrap-up."* **Where this section and the prescription disagree, the prescription
+> wins: the next era compiles against `35M / 0.9`.** Raw: `.conductor/evidence/KS12/ks12-1-budget-remeasure.json`.
+> Full working: `TOKEN-BUDGET-TUNING.md` §12.
+
 - **Keep 32M — and move the ratio to 0.85. Keep the model the pair was fitted to.** ~~32M / 0.70~~
   → **32M / 0.85** (nudge 27.2M), measured at KS10.1. The ceiling is only valid for
   `claude-opus-5`, the model whose run.db produced it (the sonnet→opus re-derivation was a
@@ -424,6 +436,13 @@ Basis: karvan-core at the tag — 24 checkpoints × **16.8M tokens** × **$13.24
   whatever KS7.5 earns. **KS10.1's measure is in and it does not move this line:** the 16.8M / $13.24
   basis re-verified against a longer karvan run (30 costed sessions, 403.9M, still 16.8M/ckpt), so
   the estimate stands as written. What changes is the ceiling pair it runs under — `32M / 0.85`.
+  ⚠ **Corrected in place at KS12.1 (2026-08-19) — this line was stale before the run started, and
+  the outturn is now in.** Edge was *authored* at **24 checkpoints, cap $420**, not the 16 / $280
+  drafted here; KS11 (the courier, 5cp) and KS4's fifth checkpoint did not exist when this was
+  written. Measured at KS12.1 with 21 of those 24 closed: **366.8M tokens, $290.07, 17.47M /
+  $13.81 per checkpoint** — **+4.0% tokens and +4.3% cost against the 16.8M / $13.24 basis**, which
+  is the first per-checkpoint estimate in this project ever checked against a whole era's outturn
+  and found to hold. Extrapolated to all 24 that is ~419M / **~$331**, inside the $420 cap.
 - Cut lines, in order: KS8 (MCP/ATIF), then KS9.3 (Projects v2), then KS3.5 (import bridges).
   Core's KS0+KS1 are indivisible (the door doesn't open onto lying surfaces); KS9.1–9.2 are
   committed per ND-9 and not on the cut list.
