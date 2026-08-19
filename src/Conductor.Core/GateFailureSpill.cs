@@ -39,13 +39,20 @@ public static class GateFailureSpill
     public static string Render(IEnumerable<GateResult> results, string? stateDir, int sessionNumber)
     {
         ArgumentNullException.ThrowIfNull(results);
-        var failed = results.Where(r => !r.Passed && !r.Skipped).ToList();
+        // KS4.2: a regressing gate PASSED — it is red because a check that used to pass is gone — so
+        // the ordinary filter drops it and the fix session is told "(no gate output captured)" about
+        // the one failure it most needs explained. This is the same lesson KS4.1 paid for: the
+        // engine has two fix-brief renderers and only one of them is on the path a real run takes.
+        var failed = results.Where(r => (!r.Passed && !r.Skipped) || r.HasRegressions).ToList();
         if (failed.Count == 0) return "";
 
         var dir = Prepare(stateDir);
         var parts = new List<string>(failed.Count);
         foreach (var r in failed)
         {
+            // Nothing to spill: the gate's own output is a success message. What the fix session
+            // needs is the class's finding, and all of it fits in the prompt.
+            if (r.HasRegressions) { parts.Add(GateRunner.RegressionDetail(r)); continue; }
             var path = dir is null ? null : Spill(dir, r, sessionNumber);
             var excerpt = r.Tail.Length > ExcerptChars ? "…" + r.Tail[^ExcerptChars..] : r.Tail;
             // SC4.1: say it was retried. A fix session that knows the gate failed TWICE does not waste

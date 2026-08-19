@@ -527,8 +527,9 @@ public static class GateRunner
         return string.Join("\n\n", parts);
     }
 
-    /// <summary>KS4.2's distinct reporting, in the one place a fix session actually reads.</summary>
-    private static string RegressionDetail(GateResult r)
+    /// <summary>KS4.2's distinct reporting, in the words both fix-brief renderers use — this one and
+    /// <see cref="GateFailureSpill"/>, which is the one an ordinary run actually goes through.</summary>
+    internal static string RegressionDetail(GateResult r)
     {
         if (r.RegressionNote is { } note)
             return $"### Gate `{r.Name}` — {GateClass.Glyph} CLASS\n```\n{note}\n```";

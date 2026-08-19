@@ -316,10 +316,11 @@ public sealed class K3_3ProvenanceTests : IDisposable
         Assert.Equal((long)SqliteRunStore.CurrentSchemaVersion,
             Convert.ToInt64(archive.Query("SELECT version FROM schema_version")[0]["version"]));
         // K4.1 moved the schema to v12 (sessions.context_*), KS1.1 to v13 (runs.limits_json_at_launch
-        // and the reload provenance), KS9.2 to v14 (github_cursor + github_map). The pin follows the
+        // and the reload provenance), KS9.2 to v14 (github_cursor + github_map), KS4.2 to v15
+        // (gate_pass_sets, the PASS-TO-PASS baseline). The pin follows the
         // shipped version on purpose: this test asserts the v10 -> current upgrade path lands, not
         // that v11 is the end.
-        Assert.Equal(14, SqliteRunStore.CurrentSchemaVersion);
+        Assert.Equal(15, SqliteRunStore.CurrentSchemaVersion);
         var run = Assert.Single(archive.Runs());
         Assert.Equal("run-k33-0004", run.RunId);
         Assert.Equal("completed", run.Status);

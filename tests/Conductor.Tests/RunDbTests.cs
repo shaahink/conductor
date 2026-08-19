@@ -53,7 +53,7 @@ public sealed class RunDbTests : IDisposable
     }
 
     [Fact]
-    public void Schema_version_is_fourteen()
+    public void Schema_version_is_fifteen()
     {
         var rows = _db.Query("SELECT version FROM schema_version");
         Assert.Single(rows);
@@ -65,7 +65,9 @@ public sealed class RunDbTests : IDisposable
         // "what have I already created there" map. The pin moved because that migration is real and
         // registered (Store/Migrations/v14_github_cursor.sql), which is precisely the decision this
         // literal exists to force somebody to make out loud.
-        Assert.Equal(14L, (long)rows[0]["version"]!);
+        // v15 (KS4.2) gate_pass_sets — the PASS-TO-PASS baseline, one row per (run, gate), holding
+        // the checks a regression gate last reported passing on a clean run.
+        Assert.Equal(15L, (long)rows[0]["version"]!);
     }
 
     [Fact]
