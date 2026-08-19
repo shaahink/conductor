@@ -31,7 +31,7 @@ calls and commits happening, that's DeepSeek, driven by whatever prompt `templat
 | `.conductor/logs/session-NNN.jsonl` / `.prompt.md` | Raw per-session agent I/O and the exact compiled prompt sent. |
 | `.conductor/REPORT.md` | Human-readable stage/checkpoint progress snapshot, regenerated each session. |
 | `.conductor/followups.md` | Tracked bug ledger, git-tracked, `owning stage` column — the mechanism for "log this so the right stage's session reads it." |
-| `.conductor/run.db` | SQLite: sessions, gates, ledger, pid tracking. `conductor task --list` / `conductor log --query ...` read it. |
+| the run store (`run.db`) | SQLite: sessions, gates, ledger, pid tracking. `conductor task --list` / `conductor log --query ...` read it. **It is not in the working tree.** K3.1 moved it to a machine-level home — `%LOCALAPPDATA%\conductor\runs\<repo>-<plan>-<hash>\` on Windows, `$XDG_DATA_HOME/conductor` elsewhere — indexed by `catalogue.json`, because `.conductor/.gitignore` is a bare `*` and every session, cost and bug used to die with the machine. `conductor catalogue` lists the stores; `CONDUCTOR_STATE_HOME` moves the root; a `.conductor/run.db` you still find on disk is a pre-K3.1 leftover that nothing writes. |
 | `MAESTRO-TRACKER.md` | Checkpoint status table, re-seeded into `run.db` on every startup — don't trust hand-edits to it. |
 | `git log` / `git status` | The only durable record of real progress. State files can be stale; commits can't. |
 
@@ -57,6 +57,23 @@ calls and commits happening, that's DeepSeek, driven by whatever prompt `templat
 7. **Resume**: `conductor run -p plans/conductor-maestro.plan.json`. The next session's prompt
    template already tells the agent to run `git status`/`git log`, re-read the tracker handoff,
    call `ledger_list`, and finish or safely revert whatever was in flight.
+
+## A gate exited 0 and the battery still went red
+
+New at the Karvansara edge era, and it will read as a broken gate runner if you have not met it.
+Three gate **classes** deliberately disagree with the exit code, because an exit code can only say
+*this command succeeded* and three of the ways a suite lies about the code do not change it. The
+failure text says which class fired and says it in that class's own words — "a gate failed" would
+send you looking for an assertion that does not exist.
+
+| The battery says | What it means | What to actually look at |
+|---|---|---|
+| `REGRESSION` | A check that passed **earlier in this run** does not pass now, and the command still exited 0. The usual cause is a test deleted, renamed or skipped rather than fixed. | The named checks. If one was legitimately renamed, that is a real change to the pass set and the message lists it by name — the point is that it cannot happen silently. |
+| `MUTANTS` | The gate produced a mutation report and the score is under its threshold: the suite runs and asserts too little. | The surviving mutants in the report. An **unreadable** report is reported as unreadable, never as a pass — check the path the message names. |
+| a gate you cannot see by name | A **holdout** gate failed. Holdouts run at the phase gate only, and their names are redacted everywhere a session can see, so an agent cannot tune to them. | The plan's `gates[]`, from outside the session — `visibility: "holdout"` marks them. This is working as intended; the redaction is the feature. |
+
+An empty pass set is called out rather than treated as green, for the same reason: a battery that
+found nothing to compare has not proved anything.
 
 ## Known gaps (real, not yet fixed)
 

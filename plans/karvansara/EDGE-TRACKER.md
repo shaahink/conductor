@@ -2,39 +2,40 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, <=12 lines, no history)
 
-last: STAGE KS8 IS COMPLETE - KS8.1 (e9fcfa5) and KS8.2 (9af9339), both with evidence under
-  .conductor/evidence/KS8/. `conductor mcp-observe` serves history/status/money as MCP RESOURCES and
-  no tools: initialize declares no tools capability, tools/list is empty, tools/call is refused -32601
-  for all sixteen agent-surface tools (the list is SCANNED off McpTaskServer.cs, so a new one joins
-  the battery automatically), and read-only is enforced by RunArchive's Mode=ReadOnly connection, not
-  by discipline. ADR-0007 records why. `conductor history export <run> --atif` (and `--all -o DIR`)
-  writes runs as ATIF-v1.7 trajectories; 30/30 validate against HARBOR'S OWN pydantic model, which is
-  extra="forbid", so a misspelled field would have been a hard rejection. `conductor init` now writes
-  AGENTS.md plus a CLAUDE.md that imports it, clobbering neither. 23 new tests.
-TRAP THAT COST ME A CONFUSING RED: editing a .cs file with a text-mode script flips the WORKING TREE
-  from CRLF to LF. autocrlf=true means git diff shows NOTHING, the build is clean, and exactly one
-  test goes red - KS3_1PlanNewTests.InitStillWritesExactlyWhatItWroteBefore, which separates the live
-  advisor block from the commented one by a raw string literal's line ending. Re-normalise before you
-  run the suite. Also: Program.cs is AT CA1505's maintainability bar - a third argv rewrite pushed it
-  to MI 19, so new rewrites go in VerbRewrites.cs. And MA0045 exempts an override, not a helper you
-  factor out of one - keep sync file I/O inside Execute.
-OPEN QUESTION FOR THE OWNER, not blocking: this repo has a 28KB AGENTS.md and no CLAUDE.md, so every
-  session in this run reads none of it. The import is one file; it also adds ~7k tokens to every
-  remaining session's prefix. That is a live-run spend call, so KS8.2 shipped the mechanism and left
-  this repo alone.
-next: KS12 only (KS12.1 docs, KS12.2 published surface + the payesh harvest re-run, KS12.3 is the
-  owner's merge/reinstall). Bugs #53/#54/#55/#57/#58/#59/#60 open; analyzer-debt.ps1 still red at
-  pragma-src 33 vs bar 31 from KS4.4 (bug #60) - KS8 added none.
+last: KS12.1 IS DONE (eb87ad4, 914113c, e08c8dd), evidence in .conductor/evidence/KS12/. Budget
+  re-measured: the era ran at 32M/0.85 and it HELD - realised nudgeRatio 0.8541, 0 rollovers in 19
+  costed sessions, 5 nudged and all 5 clean. `budget` now prescribes 35M / 0.9 (nudge 31.5M) for the
+  NEXT era; the per-checkpoint outturn is 17.47M / $13.81, only +4% on the karvan basis this era
+  planned against. TOKEN-BUDGET-TUNING section 12 and the plan doc carry it. ARCHITECTURE.md: 27
+  drifted citations corrected by opening every one, and the "exactly nine public interfaces" line was
+  wrong (ten - KS11 added IMessageChannel). Closure ledger in .conductor/followups.md names all 34
+  bug rows with an owner; bug 44 closed by KS6.2, bug 61 filed by me.
+KS12.2 IS IN PROGRESS, NOT CLAIMED - three of its five parts landed (uncommitted work is in this
+  commit): docs/cli.md now names all 82 long options with a NEW derived pin
+  (SF7_1DocsMatchRealityTests.Flags.cs, 35/35 green - it went red on its first run and was right: the
+  rollback row conflated --yes with --force); CHANGELOG [Unreleased] written as the release body for
+  KS4/6/7/8 (tools/changelog-section.sh Unreleased, 112 lines, exit 0); troubleshooting.md gained the
+  classed-gate section and a run.db-location correction. STILL OWED: README.md and docs/README.md
+  (neither mentions gate classes, mcp-observe, ATIF, otel or chat profiles); operating.md section 7
+  still says "as of 2026-08-15" and claims "the anti-cheat ratchet green" which is FALSE; and the
+  payesh harvest re-run + PR, which is untouched.
+TRAP THAT WOULD HAVE COST THE RUN: MigrationRunner.CurrentVersion is 15 on this branch and 14 on
+  master, so `dotnet run -- budget` against the LIVE run.db migrates it and locks the 0.4.1 engine
+  driving this run out of its own store (bug 45, it happened at KS10.1). Take a sqlite3.backup copy
+  and pass it as budget's POSITIONAL db path. CONDUCTOR_RUN_DB does not work for that verb (bug 61).
+next: finish KS12.2 (README, docs/README.md, operating.md section 7, then payesh on a branch with a
+  PR - never that repo's main). analyzer-debt is RED: pragma-src 33 vs bar 31, both MA0045 from
+  KS4.4, bug 60 - stated in the ledger, not fixed, and the bar may not be raised.
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 24 |
-| Done | 14 |
-| Claimed (unconfirmed) | 5 |
+| Done | 19 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -74,18 +75,18 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS4.1 | Holdout gates: a visibility holdout gate class excluded from prompts, tool contract and agent-readable logs, run only at verdict time; grep of composed prompt + transcript proves absence; a seeded gaming fake-agent passes visible gates, fails holdout, verdict red | DONE | 3365a3d | .conductor/evidence/KS4/KS4.1-holdout-gates.md |
-| KS4.2 | Regression gate class (PASS-TO-PASS semantics): nothing-that-worked-broke as a named class with distinct reporting; a seeded regression flips the verdict with the class named in evidence | DONE | 8d649ea | .conductor/evidence/KS4/KS4.2-regression-gates.md |
-| KS4.3 | Mutation gate kind: mutation-score >= threshold, diff-scoped, Stryker.NET first; a checkpoint adding tests must clear the score on changed files; an era-boundary run on conductor's own suite recorded | DONE | 4d6ad56 | .conductor/evidence/KS4/KS4.3-mutation-gates.md |
-| KS4.4 | Worktree-per-stage-attempt: each attempt in a worktree, failed attempt drops the tree, verdict receives the clean attempt diff, merge ff-only on green, never branch -D an unmerged branch (lanes L1.3 fix per ND-8, amendment committed); Windows lock/removal proven; orphan sweep at startup | DONE | 05696d4 | .conductor/evidence/KS4/KS4.4-worktree-per-attempt.md |
-| KS4.5 | Judge as evidence, never verdict: second-model review joins the evidence taxonomy through KS6.4's seam as an advisory row; judge disagreement recorded as evidence; a test asserts NO code path lets a judge score flip a gate verdict | DONE | 546a092 | .conductor/evidence/KS4/KS4.5-judge-as-evidence.md |
+| KS4.1 | Holdout gates: a visibility holdout gate class excluded from prompts, tool contract and agent-readable logs, run only at verdict time; grep of composed prompt + transcript proves absence; a seeded gaming fake-agent passes visible gates, fails holdout, verdict red | DONE ✓ | 3365a3d | .conductor/evidence/KS4/KS4.1-holdout-gates.md |
+| KS4.2 | Regression gate class (PASS-TO-PASS semantics): nothing-that-worked-broke as a named class with distinct reporting; a seeded regression flips the verdict with the class named in evidence | DONE ✓ | 8d649ea | .conductor/evidence/KS4/KS4.2-regression-gates.md |
+| KS4.3 | Mutation gate kind: mutation-score >= threshold, diff-scoped, Stryker.NET first; a checkpoint adding tests must clear the score on changed files; an era-boundary run on conductor's own suite recorded | DONE ✓ | 4d6ad56 | .conductor/evidence/KS4/KS4.3-mutation-gates.md |
+| KS4.4 | Worktree-per-stage-attempt: each attempt in a worktree, failed attempt drops the tree, verdict receives the clean attempt diff, merge ff-only on green, never branch -D an unmerged branch (lanes L1.3 fix per ND-8, amendment committed); Windows lock/removal proven; orphan sweep at startup | DONE ✓ | 05696d4 | .conductor/evidence/KS4/KS4.4-worktree-per-attempt.md |
+| KS4.5 | Judge as evidence, never verdict: second-model review joins the evidence taxonomy through KS6.4's seam as an advisory row; judge disagreement recorded as evidence; a test asserts NO code path lets a judge score flip a gate verdict | DONE ✓ | 546a092 | .conductor/evidence/KS4/KS4.5-judge-as-evidence.md |
 
 ### KS8 — Interop - the run as a readable artifact (cut-first)
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS8.1 | Read-only MCP surface: history/status/money as MCP resources, control ops excluded by design with the ADR citing MCP's 2026 attack record; an MCP client lists runs and quotes reconciled status; no write tool exists on the surface | TODO | - | - |
-| KS8.2 | ATIF trajectory export from the fold (history export, billed costs included) validating against the ATIF schema on the karvan-core run; AGENTS.md generated/honored via the CLAUDE.md-import pattern | TODO | - | - |
+| KS8.1 | Read-only MCP surface: history/status/money as MCP resources, control ops excluded by design with the ADR citing MCP's 2026 attack record; an MCP client lists runs and quotes reconciled status; no write tool exists on the surface | DONE | e9fcfa5 | .conductor/evidence/KS8/KS8.1-read-only-mcp-surface.md |
+| KS8.2 | ATIF trajectory export from the fold (history export, billed costs included) validating against the ATIF schema on the karvan-core run; AGENTS.md generated/honored via the CLAUDE.md-import pattern | DONE | e9fcfa5 | .conductor/evidence/KS8/KS8.2-atif-and-agents.md |
 
 ### KS12 — Ship edge - close the era
 
