@@ -2,22 +2,22 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, <=12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS6.1 DONE and committed (af6d93e). Roslynator 4.16.1 pinned, 33 rules at error each with the
-  design property it buys, RCS1233 refused with its measurement, 113 violations FIXED - no pragma added.
-  Suite 2886/2886. Evidence: .conductor/evidence/KS6/KS6.1-curated-roslynator.md.
-THE FINDING KS6.2 INHERITS: roslynator_analyzers.enabled_by_default = false DOES NOTHING here - not from
-  .editorconfig, not from a repo-root .globalconfig reaching the compiler through EditorConfigFiles
-  (three ways, ks61-seed2/3/4 logs). "Everything else off" is now enforced by KS6_1AnalyzerCurationTests,
-  which asks the analyzer assemblies which rules can fail this build. Do not re-add the switch - a test
-  asserts it stays out. And seed a break into your own referee before trusting it: my first version
-  missed RCS1O43 (letter O for zero) entirely, invisible to compiler and checker alike.
-KS6.2 IS BACK ON TODO WITH THE MEASUREMENT ALREADY TAKEN - read the card's amendment and the ledger, do
-  not re-measure. Short version: 45 pragmas against a ceiling of 38 (bug 44 said 43; KS7 added two), but
-  41 of the 45 carry an inline justification naming a real sync boundary and only 4 are bare, so the
-  ceiling counts sync boundaries, not debt. CA1031's pragmas are dead - it sits at suggestion.
-next: KS6.2, the analyzer-debt ratchet. Bugs #53/#54/#55 still open.
+last: KS6.2 DONE (0cb514d, 4b25081, 42f846f). tools/gates/analyzer-debt.ps1 counts SIX kinds of
+  suppression, not one, wired from ratchet.ps1 so no plan edit was needed. Bug 44 CLOSED downward: 14
+  of the 45 pragmas measured dead and removed, 45 -> 31, maxPragmas ratcheted DOWN 38 -> 31, zero
+  unjustified. Evidence: .conductor/evidence/KS6/KS6.2-analyzer-debt-ratchet.md + -seeded-attacks.log.
+THE FINDING KS6.3 MUST NOT REPEAT: ALL of ratchet.ps1 section 3 is vacuous in this run's flow. It
+  anchors on origin/<branch>, but a session commits AND PUSHES before conductor runs the battery, so
+  at gate time origin/<branch> IS HEAD and 3a/3b/3c/3d compare the tree against itself - attack 8 in
+  the log commits a suppression and walks through. Do NOT write KS6.3's complexity ratchets against
+  origin/<branch>; use the window minimum (Get-AnchorCommits, one function, 25 commits, ~7s).
+  Same hole leaves 3c open with minTests=1932 against an actual 2487: 555 attributes could go silently.
+Two traps that cost me time: a $-anchored regex silently misses every CRLF line here, and a proof
+  script that git reset --hard ate an hour of uncommitted gate work. Commit first, then seed.
+next: KS6.3 complexity budgets. Bugs #53/#54/#55 still open.
+
 
 ## Baseline numbers (from run.db)
 
