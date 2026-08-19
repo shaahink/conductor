@@ -149,7 +149,9 @@ public sealed class JourneyCommand : AsyncCommand<PlanSettings>
 
         foreach (var tier in new[] { "fast", "full", "truth" })
         {
-            var inTier = plan.Gates.Where(g => g.Tier.Equals(tier, StringComparison.OrdinalIgnoreCase)).ToList();
+            // KS4.1: journey prints name AND command for every gate, and the agent can run it.
+            var inTier = GateVisibility.VisibleOnly(plan.Gates)
+                .Where(g => g.Tier.Equals(tier, StringComparison.OrdinalIgnoreCase)).ToList();
             if (inTier.Count == 0) continue;
             AnsiConsole.MarkupLine($"  [bold]{tier}[/]");
             foreach (var g in inTier)

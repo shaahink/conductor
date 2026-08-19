@@ -27,9 +27,14 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
         await GateRunner.RunHookAsync(_plan, _plan.Setup, "setup", log, ct).ConfigureAwait(false);
         var stage = _plan.Stages.FirstOrDefault(s => s.Id == state.CurrentStage);
         var headSha = Git.Head(_plan.Repo);
+        // KS4.1: includeHoldout: true, and this is the ONLY place in the engine that passes it. This
+        // method is reached from VerdictEngine alone — the per-session battery, the phase gate and
+        // the closing battery — which is exactly "run only by the engine at verdict time". Every
+        // other route into GateRunner (conductor gate, the lane merge battery, the doctor's lints)
+        // takes the default and cannot run a holdout at all.
         var gates = await GateRunner.RunAllAsync(_plan, log, ct, fastOnly,
             state.CurrentStage, stage?.Kind, onGates,
-            store, state.RunId, headSha).ConfigureAwait(false);
+            store, state.RunId, headSha, includeHoldout: true).ConfigureAwait(false);
         await GateRunner.RunHookAsync(_plan, _plan.Teardown, "teardown", log, ct).ConfigureAwait(false);
         foreach (var g in gates)
         {

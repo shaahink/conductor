@@ -33,7 +33,12 @@ public sealed record PlanDto(
                 s.Persona, s.Notes,
                 s.DependsOn is { Count: > 0 } ? [.. s.DependsOn] : [],
                 s.Qa?.Mode, s.Qa?.VerifierThreshold))],
-            Gates: [.. p.Gates.Select(g => new PlanGateDto(g.Name, g.Command, g.Tier, g.TimeoutMinutes, g.Optional))],
+            // KS4.1: the control plane listens on localhost, so "the Face is the owner's window" is
+            // not an access boundary. A holdout is reported as EXISTING - the owner must see that
+            // the battery has one - under its redacted name and with the command withheld.
+            Gates: [.. p.Gates.Select(g => g.IsHoldout
+                ? new PlanGateDto(GateVisibility.RedactedName, "", g.Tier, g.TimeoutMinutes, g.Optional)
+                : new PlanGateDto(g.Name, g.Command, g.Tier, g.TimeoutMinutes, g.Optional))],
             Limits: new PlanLimitsDto(
                 p.Limits.StallMinutes, p.Limits.SessionTimeoutMinutes,
                 p.Limits.MaxRunCostUsd, p.Limits.MaxRunTokens, p.Limits.VerifierThreshold,

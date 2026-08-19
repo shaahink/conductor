@@ -21,6 +21,11 @@ public sealed class GateConfig
     /// (and every session under perSession policy); "truth" gates are per-stage product-level
     /// assertions that run at phase confirmation only. Default "full".</summary>
     public string Tier { get; set; } = "full";
+    /// <summary>KS4.1: <c>visible</c> (default) or <c>holdout</c>. A holdout gate runs only in the
+    /// engine's own verdict-time battery and its name, command and output never reach the coding
+    /// agent — see <see cref="GateVisibility"/> for the contract and why it is enforced in the
+    /// runner rather than at each rendering surface.</summary>
+    public string Visibility { get; set; } = GateVisibility.Visible;
     /// <summary>Gates sharing a truthy parallel flag run concurrently within their battery.</summary>
     public bool Parallel { get; set; }
     /// <summary>If set, this gate only runs while the current stage id is in this list (doc-scoped
@@ -41,6 +46,11 @@ public sealed class GateConfig
     /// repo-relative or absolute. Empty/null = HEAD alone, unchanged.</summary>
     public List<string>? WatchPaths { get; set; }
     public int TimeoutMinutes { get; set; } = 20;
+
+    /// <summary>KS4.1: engine-only. The predicate every gate-enumerating surface outside
+    /// <see cref="Conductor.Core.GateRunner"/> must respect — use
+    /// <see cref="GateVisibility.VisibleOnly"/> rather than testing this by hand.</summary>
+    [JsonIgnore] public bool IsHoldout => Visibility.Equals(GateVisibility.Holdout, StringComparison.OrdinalIgnoreCase);
 
     [JsonIgnore] public bool IsFast => Tier.Equals("fast", StringComparison.OrdinalIgnoreCase);
     [JsonIgnore] public bool IsTruth => Tier.Equals("truth", StringComparison.OrdinalIgnoreCase);

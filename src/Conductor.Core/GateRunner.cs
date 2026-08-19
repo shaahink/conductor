@@ -6,6 +6,11 @@ namespace Conductor.Core;
 public sealed record GateResult(string Name, bool Passed, bool Skipped, bool Optional, int ExitCode, TimeSpan Duration, string Tail)
 {
     public bool Cached { get; init; }
+    /// <summary>KS4.1: this result came from a <see cref="GateVisibility.Holdout"/> gate, and is
+    /// therefore already anonymous — <see cref="Name"/> is <see cref="GateVisibility.RedactedName"/>,
+    /// <see cref="Tail"/> carries a fixed notice rather than the command's output, and
+    /// <see cref="ExitCode"/> is normalised. Nothing downstream has the gate's identity to leak.</summary>
+    public bool Holdout { get; init; }
     /// <summary>SC4.1: this result is the SECOND run of the gate — the first one failed.</summary>
     public bool Retried { get; init; }
     /// <summary>SC4.1: wall time the discarded first attempt burned. Counted in the cost estimate,
@@ -32,20 +37,30 @@ public static class GateRunner
     /// <param name="db">Optional run.db for per-gate SHA cache lookup.</param>
     /// <param name="runId">Run id for cache key.</param>
     /// <param name="headSha">Current HEAD sha for cache key.</param>
+    /// <param name="includeHoldout">KS4.1: run <see cref="GateVisibility.Holdout"/> gates too.
+    /// <b>Defaults to false, and that default is the checkpoint.</b> Every caller the agent can
+    /// reach — <c>conductor gate</c>, the lane merge battery, every test helper — gets the default
+    /// and therefore cannot run, time or observe a holdout. Only
+    /// <see cref="Orchestration.GateOrchestrator.RunBatteryAsync"/>, the engine's own verdict-time
+    /// battery, passes true.</param>
     public static async Task<List<GateResult>> RunAllAsync(PlanConfig plan, Action<string>? onProgress = null, CancellationToken ct = default,
         bool fastOnly = false, string? currentStage = null, string? stageKind = null,
         Action<IReadOnlyList<GateProgress>>? onGates = null,
-        IRunStore? db = null, string? runId = null, string? headSha = null)
+        IRunStore? db = null, string? runId = null, string? headSha = null,
+        bool includeHoldout = false)
     {
         var gates = plan.Gates
+            .Where(g => includeHoldout || !g.IsHoldout)
             .Where(g => g.AppliesToStage(currentStage) && g.AppliesToStageKind(stageKind))
             .Where(g => !fastOnly || g.IsFast)
             .Where(g => !fastOnly || !g.IsTruth)
             .ToList();
         var results = new GateResult?[gates.Count];
 
-        // Live status array shared across the (possibly parallel) gate tasks.
-        var live = gates.Select(g => GateProgress.Pending(g.Name)).ToArray();
+        // Live status array shared across the (possibly parallel) gate tasks. KS4.1: Label(), not
+        // g.Name — the dashboard timer array is handed to the control plane, and a holdout that
+        // announced itself there would be a holdout in name only.
+        var live = gates.Select(g => GateProgress.Pending(Label(g))).ToArray();
         var liveGate = new Lock();
         void Emit() { if (onGates != null) { lock (liveGate) onGates(live.ToArray()); } }
         void Mark(int i, GateProgress gp) { lock (liveGate) live[i] = gp; Emit(); }
@@ -56,7 +71,10 @@ public static class GateRunner
             var gate = gates[i];
             // F7.4: per-gate SHA cache — if this gate already passed at this tier+key, skip execution.
             // SC4.3: the key is the gate's whole world now, not just the primary repo's HEAD.
-            if (db != null && runId != null && headSha != null)
+            // KS4.1: holdout gates are never cache-served. The cache is keyed by gate NAME and their
+            // stored name is the shared redacted one, so a lookup would answer for the wrong gate —
+            // and a holdout that can be skipped by a cached pass is a holdout that can be replayed.
+            if (db != null && runId != null && headSha != null && !gate.IsHoldout)
             {
                 var cachedResult = db.GetLastPassingGateResult(runId, gate.Name, gate.Tier, CacheKey(plan, gate, headSha));
                 if (cachedResult is true)
@@ -66,10 +84,10 @@ public static class GateRunner
                         $"cached — passed at {headSha[..Math.Min(7, headSha.Length)]}") { Cached = true };
                 }
             }
-            Mark(i, new GateProgress(gate.Name, "running", TimeSpan.Zero, DateTime.UtcNow));
+            Mark(i, new GateProgress(Label(gate), "running", TimeSpan.Zero, DateTime.UtcNow));
             var r = await RunOneAsync(plan, gate, onProgress, ct).ConfigureAwait(false);
             var state = r.Cached ? "cached" : r.Skipped ? "skip" : r.Passed ? "pass" : r.Optional ? "warn" : "fail";
-            Mark(i, new GateProgress(gate.Name, state, r.Duration));
+            Mark(i, new GateProgress(Label(gate), state, r.Duration));
             return r;
         }
 
@@ -104,29 +122,50 @@ public static class GateRunner
         for (var i = 0; i < gates.Count && !ct.IsCancellationRequested; i++)
         {
             if (results[i] is not { } first || first.IsGreen) continue;
-            onProgress?.Invoke($"gate {gates[i].Name}: failed (exit {first.ExitCode} in {first.Duration.TotalSeconds:0}s) — retrying once before the battery is called red");
-            Mark(i, new GateProgress(gates[i].Name, "running", TimeSpan.Zero, DateTime.UtcNow));
+            onProgress?.Invoke(gates[i].IsHoldout
+                ? $"gate {Label(gates[i])}: failed in {first.Duration.TotalSeconds:0}s — retrying once before the battery is called red"
+                : $"gate {gates[i].Name}: failed (exit {first.ExitCode} in {first.Duration.TotalSeconds:0}s) — retrying once before the battery is called red");
+            Mark(i, new GateProgress(Label(gates[i]), "running", TimeSpan.Zero, DateTime.UtcNow));
             var second = await RunOneAsync(plan, gates[i], onProgress, ct).ConfigureAwait(false);
             // A skipIfFresh gate whose own failed run touched the watched artifact would come back
             // "cached" here. That is not a pass — keep the failure the gate actually produced.
             if (second.Cached || second.Skipped)
             {
-                Mark(i, new GateProgress(gates[i].Name, first.Optional ? "warn" : "fail", first.Duration));
+                Mark(i, new GateProgress(Label(gates[i]), first.Optional ? "warn" : "fail", first.Duration));
                 continue;
             }
             results[i] = second with
             {
                 Retried = true,
                 FirstAttemptDuration = first.Duration,
-                Tail = $"[conductor] retried once (SC4.1): the first attempt exited {first.ExitCode} after " +
-                       $"{first.Duration.TotalSeconds:0}s. Below is the SECOND run.\n{second.Tail}",
+                // KS4.1: the retry preamble quotes the first attempt's exit code, so for a holdout it
+                // would put back exactly what RunOneAsync just took out. The notice stands alone.
+                Tail = gates[i].IsHoldout ? second.Tail
+                    : $"[conductor] retried once (SC4.1): the first attempt exited {first.ExitCode} after " +
+                      $"{first.Duration.TotalSeconds:0}s. Below is the SECOND run.\n{second.Tail}",
             };
-            Mark(i, new GateProgress(gates[i].Name, second.Passed ? "pass" : second.Optional ? "warn" : "fail", second.Duration));
+            Mark(i, new GateProgress(Label(gates[i]), second.Passed ? "pass" : second.Optional ? "warn" : "fail", second.Duration));
         }
 
         // any not-yet-populated slots (e.g. cancelled before reached) get a skipped placeholder
-        return results.Select((r, i) => r ?? new GateResult(gates[i].Name, false, true, gates[i].Optional, 0, TimeSpan.Zero, "not run (cancelled)")).ToList();
+        return results.Select((r, i) => r ?? new GateResult(Label(gates[i]), false, true, gates[i].Optional, 0, TimeSpan.Zero, "not run (cancelled)")
+        { Holdout = gates[i].IsHoldout }).ToList();
     }
+
+    /// <summary>KS4.1: the ONLY name a gate is allowed to be called outside this class. Every result,
+    /// progress row and log line this runner emits goes through it, which is what makes a holdout's
+    /// invisibility a property of the data rather than a promise about thirty rendering surfaces.</summary>
+    private static string Label(GateConfig g) => g.IsHoldout ? GateVisibility.RedactedName : g.Name;
+
+    /// <summary>KS4.1: the result constructor for a gate that may be a holdout. A holdout's result
+    /// keeps only what the verdict needs (pass/skip/optional) and what the run must bill (duration);
+    /// its name, its exit code and its output are dropped HERE, so nothing downstream holds them.</summary>
+    private static GateResult Result(GateConfig g, bool passed, bool skipped, int exitCode, TimeSpan duration, string tail)
+        => g.IsHoldout
+            ? new GateResult(GateVisibility.RedactedName, passed, skipped, g.Optional,
+                passed || skipped ? 0 : 1, duration,
+                passed || skipped ? GateVisibility.PassNotice : GateVisibility.FailureNotice) { Holdout = true }
+            : new GateResult(g.Name, passed, skipped, g.Optional, exitCode, duration, tail);
 
     /// <summary>Signature of the full gate battery for a given tree state — used to skip identical reruns.</summary>
     /// <remarks>SC4.3: the gates' COMMANDS are part of the signature, not just their names. A plan
@@ -216,13 +255,20 @@ public static class GateRunner
 
     private static async Task<GateResult> RunOneAsync(PlanConfig plan, GateConfig g, Action<string>? onProgress, CancellationToken ct)
     {
+        // KS4.1: a holdout gate runs SILENTLY. Every line below names the gate, the probe path, the
+        // freshness artifact or the command itself, and conductor.log sits inside the repo the agent
+        // is editing — so for a holdout the progress sink is cut here, at the top, and the only line
+        // that survives is the redacted verdict at the bottom. Cutting it once beats remembering to
+        // redact each of the eight call sites, and a new one added later is silent by default.
+        var log = g.IsHoldout ? null : onProgress;
+
         if (g.SkipIfMissing != null)
         {
             var probe = Path.Combine(plan.Repo, g.SkipIfMissing);
             if (!File.Exists(probe) && !Directory.Exists(probe))
             {
-                onProgress?.Invoke($"gate {g.Name}: skipped ({g.SkipIfMissing} missing)");
-                return new GateResult(g.Name, false, true, g.Optional, 0, TimeSpan.Zero, $"skipped — {g.SkipIfMissing} does not exist yet");
+                log?.Invoke($"gate {g.Name}: skipped ({g.SkipIfMissing} missing)");
+                return Result(g, false, true, 0, TimeSpan.Zero, $"skipped — {g.SkipIfMissing} does not exist yet");
             }
         }
         // F7.5: skipIfFresh — skip if the output artifact exists and is newer than the newest
@@ -247,12 +293,11 @@ public static class GateRunner
                     var mostRecentChange = Git.MostRecentChangeTime(plan.Repo, freshPath);
                     if (mostRecentChange is { } changeTime && freshTime > changeTime)
                     {
-                        onProgress?.Invoke($"gate {g.Name}: cached (output at {freshPath} is fresh — newer than the last commit and than every uncommitted change)");
-                        return new GateResult(g.Name, true, false, g.Optional, 0, TimeSpan.Zero,
-                            $"cached — output at {freshPath} is fresh") { Cached = true };
+                        log?.Invoke($"gate {g.Name}: cached (output at {freshPath} is fresh — newer than the last commit and than every uncommitted change)");
+                        return Result(g, true, false, 0, TimeSpan.Zero, $"cached — output at {freshPath} is fresh") with { Cached = true };
                     }
                     if (mostRecentChange is { } t && Git.IsDirty(plan.Repo))
-                        onProgress?.Invoke($"gate {g.Name}: running — the working tree has changes newer than {freshPath} (source {t:HH:mm:ss}Z vs output {freshTime:HH:mm:ss}Z)");
+                        log?.Invoke($"gate {g.Name}: running — the working tree has changes newer than {freshPath} (source {t:HH:mm:ss}Z vs output {freshTime:HH:mm:ss}Z)");
                 }
                 catch (IOException) { /* freshness check is best-effort — run the gate if it fails */ }
                 catch (UnauthorizedAccessException) { /* ditto */ }
@@ -266,19 +311,23 @@ public static class GateRunner
             is { } shadow)
         {
             command = shadow.Command;
-            onProgress?.Invoke($"gate {g.Name}: {shadow.Why}");
+            log?.Invoke($"gate {g.Name}: {shadow.Why}");
         }
 
         // Logged AFTER the redirect, and it is the command that actually ran — not the one the plan
         // asked for. When the two differ the line above says why; a log that names a command the
         // engine did not execute is how a gate failure gets debugged against the wrong command line.
-        onProgress?.Invoke($"gate {g.Name}: {command}");
+        log?.Invoke($"gate {g.Name}: {command}");
 
         var shell = string.IsNullOrWhiteSpace(g.Shell) ? ProcessRunner.DefaultShell : g.Shell;
         var r = await ProcessRunner.RunShellAsync(shell, command, cwd, TimeSpan.FromMinutes(g.TimeoutMinutes), ct).ConfigureAwait(false);
         var passed = !r.TimedOut && r.ExitCode == 0;
-        onProgress?.Invoke($"gate {g.Name}: {(passed ? "PASS" : $"FAIL (exit {r.ExitCode}{(r.TimedOut ? ", timeout" : "")})")} in {r.Duration.TotalSeconds:0}s");
-        return new GateResult(g.Name, passed, false, g.Optional, r.ExitCode, r.Duration,
+        // The one line a holdout is allowed: that it ran, and how it went. No name, no exit code, no
+        // timeout distinction — a timeout is a different fact about the check, and facts are the leak.
+        onProgress?.Invoke(g.IsHoldout
+            ? $"gate {GateVisibility.RedactedName}: {(passed ? "PASS" : "FAIL")} in {r.Duration.TotalSeconds:0}s"
+            : $"gate {g.Name}: {(passed ? "PASS" : $"FAIL (exit {r.ExitCode}{(r.TimedOut ? ", timeout" : "")})")} in {r.Duration.TotalSeconds:0}s");
+        return Result(g, passed, false, r.ExitCode, r.Duration,
             TailOf(r.Output, 60) + (r.TimedOut ? $"\n[conductor] gate timed out after {g.TimeoutMinutes}m and was killed" : ""));
     }
 

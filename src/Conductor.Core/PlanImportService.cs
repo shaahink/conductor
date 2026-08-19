@@ -232,7 +232,8 @@ public static class PlanImportService
     private static string BuildImportPrompt(PlanConfig plan, string description)
     {
         var existingStages = string.Join("\n", plan.Stages.Select(s => $"- {s.Id}: {s.Title}"));
-        var existingGates = string.Join("\n", plan.Gates.Select(g => $"- {g.Name}: {g.Command} (tier={g.Tier})"));
+        // KS4.1: the plan-architect is a model too, and its brief goes into a prompt.
+        var existingGates = string.Join("\n", GateVisibility.VisibleOnly(plan.Gates).Select(g => $"- {g.Name}: {g.Command} (tier={g.Tier})"));
         if (description.Length > MaxDescriptionChars)
             description = description[..MaxDescriptionChars];
 

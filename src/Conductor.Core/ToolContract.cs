@@ -119,7 +119,12 @@ public static class ToolContract
     /// is something the agent will actually run rather than a generic placeholder it has to translate.</summary>
     private static string ExampleLongCommand(PlanConfig plan)
     {
-        var slowest = plan.Gates?.FirstOrDefault(g => g.Command?.Contains("test", StringComparison.OrdinalIgnoreCase) == true);
+        // KS4.1: VisibleOnly, not plan.Gates. This is the one place a gate's COMMAND is pasted
+        // verbatim into every composed prompt, and a holdout gate whose command happens to contain
+        // "test" would have been picked as the sample — publishing the holdout to the agent in the
+        // one block every template includes.
+        var slowest = plan.Gates is null ? null
+            : GateVisibility.VisibleOnly(plan.Gates).FirstOrDefault(g => g.Command?.Contains("test", StringComparison.OrdinalIgnoreCase) == true);
         return slowest?.Command ?? "<your long command>";
     }
 }
