@@ -2,29 +2,31 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, ≤ 12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS4.5 DONE (546a092 + evidence 6006ed1). STAGE KS4 IS COMPLETE - all five checkpoints claimed.
-  A `judge` plan block (OFF by default, 6 keys, `judge.threshold` refused by name) spawns a second
-  model after a delivery session; the review lands as an evidence artifact with source `judge` under
-  the state dir, as an AdvisoryEvidence row, and as a log line that names itself advisory. The
-  guarantee is the ORDER: JudgeSessionAsync is handed a decision that already exists and never calls
-  Decide - proved by a source rule, an order rule, and a live harness pair (0/FAIL leaves green
-  green, 100/PASS leaves red red, both against a no-judge baseline run of the same rig). 42 tests.
-FOUR RATCHETS BIT, in this order, and every one is a real edit not a config change: 3 types per file
-  (Judge.cs split), 500 lines (PlanConfig.cs - both consult validators now in PlanConfig.Consults.cs),
-  doctor's PromptMatrix (a new built-in template whose placeholders no session kind resolves makes a
-  SCAFFOLDED templates dir doctor-red), and SF7_1DocsMatchReality (a new plan block needs its
-  docs/plan-config.md section in the same commit). Adding a built-in template is FIVE edits.
-BUILD FLAKE, cost me two confusing reds: `dotnet build Conductor.slnx` intermittently reports
-  100-800 analyzer errors in files your diff never opened. It is MSBuild node reuse with a stale
-  analyzer config. Re-run with -nodeReuse:false before hunting; the same tree then builds 0 twice.
-RED THIS BRANCH ALREADY CARRIED: tools/gates/analyzer-debt.ps1 fails - pragma-src 33 against a bar
-  of 31, both pragmas from KS4.4 (AttemptWorktree.cs:98, WorktreeDrop.cs:110), bug #60. Not in the
-  plan's battery, which is why it never blocked. KS4.5 added zero to it.
-next: KS8.1 read-only MCP surface (KS8.1/8.2 and all of KS12 are what is left). Bugs
-  #53/#54/#55/#57/#58/#59/#60 open.
-
+last: STAGE KS8 IS COMPLETE - KS8.1 (e9fcfa5) and KS8.2 (9af9339), both with evidence under
+  .conductor/evidence/KS8/. `conductor mcp-observe` serves history/status/money as MCP RESOURCES and
+  no tools: initialize declares no tools capability, tools/list is empty, tools/call is refused -32601
+  for all sixteen agent-surface tools (the list is SCANNED off McpTaskServer.cs, so a new one joins
+  the battery automatically), and read-only is enforced by RunArchive's Mode=ReadOnly connection, not
+  by discipline. ADR-0007 records why. `conductor history export <run> --atif` (and `--all -o DIR`)
+  writes runs as ATIF-v1.7 trajectories; 30/30 validate against HARBOR'S OWN pydantic model, which is
+  extra="forbid", so a misspelled field would have been a hard rejection. `conductor init` now writes
+  AGENTS.md plus a CLAUDE.md that imports it, clobbering neither. 23 new tests.
+TRAP THAT COST ME A CONFUSING RED: editing a .cs file with a text-mode script flips the WORKING TREE
+  from CRLF to LF. autocrlf=true means git diff shows NOTHING, the build is clean, and exactly one
+  test goes red - KS3_1PlanNewTests.InitStillWritesExactlyWhatItWroteBefore, which separates the live
+  advisor block from the commented one by a raw string literal's line ending. Re-normalise before you
+  run the suite. Also: Program.cs is AT CA1505's maintainability bar - a third argv rewrite pushed it
+  to MI 19, so new rewrites go in VerbRewrites.cs. And MA0045 exempts an override, not a helper you
+  factor out of one - keep sync file I/O inside Execute.
+OPEN QUESTION FOR THE OWNER, not blocking: this repo has a 28KB AGENTS.md and no CLAUDE.md, so every
+  session in this run reads none of it. The import is one file; it also adds ~7k tokens to every
+  remaining session's prefix. That is a live-run spend call, so KS8.2 shipped the mechanism and left
+  this repo alone.
+next: KS12 only (KS12.1 docs, KS12.2 published surface + the payesh harvest re-run, KS12.3 is the
+  owner's merge/reinstall). Bugs #53/#54/#55/#57/#58/#59/#60 open; analyzer-debt.ps1 still red at
+  pragma-src 33 vs bar 31 from KS4.4 (bug #60) - KS8 added none.
 
 ## Baseline numbers (from run.db)
 
@@ -32,7 +34,7 @@ next: KS8.1 read-only MCP surface (KS8.1/8.2 and all of KS12 are what is left). 
 |---|---|
 | Total checkpoints | 24 |
 | Done | 14 |
-| Claimed (unconfirmed) | 4 |
+| Claimed (unconfirmed) | 5 |
 
 ## Checkpoints
 
@@ -76,7 +78,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | KS4.2 | Regression gate class (PASS-TO-PASS semantics): nothing-that-worked-broke as a named class with distinct reporting; a seeded regression flips the verdict with the class named in evidence | DONE | 8d649ea | .conductor/evidence/KS4/KS4.2-regression-gates.md |
 | KS4.3 | Mutation gate kind: mutation-score >= threshold, diff-scoped, Stryker.NET first; a checkpoint adding tests must clear the score on changed files; an era-boundary run on conductor's own suite recorded | DONE | 4d6ad56 | .conductor/evidence/KS4/KS4.3-mutation-gates.md |
 | KS4.4 | Worktree-per-stage-attempt: each attempt in a worktree, failed attempt drops the tree, verdict receives the clean attempt diff, merge ff-only on green, never branch -D an unmerged branch (lanes L1.3 fix per ND-8, amendment committed); Windows lock/removal proven; orphan sweep at startup | DONE | 05696d4 | .conductor/evidence/KS4/KS4.4-worktree-per-attempt.md |
-| KS4.5 | Judge as evidence, never verdict: second-model review joins the evidence taxonomy through KS6.4's seam as an advisory row; judge disagreement recorded as evidence; a test asserts NO code path lets a judge score flip a gate verdict | TODO | - | - |
+| KS4.5 | Judge as evidence, never verdict: second-model review joins the evidence taxonomy through KS6.4's seam as an advisory row; judge disagreement recorded as evidence; a test asserts NO code path lets a judge score flip a gate verdict | DONE | 546a092 | .conductor/evidence/KS4/KS4.5-judge-as-evidence.md |
 
 ### KS8 — Interop - the run as a readable artifact (cut-first)
 
