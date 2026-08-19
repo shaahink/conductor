@@ -2,22 +2,22 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, <=12 lines, no history)
 
-last: KS6.3 DONE (094c5c3, 71c1e64, 3901ac1). CA1502/CA1505/CA1506 on at error with per-project
-  CodeMetricsConfig.txt budgets set to each project's MEASURED WORST, so the tree carries zero slack.
-  tools/gates/complexity-budget.ps1 wired from ratchet.ps1 section 6; 14 seeded loosenings in
-  KS6_3ComplexityBudgetTests. Evidence: .conductor/evidence/KS6/KS6.3-complexity-budgets.md.
-THE THING KS6.4 MUST KNOW BEFORE IT WRITES ITS EXIT CRITERION: VerdictEngine is NOT the binding
-  constraint on Conductor.Core. RunLoop is - 182 coupling against VerdictEngine's 144, and 91
-  cyclomatic (RunLoop.RunAsync) against EvaluateSessionAsync's 70. Extract the pure verdict function
-  and the project budget does not move. Do not phrase the checkpoint as "the budget drops". The
-  surfaces are 9 and 12 partial files now, not the plan's 8 and 11. Full table in evidence section 7.
-Two traps paid for: ONE unparseable line in CodeMetricsConfig.txt silently kills all three rules (no
-  AD0001, no CA1509) - never hand-edit one without re-running the gate; and 'git ls-tree -- *.csproj'
-  returns nothing while 'git ls-files -- *.csproj' returns five, which made my gate vacuous until the
-  seeded tests caught it. Never trust a git pathspec to glob without a known-nonzero check.
-next: KS6.4, the funded VerdictEngine extraction. Bugs #53/#54/#55 still open.
+last: KS6.4 DONE (5da5260, a8a9066, 67be608) - KS6 is now complete, 4/4. SessionVerdict.Decide is a
+  pure total function over SessionEvidence; EvaluateSessionAsync is gather/decide/apply and buys the
+  gate battery only when the free rows have not settled the session. 34 tests drive the taxonomy with
+  no RunContext; 2941 green, no existing test edited. Evidence: .conductor/evidence/KS6/KS6.4-pure-verdict-function.md
+KS4.5 SHOULD READ SECTION 6 OF THAT EVIDENCE BEFORE IT PLANS: its seam already exists (AdvisoryRows on
+  SessionEvidence) and its exit criterion - no code path lets a judge score flip a gate verdict - is
+  ALREADY ASSERTED by two tests written before the judge exists. Decide never needs to change; extend
+  the advisory variants in AnAdvisoryRowNeverChangesAVerdict and leave the source rule alone.
+MEASURED TRAP, and it is about the instrument: VerdictEngine CA1506 went 144 -> 152 UP. CA1506 counts
+  distinct types depended on, so an extraction into new types RAISES coupling on its origin unless the
+  new types replace more than they add. Never write an exit criterion of the form "the coupling drops".
+  RunLoop still binds Conductor.Core at 182. The architecture ratchet caught this refactor twice and
+  was right twice - both fixed in code, architecture-baseline.json untouched.
+next: KS4 opens. Bugs #53/#54/#55 still open.
 
 
 ## Baseline numbers (from run.db)
