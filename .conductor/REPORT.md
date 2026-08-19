@@ -1,11 +1,11 @@
 ﻿# Conductor — Karvansara edge - gates that can't be gamed, and the courier run report
 
-_Updated 2026-08-19 12:15 UTC · branch `feat/karvansara-edge` · HEAD `f830e88`_
+_Updated 2026-08-19 12:56 UTC · branch `feat/karvansara-edge` · HEAD `20e1eab`_
 
 **Status:** Idle
-**Stage:** KS6 — Quality lane - hygiene that buys design · attempts used 0 · working ▸ KS6.4
-**Checkpoints:** 13/24 done · **Sessions run:** 13 · **Cost:** $170.7918 (agent $170.6763 + gates $0.1155) · **Tokens:** 2,567,560 in / 1,208,599 out
-**Confirmed phases:** KS11, KS7
+**Stage:** KS6 — Quality lane - hygiene that buys design · attempts used 0
+**Checkpoints:** 14/24 done · **Sessions run:** 14 · **Cost:** $181.7113 (agent $181.5853 + gates $0.1260) · **Tokens:** 2,761,480 in / 1,329,708 out
+**Confirmed phases:** KS11, KS7, KS6
 
 ## Stage progress
 
@@ -13,7 +13,7 @@ _Updated 2026-08-19 12:15 UTC · branch `feat/karvansara-edge` · HEAD `f830e88`
 |---|---|---|---|
 | KS11 | Chapar - the remote surface: profiles, onboarding, evidence on demand | ██████████ 5/5 | confirmed ✓ |
 | KS7 | Platform catch-up - posture, hooks, usage, lifecycle, context economics | ██████████ 5/5 | confirmed ✓ |
-| KS6 | Quality lane - hygiene that buys design | ████████░░ 3/4 | **← active** |
+| KS6 | Quality lane - hygiene that buys design | ██████████ 4/4 | confirmed ✓ |
 | KS4 | Verification that can't be gamed | ░░░░░░░░░░ 0/5 | todo |
 | KS8 | Interop - the run as a readable artifact (cut-first) | ░░░░░░░░░░ 0/2 | todo |
 | KS12 | Ship edge - close the era | ░░░░░░░░░░ 0/3 | todo |
@@ -42,14 +42,14 @@ _Updated 2026-08-19 12:15 UTC · branch `feat/karvansara-edge` · HEAD `f830e88`
 
 </details>
 
-<details><summary>KS6 — Quality lane - hygiene that buys design (3/4)</summary>
+<details> ✅<summary>KS6 — Quality lane - hygiene that buys design (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | KS6.1 | Curated Roslynator set (~25 design-shaped rules) as errors, everything else explicitly off, each rule adopted with a one-line reason | ✅ DONE | [`af6d93e`](https://github.com/shaahink/conductor/commit/af6d93e) |
 | KS6.2 | Analyzer-debt count ratchet extending ratchet.ps1 semantics; the referee not editable by the agent - a seeded baseline rewrite goes red | ✅ DONE | [`0cb514d`](https://github.com/shaahink/conductor/commit/0cb514d) |
-| KS6.3 | Complexity budgets (CA1502/1505/1506) with ratchets; first targets the largest partial surfaces - VerdictEngine (8 files) and ControlPlaneServer (11) | ✅ DONE | - |
-| KS6.4 | The pure evidence-to-verdict function extracted from VerdictEngine - the taxonomy testable without the loop; the seam KS4.5 plugs into | ⬜ TODO | - |
+| KS6.3 | Complexity budgets (CA1502/1505/1506) with ratchets; first targets the largest partial surfaces - VerdictEngine (8 files) and ControlPlaneServer (11) | ✅ DONE | [`094c5c3`](https://github.com/shaahink/conductor/commit/094c5c3) |
+| KS6.4 | The pure evidence-to-verdict function extracted from VerdictEngine - the taxonomy testable without the loop; the seam KS4.5 plugs into | ✅ DONE | [`5da5260`](https://github.com/shaahink/conductor/commit/5da5260) |
 
 </details>
 
@@ -101,6 +101,7 @@ _Updated 2026-08-19 12:15 UTC · branch `feat/karvansara-edge` · HEAD `f830e88`
 | 11 | KS6 | Deliver | 1 | 08-19 00:39 | 0:52 | Advanced | KS6.1 | 2 | engine-fast:OK · face-fast:OK | $20.6082 | $0.0103 | 256,670/149,412 |
 | 12 | KS6 | Deliver | 1 | 08-19 01:33 | 0:33 | Advanced | KS6.2 | 5 | engine-fast:OK · face-fast:OK | $12.1019 | $0.0086 | 199,951/114,585 |
 | 13 | KS6 | Deliver | 1 | 08-19 11:48 | 0:24 | Advanced | KS6.3 | 4 | engine-fast:OK · face-fast:OK | $7.6448 | $0.0102 | 141,705/85,286 |
+| 14 | KS6 | Deliver | 1 | 08-19 12:15 | 0:35 | Advanced | KS6.4 | 4 | engine-fast:OK · face-fast:OK | $10.9090 | $0.0105 | 193,920/121,109 |
 
 ## Money
 
@@ -108,32 +109,19 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 12 | 224.8M | 98.5% | $163.14 | 12 | 18.7M | $13.59 |
+| **run total** | 14 | 244.5M | 98.4% | $181.71 | 14 | 17.5M | $12.98 |
 | stage KS11 | 5 | 83.9M | 98.4% | $61.37 | 5 | 16.8M | $12.27 |
 | stage KS7 | 5 | 97.1M | 98.5% | $69.03 | 5 | 19.4M | $13.81 |
-| stage KS6 | 2 | 43.8M | 98.4% | $32.73 | 2 | 21.9M | $16.36 |
-| 2026-08 | 12 | 224.8M | 98.5% | $163.14 | 12 | 18.7M | $13.59 |
+| stage KS6 | 4 | 63.5M | 98.0% | $51.30 | 4 | 15.9M | $12.83 |
+| 2026-08 | 14 | 244.5M | 98.4% | $181.71 | 14 | 17.5M | $12.98 |
 
-_Where the money goes: agent $163.03 (100%) · gate $0.11 (0%) · blended $0.73/M tokens._
+_Where the money goes: agent $181.59 (100%) · gate $0.13 (0%) · blended $0.74/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-18 23:25:28  ▪ gate face-fast pass [session]  (28.6s)
-08-18 23:25:28  • session #7 KS7 → Advanced · done KS7.2 · 2 commit(s)  (39m09s)
-08-18 23:25:29  • session #8 KS7 Deliver started (attempt 1/10)
-08-19 00:14:37  ▪ gate engine-fast pass [session]  (1m06s)
-08-19 00:14:37  ▪ gate face-fast pass [session]  (25.0s)
-08-19 00:14:37  • session #8 KS7 → Advanced · done KS7.3,KS7.4 · 3 commit(s)  (49m08s)
-08-19 00:14:39  • session #9 KS7 Deliver started (attempt 1/10)
-08-19 01:02:53  ▪ gate engine-fast pass [session]  (1m03s)
-08-19 01:02:53  ▪ gate face-fast pass [session]  (19.1s)
-08-19 01:02:54  • session #9 KS7 → Advanced · done KS7.5 · 2 commit(s)  (48m15s)
-08-19 01:11:23  ▪ gate engine-fast pass [phase]  (0.0s)
-08-19 01:11:23  ▪ gate face-fast pass [phase]  (0.0s)
-08-19 01:11:23  ▪ gate engine-full FAIL [phase]  (4m18s)
 08-19 01:11:23  ▪ gate face-full pass [phase]  (5.1s)
 08-19 01:11:23  • session #10 KS7 Fix started (attempt 2/10)
 08-19 01:35:49  ▪ gate engine-fast pass [session]  (1m28s)
@@ -161,6 +149,19 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-19 12:48:34  • session #13 KS6 Deliver started (attempt 1/8)
 08-19 13:15:00  ▪ gate engine-fast pass [session]  (1m05s)
 08-19 13:15:00  ▪ gate face-fast pass [session]  (37.1s)
+08-19 13:15:00  • session #13 KS6 → Advanced · done KS6.3 · 4 commit(s)  (26m26s)
+08-19 13:15:08  • session #14 KS6 Deliver started (attempt 1/8)
+08-19 13:51:55  ▪ gate engine-fast pass [session]  (1m12s)
+08-19 13:51:55  ▪ gate face-fast pass [session]  (31.7s)
+08-19 13:51:55  • session #14 KS6 → Advanced · done KS6.4 · 4 commit(s)  (36m47s)
+08-19 13:56:59  ▪ gate engine-fast pass [phase]  (0.0s)
+08-19 13:56:59  ▪ gate face-fast pass [phase]  (0.0s)
+08-19 13:56:59  ▪ gate engine-full pass [phase]  (4m30s)
+08-19 13:56:59  ▪ gate face-full pass [phase]  (26.1s)
+08-19 13:56:59  ✓ checkpoint KS6.1 confirmed
+08-19 13:56:59  ✓ checkpoint KS6.2 confirmed
+08-19 13:56:59  ✓ checkpoint KS6.3 confirmed
+08-19 13:56:59  ✓ checkpoint KS6.4 confirmed
 ```
 
 ## Health
@@ -168,7 +169,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 13 · retries 1 (8 %) · overall Warn
+sessions 14 · retries 1 (7 %) · overall Warn
 ⚠ [context-saturation] session #11: 28,600,968 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #3: 28,433,638 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 25,994,603 context tokens (≥ 20,000,000)
@@ -181,16 +182,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvansara-edge
-working tree: clean
+working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
 ```
 
 ### Commits by session
 
-- **s6 (KS7 Deliver)** — 4 commit(s):
-  - [`129d944`](https://github.com/shaahink/conductor/commit/129d944) docs(tracker): KS7.1 - the handoff, and what the next session should not re-probe
-  - [`4bc1fff`](https://github.com/shaahink/conductor/commit/4bc1fff) docs(ks7): the KS7.1 evidence - two rig runs, and the conclusion that did not hold
-  - [`efe1e69`](https://github.com/shaahink/conductor/commit/efe1e69) fix(ks7): a restricted posture must not shut the run's own claim path
-  - [`0c3380f`](https://github.com/shaahink/conductor/commit/0c3380f) feat(ks7): the permission posture, and refusals that leave a trace
 - **s7 (KS7 Deliver)** — 2 commit(s):
   - [`cf2bfb7`](https://github.com/shaahink/conductor/commit/cf2bfb7) docs(ks7): the KS7.2 evidence, the architecture section, and a decision recorded
   - [`5b8d56e`](https://github.com/shaahink/conductor/commit/5b8d56e) feat(ks7): hooks as ground truth - the call the agent made, not the one it printed
@@ -218,6 +214,11 @@ working tree: clean
   - [`3901ac1`](https://github.com/shaahink/conductor/commit/3901ac1) docs(ks6): the KS6.3 evidence - what binds, what does not, and what it hands KS6.4
   - [`71c1e64`](https://github.com/shaahink/conductor/commit/71c1e64) test(ks6): fourteen seeded loosenings, and the one that proved the gate blind
   - [`094c5c3`](https://github.com/shaahink/conductor/commit/094c5c3) feat(ks6): complexity budgets that bind, and the config typo that voids them in silence
+- **s14 (KS6 Deliver)** — 4 commit(s):
+  - [`20e1eab`](https://github.com/shaahink/conductor/commit/20e1eab) docs(ks6): the KS6.4 handoff - the seam KS4.5 needs is already built and already asserted
+  - [`67be608`](https://github.com/shaahink/conductor/commit/67be608) docs(ks6): the KS6.4 evidence - what moved, and the metric that cannot reward it
+  - [`a8a9066`](https://github.com/shaahink/conductor/commit/a8a9066) refactor(ks6): the verdict leaves the loop - gather, decide, apply
+  - [`5da5260`](https://github.com/shaahink/conductor/commit/5da5260) feat(ks6): the evidence taxonomy as data, and a verdict function with no loop in it
 
 ## Phase handovers (audit)
 
@@ -240,36 +241,36 @@ working tree: clean
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> **KS6.3 landed — complexity budgets at error, per project, with a window-minimum referee**
-> - Measured: one unparseable line in CodeMetricsConfig.txt silently kills all three rules; no AD0001, no CA1509. Per-symbol exemptions are impossible, which is why budgets are per-project global numbers the tree must meet.
-> - My own seeded tests caught the referee measuring nothing: `git ls-tree -- *.csproj` returns 0 where `ls-files` returns 5. Fixed; five red tests went green for the right reason.
-> - Corrected the stage's premise for KS6.4: RunLoop binds Conductor.Core, not VerdictEngine (182 vs 144, 91 vs 70).
+> **KS6.4 landed - pure verdict function extracted, taxonomy testable without the loop**
+> - EvaluateSessionAsync cyclomatic 70 to 11, VerdictEngine.cs 483 to 171 lines, partial count still 9; 2941 tests green with no existing test edited, 121 of them live fake-agent rigs driving the refactored verdict path end to end.
+> - KS4.5's seam is built AND its exit criterion already asserted: AdvisoryRows on SessionEvidence, plus a behavioural invariance test over 76 combinations and a total source rule. Decide never needs to change for KS4.5.
+> - Measured finding: VerdictEngine CA1506 went 144 to 152 UP, because CA1506 counts types depended on and an explicit seam adds types. RunLoop still binds Conductor.Core at 182, as KS6.3 predicted.
 >
-> artefacts: 094c5c3, 71c1e64, 3901ac1, f830e88, tools/gates/complexity-budget.ps1, tools/gates/ratchet.ps1, tests/Conductor.Tests/KS6_3ComplexityBudgetTests.cs, 5x CodeMetricsConfig.txt
+> artefacts: 5da5260, a8a9066, 67be608, 20e1eab, src/Conductor.Core/Orchestration/SessionVerdict.cs, SessionEvidence.cs, VerdictDecision.cs, VerdictDisposition.cs
 >
-> evidence: .conductor/evidence/KS6/KS6.3-complexity-budgets.md, .conductor/evidence/KS6/KS6.3-gate-run.log
+> evidence: .conductor/evidence/KS6/KS6.4-pure-verdict-function.md, .conductor/evidence/KS6/KS6.4-live-verdict-path.log
 >
-> gaps: KS6.4 unstarted. 8 of 15 budgets are looser than the analyzer default because the code is — they can only come down. CA1509 does not fire on a malformed budget file; defended by the gate's grammar check plus the compiling canary, not by the analyzer. Bugs #53/#54/#55/#56 open.
+> gaps: none red. Carried to KS12.1's closure ledger: CA1506 cannot reward a type-introducing extraction, so no checkpoint should use "coupling drops" as an exit. Bugs #53/#54/#55 still open, untouched by this stage.
 
 ## Tracker handoff
 
 ```
-last: KS6.3 DONE (094c5c3, 71c1e64, 3901ac1). CA1502/CA1505/CA1506 on at error with per-project
-  CodeMetricsConfig.txt budgets set to each project's MEASURED WORST, so the tree carries zero slack.
-  tools/gates/complexity-budget.ps1 wired from ratchet.ps1 section 6; 14 seeded loosenings in
-  KS6_3ComplexityBudgetTests. Evidence: .conductor/evidence/KS6/KS6.3-complexity-budgets.md.
-THE THING KS6.4 MUST KNOW BEFORE IT WRITES ITS EXIT CRITERION: VerdictEngine is NOT the binding
-  constraint on Conductor.Core. RunLoop is - 182 coupling against VerdictEngine's 144, and 91
-  cyclomatic (RunLoop.RunAsync) against EvaluateSessionAsync's 70. Extract the pure verdict function
-  and the project budget does not move. Do not phrase the checkpoint as "the budget drops". The
-  surfaces are 9 and 12 partial files now, not the plan's 8 and 11. Full table in evidence section 7.
-Two traps paid for: ONE unparseable line in CodeMetricsConfig.txt silently kills all three rules (no
-  AD0001, no CA1509) - never hand-edit one without re-running the gate; and 'git ls-tree -- *.csproj'
-  returns nothing while 'git ls-files -- *.csproj' returns five, which made my gate vacuous until the
-  seeded tests caught it. Never trust a git pathspec to glob without a known-nonzero check.
-next: KS6.4, the funded VerdictEngine extraction. Bugs #53/#54/#55 still open.
+last: KS6.4 DONE (5da5260, a8a9066, 67be608) - KS6 is now complete, 4/4. SessionVerdict.Decide is a
+  pure total function over SessionEvidence; EvaluateSessionAsync is gather/decide/apply and buys the
+  gate battery only when the free rows have not settled the session. 34 tests drive the taxonomy with
+  no RunContext; 2941 green, no existing test edited. Evidence: .conductor/evidence/KS6/KS6.4-pure-verdict-function.md
+KS4.5 SHOULD READ SECTION 6 OF THAT EVIDENCE BEFORE IT PLANS: its seam already exists (AdvisoryRows on
+  SessionEvidence) and its exit criterion - no code path lets a judge score flip a gate verdict - is
+  ALREADY ASSERTED by two tests written before the judge exists. Decide never needs to change; extend
+  the advisory variants in AnAdvisoryRowNeverChangesAVerdict and leave the source rule alone.
+MEASURED TRAP, and it is about the instrument: VerdictEngine CA1506 went 144 -> 152 UP. CA1506 counts
+  distinct types depended on, so an extraction into new types RAISES coupling on its origin unless the
+  new types replace more than they add. Never write an exit criterion of the form "the coupling drops".
+  RunLoop still binds Conductor.Core at 182. The architecture ratchet caught this refactor twice and
+  was right twice - both fixed in code, architecture-baseline.json untouched.
+next: KS4 opens. Bugs #53/#54/#55 still open.
 ```

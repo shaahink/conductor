@@ -2,22 +2,22 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, <=12 lines, no history)
+## Handoff (overwrite this block, ≤ 12 lines, no history)
 
-last: KS6.4 DONE (5da5260, a8a9066, 67be608) - KS6 is now complete, 4/4. SessionVerdict.Decide is a
-  pure total function over SessionEvidence; EvaluateSessionAsync is gather/decide/apply and buys the
-  gate battery only when the free rows have not settled the session. 34 tests drive the taxonomy with
-  no RunContext; 2941 green, no existing test edited. Evidence: .conductor/evidence/KS6/KS6.4-pure-verdict-function.md
-KS4.5 SHOULD READ SECTION 6 OF THAT EVIDENCE BEFORE IT PLANS: its seam already exists (AdvisoryRows on
-  SessionEvidence) and its exit criterion - no code path lets a judge score flip a gate verdict - is
-  ALREADY ASSERTED by two tests written before the judge exists. Decide never needs to change; extend
-  the advisory variants in AnAdvisoryRowNeverChangesAVerdict and leave the source rule alone.
-MEASURED TRAP, and it is about the instrument: VerdictEngine CA1506 went 144 -> 152 UP. CA1506 counts
-  distinct types depended on, so an extraction into new types RAISES coupling on its origin unless the
-  new types replace more than they add. Never write an exit criterion of the form "the coupling drops".
-  RunLoop still binds Conductor.Core at 182. The architecture ratchet caught this refactor twice and
-  was right twice - both fixed in code, architecture-baseline.json untouched.
-next: KS4 opens. Bugs #53/#54/#55 still open.
+last: KS4.1 DONE (3365a3d, daa6e8c). The visibility:holdout gate class - GateConfig.Visibility, the
+  root key holdoutGates, and GateRunner.RunAllAsync(includeHoldout) whose FALSE DEFAULT is the whole
+  checkpoint: GateOrchestrator is the only caller that opts in, asserted by a source scan. 19 tests,
+  2960 green. Evidence: .conductor/evidence/KS4/KS4.1-holdout-gates.md
+THE RULE KS4.2 SHOULD REUSE: do not redact at the surfaces. A gate's name or command reaches the
+  agent through 14+ routes (the tools block pastes a COMMAND into every prompt; conductor.log prints
+  the exact command line inside the agent's own tree; run_query is raw SQL over the gates table).
+  GateRunner now returns a result that never held the secret, so every renderer downstream is correct
+  without knowing holdouts exist. Only code reading plan.Gates DIRECTLY needs VisibleOnly.
+MEASURED TRAP, bug #57, caused by no code: dotnet build Conductor.slnx FLAPS red with 100+ MA00xx
+  errors in untouched files. A reused MSBuild node carries the cwd spelled C:\Code\conductor and
+  Roslyn matches .editorconfig by CASE-SENSITIVE path prefix, so every severity override is dropped.
+  Build with -nr:false always - this can turn a gate battery red for no reason in the tree.
+next: KS4.2 regression gate class. Bugs #53/#54/#55/#57 open.
 
 
 ## Baseline numbers (from run.db)
@@ -26,7 +26,7 @@ next: KS4 opens. Bugs #53/#54/#55 still open.
 |---|---|
 | Total checkpoints | 24 |
 | Done | 10 |
-| Claimed (unconfirmed) | 3 |
+| Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
 
@@ -60,7 +60,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | KS6.1 | Curated Roslynator set (~25 design-shaped rules) as errors, everything else explicitly off, each rule adopted with a one-line reason | DONE | af6d93e | .conductor/evidence/KS6/KS6.1-curated-roslynator.md |
 | KS6.2 | Analyzer-debt count ratchet extending ratchet.ps1 semantics; the referee not editable by the agent - a seeded baseline rewrite goes red | DONE | 0cb514d | .conductor/evidence/KS6/KS6.2-analyzer-debt-ratchet.md |
 | KS6.3 | Complexity budgets (CA1502/1505/1506) with ratchets; first targets the largest partial surfaces - VerdictEngine (8 files) and ControlPlaneServer (11) | DONE | 094c5c3 | .conductor/evidence/KS6/KS6.3-complexity-budgets.md |
-| KS6.4 | The pure evidence-to-verdict function extracted from VerdictEngine - the taxonomy testable without the loop; the seam KS4.5 plugs into | TODO | - | - |
+| KS6.4 | The pure evidence-to-verdict function extracted from VerdictEngine - the taxonomy testable without the loop; the seam KS4.5 plugs into | DONE | 5da5260 | .conductor/evidence/KS6/KS6.4-pure-verdict-function.md |
 
 ### KS4 — Verification that can't be gamed
 
