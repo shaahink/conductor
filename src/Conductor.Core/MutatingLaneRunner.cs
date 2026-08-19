@@ -129,19 +129,15 @@ public static class MutatingLaneRunner
             // 5. Merge gate: create a staging worktree from the base branch, merge scratch into it,
             //    run the battery there to verify the integrated tree.
             var stagingSuffix = Guid.NewGuid().ToString("N")[..8];
-            var stagingBranch = $"conductor-staging-{lane.Id}-{stagingSuffix}";
             var stagingPath = Path.Combine(Path.GetTempPath(), $"conductor-mergegate-{lane.Id}-{stagingSuffix}");
 
             var mergeGateResult = await RunMergeGateAsync(
-                plan, lane, plan.Repo, stagingPath, stagingBranch,
+                plan, lane, plan.Repo, stagingPath,
                 scratchBranch, baseBranch, log, ct).ConfigureAwait(false);
 
-            // 6. Clean up the staging worktree regardless of outcome. KS4.4: through the same safe drop
-            // as the lane tree. A staging branch is disposable in principle — it is base + scratch, both
-            // of which still exist — but "in principle" is exactly the reasoning that made `-D` look
-            // fine here, so the reachability check stays git's to make. A refusal leaves a small named
-            // branch behind, which `conductor worktree` lists and a human can reap.
-            try { WorktreeDrop.DropAttempt(plan.Repo, stagingPath, stagingBranch, log); }
+            // 6. Clean up the staging worktree regardless of outcome, through the same safe drop as the
+            // lane tree. No branch is passed because the staging tree is detached and has none.
+            try { WorktreeDrop.DropAttempt(plan.Repo, stagingPath, branch: null, log); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 log?.Invoke($"mutating lane '{lane.Id}': staging teardown could not finish — {ex.Message}");
@@ -229,14 +225,19 @@ public static class MutatingLaneRunner
 
     private static async Task<MergeGateOutcome> RunMergeGateAsync(
         PlanConfig plan, MutatingLaneConfig lane,
-        string primaryRepo, string stagingPath, string stagingBranch,
+        string primaryRepo, string stagingPath,
         string scratchBranch, string baseBranch,
         Action<string>? log, CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
 
-        // Create staging worktree from the base branch
-        var createStaging = Git.Exec(primaryRepo, "worktree", "add", "-b", stagingBranch, stagingPath, baseBranch);
+        // KS4.4: the staging tree is DETACHED, not on a branch of its own. It used to be created with
+        // `-b conductor-staging-...`, and that branch then held a merge commit (base + scratch) that
+        // nothing else reached — so the safe delete correctly refuses it and the teardown leaked a
+        // branch per lane run. The old code hid that by force-deleting it, which is the very move this
+        // checkpoint removed. A throwaway integration tree needs no ref at all: with no branch there is
+        // nothing to delete, nothing to leak, and nothing to force.
+        var createStaging = Git.WorktreeAddDetached(primaryRepo, stagingPath, baseBranch);
         if (createStaging.ExitCode != 0)
         {
             return new MergeGateOutcome

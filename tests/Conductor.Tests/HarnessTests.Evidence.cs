@@ -104,7 +104,7 @@ public sealed partial class HarnessTests
 
         // Emit persists via an async drain, so a read taken the instant RunAsync returns can race it
         // (the same wait ControlPlaneServerTests makes for the same reason).
-        var registered = await WaitForEvidenceAsync(store, state, expected: 2);
+        var registered = await WaitForEvidenceAsync(store, state, expected: 3);
 
         // 1. The screenshot the agent never mentioned reached the run as an IMAGE, carrying the
         //    session that produced it and the stage it sits in. This is the motivating case.
@@ -130,10 +130,20 @@ public sealed partial class HarnessTests
         var row = Assert.Single(store.GetCheckpoints(state.RunId), c => c.Id == "H0.1");
         Assert.Equal(ClaimEvidenceText, row.Evidence);
 
-        // 4. And the registry a surface reads is the FOLD of those events — the same two artifacts,
-        //    newest first, without going back to the disk.
+        // 3b. KS4.4: the third artifact is the one the ENGINE made — this attempt's own diff. It
+        //     carries its own source, so a surface can tell it from a file a session claimed, and NO
+        //     checkpoint id, because an attempt is not a claim.
+        var attempt = Assert.Single(registered, e => e.Path.Contains("/attempts/", StringComparison.Ordinal));
+        Assert.Equal(EvidenceArtifact.AttemptSource, attempt.Source);
+        Assert.Null(attempt.CheckpointId);
+        Assert.Equal(rec.Number, attempt.SessionNumber);
+        Assert.EndsWith($"H0-a{rec.Attempt}-s{rec.Number:000}.diff", attempt.Path, StringComparison.Ordinal);
+
+        // 4. And the registry a surface reads is the FOLD of those events — the same three artifacts,
+        //    newest first, without going back to the disk. Only two of them belong to the checkpoint:
+        //    the attempt diff is the engine's, not the claim's.
         var registry = EvidenceRegistry.From(store.ReadAllEvents(state.RunId));
-        Assert.Equal(2, registry.Count);
+        Assert.Equal(3, registry.Count);
         Assert.Equal(["H0.1-claim-note.md", "H0.1-shot.png"],
             registry.ForCheckpoint("H0.1").Select(a => a.Path.Split('/')[^1]).Order(StringComparer.Ordinal));
     }

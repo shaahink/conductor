@@ -14,6 +14,12 @@ last: KS4.4 DONE (05696d4, c407562, + this one). `branch -D` is GONE from src/ a
   attempt and RunLoop registers it as evidence with source `attempt` - it excludes the state dir on
   BOTH sides after a live run put 132 lines of the engine's own REPORT.md into an artifact. 16 tests,
   plus a live demo rig. Evidence: .conductor/evidence/KS4/KS4.4-worktree-per-attempt.md
+FULL SUITE RAN ONCE and turned up FIVE reds, all mine, all fixed and re-verified green (0e0 pending the
+  closing commit): the two docs-verb tests and the completion verb list wanted `worktree` (add a verb
+  in FOUR places - Program.cs, CompletionCommand.Verbs, docs/cli.md, docs/operating.md section 2);
+  HarnessTests now asserts the THIRD artifact (source `attempt`, no checkpoint id); and B12_3's lane
+  cleanup was right - the staging tree is now DETACHED, because its branch held a merge commit nothing
+  reached, which the safe delete correctly refuses. A throwaway integration tree needs no ref.
 NOT DONE, deliberately, and argued in the evidence section 7: the SESSION still runs in the primary
   tree. PlanConfig.StateDir is derived from Repo (PlanConfig.cs:125), so redirecting a session moves
   state.json, the logs, the evidence dir and the engine lock into the throwaway tree with it. That is

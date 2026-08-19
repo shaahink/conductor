@@ -132,6 +132,7 @@ command palette, and from Telegram.
 | `note` / `bug` | Knowledge ledger + tracked bugs that outlive the session that found them. |
 | `audit <ID>` | Post-hoc audit replay (read-only, `--replay`). |
 | `bg` | Background process management: `start\|status\|logs\|stop`. |
+| `worktree` | What attempt worktrees conductor has on disk: which run made each, which are orphans from a run that died, and which belong to a live run. Read-only; `--reap` removes the orphans, and it never touches a worktree you made or a live run's. The engine runs the same sweep at startup, so this verb is mostly for the one case that survives it: a tree whose build output is still locked by a process that outlived the run. |
 | `chat "…"` | Ask questions about a running plan (MCP access to run.db, ledger, control verbs). |
 | `mcp-serve` | Run the MCP task server (JSON-RPC 2.0 over stdio). |
 | `completion` | Generate shell completion scripts (`powershell` or `bash`). |
