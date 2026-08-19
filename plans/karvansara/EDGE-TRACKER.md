@@ -2,7 +2,7 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, <=12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
 last: KS7.5 DONE (3d7414a) - stage KS7 is complete. RepoMapBattery and DefinitionOfDoneBattery are
   now REGISTERED in PromptBuilder.BatterySection (which takes the folded board + effective stage), both
@@ -25,7 +25,7 @@ build: MSBuild switches nodeReuse:false and UseSharedCompilation=false (bug #54)
 |---|---|
 | Total checkpoints | 24 |
 | Done | 5 |
-| Claimed (unconfirmed) | 4 |
+| Claimed (unconfirmed) | 5 |
 
 ## Checkpoints
 
@@ -50,7 +50,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | KS7.2 | Hooks as ground truth: tool events by hook (extending the hook-budget channel) become the primary source, transcript parsing the fallback; hook-derived digests match transcript-derived on a replay corpus; a hook-less agent still works; digest claim-counting (bug 19 class) fixed; skills-vs-promptExtra decided and recorded | DONE | 5b8d56e | .conductor/evidence/KS7/ks7-2-hooks-as-ground-truth.md |
 | KS7.3 | Cost/usage: per-turn usage with cache split parsed from the stream; OTel emit mirroring gen_ai names from the event log; an OTLP collector renders a run's spans; the per-turn context curve reconciles with K4.1's derivation | DONE | 5794417 | .conductor/evidence/KS7/ks7-3-cost-usage-and-otel.md |
 | KS7.4 | Session lifecycle: fork-instead-of-cold-resume for fix/audit sessions where supported, with the measured token delta vs the resume baseline; resume flags re-verified; model lineup and context ceilings re-measured into TOKEN-BUDGET-TUNING | DONE | 5794417 | .conductor/evidence/KS7/ks7-4-fork-lifecycle.md |
-| KS7.5 | Context economics (B7): gate output truncated in-prompt with full text as an evidence file; RepoMapBattery + definition-of-done recap battery on the IPromptBattery seam; templates teach search-delegation; measured cache-read tokens per session DROP vs the karvan baseline on a comparable stage, reported by conductor budget | IN PROGRESS | - | - |
+| KS7.5 | Context economics (B7): gate output truncated in-prompt with full text as an evidence file; RepoMapBattery + definition-of-done recap battery on the IPromptBattery seam; templates teach search-delegation; measured cache-read tokens per session DROP vs the karvan baseline on a comparable stage, reported by conductor budget | DONE | 3d7414a | .conductor/evidence/KS7/KS7.5-context-economics.md |
 
 ### KS6 — Quality lane - hygiene that buys design
 

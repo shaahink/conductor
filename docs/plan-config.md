@@ -74,6 +74,8 @@ whose deliverable lives partly in a sibling checkout: one such stage was deliver
 | `args` | string[] | Arguments. `{prompt}`, `{sessionId}` and `{model}` are substituted. |
 | `resumeArgs` | string[] | Arguments for resuming a session (`{prompt}`, `{claudeSessionId}`, `{model}`). |
 | `provider` | string | Adapter: `"opencode"`, `"claude"`, `"text"`. Inferred from `output` if unset. |
+| `forkArgs` | string[] | KS7.4. Arguments for a session that **forks** an earlier one instead of starting cold (`{prompt}`, `{claudeSessionId}` = the session forked *from*, `{sessionId}` = the new id). Unset means nothing forks, whatever `forkKinds` says — see below. |
+| `forkKinds` | string[] | KS7.4. Which session kinds fork the stage's previous session rather than starting cold. Names match `SessionKind` case-insensitively; `["fix","audit"]` is the pairing the mechanism was built for. Empty or unset = nothing forks. |
 | `output` | string | `"stream-json"` (claude) or `"text"` (opencode etc.). Legacy. |
 | `systemPrompt` | string | System prompt injected before the base prompt (persona). |
 | `model` | string | Model override (e.g. `"claude-sonnet-4-20250514"`). **Only reaches the CLI where the template says `{model}`** — see below. |
@@ -81,6 +83,27 @@ whose deliverable lives partly in a sibling checkout: one such stage was deliver
 | `env` | object | Extra environment variables for the agent process. |
 | `inheritMcpServers` | bool | Default true. Whether a session also gets the MCP servers configured on this machine — see below. |
 | `permissions` | object | The permission posture the session runs under: `mode`, `allow`, `deny` — see below. Absent means the plan's own `args` decide, exactly as before this key existed. |
+
+**`forkArgs` / `forkKinds` — a fix session that starts inside the work it is fixing.** A fix or audit
+session is *about* work another session just did, and a cold start makes it pay full fresh-input rates
+to rediscover it. Where the agent CLI supports forking, these two keys let it carry the base
+conversation instead:
+
+```jsonc
+"agent": {
+  "forkArgs": ["-p", "{prompt}", "--resume", "{claudeSessionId}", "--fork-session", "--session-id", "{sessionId}"],
+  "forkKinds": ["fix", "audit"]
+}
+```
+
+Both are **opt-in**, for two reasons measured rather than assumed (claude 2.1.235). First, only the
+plan knows whether its agent CLI has the flags at all. Second, a fork resumes a transcript **on disk**:
+if the CLI has pruned the base session, the fork cannot start, so conductor falls back to a cold
+session rather than failing the stage. What the measurement settled is that a fork is *not* a more
+expensive resume — the carried conversation arrives as a cache **read** (30,098 read / 0 write on a 30k
+base), landing 0.15% larger and a hundredth of a cent cheaper than resuming the same conversation. Note
+`--fork-session` composes with `--session-id`, so conductor keeps control of the id and crash recovery
+and transcript correlation keep working.
 
 **`inheritMcpServers` — the session's tools are conductor's plus the operator's.** Every session is
 launched against a config conductor writes itself, holding the `conductor-tasks` server that carries
@@ -537,6 +560,9 @@ ordered list in the session prompt.
 | `recentFailure` | bool | true | Inject compact failed-session summary when the last session didn't verify. |
 | `ledger` | bool | true | Inject recent knowledge-ledger entries (`conductor note`). |
 | `bugs` | bool | true | Inject the run's open tracked bugs (`conductor bug new`). |
+| `repoMap` | bool | false | KS7.5. Inject a bounded map of the repo's top-level source directories. **Opt-in**: this battery makes the prompt *bigger* on a bet that it saves exploration turns, and that bet is about session behaviour, not arithmetic. |
+| `definitionOfDone` | bool | false | KS7.5. Recap the checkpoint in flight and the exact `conductor task --done` command, pre-filled with its id. **Opt-in** for a measured reason: a prompt is also an *argument*, and a minimal plan on the built-in templates already sits at ~7.8k of the 8191-char argv ceiling a cmd/bat-shimmed agent has (bugs #15/#21) — ~280 more bytes is a fifth of the headroom left. Turn it on when the plan has the room. |
+| `repoMapMaxEntries` | int | 12 | Max top-level directories `repoMap` lists. |
 | `lessonsMaxEntries` | int | 3 | Max lessons entries. |
 | `ledgerMaxEntries` | int | 8 | Max ledger entries. |
 | `maxBytes` | int | 2048 | Total byte cap for all battery sections. |

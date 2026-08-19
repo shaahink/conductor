@@ -28,7 +28,7 @@ public static class ToolContract
             **Knowledge ledger — `conductor note "<what you learned>"`  (MCP: `conductor_note`)**
             Write what you learn IMMEDIATELY — a root cause, a dead end, a constraint that surprised you. If
             you are killed, everything not in the ledger dies with you: one session found the correct fix, was
-            killed before saying so, and the next two chased theories it had already disproved.
+            killed before saying so, and the next two chased theories it had disproved.
 
             **Long-running commands — `conductor bg start|status|logs|stop`  (MCP: `bg_start`/`bg_status`/`bg_logs`/`bg_stop`)**
             ANYTHING over ~3 minutes (builds, full test suites, servers) MUST run through `conductor bg`:
@@ -46,7 +46,7 @@ public static class ToolContract
             **Tracked bugs — `conductor bug new|list|fix`  (MCP: `bug_new`/`bug_list`/`bug_fix`)**
             A defect you are not fixing now: `conductor bug new "<title>"` outlives your session and reaches
             later prompts and the audit phase. `bug list` before hunting — the open ones are known, do not
-            re-file them. `bug fix <id>` closes one.
+            re-file. `bug fix <id>` closes one.
 
             **Checkpoint progress — `conductor task`  (MCP: `task_list`/`task_update`/`task_add`)**
                 conductor task --list
@@ -72,23 +72,23 @@ public static class ToolContract
             Cannot proceed until a known future instant (rate-limit window, deploy slot)? Do not end the
             session hoping the wall is gone, and do not re-measure the clock:
                 conductor task --blocked-until 2026-07-31T15:12:00Z --reason "deploy window full, next slot 15:12"
-            Conductor sleeps until then and spawns ONE more session — no attempt burned, your reason handed to
-            it. Must be in the future and within 24h; longer is an escalation, not a nap. End the session
-            immediately after: the engine is waiting.
+            Conductor sleeps until then and spawns ONE more session — no attempt burned, your reason handed
+            on. Must be in the future and within 24h; longer is an escalation, not a nap. End the session at
+            once: the engine is waiting.
 
             **Ask the database — MCP `run_query`, `ledger_list`, `bug_list`, `session_detail`.** Prior sessions,
             gates, costs, bugs and what earlier agents learned are queryable. Query before you guess.
 
-            **Keep your own context small — delegate the wide reads.** Cost is (turns) x (context), and
-            context only grows, so bytes pulled in early are paid for on every turn after. A directory
-            sweep, a "where is this referenced" question, or a survey of files you will not edit belongs
-            in a SUBAGENT: keep its conclusion, not the file dumps. Read the SECTION your work names,
-            not the whole document, and never re-read what is already in your context.
+            **Keep your own context small — delegate the wide reads.** Cost is (turns) x (context) and
+            context only grows, so early bytes are paid for on every turn after. A directory sweep, a
+            "where is this referenced", or a survey of files you will not edit belongs in a SUBAGENT:
+            keep its conclusion, not the file dumps. Read the SECTION your work names, not the whole
+            document, and never re-read what is already in context.
 
             **Evidence or it did not happen.** A checkpoint claimed DONE without a fresh artifact path (a file,
-            a gate log, a commit sha) is rejected by verification. Never weaken a gate, a golden file or a test
-            to get green — the one unforgivable move here; if a gate is wrong, say so in the ledger and the
-            handoff rather than editing it into passing.
+            a gate log, a sha) is rejected by verification. Never weaken a gate, a golden file or a test to get
+            green — the one unforgivable move here; if a gate is wrong, say so in the ledger and the handoff,
+            never by editing it into passing.
             """ + MultiRepoSection(plan);
     }
 

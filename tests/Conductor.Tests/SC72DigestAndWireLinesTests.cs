@@ -210,8 +210,14 @@ public sealed class SC72DigestAndWireLinesTests
         var digest = new SessionDigest();
         foreach (var call in SampleSession(repo)) digest.Add(call, repo);
 
-        Assert.Equal("9 tool calls · 6 tools · 2 files (3 writes) · 1 claim · 1 bg job · 3 build/test commands",
+        // KS7.2 gave the line a provenance suffix, and it is unconditional on purpose: a digest that
+        // does not say where its numbers came from cannot be argued with when hook and transcript
+        // disagree. Both endings are pinned, so the label can neither vanish nor lie about a fallback.
+        Assert.Equal("9 tool calls · 6 tools · 2 files (3 writes) · 1 claim · 1 bg job · 3 build/test commands · via transcript",
             digest.Summary());
+
+        digest.Source = SessionDigest.HookSource;
+        Assert.EndsWith("· 3 build/test commands · via hook", digest.Summary(), StringComparison.Ordinal);
     }
 
     /// <summary>Round-trips through the JSON that run.db's <c>sessions.digest</c> column stores. An

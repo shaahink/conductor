@@ -15,8 +15,14 @@ appears fails too.
 **Re-checked 2026-08-05 (K7.1).** The Karvan era closed twenty-three checkpoints and none of them
 had reached this page, so its output is added to the shipped list below. Every item still on the
 *open* list was re-verified against `src/` on that date rather than trusted: `requireCleanTree`,
-`RepoMapBattery` and `DefinitionOfDoneBattery` return no hits, `WarnOnBranchPattern` is still the
-only enforcement of `branchPattern` (`RunLoop.Control.cs`), so all four entries stand as written.
+`RepoMapBattery` and `DefinitionOfDoneBattery` returned no hits, `WarnOnBranchPattern` is still the
+only enforcement of `branchPattern` (`RunLoop.Control.cs`), so all four entries stood as written
+**on that date**.
+
+**Re-checked 2026-08-19 (KS7.5).** Two of those four closed. `RepoMapBattery` and
+`DefinitionOfDoneBattery` are in the tree (`PromptBattery.Context.cs`) and moved to the shipped
+list below; `requireCleanTree` and the branch-pattern gap were re-grepped on this date and still
+return nothing, so those two entries stand.
 
 ---
 
@@ -24,6 +30,12 @@ only enforcement of `branchPattern` (`RunLoop.Control.cs`), so all four entries 
 
 Do not re-plan these. Each names the thing in the tree that answers it.
 
+- **The two batteries that were designed and never built.** `RepoMapBattery` (the files this run's
+  own commits touched most this phase) and `DefinitionOfDoneBattery` (the active checkpoint's
+  acceptance recapped back at the session that owes it) both landed at KS7.5 on the shipped
+  `IPromptBattery` seam in `PromptBattery.Context.cs`, wired through `PromptBuilder` and gated by
+  `batteries.repoMap` / `batteries.definitionOfDone`, with `batteries.repoMapMaxEntries` bounding
+  what the map may cost a prompt. Off by default: a prompt is argv, and argv has a ceiling.
 - **Token-budget rollover.** `RolloverCommand`, `limits.maxSessionTokens`, and the live
   `set-rollover` control on `ControlDispatcher`. A session that crosses the ceiling ends cleanly
   after writing its handoff, and no attempt is burned.
@@ -98,10 +110,6 @@ Do not re-plan these. Each names the thing in the tree that answers it.
   and nothing guards a force-push. The rules exist only as prose the agent is asked to follow.
 - **The processes lane.** Live gate timers surface conductor's own shell; a nested view of agent bash
   tools + gates + hooks, à la Claude Code's tool tree, does not exist.
-- **Two batteries that were designed and never built.** `RepoMapBattery` (most-touched files this
-  phase, surfaced next session) and a definition-of-done recap pulling the active checkpoint's
-  acceptance from the doc. Both fit the shipped `IPromptBattery` seam — this is implementation, not
-  design.
 - **Plan import still needs an existing plan to diff against.** There is no from-scratch import path.
   *(Re-checked at KS10.1, 2026-08-15: still true — `PlanImportCommand.ExecuteImport` takes a
   `planPath` and diffs into it. What KS3.5 changed is the other half: `PlanImportService.ParseKnown`

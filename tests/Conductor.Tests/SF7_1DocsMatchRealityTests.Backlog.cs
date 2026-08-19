@@ -28,6 +28,11 @@ public sealed partial class SF7_1DocsMatchRealityTests
         ("ConsoleCtrlRails", "ConsoleCtrlRails"),
         ("InitCommand", "InitCommand"),
         ("OperatorMcpServers", "OperatorMcpServers"),
+        // KS7.5: these two crossed over. They sat on the open list from SF7.1 to KS7.4 and were
+        // re-verified as absent twice; the day they appeared this test went red exactly as designed,
+        // and the edit it demanded is this one — off the open list, onto the shipped list, named.
+        ("RepoMapBattery", "RepoMapBattery"),
+        ("DefinitionOfDoneBattery", "DefinitionOfDoneBattery"),
     ];
 
     /// <summary>The load-bearing half. Each of these is named by the page as STILL OPEN; the day one
@@ -36,8 +41,6 @@ public sealed partial class SF7_1DocsMatchRealityTests
     private static readonly string[] UnbuiltSymbols =
     [
         "requireCleanTree",     // commit/push discipline + git safety
-        "RepoMapBattery",       // repo-map / hot-files battery
-        "DefinitionOfDoneBattery",
     ];
 
     private static string EngineSources()

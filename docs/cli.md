@@ -145,6 +145,7 @@ command palette, and from Telegram.
 | `budget` | Measure this repo's token budget **from its own runs** and prescribe the next one: session floor, wrap-up spend, cap, nudge-versus-floor, rollover rate. No argument profiles the current repo. Filters: `--repo`, `--plan`, `--since`, `--json`. |
 | `money` | Price a run or a project from its own ledger: sessions, tokens, cache-read share, cost, checkpoints, tokens and dollars per checkpoint, plus the windows either side of a cap change, the per-stage split and the calendar month. Scopes: `--run`, `--project`, `--since`, `--plan`, `--json`. |
 | `spend` | What this **whole machine** spent — today, this week, this month — across every catalogued store, with no repo and no plan argument. Billed rows only; each real run counted once even when the catalogue holds it twice. Flags: `--since`, `--runs`, `--home`, `--json`. |
+| `otel` | Export a run's event log to an **OTLP/HTTP collector** as one trace: run → stage → session → gate and tool spans, `gen_ai.*` usage attributes with the cache split, and the per-turn context curve as span events. Read-only — it reads the event log and posts, it never writes the run. Flags: `--endpoint`, `--run`, `--service`, `--dry-run`, `--out`. |
 
 ```
 conductor budget            # profile this repo's runs and prescribe the next cap
@@ -152,10 +153,14 @@ conductor money             # what every run of this repo cost
 conductor money --run <ID>  # one run, per stage and per checkpoint
 conductor spend             # what this machine spent today / this week / this month
 conductor spend --since 1mo # one window instead of the ladder
+conductor otel --dry-run    # render the trace and print it, post nothing
+conductor otel --endpoint http://localhost:4318  # ship it to a collector
 ```
 
-All three read the machine-wide run catalogue rather than the current run's state, so they answer
-after a run has ended and from any directory.
+`budget`, `money` and `spend` read the machine-wide run catalogue rather than the current run's
+state, so they answer after a run has ended and from any directory. `otel` takes a run the same way
+`money --run` does, and `--dry-run`/`--out` render the exact OTLP payload without needing a
+collector to be up — which is also how the span shape is pinned in tests.
 
 `spend` differs from `money --since` in the one way that matters. `--since` elsewhere filters **whole
 runs** by last activity, so a run that started in June and closed a checkpoint this morning puts its
