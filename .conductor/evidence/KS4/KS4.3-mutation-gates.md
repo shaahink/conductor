@@ -188,4 +188,16 @@ dotnet test Conductor.slnx --no-build --filter "KS4_|Gate|Verdict|Spill|Reporter
   Passed!  - Failed: 0, Passed: 468, Skipped: 0, Total: 468
 ```
 
+And the whole suite, against the shipped tree (`9707af7`), after the split and the two red fixes:
+
+```
+dotnet test Conductor.slnx --no-build
+  Passed!  - Failed: 0, Passed: 3019, Skipped: 0, Total: 3019, Duration: 4 m 17 s
+```
+
+That is the number the two pre-existing reds were hiding: the same command an hour earlier read
+`Failed: 3, Passed: 3016` — the architecture ratchet twice and `K4_1`'s schema pin — and none of the
+three was this checkpoint's doing. The suite costs four minutes; a session that only runs a filtered
+subset cannot see any of them.
+
 No test was deleted, skipped, or weakened for this checkpoint.
