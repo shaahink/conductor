@@ -1,0 +1,75 @@
+KS8.2 — AGENTS.md generated, and honoured via the CLAUDE.md import
+
+Driven through the FRESH build (dotnet run --project src/Conductor --no-build -- init),
+against two scratch repos under the temp directory. Never this repo.
+
+=== A. a repo with neither file ===============================================
+Detected generic repo
+Created C:\Users\shahi\AppData\Local\Temp\ks82init\fresh2\conductor.plan.json
+Created C:\Users\shahi\AppData\Local\Temp\ks82init\fresh2\TRACKER.md
+Created C:\Users\shahi\AppData\Local\Temp\ks82init\fresh2\templates\ (9 
+Created C:\Users\shahi\AppData\Local\Temp\ks82init\fresh2\AGENTS.md (the 
+AGENTS.md convention)
+Created C:\Users\shahi\AppData\Local\Temp\ks82init\fresh2\CLAUDE.md (@AGENTS.md 
+— Claude Code does not read AGENTS.md natively)
+
+--- the generated CLAUDE.md ---
+﻿# CLAUDE.md
+
+This repo keeps its agent instructions in `AGENTS.md`, the convention most coding
+agents look for. Claude Code reads this file instead, so it imports that one — one
+source of truth, no second copy to drift.
+
+@AGENTS.md
+--- head of the generated AGENTS.md ---
+﻿# AGENTS.md
+
+Agent instructions for this repo. Read once; it is short on purpose.
+
+## This repo is driven by conductor
+
+An autonomous session in this repo is spawned by **conductor**, an orchestrator that runs a plan
+stage by stage, gates every delivery, and keeps the record. The plan is `conductor.plan.json`; the
+board a session reports against is `TRACKER.md`. The current plan is **probe plan**.
+
+Sessions are independent — the context is reset between every one. Whatever the next session needs
+to know has to be written down, not remembered.
+
+## The verbs a session has
+
+These are wired into every session conductor spawns, as CLI and as MCP tools. Use them instead of
+hand-rolled bookkeeping; each exists because its absence cost real work.
+
+| verb | what it is for |
+|---|---|
+| `conductor task --list` | the checkpoints of the current stage |
+| `conductor task --in-progress <id>` | **before** the first edit, not after the work |
+
+=== B. a repo that ALREADY has both ===========================================
+before:
+  AGENTS.md : MY OWN AGENT RULES
+  CLAUDE.md : (3 lines, its own instructions)
+Created 
+Created C:\Users\shahi\AppData\Local\Temp\ks82init\hasclaude2\TRACKER.md
+Created C:\Users\shahi\AppData\Local\Temp\ks82init\hasclaude2\templates\ (9 
+Kept C:\Users\shahi\AppData\Local\Temp\ks82init\hasclaude2\AGENTS.md (already 
+Appended @AGENTS.md to 
+
+after — AGENTS.md is byte-identical, not one line added:
+MY OWN AGENT RULES
+after — CLAUDE.md keeps every original byte and gains the import:
+﻿# CLAUDE.md
+
+Run the tests with `just test`. Never touch generated/.
+
+<!-- added by conductor init: agent instructions live in AGENTS.md -->
+@AGENTS.md
+
+=== C. running init a THIRD time changes nothing ==============================
+d570efd87c6fdbd7b3f9ff1433e16d0c */tmp/ks82init/hasclaude2/CLAUDE.md
+d4dd2971da6cb9c304593930caa98afc */tmp/ks82init/hasclaude2/AGENTS.md
+Created C:\Users\shahi\AppData\Local\Temp\ks82init\hasclaude2\TRACKER.md
+Kept C:\Users\shahi\AppData\Local\Temp\ks82init\hasclaude2\AGENTS.md (already 
+Kept C:\Users\shahi\AppData\Local\Temp\ks82init\hasclaude2\CLAUDE.md (already 
+d570efd87c6fdbd7b3f9ff1433e16d0c */tmp/ks82init/hasclaude2/CLAUDE.md
+d4dd2971da6cb9c304593930caa98afc */tmp/ks82init/hasclaude2/AGENTS.md

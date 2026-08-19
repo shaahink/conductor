@@ -1,0 +1,201 @@
+{
+  "schema_version": "ATIF-v1.7",
+  "session_id": "df9c4af8044442cca197463d9af7e670",
+  "trajectory_id": "df9c4af8044442cca197463d9af7e670",
+  "agent": {
+    "name": "conductor",
+    "version": "0.0.0.0",
+    "extra": {
+      "plan": "Karvan core - the engine knows what it did and what it cost",
+      "repo": "conductor",
+      "branch": "feat/karvan"
+    }
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "timestamp": "2026-08-04T23:27:35.3457908Z",
+      "source": "system",
+      "message": "Run of plan \"Karvan core - the engine knows what it did and what it cost\" in conductor on feat/karvan, driven by conductor 0.0.0.0. Each agent step below is one autonomous session conductor dispatched; each observation is what the engine fed back to it — the gate battery, the checkpoints it confirmed, the commits it landed."
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2026-08-04T21:49:08.6420661Z",
+      "source": "system",
+      "message": "Stage K1 entered — The ledger stops lying."
+    },
+    {
+      "step_id": 3,
+      "timestamp": "2026-08-04T21:49:08.6420661Z",
+      "source": "agent",
+      "message": "SESSION-RESULT: Landed two K1 checkpoints, each claimed with a fresh evidence artifact and committed separately. **K1.1** — a rolled-over session now records the commits and claims it actually made: `VerdictEngine.RecordRolloverFacts` (new, in `VerdictEngine.Claims.cs`) is called from the rollover branch at `SessionRunner.cs:423`, the W1.3 claim rule was lifted into one shared `ResolveClaims` so the rollover uses the same rule as the verdict path rather than a quieter second one, and `PendingConfirmation` now unions instead of replacing so a rollover's claim can still be confirmed. The semantics are unchanged and asserted: no attempt burned, no gate battery, outcome still `RolledOver`. Proof…",
+      "llm_call_count": 184,
+      "observation": {
+        "results": [
+          {
+            "content": "outcome: Advanced; gates: engine-fast:OK · face-fast:OK; checkpoints closed: K1.1, K1.2; commits: 3"
+          },
+          {
+            "content": "gate engine-fast: passed (exit 0, 46448ms)",
+            "extra": {
+              "gate": "engine-fast",
+              "passed": true,
+              "skipped": false,
+              "optional": false,
+              "exit_code": 0,
+              "duration_ms": 46448
+            }
+          },
+          {
+            "content": "gate face-fast: passed (exit 0, 36168ms)",
+            "extra": {
+              "gate": "face-fast",
+              "passed": true,
+              "skipped": false,
+              "optional": false,
+              "exit_code": 0,
+              "duration_ms": 36168
+            }
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 24872817,
+        "completion_tokens": 95366,
+        "cached_tokens": 24653507,
+        "cost_usd": 18.06861067812,
+        "extra": {
+          "reasoning_tokens": 0,
+          "wall_ms": 2142276,
+          "categories": [
+            {
+              "label": "agent",
+              "tokens": 24968183,
+              "cost_usd": 18.060349
+            },
+            {
+              "label": "gate",
+              "tokens": 0,
+              "cost_usd": 0.00826167812
+            }
+          ]
+        }
+      },
+      "extra": {
+        "session_number": 1,
+        "stage_id": "K1",
+        "session_kind": "Deliver",
+        "attempt": 1,
+        "resume_count": 0,
+        "commits": 3,
+        "ended_utc": "2026-08-04T22:24:50.9189678Z",
+        "context_high_water_tokens": 239583,
+        "context_mean_turn_tokens": 139495,
+        "closed_checkpoints": [
+          "K1.1",
+          "K1.2"
+        ]
+      }
+    },
+    {
+      "step_id": 4,
+      "timestamp": "2026-08-04T22:27:13.6765611Z",
+      "source": "agent",
+      "message": "SESSION-RESULT: K1.3 is claimed DONE with evidence at `.conductor/evidence/K1/K1.3-three-untruths.md`, across six commits on `feat/karvan` through `2de7cca` — all local, tree clean, remote behind (see below). (1) **tokens_think** was LABELLED not dropped, and the decision was measured rather than assumed: `OpencodeProvider.cs:104` really folds `tokens.reasoning` off `step_finish`, so dropping the column would have deleted a working capability to fix a rendering lie, while `ClaudeProvider.cs:147/164` leaves it unset on purpose because claude's usage object has no thinking field — which is why all 125 rows are 0. `IAgentProvider.ReportsReasoningTokens` now answers from the adapter that would h…",
+      "llm_call_count": 125,
+      "observation": {
+        "results": [
+          {
+            "content": "outcome: Advanced; gates: engine-fast:OK · face-fast:OK; checkpoints closed: K1.3; commits: 6"
+          },
+          {
+            "content": "gate engine-fast: passed (exit 0, 48720ms)",
+            "extra": {
+              "gate": "engine-fast",
+              "passed": true,
+              "skipped": false,
+              "optional": false,
+              "exit_code": 0,
+              "duration_ms": 48720
+            }
+          },
+          {
+            "content": "gate face-fast: passed (exit 0, 6209ms)",
+            "extra": {
+              "gate": "face-fast",
+              "passed": true,
+              "skipped": false,
+              "optional": false,
+              "exit_code": 0,
+              "duration_ms": 6209
+            }
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 13847449,
+        "completion_tokens": 76748,
+        "cached_tokens": 13700166,
+        "cost_usd": 10.25167402863,
+        "extra": {
+          "reasoning_tokens": 0,
+          "wall_ms": 1850820,
+          "categories": [
+            {
+              "label": "agent",
+              "tokens": 13924197,
+              "cost_usd": 10.246181
+            },
+            {
+              "label": "gate",
+              "tokens": 0,
+              "cost_usd": 0.00549302863
+            }
+          ]
+        }
+      },
+      "extra": {
+        "session_number": 2,
+        "stage_id": "K1",
+        "session_kind": "Deliver",
+        "attempt": 1,
+        "resume_count": 0,
+        "commits": 6,
+        "ended_utc": "2026-08-04T22:58:04.4973165Z",
+        "context_high_water_tokens": 167582,
+        "context_mean_turn_tokens": 110779,
+        "closed_checkpoints": [
+          "K1.3"
+        ]
+      }
+    },
+    {
+      "step_id": 41,
+      "timestamp": "2026-08-05T13:39:11.6844163Z",
+      "source": "system",
+      "message": "Run Completed after 32 sessions, $317.84 billed."
+    }
+  ],
+  "final_metrics": {
+    "total_prompt_tokens": 401623975,
+    "total_completion_tokens": 2289567,
+    "total_cached_tokens": 396958427,
+    "total_cost_usd": 317.84163212295,
+    "total_steps": 41
+  },
+  "extra": {
+    "generator": "conductor history export --atif",
+    "exported_utc": "2026-08-19T17:40:42.1803214Z",
+    "run_id": "df9c4af8044442cca197463d9af7e670",
+    "plan": "Karvan core - the engine knows what it did and what it cost",
+    "repo": "conductor",
+    "status": "Completed",
+    "stored_status": "Completed",
+    "started_utc": "2026-08-04T23:27:35.3457908+00:00",
+    "ended_utc": "2026-08-05T13:39:11.6844163+00:00",
+    "sessions": 32,
+    "events": 3724,
+    "event_log_steps": true
+  },
+  "notes": "EXCERPT for evidence: 5 of 41 steps. The full document is what was validated (see KS8.2-atif-validation.txt); regenerate it with `conductor history export df9c4af8 --atif -o karvan-core.atif.json`."
+}

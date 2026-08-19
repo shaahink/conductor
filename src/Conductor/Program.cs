@@ -65,6 +65,11 @@ app.Configure(c =>
         .WithDescription("Regenerate .conductor/REPORT.md from current state.");
     c.AddCommand<HistoryCommand>("history")
         .WithDescription("Browse past runs from this machine's catalogue, read-only. No argument lists; pass a run id, repo or slug to open one and replay its spine. Filters: --repo, --plan, --since, --limit, --json.");
+    // KS8.2: reached as `conductor history export <run> --atif` (see RewriteHistoryExport). Hidden
+    // for the same reason `run-record` is: `history` cannot be both a branch and the verb that lists
+    // the catalogue, and listing the catalogue is what `history` is for. docs/cli.md documents it
+    // under `history`.
+    c.AddCommand<HistoryExportCommand>("history-export").IsHidden();
     // KS0.2: reached as `conductor run close|adopt` — hidden because the name it is registered under
     // is a spelling nobody types (see RewriteRunRecordVerbs), not because it is not a verb to reach
     // for. docs/cli.md documents it under `run`.
@@ -165,7 +170,7 @@ app.Configure(c =>
         return 1;
     });
 });
-return await app.RunAsync(RewriteRunRecordVerbs(HubWhenBare(args))).ConfigureAwait(false);
+return await app.RunAsync(Conductor.VerbRewrites.HistoryExport(RewriteRunRecordVerbs(HubWhenBare(args)))).ConfigureAwait(false);
 
 // KS2.1: typing nothing is a question, and the answer used to be forty-one verbs — a table of
 // contents handed to someone who asked to come in. An empty argv now opens the hub: what is running

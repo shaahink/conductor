@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Conductor.Core;
+using Conductor.Core.Interop;
 using Conductor.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -74,6 +75,35 @@ public sealed class InitCommand : Command<InitCommand.Settings>
         foreach (var (path, content) in TemplateScaffold(templatesDir))
             File.WriteAllText(path, content, System.Text.Encoding.UTF8);
 
+        // KS8.2 — the AGENTS.md courtesy, and the import that makes Claude Code honour it. The I/O
+        // sits here rather than in a helper because MA0045 exempts this override and not a helper,
+        // and because keeping every write on one screen is how "never clobber" stays checkable.
+        var courtesy = new List<string>();
+        var agentsPath = Path.Combine(outputDir, AgentsFile.AgentsFileName);
+        if (File.Exists(agentsPath))
+        {
+            courtesy.Add($"[grey]Kept[/] {Markup.Escape(agentsPath)} [grey](already yours — not touched)[/]");
+        }
+        else
+        {
+            File.WriteAllText(agentsPath, AgentsFile.Generate(name, "TRACKER.md"), System.Text.Encoding.UTF8);
+            courtesy.Add($"[green]Created[/] {Markup.Escape(agentsPath)} [grey](the AGENTS.md convention)[/]");
+        }
+
+        var claudePath = Path.Combine(outputDir, AgentsFile.ClaudeFileName);
+        var existingClaude = File.Exists(claudePath) ? File.ReadAllText(claudePath) : null;
+        if (AgentsFile.ClaudeMdWithImport(existingClaude) is { } claudeMd)
+        {
+            File.WriteAllText(claudePath, claudeMd, System.Text.Encoding.UTF8);
+            courtesy.Add(existingClaude is null
+                ? $"[green]Created[/] {Markup.Escape(claudePath)} [grey]({AgentsFile.ImportLine} — Claude Code does not read AGENTS.md natively)[/]"
+                : $"[green]Appended[/] {AgentsFile.ImportLine} [grey]to[/] {Markup.Escape(claudePath)}");
+        }
+        else
+        {
+            courtesy.Add($"[grey]Kept[/] {Markup.Escape(claudePath)} [grey](already imports {AgentsFile.ImportLine})[/]");
+        }
+
         // Self-check: don't leave a scaffold that won't load. Mirror NewPlanCommand's A6 discipline.
         try
         {
@@ -93,6 +123,7 @@ public sealed class InitCommand : Command<InitCommand.Settings>
         AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(trackerPath)}");
         AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(templatesDir)}{Path.DirectorySeparatorChar} " +
             $"({PromptBuilder.BuiltInNames.Length} templates: {string.Join(", ", PromptBuilder.BuiltInNames)} — edit these)");
+        foreach (var line in courtesy) AnsiConsole.MarkupLine(line);
 
         if (!string.IsNullOrWhiteSpace(settings.FromIdea))
             return FromIdea(planPath, settings.FromIdea, settings.Model);

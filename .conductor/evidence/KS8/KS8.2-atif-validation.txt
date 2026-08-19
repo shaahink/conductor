@@ -1,0 +1,55 @@
+VALIDATOR: harbor (PyPI `harbor`, the Laude Institute / Terminal-Bench eval harness), installed
+           into a throwaway venv; NOT vendored, NOT written by this session.
+           module: C:\Users\shahi\AppData\Local\Temp\ks82venv\Lib\site-packages\harbor\__init__.py
+           Trajectory.model_config extra = forbid
+           Step.model_config       extra = forbid
+           -> an unknown or misspelled field is a HARD REJECTION, not a dropped key.
+
+EVERY CATALOGUED RUN, EXPORTED AND VALIDATED  (conductor history export --all --atif -o <dir>)
+
+run        plan                                    steps   cost_usd status     schema
+0031daaa   Maestro                                     4       0.00 closed     ATIF-v1.7
+02cf8280   Conductor UX (U-series)                     4       0.00 Aborted    ATIF-v1.7
+0d8d372e   KUK — Pouyan Ghahremani, site 8            27     191.35 Completed  ATIF-v1.7
+0ebd34b6   Cyber Assistant reconstruction             40     331.46 Completed  ATIF-v1.7
+105b2731   DevContext agent probe - does the MCP      15      51.74 Completed  ATIF-v1.7
+13a91f1d   sk-fleet 09.6 finish the list              40     224.28 Completed  ATIF-v1.7
+1a7c1714   Conductor UX (U-series)                    17     139.68 closed     ATIF-v1.7
+1ddd2036   THE SECOND REEL                            21      97.48 Completed  ATIF-v1.7
+1e942d7e   Maestro                                     6       0.17 closed     ATIF-v1.7
+2349f46b   w5-rehearsal                               15       0.00 Completed  ATIF-v1.7
+380c587c   KS7.1 posture rig                           4       0.14 orphaned   ATIF-v1.7
+3dd4564a   sk-fleet round four                        37     425.12 Completed  ATIF-v1.7
+6cf402fe   Test                                        4       0.00 orphaned   ATIF-v1.7
+7195e538   A NAME AND A WAY OUT                       23     110.93 Completed  ATIF-v1.7
+7951c3ca   NINE STREETS                               80     421.46 Completed  ATIF-v1.7
+79cacf31   CI health - the public repos go green      20      37.99 Completed  ATIF-v1.7
+8cefa5de   Sarban face - the watcher and the surf     51     297.24 Completed  ATIF-v1.7
+8faf849d   DevContext pre-release - desktop agent     34     189.30 Completed  ATIF-v1.7
+9491891f   Karvansara edge - gates that can't be      25     271.38 running    ATIF-v1.7
+9647f1b8   Karvansara core - the open door            30     147.55 Aborted    ATIF-v1.7
+a007ef6c   sk-fleet round five                        25     222.63 Completed  ATIF-v1.7
+bae63ba0   DevContext graph-v2 — autonomous remai     38     358.42 Completed  ATIF-v1.7
+c5fe473d   KS7.2 hook-ground-truth rig                 5       0.16 orphaned   ATIF-v1.7
+d6fd22ba   DevContext pre-release - engine and ag     37     219.85 Completed  ATIF-v1.7
+df9c4af8   Karvan core - the engine knows what it     41     317.84 Completed  ATIF-v1.7
+e9e21d10   Sarban core - the engine says what it      38     360.14 Completed  ATIF-v1.7
+f1c4d068   conductor-demo                             10       0.00 Completed  ATIF-v1.7
+f5066ddc   conductor-site - a field guide to agen     27     144.85 closed     ATIF-v1.7
+fc2e69df   sk-fleet shared CI + 404                    4       2.91 Completed  ATIF-v1.7
+fe33af65   informadex.com build                       12      34.67 Completed  ATIF-v1.7
+
+VALIDATED 30/30; invalid: 0
+corpus totals: 734 steps, $4598.75 billed
+
+THE CHECKPOINT'S NAMED RUN - Karvan core, exported on its own:
+  schema_version    ATIF-v1.7
+  session_id        df9c4af8044442cca197463d9af7e670
+  steps             41 ( 32 agent / 9 system )
+  final_metrics     total_prompt_tokens=401623975 total_completion_tokens=2289567 total_cached_tokens=396958427 total_cost_usd=317.84163212295 total_steps=41 extra=None
+  first agent step  step_id=3 llm_call_count=184
+    metrics        prompt=24872817 completion=95366 cached=24653507 cost_usd=18.068611
+    observation    3 results; first: outcome: Advanced; gates: engine-fast:OK · face-fast:OK; checkpoints closed: K1.1, K1.2; commits: 3
+    extra keys      ['attempt', 'closed_checkpoints', 'commits', 'context_high_water_tokens', 'context_mean_turn_tokens', 'ended_utc', 'resume_count', 'session_kind', 'session_number', 'stage_id']
+  root extra keys   ['ended_utc', 'event_log_steps', 'events', 'exported_utc', 'generator', 'plan', 'repo', 'run_id', 'sessions', 'started_utc', 'status', 'stored_status']
+  agent             conductor / 0.0.0.0 / {'plan': 'Karvan core - the engine knows what it did and what it cost', 'repo': 'conductor', 'branch': 'feat/karvan'}
