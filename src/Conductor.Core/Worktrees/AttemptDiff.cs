@@ -63,7 +63,12 @@ public static class AttemptDiff
     public static string Render(string tree, string baseSha, int maxChars = 200_000)
     {
         var parts = new List<string>();
-        var tracked = Git.Exec(tree, "diff", baseSha);
+        // The state dir is excluded on BOTH sides. Measured against a live demo run: a repo that TRACKS
+        // .conductor/ (the scaffolded default — this repo gitignores it, which is what hid this) put 132
+        // lines of the engine's own REPORT.md bookkeeping into the artifact, because that commit lands
+        // inside the session's window. An attempt diff carrying the engine's edits is worse than none:
+        // it reads as work the agent did.
+        var tracked = Git.Exec(tree, "diff", baseSha, "--", ".", ":(exclude)" + Store.StateHome.ScratchDirName);
         if (tracked.ExitCode == 0 && tracked.Output.Trim().Length > 0) parts.Add(tracked.Output.TrimEnd());
 
         var untracked = Git.Exec(tree, "ls-files", "--others", "--exclude-standard");

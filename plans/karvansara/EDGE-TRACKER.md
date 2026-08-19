@@ -2,22 +2,27 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, ≤ 12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS4.3 DONE (4d6ad56, a27dc51, b4b3efa, 9707af7, 32dc5d5). `class: mutation`, diff-scoped. The
-  gate only PRODUCES a Stryker report; the ENGINE scopes it to the files the branch changed
-  (Git.ChangedFiles + mutation.diffBase) and compares to the plan's threshold. NO-COVERAGE counts in
-  the denominator, so the score cannot be raised by not testing. Fail closed when the report scores
-  none of the diff; green with NO finding when the branch changed no .cs. Glyph MUTANTS. Live rig
-  reads the composed prompt off disk. 36 tests. Evidence: .conductor/evidence/KS4/KS4.3-mutation-gates.md
-OWED, and it is the one gap: the era-boundary Stryker score. Two real runs, neither reached a number
-  inside the session. Recipe + ready-made rig are in the evidence file's A5 - one bg child finishes it.
-TWO REDS WERE ALREADY STANDING and a scoped `dotnet test --filter` sees neither: the architecture
-  ratchet (GateRunner.cs 550>500 since KS4.2, empty debt map) and K4_1's schema pin (14 vs v15).
-  Both fixed by splitting/bumping, never by editing a ratchet. THE FULL SUITE IS 4m6s - run it once.
-STRYKER FACTS: `--mutate` on the CLI is IGNORED (use stryker-config.json); it cannot share a tree with
-  a dotnet test (testhost locks the dlls - use a worktree); ~18 min before the first mutant is tested.
-next: KS4.4 worktree-per-stage-attempt. Bugs #53/#54/#55/#57/#58 open.
+last: KS4.4 DONE (05696d4, c407562, + this one). `branch -D` is GONE from src/ and a test fails the
+  build if it returns; a refused delete KEEPS the branch and says its name. The drop deletes the
+  directory itself - children first, the tree's own `.git` link LAST, because a plain recursive delete
+  had already removed that link before it hit a locked bin/*.dll, which made the leftover tree
+  invisible to the sweep meant to finish it. AttemptWorktree = cut / clean diff / ff-only merge /
+  drop-whole. WorktreeSweeper reaps orphans at engine STARTUP; `conductor worktree [--reap]` lists
+  them; a human's tree and a live run's are never touched. AttemptDiff writes <stateDir>/attempts/ per
+  attempt and RunLoop registers it as evidence with source `attempt` - it excludes the state dir on
+  BOTH sides after a live run put 132 lines of the engine's own REPORT.md into an artifact. 16 tests,
+  plus a live demo rig. Evidence: .conductor/evidence/KS4/KS4.4-worktree-per-attempt.md
+NOT DONE, deliberately, and argued in the evidence section 7: the SESSION still runs in the primary
+  tree. PlanConfig.StateDir is derived from Repo (PlanConfig.cs:125), so redirecting a session moves
+  state.json, the logs, the evidence dir and the engine lock into the throwaway tree with it. That is
+  lanes L3.1's seam. Half-wiring it isolates the agent and loses the tracker.
+TWO RATCHETS BIND ANY ORCHESTRATION EDIT: RunLoop is AT its CA1506 coupling ceiling of exactly 182
+  (src/Conductor.Core/CodeMetricsConfig.txt) - ONE new type in ANY RunLoop.*.cs partial fails the
+  build; put the method on RunContext, or the constant on a type RunLoop already knows. And Git.cs hit
+  528 against the 500 line ceiling, so its worktree half now lives in Git.Worktrees.cs.
+next: KS4.5 judge as evidence, never verdict. Bugs #53/#54/#55/#57/#58/#59 open.
 
 
 ## Baseline numbers (from run.db)
@@ -26,7 +31,7 @@ next: KS4.4 worktree-per-stage-attempt. Bugs #53/#54/#55/#57/#58 open.
 |---|---|
 | Total checkpoints | 24 |
 | Done | 14 |
-| Claimed (unconfirmed) | 2 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -68,7 +73,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | KS4.1 | Holdout gates: a visibility holdout gate class excluded from prompts, tool contract and agent-readable logs, run only at verdict time; grep of composed prompt + transcript proves absence; a seeded gaming fake-agent passes visible gates, fails holdout, verdict red | DONE | 3365a3d | .conductor/evidence/KS4/KS4.1-holdout-gates.md |
 | KS4.2 | Regression gate class (PASS-TO-PASS semantics): nothing-that-worked-broke as a named class with distinct reporting; a seeded regression flips the verdict with the class named in evidence | DONE | 8d649ea | .conductor/evidence/KS4/KS4.2-regression-gates.md |
-| KS4.3 | Mutation gate kind: mutation-score >= threshold, diff-scoped, Stryker.NET first; a checkpoint adding tests must clear the score on changed files; an era-boundary run on conductor's own suite recorded | TODO | - | - |
+| KS4.3 | Mutation gate kind: mutation-score >= threshold, diff-scoped, Stryker.NET first; a checkpoint adding tests must clear the score on changed files; an era-boundary run on conductor's own suite recorded | DONE | 4d6ad56 | .conductor/evidence/KS4/KS4.3-mutation-gates.md |
 | KS4.4 | Worktree-per-stage-attempt: each attempt in a worktree, failed attempt drops the tree, verdict receives the clean attempt diff, merge ff-only on green, never branch -D an unmerged branch (lanes L1.3 fix per ND-8, amendment committed); Windows lock/removal proven; orphan sweep at startup | TODO | - | - |
 | KS4.5 | Judge as evidence, never verdict: second-model review joins the evidence taxonomy through KS6.4's seam as an advisory row; judge disagreement recorded as evidence; a test asserts NO code path lets a judge score flip a gate verdict | TODO | - | - |
 

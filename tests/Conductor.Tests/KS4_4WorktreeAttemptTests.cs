@@ -419,6 +419,37 @@ public class KS4_4WorktreeAttemptTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
+    public void The_attempt_diff_excludes_the_engines_own_state_even_when_the_repo_tracks_it()
+    {
+        var (repo, cleanup) = CreateTestRepo();
+        try
+        {
+            // The scaffolded default TRACKS .conductor/ — conductor's own repo gitignores it, which is
+            // exactly what hid this until a live demo run put 132 lines of the engine's REPORT.md into
+            // an attempt's artifact. A diff carrying the engine's edits reads as work the agent did.
+            var stateDir = Path.Combine(repo, ".conductor");
+            Directory.CreateDirectory(stateDir);
+            File.WriteAllText(Path.Combine(stateDir, "REPORT.md"), "# report\nbefore\n");
+            Git.Exec(repo, "add", "-f", ".conductor/REPORT.md");
+            Git.Exec(repo, "commit", "-m", "chore(conductor): report");
+
+            var baseSha = Git.Head(repo);
+            File.WriteAllText(Path.Combine(stateDir, "REPORT.md"), "# report\nthe engine rewrote this\n");
+            Git.Exec(repo, "add", "-f", ".conductor/REPORT.md");
+            Git.Exec(repo, "commit", "-m", "chore(conductor): report");
+            File.WriteAllText(Path.Combine(repo, "the-agents-work.cs"), "// what the attempt actually did\n");
+
+            var body = AttemptDiff.Render(repo, baseSha);
+
+            Assert.Contains("the-agents-work.cs", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("the engine rewrote this", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("REPORT.md", body, StringComparison.Ordinal);
+        }
+        finally { cleanup(); }
+    }
+
+    [Fact]
     public void The_run_loop_registers_the_attempt_diff_as_evidence_the_engine_made()
     {
         var evidence = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor.Core", "Orchestration", "RunLoop.Evidence.cs"));

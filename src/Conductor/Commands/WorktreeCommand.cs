@@ -87,7 +87,8 @@ public sealed class WorktreeCommand : Command<WorktreeCommand.Settings>
         var reapable = survey.Count(s => s.Reapable);
         if (settings.Reap)
         {
-            foreach (var line in acted) AnsiConsole.MarkupLine($"[green]reaped[/] {Markup.Escape(line)}");
+            // The sweeper's lines already start with "reaped "/"would reap " — do not say it twice.
+            foreach (var line in acted) AnsiConsole.MarkupLine($"[green]·[/] {Markup.Escape(line)}");
             if (acted.Count == 0) AnsiConsole.MarkupLine("[grey]nothing to reap[/]");
         }
         else if (reapable > 0)
