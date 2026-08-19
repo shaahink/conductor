@@ -116,7 +116,11 @@ function Test-HasReason {
 # --- the kinds ------------------------------------------------------------------------------------------
 # Each kind is (name, regex, pathspec, how a reason is spelled here). Adding a kind is a one-entry edit;
 # that is the point of the shape.
-$PRAGMA_RE    = '#pragma[ \t]+warning[ \t]+disable'
+# Anchored, and that is faithful rather than lenient: C# requires a #pragma directive to be the first
+# token on its line, so a match anywhere else is not a suppression - it is the text of one, quoted inside
+# a string literal. KS6_2AnalyzerDebtRatchetTests seeds exactly such literals, and an unanchored pattern
+# counted four of them as repo debt. Match what the language allows, not what the characters look like.
+$PRAGMA_RE    = '^[ \t]*#pragma[ \t]+warning[ \t]+disable'
 $SUPPRESS_RE  = 'SuppressMessage[ \t]*\('
 $NOWARN_RE    = '<(NoWarn|WarningsNotAsErrors)>'
 $DOWNGRADE_RE = '^[ \t]*dotnet_(diagnostic\.[^.]+|analyzer_diagnostic(\.category-[^.]+)?)\.severity[ \t]*=[ \t]*(none|silent|suggestion)'
