@@ -2,24 +2,22 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, ≤ 12 lines, no history)
 
-last: KS4.2 DONE (8d649ea, 6c9168a). `class: regression`, PASS-TO-PASS. A gate that EXITS 0 is red
-  when a check that passed earlier in this run is no longer reported passing - deleted, renamed,
-  skipped, filtered out. One line carries it everywhere (GateResult.IsGreen); the reporting is
-  deliberately NOT shared (glyph REGRESSION, its own fix-brief block, its own verdict reason).
-  Baseline advances only on a clean pass, so a deletion cannot be laundered by one red session.
-  23 new tests, 447 green in the affected classes. Evidence: .conductor/evidence/KS4/KS4.2-regression-gates.md
-THE RULE KS4.3 SHOULD REUSE: a new failure SHAPE must be walked to every renderer, and only a live
-  rig finds them. There are TWO fix-brief renderers - GateRunner.FailureDetails (conductor gate,
-  workflow path) and GateFailureSpill.Render (every ordinary session) - and my unit test was green
-  while the live fix session was handed "(no gate output captured)". Read the composed prompt off disk.
-RIG FACTS, measured: VerifyEachDelivery DEFAULTS TRUE, so History[1] in a multi-session rig is the
-  verifier, not session 2. And a cmd.exe fake agent DIES on a fix session (prompt is an argument,
-  cmd caps at 8191 chars, the fix prompt is 8.1k) - use powershell.exe.
-DB WARNING: the tree is schema v15 now (gate_pass_sets); the installed engine driving this run is
-  v14 and REFUSES a newer db. Never point a fresh build at this repo's .conductor/run.db.
-next: KS4.3 mutation gate kind (Stryker.NET, diff-scoped). Bugs #53/#54/#55/#57 open.
+last: KS4.3 DONE (4d6ad56, a27dc51, b4b3efa, 9707af7, 32dc5d5). `class: mutation`, diff-scoped. The
+  gate only PRODUCES a Stryker report; the ENGINE scopes it to the files the branch changed
+  (Git.ChangedFiles + mutation.diffBase) and compares to the plan's threshold. NO-COVERAGE counts in
+  the denominator, so the score cannot be raised by not testing. Fail closed when the report scores
+  none of the diff; green with NO finding when the branch changed no .cs. Glyph MUTANTS. Live rig
+  reads the composed prompt off disk. 36 tests. Evidence: .conductor/evidence/KS4/KS4.3-mutation-gates.md
+OWED, and it is the one gap: the era-boundary Stryker score. Two real runs, neither reached a number
+  inside the session. Recipe + ready-made rig are in the evidence file's A5 - one bg child finishes it.
+TWO REDS WERE ALREADY STANDING and a scoped `dotnet test --filter` sees neither: the architecture
+  ratchet (GateRunner.cs 550>500 since KS4.2, empty debt map) and K4_1's schema pin (14 vs v15).
+  Both fixed by splitting/bumping, never by editing a ratchet. THE FULL SUITE IS 4m6s - run it once.
+STRYKER FACTS: `--mutate` on the CLI is IGNORED (use stryker-config.json); it cannot share a tree with
+  a dotnet test (testhost locks the dlls - use a worktree); ~18 min before the first mutant is tested.
+next: KS4.4 worktree-per-stage-attempt. Bugs #53/#54/#55/#57/#58 open.
 
 
 ## Baseline numbers (from run.db)
@@ -28,7 +26,7 @@ next: KS4.3 mutation gate kind (Stryker.NET, diff-scoped). Bugs #53/#54/#55/#57 
 |---|---|
 | Total checkpoints | 24 |
 | Done | 14 |
-| Claimed (unconfirmed) | 1 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -69,7 +67,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | KS4.1 | Holdout gates: a visibility holdout gate class excluded from prompts, tool contract and agent-readable logs, run only at verdict time; grep of composed prompt + transcript proves absence; a seeded gaming fake-agent passes visible gates, fails holdout, verdict red | DONE | 3365a3d | .conductor/evidence/KS4/KS4.1-holdout-gates.md |
-| KS4.2 | Regression gate class (PASS-TO-PASS semantics): nothing-that-worked-broke as a named class with distinct reporting; a seeded regression flips the verdict with the class named in evidence | TODO | - | - |
+| KS4.2 | Regression gate class (PASS-TO-PASS semantics): nothing-that-worked-broke as a named class with distinct reporting; a seeded regression flips the verdict with the class named in evidence | DONE | 8d649ea | .conductor/evidence/KS4/KS4.2-regression-gates.md |
 | KS4.3 | Mutation gate kind: mutation-score >= threshold, diff-scoped, Stryker.NET first; a checkpoint adding tests must clear the score on changed files; an era-boundary run on conductor's own suite recorded | TODO | - | - |
 | KS4.4 | Worktree-per-stage-attempt: each attempt in a worktree, failed attempt drops the tree, verdict receives the clean attempt diff, merge ff-only on green, never branch -D an unmerged branch (lanes L1.3 fix per ND-8, amendment committed); Windows lock/removal proven; orphan sweep at startup | TODO | - | - |
 | KS4.5 | Judge as evidence, never verdict: second-model review joins the evidence taxonomy through KS6.4's seam as an advisory row; judge disagreement recorded as evidence; a test asserts NO code path lets a judge score flip a gate verdict | TODO | - | - |
