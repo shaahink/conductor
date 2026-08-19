@@ -4,20 +4,22 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS7.5 DONE (3d7414a) - stage KS7 is complete. RepoMapBattery and DefinitionOfDoneBattery are
-  now REGISTERED in PromptBuilder.BatterySection (which takes the folded board + effective stage), both
-  opt-in via batteries.repoMap / batteries.definitionOfDone; the search-delegation guidance is in
-  ToolContract so it reaches session/fix/resume/verify/audit. 12 new facts, suite slice 171 green.
-BEFORE YOU ADD ANY PROMPT TEXT, read this: a prompt is also an ARGUMENT. 8191 chars through a cmd/bat
-  shim; the shipped prompt measures 7598 (doctor argv lint, scratch plan) and 28 test files spawn their
-  fake agent through cmd.exe. A 640-char addition took it to 8207 and killed two live-run rigs with
-  "the fake agent never started" - nothing mentions length. Ratchet test
-  KS7_5ContextEconomicsTests.ShippedPromptStaysUnderTheCmdExeArgvCeiling now fails first instead.
-  Pay for a new paragraph by trimming an old one. Bug #55: the lint under-measures the live spawn by
-  350-500 chars (battery, tail sections, --mcp-config).
-build: MSBuild switches nodeReuse:false and UseSharedCompilation=false (bug #54) or you get 9 bogus
-  Conductor.Planning analyzer errors. Bug #53: cache_creation 5m/1h TTL split still dropped.
-
+last: fix session #10 - the KS7 battery is GREEN, 2878/2878 in 2m33s
+  (.conductor/bg-logs/full-suite-green-20260819-002850258.log, commit a36ea6d). Nine reds, none of
+  them the known flake, all of them KS7.3-7.5 landing code without landing its record. KS7.3/7.4/7.5
+  re-claimed on .conductor/evidence/KS7/KS7-fix-s10-gates-green.md.
+WHAT THE NINE WERE, so you do not repeat the shape: one unregistered verb (otel) is FOUR reds -
+  completion, cli.md, operating.md S2, and the three-way agreement test all read the verb list off
+  Program.cs. A new config property is a DOCS obligation - PlanKeySchema derives the expectation, so
+  five KS7.4/7.5 keys with no row in plan-config.md were two more. Ship a verb or a key: update the
+  record in the same commit.
+THE ARGV NUMBER IN THE OLD HANDOFF WAS THE WRONG PROMPT. doctor's lint renders the SINGLE-repo
+  prompt; SF6_1's budget renders the MULTI-repo one, ~400 chars bigger, and that is the one that was
+  over (deliver 7942 / fix 7909 against 7900). After compressing five ToolContract paragraphs it
+  measures deliver=7808, fix=7775 - 92 chars of margin. Check BOTH before adding prose.
+preflight's rebuild leg goes red if you edit src/ while a bg suite is running - your own hand, not a
+  defect. Bugs #53 (cache TTL split), #54 (nodeReuse:false), #55 (lint under-measures) still open.
+next: KS8. Stage KS7 is closed and confirmed green.
 
 ## Baseline numbers (from run.db)
 
