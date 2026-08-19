@@ -44,9 +44,8 @@ public sealed class PlanConfig
     public List<StageConfig> Stages { get; set; } = new();
     public List<GateConfig> Gates { get; set; } = new();
     /// <summary>KS4.1: path to a JSON array of <see cref="GateConfig"/> loaded as HOLDOUT gates —
-    /// engine-only checks the coding agent never sees. Relative paths resolve against the plan
-    /// file's directory. The path must be OUTSIDE the repo working tree or the plan is refused at
-    /// load: see <see cref="HoldoutGateSource"/> for why that is the whole point.</summary>
+    /// engine-only checks the agent never sees. Relative to the plan file's dir, and it must be
+    /// OUTSIDE the repo working tree: see <see cref="HoldoutGateSource"/> for why that is the point.</summary>
     public string? HoldoutGates { get; set; }
     /// <summary>"perSession" (full battery every session) or "perPhase" (fast gates/session, full battery at stage-done). Default perSession.</summary>
     public string GatePolicy { get; set; } = "perSession";
@@ -181,9 +180,8 @@ public sealed class PlanConfig
         var cfg = JsonSerializer.Deserialize<PlanConfig>(File.ReadAllText(full), JsonOpts)
                   ?? throw new InvalidOperationException($"Plan file is empty: {full}");
         cfg.PlanFilePath = full;
-        // KS4.1: holdout gates join plan.Gates here, and the location rule that keeps their commands
-        // out of the agent's working tree is enforced here — before Validate, so a plan that breaks
-        // it never reaches a runner.
+        // KS4.1: holdout gates join plan.Gates here, and the location rule keeping their commands out
+        // of the agent's working tree is enforced BEFORE Validate, so a plan breaking it never runs.
         HoldoutGateSource.Apply(cfg);
         cfg.Validate();
         return cfg;
@@ -298,20 +296,7 @@ public sealed class PlanConfig
         if (Agent.Args.Count == 0) errors.Add("plan.agent.args is empty — add at least a {prompt} placeholder");
         else if (!Agent.Args.Any(a => a.Contains("{prompt}", StringComparison.Ordinal))) errors.Add("plan.agent.args must contain a {prompt} placeholder — agent won't receive instructions without it");
 
-        if (Gates.Any(g => string.IsNullOrWhiteSpace(g.Command)))
-            errors.Add("a gate is missing its command — every gate needs a shell command to run");
-
-        // KS4.1: a typo'd visibility must never project to "visible" in silence — that is the same
-        // vacuous-configuration shape as P2's QA dial, and here it would quietly publish a gate the
-        // plan meant to hide.
-        foreach (var g in Gates.Where(g => !GateVisibility.IsKnown(g.Visibility)))
-            errors.Add($"gate '{g.Name}' has visibility '{g.Visibility}' — only {string.Join(" or ", GateVisibility.Known)} are accepted");
-
-        // KS4.1: '{RedactedName}' is what every holdout is CALLED once it leaves the runner. A visible
-        // gate wearing that name is indistinguishable from a holdout's result in the summary, the
-        // spill filename and the store row — the one place the anonymity could be read backwards.
-        if (Gates.Any(g => !g.IsHoldout && g.Name.Equals(GateVisibility.RedactedName, StringComparison.OrdinalIgnoreCase)))
-            errors.Add($"a visible gate is named '{GateVisibility.RedactedName}' — that name is reserved for redacted holdout results; rename the gate");
+        errors.AddRange(GateRules.CollectErrors(Gates));
 
         // B10 trace: reject zero/negative timeouts on hooks (FU-B10-3).
         if (Setup != null && !string.IsNullOrWhiteSpace(Setup.Command) && Setup.TimeoutMinutes < 1)

@@ -284,6 +284,46 @@ typo costs a startup message instead of a stage.
 | `stages` | string[] | Only run when the current stage id is in this list. |
 | `stageKinds` | string[] | Only run when the current stage's `kind` is in this list. Applies in addition to `stages`. |
 | `timeoutMinutes` | int | Per-gate timeout. Default 20. |
+| `visibility` | string | `"visible"` (default) or `"holdout"`. A holdout gate is engine-only — see below. |
+
+### `holdoutGates` — gates the agent cannot see (KS4.1)
+
+A **holdout** gate is one the coding agent cannot see, name, discover or run. It is excluded from the
+composed prompt, from every verb and MCP tool the agent can call, and from every log, report and
+store row the agent can read; only the engine runs it, in its own verdict-time battery, and a failure
+turns the session red like any other required gate. It exists because an agent optimises against the
+measurement it can read — so one measurement stays outside its world, and "the visible gates are
+green" can never be the whole of the truth.
+
+Its result is anonymous by construction, not by redaction at each surface: the runner returns a gate
+result named `holdout`, carrying a fixed notice instead of the command's output and a normalised exit
+code, so no summary, spill file, `REPORT.md` section, `run.db` row or MCP payload has the identity to
+leak. Two holdout gates are deliberately indistinguishable from each other.
+
+`holdoutGates` (root key) is the **path to a JSON array of gate objects**, relative to the plan file's
+directory. The gates in it are holdouts whatever the file says about their `visibility`.
+
+```jsonc
+// conductor.plan.json  (in the repo)
+"holdoutGates": "../conductor-holdouts/gates.json"
+```
+```jsonc
+// ../conductor-holdouts/gates.json  (OUTSIDE the repo)
+[ { "name": "invariants", "command": "pwsh ./check-invariants.ps1", "timeoutMinutes": 5 } ]
+```
+
+**The path must be outside the repo working tree, and the plan is refused at load if it is not.** A
+gate's command lives in the plan, and the plan normally lives in the repo the agent is editing — so a
+holdout declared there is one `Read` away and the whole class is worthless. Three load-time refusals,
+each naming the offending path:
+
+- a `visibility: "holdout"` gate declared inline in a plan file that itself lives inside the repo;
+- a `holdoutGates` file inside the repo working tree;
+- a `holdoutGates` file that does not exist — **fail closed**. A missing file must stop the run, not
+  quietly reduce the battery to its visible gates and report green.
+
+Two vocabulary refusals as well: an unknown `visibility` value is rejected by name, and a *visible*
+gate may not be named `holdout`, because that is the name every redacted result wears.
 
 **Leave `shell` unset for portable gates.** `conductor init` does, which is why a scaffolded plan
 (`dotnet build`, `npm test`, `go test ./...`, `cargo test`, `pytest -q`) runs unchanged on any host.

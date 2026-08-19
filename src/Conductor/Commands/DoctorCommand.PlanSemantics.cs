@@ -53,7 +53,12 @@ public sealed partial class DoctorCommand
 
         foreach (var g in plan.Gates)
         {
-            var label = string.IsNullOrWhiteSpace(g.Name) ? "(unnamed)" : g.Name;
+            // KS4.1: doctor is a verb the agent can run, and every message below quotes a piece of
+            // the gate's configuration. A holdout keeps its diagnostics — the owner must still learn
+            // that one of them cannot resolve — but wears the redacted label and quotes nothing.
+            var label = g.IsHoldout ? GateVisibility.RedactedName
+                : string.IsNullOrWhiteSpace(g.Name) ? "(unnamed)" : g.Name;
+            string Q(string? v) => g.IsHoldout ? "(withheld)" : $"'{v}'";
 
             var shell = string.IsNullOrWhiteSpace(g.Shell) ? ProcessRunner.DefaultShell : g.Shell;
             if (!KnownShells.Contains(shell, StringComparer.OrdinalIgnoreCase))
@@ -63,22 +68,22 @@ public sealed partial class DoctorCommand
 
             var cwd = string.IsNullOrWhiteSpace(g.Cwd) ? plan.Repo : Path.Combine(plan.Repo, g.Cwd);
             if (!Directory.Exists(cwd))
-                fails.Add($"gate '{label}': cwd '{g.Cwd}' does not exist ({cwd})");
+                fails.Add($"gate '{label}': cwd {Q(g.Cwd)} does not exist{(g.IsHoldout ? "" : $" ({cwd})")}");
 
             var leading = LeadingProgram(g.Command);
             if (leading is null)
                 fails.Add($"gate '{label}': command is empty");
             else if (!ShellKeywords.Contains(leading) && ResolveProgram(leading, Directory.Exists(cwd) ? cwd : plan.Repo) is null)
-                fails.Add($"gate '{label}': command starts with '{leading}', which is neither a file nor on PATH — the gate fails at spawn, not at assertion");
+                fails.Add($"gate '{label}': command starts with {Q(leading)}, which is neither a file nor on PATH — the gate fails at spawn, not at assertion");
 
             if (g.SkipIfMissing is { Length: > 0 } skip && !PathExists(Path.Combine(plan.Repo, skip)))
-                warns.Add($"gate '{label}': skipIfMissing '{skip}' does not exist, so this gate is skipped on every battery until it does");
+                warns.Add($"gate '{label}': skipIfMissing {Q(skip)} does not exist, so this gate is skipped on every battery until it does");
 
             foreach (var w in g.WatchPaths ?? [])
             {
                 if (string.IsNullOrWhiteSpace(w)) continue;
                 if (!PathExists(Path.IsPathRooted(w) ? w : Path.Combine(plan.Repo, w)))
-                    warns.Add($"gate '{label}': watchPath '{w}' does not exist, so it adds nothing to the result-cache key");
+                    warns.Add($"gate '{label}': watchPath {Q(w)} does not exist, so it adds nothing to the result-cache key");
             }
         }
 

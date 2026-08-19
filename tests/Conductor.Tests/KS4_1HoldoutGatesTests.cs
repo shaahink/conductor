@@ -217,6 +217,31 @@ public sealed class KS4_1HoldoutGatesTests
         Assert.Contains("<your long command>", block, StringComparison.Ordinal);
     }
 
+    /// <summary><c>conductor doctor</c> is a verb the agent can run, and its gate lint quotes a piece
+    /// of the gate's configuration in every message it emits. A holdout keeps its diagnostics — the
+    /// owner must still learn that one of them cannot resolve — but wears the redacted label and
+    /// quotes nothing.</summary>
+    [Fact]
+    public void TheDoctorGateLintNamesNoHoldoutAndQuotesNoneOfItsConfiguration()
+    {
+        var plan = Plan(new GateConfig
+        {
+            Name = SecretName,
+            Command = "zzz-unicorn-binary --run",
+            Cwd = "zzz-unicorn-dir",
+            SkipIfMissing = "zzz-unicorn-marker.txt",
+            Visibility = GateVisibility.Holdout,
+        });
+
+        var msg = Conductor.Commands.DoctorCommand.CheckGatePaths(plan).Message;
+
+        Assert.DoesNotContain(SecretName, msg, StringComparison.Ordinal);
+        Assert.DoesNotContain("zzz-unicorn", msg, StringComparison.Ordinal);
+        // …and it still reports the problem, under the redacted label.
+        Assert.Contains(GateVisibility.RedactedName, msg, StringComparison.Ordinal);
+        Assert.Contains("(withheld)", msg, StringComparison.Ordinal);
+    }
+
     // ── the plan file itself: the one thing the runner cannot redact ──
 
     [Fact]
