@@ -53,10 +53,8 @@ public sealed class GateCommand : Command<GateCommand.Settings>
                 : g.Optional ? "[yellow]warn[/]"
                 : "[red]FAIL[/]";
             AnsiConsole.MarkupLine($"  {icon} {Markup.Escape(g.Name)} ({g.Duration.TotalSeconds:0.0}s)");
-            if (g.HasClassFailure)
-                AnsiConsole.WriteLine(g.HasRegressions ? GateRunner.RegressionDetail(g) : GateRunner.MutationDetail(g));
-            else if (!g.Passed && !g.Skipped)
-                AnsiConsole.WriteLine(g.Tail);
+            if (GateRunner.ClassDetail(g) is { } detail) AnsiConsole.WriteLine(detail);
+            else if (!g.Passed && !g.Skipped) AnsiConsole.WriteLine(g.Tail);
         }
 
         LogGateEvent(logPath, $"gate battery done — {GateRunner.Token(gates)}: {summary}");

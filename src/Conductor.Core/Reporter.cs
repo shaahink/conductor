@@ -228,25 +228,13 @@ public static class Reporter
             var failures = lastGates.Where(g => (!g.Passed || g.HasClassFailure) && !g.Skipped).ToList();
             foreach (var f in failures)
             {
-                sb.AppendLine();
                 // KS4.2/KS4.3: a class failure has no useful tail — its command reported success —
                 // so the report shows the class's own finding instead of forty lines of "PASS".
-                var body = f.HasRegressions ? GateRunner.RegressionDetail(f)
-                    : f.HasMutationShortfall ? GateRunner.MutationDetail(f)
-                    : null;
-                if (body is not null)
-                {
-                    sb.AppendLine($"<details><summary>{f.Name} — {f.Glyph}</summary>");
-                    sb.AppendLine();
-                    sb.AppendLine(body);
-                    sb.AppendLine("</details>");
-                    continue;
-                }
-                sb.AppendLine($"<details><summary>{f.Name} — exit {f.ExitCode}</summary>");
+                var body = GateRunner.ClassDetail(f) ?? $"```\n{GateRunner.TailOf(f.Tail, 40)}\n```";
                 sb.AppendLine();
-                sb.AppendLine("```");
-                sb.AppendLine(GateRunner.TailOf(f.Tail, 40));
-                sb.AppendLine("```");
+                sb.AppendLine($"<details><summary>{f.Name} — {(f.HasClassFailure ? f.Glyph : "exit " + f.ExitCode)}</summary>");
+                sb.AppendLine();
+                sb.AppendLine(body);
                 sb.AppendLine("</details>");
             }
             sb.AppendLine();
