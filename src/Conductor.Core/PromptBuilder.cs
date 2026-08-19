@@ -266,7 +266,8 @@ public sealed partial class PromptBuilder
     /// <see cref="BatteriesConfig"/>, using current run state for the recent-failure digest (B8.5).
     /// When a <paramref name="store"/> is supplied (always, in a real run) the M7 knowledge batteries —
     /// the ledger and the run's open bugs — are injected too, so knowledge compounds across sessions.</summary>
-    public string BatterySection(RunState? state, IRunStore? store = null)
+    public string BatterySection(RunState? state, IRunStore? store = null,
+        IReadOnlyList<TaskItem>? checkpoints = null, string? stageId = null)
     {
         var cfg = _plan.Batteries;
 
@@ -293,6 +294,21 @@ public sealed partial class PromptBuilder
         {
             if (cfg.Lessons) list.Add(new LessonsBattery(_lessons, cfg.LessonsMaxEntries));
             if (cfg.RecentFailure && state != null) list.Add(new RecentFailureBattery(state));
+        }
+
+        // KS7.5: the two context-economics batteries. Both are gated on the caller having supplied
+        // what they need - the repo map on a repo path that exists, the recap on the folded board -
+        // so a caller that composes a prompt without a graph (the control-plane preview) renders the
+        // same prompt minus a section it has no data for, rather than an empty heading.
+        if (cfg?.RepoMap == true && _plan.Repo is { Length: > 0 } repoRoot)
+        {
+            var mapBattery = new RepoMapBattery(repoRoot, cfg.RepoMapMaxEntries);
+            if (!mapBattery.IsEmpty) list.Add(mapBattery);
+        }
+        if (cfg?.DefinitionOfDone == true && checkpoints is { Count: > 0 } && stageId is { Length: > 0 })
+        {
+            var dodBattery = new DefinitionOfDoneBattery(checkpoints, stageId);
+            if (!dodBattery.IsEmpty) list.Add(dodBattery);
         }
 
         // B12.1: inject recent analysis-lane artifacts into the next session's prompt

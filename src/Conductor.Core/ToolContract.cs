@@ -1,4 +1,4 @@
-using Conductor.Models;
+﻿using Conductor.Models;
 
 namespace Conductor.Core;
 
@@ -26,67 +26,69 @@ public static class ToolContract
             instead of hand-rolled bookkeeping. Each exists because its absence already cost real work.
 
             **Knowledge ledger — `conductor note "<what you learned>"`  (MCP: `conductor_note`)**
-            Write what you learn IMMEDIATELY — a root cause, a dead end, a constraint that surprised you —
-            not at session end. If you are killed, everything not in the ledger dies with you: one session
-            found the correct fix, was killed before saying so, and the next two chased theories it had
-            already disproved. An empty ledger is a failed part of the job.
+            Write what you learn IMMEDIATELY — a root cause, a dead end, a constraint that surprised you. If
+            you are killed, everything not in the ledger dies with you: one session found the correct fix, was
+            killed before saying so, and the next two chased theories it had already disproved.
 
             **Long-running commands — `conductor bg start|status|logs|stop`  (MCP: `bg_start`/`bg_status`/`bg_logs`/`bg_stop`)**
             ANYTHING over ~3 minutes (builds, full test suites, servers) MUST run through `conductor bg`:
                 conductor bg start --name tests -- {{ExampleLongCommand(plan)}}
                 conductor bg status · conductor bg logs --name tests · conductor bg stop
             A live background child is proof of life to the stall detector; block the foreground instead and
-            you look dead — a session was killed at 15 minutes of silence doing perfectly good work. Never
-            kill processes by name (`Stop-Process dotnet`): you will take out unrelated work.
+            you look dead — a session was killed at 15 minutes of silence doing perfectly good work.
 
-            **Never kill a pid you have not identified.** The conductor supervising you is PID {{Environment.ProcessId}},
-            also in `CONDUCTOR_PID`. `locked by: conductor (PID)` in a build error is almost always THIS run
-            holding its own binary, not a stale orphan: a fix session read that line, inferred an orphan, and
-            killed the conductor running it. Another repo's run may share this machine — check a pid's command
-            line before touching it, and never kill by name.
+            **Never kill a pid you have not identified**, and never kill by name (`Stop-Process dotnet`
+            takes out unrelated work). The conductor supervising you is PID {{Environment.ProcessId}}, also in
+            `CONDUCTOR_PID`; `locked by: conductor (PID)` in a build error is almost always THIS run holding
+            its own binary, not an orphan — a fix session inferred one and killed the conductor running it.
+            Another repo's run may share this machine: check a pid's command line first.
 
             **Tracked bugs — `conductor bug new|list|fix`  (MCP: `bug_new`/`bug_list`/`bug_fix`)**
-            Found a defect you are not fixing now? `conductor bug new "<title>"` — it outlives your session
-            and reaches later prompts and the audit phase. `conductor bug list` before hunting: the open ones
-            are known, do not re-file them. `conductor bug fix <id>` closes one.
+            A defect you are not fixing now: `conductor bug new "<title>"` outlives your session and reaches
+            later prompts and the audit phase. `bug list` before hunting — the open ones are known, do not
+            re-file them. `bug fix <id>` closes one.
 
             **Checkpoint progress — `conductor task`  (MCP: `task_list`/`task_update`/`task_add`)**
                 conductor task --list
                 conductor task --in-progress <id>          # BEFORE your first edit, not after the work
                 conductor task --done <id> --evidence <path-to-artifact>
             THIS IS THE ONLY WAY TO REPORT PROGRESS — the one channel Conductor reads when it works out what
-            you delivered. A checkpoint not claimed through this verb did not happen, whatever you wrote
-            elsewhere. There is no second mechanism to also update. Mark IN PROGRESS BEFORE your first edit:
-            a session that delivered for 56 minutes without it left the owner watching a wall of TODO. Claim
-            BEFORE writing the handoff — do the work, write DONE in the tracker, run out of room, and you
-            delivered nothing that counts.
-            If the MCP tools arrive DEFERRED in your harness, `ToolSearch` for `task_update` first — or skip that and use the CLI: `conductor task --done <id> --evidence <path>`.
-            You CLAIM; Conductor confirms, and only once its gate battery and the Verifier agree. `{{plan.Tracker}}`
-            is a GENERATED VIEW of the database — its checkpoint rows are overwritten, so they are not where
-            you report. The part that IS yours is the **handoff block**, handed to the next session.
+            you delivered. There is no second mechanism to also update, and a checkpoint not claimed through
+            this verb did not happen, whatever you wrote elsewhere. Mark IN PROGRESS before your first edit —
+            a session that delivered for 56 minutes without it left the owner watching a wall of TODO — and
+            claim BEFORE the handoff, or you run out of room having delivered nothing that counts. If the MCP
+            tools arrive DEFERRED, `ToolSearch` for `task_update`, or use the CLI. You CLAIM; Conductor confirms
+            once its gates and the Verifier agree. `{{plan.Tracker}}` is a GENERATED VIEW of the database — its
+            rows are overwritten, so the part that IS yours is the **handoff block**, for the next session.
 
             **Correcting the board — `conductor task --todo|--blocked|--skipped <id>` and `--amend <id> --note "<text>"`**
             Put a card back with `--todo`, park one with `--blocked`, retire one with `--skipped`. Every move
-            prints the card's REAL status and exits non-zero if refused — believe the output, not intent.
-            When a checkpoint's acceptance encodes a false premise, do not argue in prose nothing reads:
-                conductor task --amend <id> --note "acceptance says X; X is impossible because Y - delivering Z instead"
+            prints the card's REAL status and exits non-zero if refused — believe the output, not intent. When
+            a checkpoint's acceptance encodes a false premise, do not argue in prose nothing reads:
+                conductor task --amend <id> --note "acceptance says X; X is impossible because Y - delivering Z"
             The amendment rides the card into the next session's prompt and lands in the ledger.
 
             **Blocked on a clock — `conductor task --blocked-until <iso8601> --reason "<text>"`  (MCP: `task_blocked_until`)**
-            When you cannot proceed until a known future instant (rate-limit window, deploy slot), do not end
-            the session hoping the wall is gone next time, and do not re-measure the clock:
+            Cannot proceed until a known future instant (rate-limit window, deploy slot)? Do not end the
+            session hoping the wall is gone, and do not re-measure the clock:
                 conductor task --blocked-until 2026-07-31T15:12:00Z --reason "deploy window full, next slot 15:12"
-            Conductor sleeps until then and spawns ONE more session — no attempt burned, your reason handed
-            to it. Must be in the future and within 24h; longer is a `HUMAN:` line, not a nap. End the
-            session immediately after: the engine is waiting.
+            Conductor sleeps until then and spawns ONE more session — no attempt burned, your reason handed to
+            it. Must be in the future and within 24h; longer is an escalation, not a nap. End the session
+            immediately after: the engine is waiting.
 
-            **Ask the database — MCP `run_query`, `ledger_list`, `bug_list`, `session_detail`.** Prior
-            sessions, gates, costs, bugs, what earlier agents learned are queryable. Query before you guess.
+            **Ask the database — MCP `run_query`, `ledger_list`, `bug_list`, `session_detail`.** Prior sessions,
+            gates, costs, bugs and what earlier agents learned are queryable. Query before you guess.
 
-            **Evidence or it did not happen.** A checkpoint claimed DONE without a fresh artifact path (a
-            file, a gate log, a commit sha) will be rejected by verification. Never weaken a gate, a golden
-            file, or a test to get green — that is the one unforgivable move here. If a gate is wrong, say
-            so in the ledger and the handoff; do not edit it into passing.
+            **Keep your own context small — delegate the wide reads.** Cost is (turns) x (context), and
+            context only grows, so bytes pulled in early are paid for on every turn after. A directory
+            sweep, a "where is this referenced" question, or a survey of files you will not edit belongs
+            in a SUBAGENT: keep its conclusion, not the file dumps. Read the SECTION your work names,
+            not the whole document, and never re-read what is already in your context.
+
+            **Evidence or it did not happen.** A checkpoint claimed DONE without a fresh artifact path (a file,
+            a gate log, a commit sha) is rejected by verification. Never weaken a gate, a golden file or a test
+            to get green — the one unforgivable move here; if a gate is wrong, say so in the ledger and the
+            handoff rather than editing it into passing.
             """ + MultiRepoSection(plan);
     }
 

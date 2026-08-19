@@ -91,29 +91,36 @@ public sealed class RepoMapBattery : IPromptBattery
 }
 
 /// <summary>
-/// KS7.5 — what "done" means for the checkpoint in flight, recapped from the board rather than from
-/// the agent's memory of the ritual.
+/// KS7.5 — the checkpoint in flight and the exact command that closes it, recapped from the live
+/// board rather than from the agent's memory of the ritual.
 /// </summary>
 /// <remarks>
-/// This one is not a bet. Sessions in this project have repeatedly written DONE in prose, filled the
-/// tracker's checkpoint table, or described the work in a result block — none of which moves anything,
-/// because the tracker's rows are a GENERATED VIEW of the database and the claim verb is the only
-/// channel. The failure is not ignorance of the rule; the rule is in the prompt. It is that by the
-/// time a session closes, the rule is thousands of turns back in its context and the acceptance
-/// criteria are further back still. So this battery restates both, from the live board, in the same
-/// place every session — with the exact command, pre-filled with the id.
+/// <para>This one is not a bet. Sessions in this project have repeatedly written DONE in prose,
+/// filled the tracker's checkpoint table, or described the work in a result block — none of which
+/// moves anything, because the tracker's rows are a GENERATED VIEW of the database and the claim verb
+/// is the only channel. The failure is not ignorance of the rule; the rule is in the prompt. It is
+/// that by the time a session closes, the rule is thousands of turns back in its context and it names
+/// a placeholder id, not the one this session is holding. So the recap restates it, from the live
+/// board, in the same place every session — with the id already filled in.</para>
+/// <para><b>What it deliberately does NOT carry: the acceptance text.</b> The first cut of this
+/// battery restated the card's context, and that is exactly the mistake the KS7.5 accounting warns
+/// against — <see cref="Conductor.Planning.PromptBlockRenderer"/> already renders the open card's
+/// context verbatim into "Work items in scope" further down the same prompt, so restating it here
+/// buys nothing and pays the bytes twice. On the card that funded this checkpoint that duplicate was
+/// 300 bytes of a 500-byte battery. The title is kept as a one-line anchor and clipped; the acceptance
+/// is read where it is already written, once.</para>
 /// </remarks>
 public sealed class DefinitionOfDoneBattery : IPromptBattery
 {
     private readonly string _section;
 
-    public DefinitionOfDoneBattery(IReadOnlyList<TaskItem> checkpoints, string stageId, int maxBytes = 500)
+    public DefinitionOfDoneBattery(IReadOnlyList<TaskItem> checkpoints, string stageId, int maxBytes = 400)
     {
         ArgumentNullException.ThrowIfNull(checkpoints);
         _section = Build(checkpoints, stageId, maxBytes);
     }
 
-    public string Name => "definition-of-done";
+    public string Name => "definition of done";
 
     public string Section => _section;
 
@@ -121,30 +128,29 @@ public sealed class DefinitionOfDoneBattery : IPromptBattery
 
     private static string Build(IReadOnlyList<TaskItem> checkpoints, string stageId, int maxBytes)
     {
+        if (string.IsNullOrWhiteSpace(stageId)) return "";
+
         // The card in flight, or the next one waiting. An in-progress card wins: it is what this
         // session is already holding.
-        var active = checkpoints.FirstOrDefault(c =>
-                         string.Equals(c.StageId, stageId, StringComparison.Ordinal) &&
-                         string.Equals(c.Status, "in_progress", StringComparison.OrdinalIgnoreCase))
-                     ?? checkpoints.FirstOrDefault(c =>
-                         string.Equals(c.StageId, stageId, StringComparison.Ordinal) &&
-                         string.Equals(c.Status, "todo", StringComparison.OrdinalIgnoreCase));
-        if (active is null) return "";
+        var mine = checkpoints.Where(c => string.Equals(c.StageId, stageId, StringComparison.Ordinal)).ToList();
+        var active = mine.FirstOrDefault(c => string.Equals(c.Status, "in_progress", StringComparison.OrdinalIgnoreCase))
+                     ?? mine.FirstOrDefault(c => string.Equals(c.Status, "todo", StringComparison.OrdinalIgnoreCase));
+        if (active is null || active.TaskId.Length == 0) return "";
 
         var sb = new StringBuilder();
-        sb.AppendLine($"`{active.TaskId}` is what this session closes. It is done when:");
-        var acceptance = string.IsNullOrWhiteSpace(active.Context) ? active.Title : active.Context;
-        sb.AppendLine(Trim(acceptance, maxBytes - 200));
-        sb.AppendLine($"Claim it with `conductor task --done {active.TaskId} --evidence <path>` — that command IS the claim.");
-        sb.Append("Prose in the handoff, a filled tracker row and a SESSION-RESULT move nothing.");
+        sb.Append($"`{active.TaskId}`");
+        var title = Flatten(active.Title);
+        if (title.Length > 0) sb.Append(" — ").Append(Clip(title, 120));
+        sb.AppendLine(" is the card this session closes.");
+        sb.AppendLine($"Claim it with `conductor task --done {active.TaskId} --evidence <path>`, BEFORE the handoff.");
+        sb.Append("That command IS the claim: a tracker row, a handoff line and a SESSION-RESULT move nothing.");
 
         var s = sb.ToString();
         return s.Length > maxBytes ? s[..maxBytes].TrimEnd() + "…" : s;
     }
 
-    private static string Trim(string s, int max)
-    {
-        var flat = s.Replace("\r", "", StringComparison.Ordinal).Replace('\n', ' ').Trim();
-        return flat.Length > max && max > 0 ? flat[..max].TrimEnd() + "…" : flat;
-    }
+    private static string Flatten(string? s) =>
+        (s ?? "").ReplaceLineEndings(" ").Trim();
+
+    private static string Clip(string s, int max) => s.Length > max ? s[..max].TrimEnd() + "…" : s;
 }

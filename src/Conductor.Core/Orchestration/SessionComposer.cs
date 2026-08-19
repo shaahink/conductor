@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Conductor.Core.Events;
 using Conductor.Core.Store;
 using Conductor.Models;
@@ -120,7 +120,9 @@ public static class SessionComposer
                 : prompts.Deliver(stage, sessionNumber, attempt, maxAttempts, assignment.Persona),
         };
 
-        var battery = prompts.BatterySection(state, store);
+        // KS7.5: the folded board and the effective stage reach the battery section, so the
+        // definition-of-done recap names the card THIS session is holding rather than a placeholder.
+        var battery = prompts.BatterySection(state, store, graph?.Checkpoints(), stage.Id);
         var consumed = false;
         var prompt = AppendTail(plan, state, graph, kind, assignment,
             battery.Length > 0 ? core.TrimEnd() + "\n\n" + battery : core, ref consumed);
