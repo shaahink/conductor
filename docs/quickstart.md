@@ -113,6 +113,14 @@ do want to read it, this is the shape:
 }
 ```
 
+Two gates are enough to start, and a green exit code is enough to trust *early*. It stops being enough
+the moment the same agent writes both the code and the tests — a deleted test and a passing one exit 0
+alike. When you get there, a gate can take a **class** that asks what the exit code cannot: `regression`
+(is everything that passed before still passing), `mutation` (can these tests fail at all), and gates
+the agent cannot see at all. All three are in
+[plan-config.md](plan-config.md#class-regression--nothing-that-worked-broke-ks42) — do not reach for
+them on day one.
+
 ## 4. Edit the tracker
 
 Open `TRACKER.md` — the handoff block and checkpoint rows define what the agent

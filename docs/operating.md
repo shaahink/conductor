@@ -475,10 +475,11 @@ caching, and NEEDS-HUMAN escalation. Full detail: `docs/history/maestro/M9-FINAL
 
 ---
 
-## 7. Known gaps & missing features (as of 2026-08-15, end of the Karvansara era)
+## 7. Known gaps & missing features (as of 2026-08-19, end of Karvansara **edge**)
 
-Re-measured at the close of the Sarban era and re-checked at the close of Karvansara, not carried
-forward. Four of the ten items on the 2026-07-15 list were gone by Sarban's close; item 6 went with
+Re-measured at the close of the Sarban era, re-checked at the close of Karvansara core (2026-08-15),
+and re-checked again here at the close of Karvansara edge — not carried forward. Four of the ten items
+on the 2026-07-15 list were gone by Sarban's close; item 6 went with
 Karvansara's `plan new`, and item 3 was re-read against the tree rather than assumed —
 `src/Conductor.Core/PersonaRegistry.cs` is still there, so the row stays. What is left is stated with
 what still owns it. The open engineering rows also live in
@@ -525,7 +526,26 @@ what still owns it. The open engineering rows also live in
    build whose notes are the matching `CHANGELOG.md` section — it refuses a tag that has none. The
    installer still publishes framework-dependent (needs the .NET 10 runtime present).
 
-None of items 3–8 blocks day-to-day operation, and the era closed with the engine building clean
-(0w/0e), the C# suite green, the anti-cheat ratchet green, face-go green, and a real `conductor run`
-driving two full plans end to end with correct claims-vs-confirmations, gate caching and human
-escalation.
+10. **A newer engine migrates a store the installed one can then not open** (bug 45). `run.db` carries
+    a schema version; any verb run from a build whose `MigrationRunner.CurrentVersion` is higher
+    migrates the store *on open*, and the older `conductor` on PATH then refuses it. It bites exactly
+    one way — running a verb out of a working tree against a store a released engine is using. Point
+    the newer build at a copy (`sqlite3 run.db ".backup copy.db"`), not at the live file.
+11. **`CONDUCTOR_RUN_DB` does not redirect the measuring verbs** (bug 61). `budget` resolves its store
+    by repository first, so the variable does not move it and it reports "no runs to measure" if the
+    repo has none. Pass the database as the verb's positional path instead.
+
+None of items 3–8, 10 or 11 blocks day-to-day operation. Karvansara **edge** closed with the engine
+building clean — `dotnet build Conductor.slnx` at **0 warnings, 0 errors**, measured 2026-08-19 — and
+a real `conductor run` driving the era's 24 checkpoints end to end with correct
+claims-vs-confirmations, gate caching, budget rollovers and human escalation.
+
+One bar is **red at the close, and it is stated rather than moved**: `tools/gates/analyzer-debt.ps1`
+fails on `pragma-src` at **33 against a bar of 31** — two `#pragma warning disable` lines added by
+KS4.4, both carrying a justification (`unjustified=0` on every kind), against a bar the branch's own
+history set. It is bug 60 in this run's ledger (`conductor bug
+list`), and the honest thing about the gate is that there is no baseline file to edit: the bar is
+the minimum over the last 25 commits that touched a measured file, so a session cannot quietly
+rewrite the referee. An earlier line here claimed "the anti-cheat ratchet
+green" for the era as a whole; that claim was inherited from the core close and was not true of edge,
+which is the exact rot this section exists to catch.

@@ -160,6 +160,16 @@ and diffs the tracker + git log. A checkpoint counts only when the row flipped t
 commits exist **and** gates are green. An agent may *claim* a checkpoint; only the engine *confirms*
 one.
 
+**The gates themselves can't be gamed either.** A green exit code only means *nothing is failing right
+now* — it says the same thing when the failing test was deleted, skipped or filtered out of the run.
+So a gate can be declared with a **class** that asks the question the exit code cannot:
+
+| Gate class | The question it adds |
+|---|---|
+| `regression` | *Is everything that passed before still passing?* — SWE-bench PASS_TO_PASS semantics against the last green baseline, so a check that quietly stopped being run is a failure. |
+| `mutation` | *Can these tests fail at all?* — break the implementation on purpose and see if anything goes red. An assertion on a constant survives every other gate. |
+| `holdout` | A gate the agent cannot see, name, discover or run. It is stripped from the prompt and the battery listing, and its result comes back redacted to pass/fail. Declared in a file **outside** the repo, or the run refuses to start. |
+
 **"All DONE" is confirmed, not believed.** When the tracker says the plan is complete, Conductor runs
 the full battery one more time before declaring victory.
 
@@ -204,9 +214,44 @@ After every session Conductor rewrites `.conductor/REPORT.md` in the target repo
 it. Open it on GitHub from your phone: status, per-stage progress, session history, gate results,
 timeline, health.
 
-Optional **Telegram** integration adds push notifications and two-way control (`/status`, `/tasks`,
-`/pause`, `/resume`, `/approve`, `/skip`) via inline keyboard. **Webhooks** (generic HTTP POST,
-Discord, Slack) fire on NeedsHuman and completion.
+Optional **Telegram** integration adds push notifications and two-way control from the phone. The
+surface is split by what a verb *does*, not by how dangerous it looks:
+
+- **Browse** — `/status`, `/tasks`, `/daily`, `/progress`, `/evidence`, `/money`, `/tokens`. Reads the
+  run and answers: where it is, what it cost, how many tokens went where, and the evidence file a
+  checkpoint was claimed with, served as-is.
+- **Steer** — `/inject`, `/chat`. Points the run somewhere without moving it.
+- **Control** — `/pause`, `/resume`, `/approve`, `/skip`, `/abort`, `/kill`, via inline keyboard.
+
+A chat can be given a **profile**. `admin` gets the whole surface; `observer` gets the browse verbs
+and *nothing else* — a closed list, so a stakeholder can be added to a group chat and watch a run
+without being able to move it. Anything outside the list is refused by name rather than ignored:
+
+```jsonc
+"telegram": {
+  "chats": [
+    { "chatId": "111111111" },                          // you: admin by omission
+    { "chatId": "-100123456", "profile": "observer" }   // the group: browse only
+  ]
+}
+```
+
+**Webhooks** (generic HTTP POST, Discord, Slack) fire on NeedsHuman and completion.
+
+### Getting the run's data out
+
+Three read-only exits, none of which can write to a run:
+
+```
+conductor history export --atif -o run.json   # the run as an ATIF trajectory (Harbor / Terminal-Bench)
+conductor otel --dry-run                      # the event log as one OTLP trace: run → stage → session
+conductor mcp-observe                         # history, status and money as MCP resources — no tools
+```
+
+`mcp-observe` deliberately exposes **no tool at all**, only resources: an MCP client can list runs and
+quote reconciled status, and there is nothing on the surface that could be talked into moving a run
+([ADR-0007](docs/dev/adr/0007-read-only-mcp-surface.md)). `otel` emits `gen_ai.*` usage attributes with the cache split and the
+per-turn context curve as span events.
 
 `conductor github sync --backfill <run>` mirrors a run's board into GitHub issues — one issue per
 checkpoint with status labels and the stage as a milestone, plus a run issue with a comment per
@@ -226,8 +271,11 @@ back into the run. Drag a card there and the run does not notice; the tracker st
   (opencode, claude, text).
 - **Parallel lanes.** Read-only analysis lanes (scratch dir) and isolated worktree lanes (git
   worktree + merge gate) run concurrently with the primary session.
-- **Battery collapse.** Opt in to skip the agent's redundant pre-session ritual, saving 30-50% of
-  output tokens.
+- **Battery collapse.** Opt in to skip the agent's redundant pre-session ritual — no point paying an
+  agent to run gates the engine re-runs anyway. The size of the saving has never been measured, and
+  the docs say so rather than quoting a number nobody took.
+- **Anti-cheat is a gate property, not a review step.** `regression`, `mutation` and `holdout` classes
+  put the questions a green exit code cannot ask into the battery the engine runs itself.
 
 ## Documentation
 
@@ -245,8 +293,10 @@ back into the run. Drag a card there and the run does not notice; the tracker st
 Contributors: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/). Closed eras and their
 gate transcripts: [`docs/history/`](docs/history/).
 
-> Conductor drives itself. [`plans/karvansara/CORE-TRACKER.md`](plans/karvansara/CORE-TRACKER.md) is
-> the **live tracker** for the era in flight — the same checkpoint-table format described in
+> Conductor drives itself. [`plans/karvansara/EDGE-TRACKER.md`](plans/karvansara/EDGE-TRACKER.md) is
+> the **live tracker** for the era in flight, and
+> [`plans/karvansara/CORE-TRACKER.md`](plans/karvansara/CORE-TRACKER.md) the half of it that already
+> shipped — the same checkpoint-table format described in
 > [`docs/tracker.md`](docs/tracker.md), being used on this repo by the tool in this repo. Each closed
 > era's tracker is kept beside its gate transcripts in
 > [`docs/history/archive/trackers/`](docs/history/archive/trackers/); every one of them is the
