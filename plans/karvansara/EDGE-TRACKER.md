@@ -2,33 +2,28 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, ≤ 12 lines, no history)
 
-last: KS4.4 DONE (05696d4, c407562, + this one). `branch -D` is GONE from src/ and a test fails the
-  build if it returns; a refused delete KEEPS the branch and says its name. The drop deletes the
-  directory itself - children first, the tree's own `.git` link LAST, because a plain recursive delete
-  had already removed that link before it hit a locked bin/*.dll, which made the leftover tree
-  invisible to the sweep meant to finish it. AttemptWorktree = cut / clean diff / ff-only merge /
-  drop-whole. WorktreeSweeper reaps orphans at engine STARTUP; `conductor worktree [--reap]` lists
-  them; a human's tree and a live run's are never touched. AttemptDiff writes <stateDir>/attempts/ per
-  attempt and RunLoop registers it as evidence with source `attempt` - it excludes the state dir on
-  BOTH sides after a live run put 132 lines of the engine's own REPORT.md into an artifact. 16 tests,
-  plus a live demo rig. Evidence: .conductor/evidence/KS4/KS4.4-worktree-per-attempt.md
-FULL SUITE RAN ONCE and turned up FIVE reds, all mine, all fixed and re-verified green (0e0 pending the
-  closing commit): the two docs-verb tests and the completion verb list wanted `worktree` (add a verb
-  in FOUR places - Program.cs, CompletionCommand.Verbs, docs/cli.md, docs/operating.md section 2);
-  HarnessTests now asserts the THIRD artifact (source `attempt`, no checkpoint id); and B12_3's lane
-  cleanup was right - the staging tree is now DETACHED, because its branch held a merge commit nothing
-  reached, which the safe delete correctly refuses. A throwaway integration tree needs no ref.
-NOT DONE, deliberately, and argued in the evidence section 7: the SESSION still runs in the primary
-  tree. PlanConfig.StateDir is derived from Repo (PlanConfig.cs:125), so redirecting a session moves
-  state.json, the logs, the evidence dir and the engine lock into the throwaway tree with it. That is
-  lanes L3.1's seam. Half-wiring it isolates the agent and loses the tracker.
-TWO RATCHETS BIND ANY ORCHESTRATION EDIT: RunLoop is AT its CA1506 coupling ceiling of exactly 182
-  (src/Conductor.Core/CodeMetricsConfig.txt) - ONE new type in ANY RunLoop.*.cs partial fails the
-  build; put the method on RunContext, or the constant on a type RunLoop already knows. And Git.cs hit
-  528 against the 500 line ceiling, so its worktree half now lives in Git.Worktrees.cs.
-next: KS4.5 judge as evidence, never verdict. Bugs #53/#54/#55/#57/#58/#59 open.
+last: KS4.5 DONE (546a092 + evidence 6006ed1). STAGE KS4 IS COMPLETE - all five checkpoints claimed.
+  A `judge` plan block (OFF by default, 6 keys, `judge.threshold` refused by name) spawns a second
+  model after a delivery session; the review lands as an evidence artifact with source `judge` under
+  the state dir, as an AdvisoryEvidence row, and as a log line that names itself advisory. The
+  guarantee is the ORDER: JudgeSessionAsync is handed a decision that already exists and never calls
+  Decide - proved by a source rule, an order rule, and a live harness pair (0/FAIL leaves green
+  green, 100/PASS leaves red red, both against a no-judge baseline run of the same rig). 42 tests.
+FOUR RATCHETS BIT, in this order, and every one is a real edit not a config change: 3 types per file
+  (Judge.cs split), 500 lines (PlanConfig.cs - both consult validators now in PlanConfig.Consults.cs),
+  doctor's PromptMatrix (a new built-in template whose placeholders no session kind resolves makes a
+  SCAFFOLDED templates dir doctor-red), and SF7_1DocsMatchReality (a new plan block needs its
+  docs/plan-config.md section in the same commit). Adding a built-in template is FIVE edits.
+BUILD FLAKE, cost me two confusing reds: `dotnet build Conductor.slnx` intermittently reports
+  100-800 analyzer errors in files your diff never opened. It is MSBuild node reuse with a stale
+  analyzer config. Re-run with -nodeReuse:false before hunting; the same tree then builds 0 twice.
+RED THIS BRANCH ALREADY CARRIED: tools/gates/analyzer-debt.ps1 fails - pragma-src 33 against a bar
+  of 31, both pragmas from KS4.4 (AttemptWorktree.cs:98, WorktreeDrop.cs:110), bug #60. Not in the
+  plan's battery, which is why it never blocked. KS4.5 added zero to it.
+next: KS8.1 read-only MCP surface (KS8.1/8.2 and all of KS12 are what is left). Bugs
+  #53/#54/#55/#57/#58/#59/#60 open.
 
 
 ## Baseline numbers (from run.db)
@@ -37,7 +32,7 @@ next: KS4.5 judge as evidence, never verdict. Bugs #53/#54/#55/#57/#58/#59 open.
 |---|---|
 | Total checkpoints | 24 |
 | Done | 14 |
-| Claimed (unconfirmed) | 3 |
+| Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
 
@@ -80,7 +75,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | KS4.1 | Holdout gates: a visibility holdout gate class excluded from prompts, tool contract and agent-readable logs, run only at verdict time; grep of composed prompt + transcript proves absence; a seeded gaming fake-agent passes visible gates, fails holdout, verdict red | DONE | 3365a3d | .conductor/evidence/KS4/KS4.1-holdout-gates.md |
 | KS4.2 | Regression gate class (PASS-TO-PASS semantics): nothing-that-worked-broke as a named class with distinct reporting; a seeded regression flips the verdict with the class named in evidence | DONE | 8d649ea | .conductor/evidence/KS4/KS4.2-regression-gates.md |
 | KS4.3 | Mutation gate kind: mutation-score >= threshold, diff-scoped, Stryker.NET first; a checkpoint adding tests must clear the score on changed files; an era-boundary run on conductor's own suite recorded | DONE | 4d6ad56 | .conductor/evidence/KS4/KS4.3-mutation-gates.md |
-| KS4.4 | Worktree-per-stage-attempt: each attempt in a worktree, failed attempt drops the tree, verdict receives the clean attempt diff, merge ff-only on green, never branch -D an unmerged branch (lanes L1.3 fix per ND-8, amendment committed); Windows lock/removal proven; orphan sweep at startup | TODO | - | - |
+| KS4.4 | Worktree-per-stage-attempt: each attempt in a worktree, failed attempt drops the tree, verdict receives the clean attempt diff, merge ff-only on green, never branch -D an unmerged branch (lanes L1.3 fix per ND-8, amendment committed); Windows lock/removal proven; orphan sweep at startup | DONE | 05696d4 | .conductor/evidence/KS4/KS4.4-worktree-per-attempt.md |
 | KS4.5 | Judge as evidence, never verdict: second-model review joins the evidence taxonomy through KS6.4's seam as an advisory row; judge disagreement recorded as evidence; a test asserts NO code path lets a judge score flip a gate verdict | TODO | - | - |
 
 ### KS8 — Interop - the run as a readable artifact (cut-first)
