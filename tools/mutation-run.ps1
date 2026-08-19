@@ -37,13 +37,15 @@ try {
         }
     }
 
-    $args = @('stryker', '--project', $Project, '--test-project', $TestProject,
-              '--reporter', 'json', '--reporter', 'progress',
-              '--concurrency', "$Concurrency")
-    foreach ($m in $Mutate) { $args += @('--mutate', $m) }
+    # NOT $args: that is an automatic variable in PowerShell and assigning to it is the kind of
+    # shadowing that works until the day it does not.
+    $strykerArgs = @('stryker', '--project', $Project, '--test-project', $TestProject,
+                     '--reporter', 'json', '--reporter', 'progress',
+                     '--concurrency', "$Concurrency")
+    foreach ($m in $Mutate) { $strykerArgs += @('--mutate', $m) }
 
-    Write-Host "mutation-run: dotnet $($args -join ' ')"
-    & dotnet @args
+    Write-Host "mutation-run: dotnet $($strykerArgs -join ' ')"
+    & dotnet @strykerArgs
     $code = $LASTEXITCODE
 
     # Stryker's own --break-at is deliberately NOT used, so a low score is not an error here. What IS
