@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvansara edge - gates that can't be gamed, and the courier run report
 
-_Updated 2026-08-19 12:56 UTC · branch `feat/karvansara-edge` · HEAD `20e1eab`_
+_Updated 2026-08-19 13:42 UTC · branch `feat/karvansara-edge` · HEAD `cf5890f`_
 
 **Status:** Idle
-**Stage:** KS6 — Quality lane - hygiene that buys design · attempts used 0
-**Checkpoints:** 14/24 done · **Sessions run:** 14 · **Cost:** $181.7113 (agent $181.5853 + gates $0.1260) · **Tokens:** 2,761,480 in / 1,329,708 out
+**Stage:** KS4 — Verification that can't be gamed · attempts used 0 · working ▸ KS4.2
+**Checkpoints:** 15/24 done · **Sessions run:** 15 · **Cost:** $199.4099 (agent $199.2738 + gates $0.1361) · **Tokens:** 2,979,464 in / 1,431,224 out
 **Confirmed phases:** KS11, KS7, KS6
 
 ## Stage progress
@@ -14,7 +14,7 @@ _Updated 2026-08-19 12:56 UTC · branch `feat/karvansara-edge` · HEAD `20e1eab`
 | KS11 | Chapar - the remote surface: profiles, onboarding, evidence on demand | ██████████ 5/5 | confirmed ✓ |
 | KS7 | Platform catch-up - posture, hooks, usage, lifecycle, context economics | ██████████ 5/5 | confirmed ✓ |
 | KS6 | Quality lane - hygiene that buys design | ██████████ 4/4 | confirmed ✓ |
-| KS4 | Verification that can't be gamed | ░░░░░░░░░░ 0/5 | todo |
+| KS4 | Verification that can't be gamed | ██░░░░░░░░ 1/5 | **← active** |
 | KS8 | Interop - the run as a readable artifact (cut-first) | ░░░░░░░░░░ 0/2 | todo |
 | KS12 | Ship edge - close the era | ░░░░░░░░░░ 0/3 | todo |
 
@@ -53,11 +53,11 @@ _Updated 2026-08-19 12:56 UTC · branch `feat/karvansara-edge` · HEAD `20e1eab`
 
 </details>
 
-<details><summary>KS4 — Verification that can't be gamed (0/5)</summary>
+<details><summary>KS4 — Verification that can't be gamed (1/5)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| KS4.1 | Holdout gates: a visibility holdout gate class excluded from prompts, tool contract and agent-readable logs, run only at verdict time; grep of composed prompt + transcript proves absence; a seeded gaming fake-agent passes visible gates, fails holdout, verdict red | ⬜ TODO | - |
+| KS4.1 | Holdout gates: a visibility holdout gate class excluded from prompts, tool contract and agent-readable logs, run only at verdict time; grep of composed prompt + transcript proves absence; a seeded gaming fake-agent passes visible gates, fails holdout, verdict red | ✅ DONE | - |
 | KS4.2 | Regression gate class (PASS-TO-PASS semantics): nothing-that-worked-broke as a named class with distinct reporting; a seeded regression flips the verdict with the class named in evidence | ⬜ TODO | - |
 | KS4.3 | Mutation gate kind: mutation-score >= threshold, diff-scoped, Stryker.NET first; a checkpoint adding tests must clear the score on changed files; an era-boundary run on conductor's own suite recorded | ⬜ TODO | - |
 | KS4.4 | Worktree-per-stage-attempt: each attempt in a worktree, failed attempt drops the tree, verdict receives the clean attempt diff, merge ff-only on green, never branch -D an unmerged branch (lanes L1.3 fix per ND-8, amendment committed); Windows lock/removal proven; orphan sweep at startup | ⬜ TODO | - |
@@ -102,6 +102,7 @@ _Updated 2026-08-19 12:56 UTC · branch `feat/karvansara-edge` · HEAD `20e1eab`
 | 12 | KS6 | Deliver | 1 | 08-19 01:33 | 0:33 | Advanced | KS6.2 | 5 | engine-fast:OK · face-fast:OK | $12.1019 | $0.0086 | 199,951/114,585 |
 | 13 | KS6 | Deliver | 1 | 08-19 11:48 | 0:24 | Advanced | KS6.3 | 4 | engine-fast:OK · face-fast:OK | $7.6448 | $0.0102 | 141,705/85,286 |
 | 14 | KS6 | Deliver | 1 | 08-19 12:15 | 0:35 | Advanced | KS6.4 | 4 | engine-fast:OK · face-fast:OK | $10.9090 | $0.0105 | 193,920/121,109 |
+| 15 | KS4 | Deliver | 1 | 08-19 12:56 | 0:43 | Advanced | KS4.1 | 3 | engine-fast:OK · face-fast:OK | $17.6885 | $0.0101 | 217,984/101,516 |
 
 ## Money
 
@@ -122,11 +123,6 @@ _Where the money goes: agent $181.59 (100%) · gate $0.13 (0%) · blended $0.74/
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-19 01:11:23  ▪ gate face-full pass [phase]  (5.1s)
-08-19 01:11:23  • session #10 KS7 Fix started (attempt 2/10)
-08-19 01:35:49  ▪ gate engine-fast pass [session]  (1m28s)
-08-19 01:35:49  ▪ gate face-fast pass [session]  (25.4s)
-08-19 01:35:50  • session #10 KS7 → Progress · 2 commit(s)  (24m26s)
 08-19 01:39:49  ▪ gate engine-fast pass [phase]  (0.0s)
 08-19 01:39:49  ▪ gate face-fast pass [phase]  (0.0s)
 08-19 01:39:49  ▪ gate engine-full pass [phase]  (3m50s)
@@ -162,6 +158,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-19 13:56:59  ✓ checkpoint KS6.2 confirmed
 08-19 13:56:59  ✓ checkpoint KS6.3 confirmed
 08-19 13:56:59  ✓ checkpoint KS6.4 confirmed
+08-19 13:56:59  ▸ stage KS6 confirmed  (12h17m08s)
+08-19 13:56:59  ▸ stage KS4 entered — Verification that can't be gamed
+08-19 13:56:59  • session #15 KS4 Deliver started (attempt 1/10)
+08-19 14:42:18  ▪ gate engine-fast pass [session]  (1m11s)
+08-19 14:42:18  ▪ gate face-fast pass [session]  (29.5s)
 ```
 
 ## Health
@@ -169,7 +170,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 14 · retries 1 (7 %) · overall Warn
+sessions 15 · retries 1 (7 %) · overall Warn
 ⚠ [context-saturation] session #11: 28,600,968 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #3: 28,433,638 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 25,994,603 context tokens (≥ 20,000,000)
@@ -182,14 +183,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvansara-edge
-working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
+working tree: clean
 ```
 
 ### Commits by session
 
-- **s7 (KS7 Deliver)** — 2 commit(s):
-  - [`cf2bfb7`](https://github.com/shaahink/conductor/commit/cf2bfb7) docs(ks7): the KS7.2 evidence, the architecture section, and a decision recorded
-  - [`5b8d56e`](https://github.com/shaahink/conductor/commit/5b8d56e) feat(ks7): hooks as ground truth - the call the agent made, not the one it printed
 - **s8 (KS7 Deliver)** — 3 commit(s):
   - [`ba39a6d`](https://github.com/shaahink/conductor/commit/ba39a6d) feat(ks7): gate output spills to a file, and the prompt-side accounting that reframes KS7.5
   - [`87b5364`](https://github.com/shaahink/conductor/commit/87b5364) feat(ks7): a fix session branches off the work it is fixing, and the lineup is measured
@@ -219,6 +217,10 @@ working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
   - [`67be608`](https://github.com/shaahink/conductor/commit/67be608) docs(ks6): the KS6.4 evidence - what moved, and the metric that cannot reward it
   - [`a8a9066`](https://github.com/shaahink/conductor/commit/a8a9066) refactor(ks6): the verdict leaves the loop - gather, decide, apply
   - [`5da5260`](https://github.com/shaahink/conductor/commit/5da5260) feat(ks6): the evidence taxonomy as data, and a verdict function with no loop in it
+- **s15 (KS4 Deliver)** — 3 commit(s):
+  - [`cf5890f`](https://github.com/shaahink/conductor/commit/cf5890f) docs(ks4): the KS4.1 handoff - the rule the next checkpoint should reuse, and a build that lies
+  - [`daa6e8c`](https://github.com/shaahink/conductor/commit/daa6e8c) feat(ks4): the gaming agent that passes every gate it can see, and goes red anyway
+  - [`3365a3d`](https://github.com/shaahink/conductor/commit/3365a3d) feat(ks4): the holdout gate class - redacted where it is produced, not where it is shown
 
 ## Phase handovers (audit)
 
@@ -241,36 +243,36 @@ working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> **KS6.4 landed - pure verdict function extracted, taxonomy testable without the loop**
-> - EvaluateSessionAsync cyclomatic 70 to 11, VerdictEngine.cs 483 to 171 lines, partial count still 9; 2941 tests green with no existing test edited, 121 of them live fake-agent rigs driving the refactored verdict path end to end.
-> - KS4.5's seam is built AND its exit criterion already asserted: AdvisoryRows on SessionEvidence, plus a behavioural invariance test over 76 combinations and a total source rule. Decide never needs to change for KS4.5.
-> - Measured finding: VerdictEngine CA1506 went 144 to 152 UP, because CA1506 counts types depended on and an explicit seam adds types. RunLoop still binds Conductor.Core at 182, as KS6.3 predicted.
+> **KS4.1 landed - holdout gates the agent cannot see, name, discover or run**
+> - Redaction moved to where the result is produced, not where it is shown; 14+ leak surfaces closed structurally by one change in GateRunner, four direct plan.Gates readers via VisibleOnly
+> - Seeded gaming agent passes the visible battery, claims its checkpoint, commits, ends GatesRed; contrast leg green; absence proved by byte-scanning the whole working tree with three controls
+> - Bug #57 filed: dotnet build flaps red on reused MSBuild nodes because Roslyn matches .editorconfig case-sensitively; build with -nr:false
 >
-> artefacts: 5da5260, a8a9066, 67be608, 20e1eab, src/Conductor.Core/Orchestration/SessionVerdict.cs, SessionEvidence.cs, VerdictDecision.cs, VerdictDisposition.cs
+> artefacts: 3365a3d, daa6e8c, cf5890f, src/Conductor.Core/Models/GateVisibility.cs, src/Conductor.Core/Models/HoldoutGateSource.cs, src/Conductor.Core/Models/GateRules.cs, src/Conductor.Core/GateRunner.cs, tests/Conductor.Tests/KS4_1HoldoutGatesTests.cs
 >
-> evidence: .conductor/evidence/KS6/KS6.4-pure-verdict-function.md, .conductor/evidence/KS6/KS6.4-live-verdict-path.log
+> evidence: .conductor/evidence/KS4/KS4.1-holdout-gates.md, .conductor/evidence/KS4/KS4.1-full-suite.txt, .conductor/evidence/KS4/KS4.1-test-run.txt
 >
-> gaps: none red. Carried to KS12.1's closure ledger: CA1506 cannot reward a type-introducing extraction, so no checkpoint should use "coupling drops" as an exit. Bugs #53/#54/#55 still open, untouched by this stage.
+> gaps: KS4.2-4.5 untouched. Holdout output is dropped rather than routed to an owner-only channel - deliberate fail-closed choice, no owner-side view of why a holdout failed beyond running its command by hand. Bug #57 open and can redden a battery for machine reasons.
 
 ## Tracker handoff
 
 ```
-last: KS6.4 DONE (5da5260, a8a9066, 67be608) - KS6 is now complete, 4/4. SessionVerdict.Decide is a
-  pure total function over SessionEvidence; EvaluateSessionAsync is gather/decide/apply and buys the
-  gate battery only when the free rows have not settled the session. 34 tests drive the taxonomy with
-  no RunContext; 2941 green, no existing test edited. Evidence: .conductor/evidence/KS6/KS6.4-pure-verdict-function.md
-KS4.5 SHOULD READ SECTION 6 OF THAT EVIDENCE BEFORE IT PLANS: its seam already exists (AdvisoryRows on
-  SessionEvidence) and its exit criterion - no code path lets a judge score flip a gate verdict - is
-  ALREADY ASSERTED by two tests written before the judge exists. Decide never needs to change; extend
-  the advisory variants in AnAdvisoryRowNeverChangesAVerdict and leave the source rule alone.
-MEASURED TRAP, and it is about the instrument: VerdictEngine CA1506 went 144 -> 152 UP. CA1506 counts
-  distinct types depended on, so an extraction into new types RAISES coupling on its origin unless the
-  new types replace more than they add. Never write an exit criterion of the form "the coupling drops".
-  RunLoop still binds Conductor.Core at 182. The architecture ratchet caught this refactor twice and
-  was right twice - both fixed in code, architecture-baseline.json untouched.
-next: KS4 opens. Bugs #53/#54/#55 still open.
+last: KS4.1 DONE (3365a3d, daa6e8c). The visibility:holdout gate class - GateConfig.Visibility, the
+  root key holdoutGates, and GateRunner.RunAllAsync(includeHoldout) whose FALSE DEFAULT is the whole
+  checkpoint: GateOrchestrator is the only caller that opts in, asserted by a source scan. 19 tests,
+  2960 green. Evidence: .conductor/evidence/KS4/KS4.1-holdout-gates.md
+THE RULE KS4.2 SHOULD REUSE: do not redact at the surfaces. A gate's name or command reaches the
+  agent through 14+ routes (the tools block pastes a COMMAND into every prompt; conductor.log prints
+  the exact command line inside the agent's own tree; run_query is raw SQL over the gates table).
+  GateRunner now returns a result that never held the secret, so every renderer downstream is correct
+  without knowing holdouts exist. Only code reading plan.Gates DIRECTLY needs VisibleOnly.
+MEASURED TRAP, bug #57, caused by no code: dotnet build Conductor.slnx FLAPS red with 100+ MA00xx
+  errors in untouched files. A reused MSBuild node carries the cwd spelled C:\Code\conductor and
+  Roslyn matches .editorconfig by CASE-SENSITIVE path prefix, so every severity override is dropped.
+  Build with -nr:false always - this can turn a gate battery red for no reason in the tree.
+next: KS4.2 regression gate class. Bugs #53/#54/#55/#57 open.
 ```

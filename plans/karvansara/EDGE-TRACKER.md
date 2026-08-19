@@ -2,22 +2,24 @@
 
 **Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
-## Handoff (overwrite this block, ≤ 12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS4.1 DONE (3365a3d, daa6e8c). The visibility:holdout gate class - GateConfig.Visibility, the
-  root key holdoutGates, and GateRunner.RunAllAsync(includeHoldout) whose FALSE DEFAULT is the whole
-  checkpoint: GateOrchestrator is the only caller that opts in, asserted by a source scan. 19 tests,
-  2960 green. Evidence: .conductor/evidence/KS4/KS4.1-holdout-gates.md
-THE RULE KS4.2 SHOULD REUSE: do not redact at the surfaces. A gate's name or command reaches the
-  agent through 14+ routes (the tools block pastes a COMMAND into every prompt; conductor.log prints
-  the exact command line inside the agent's own tree; run_query is raw SQL over the gates table).
-  GateRunner now returns a result that never held the secret, so every renderer downstream is correct
-  without knowing holdouts exist. Only code reading plan.Gates DIRECTLY needs VisibleOnly.
-MEASURED TRAP, bug #57, caused by no code: dotnet build Conductor.slnx FLAPS red with 100+ MA00xx
-  errors in untouched files. A reused MSBuild node carries the cwd spelled C:\Code\conductor and
-  Roslyn matches .editorconfig by CASE-SENSITIVE path prefix, so every severity override is dropped.
-  Build with -nr:false always - this can turn a gate battery red for no reason in the tree.
-next: KS4.2 regression gate class. Bugs #53/#54/#55/#57 open.
+last: KS4.2 DONE (8d649ea, 6c9168a). `class: regression`, PASS-TO-PASS. A gate that EXITS 0 is red
+  when a check that passed earlier in this run is no longer reported passing - deleted, renamed,
+  skipped, filtered out. One line carries it everywhere (GateResult.IsGreen); the reporting is
+  deliberately NOT shared (glyph REGRESSION, its own fix-brief block, its own verdict reason).
+  Baseline advances only on a clean pass, so a deletion cannot be laundered by one red session.
+  23 new tests, 447 green in the affected classes. Evidence: .conductor/evidence/KS4/KS4.2-regression-gates.md
+THE RULE KS4.3 SHOULD REUSE: a new failure SHAPE must be walked to every renderer, and only a live
+  rig finds them. There are TWO fix-brief renderers - GateRunner.FailureDetails (conductor gate,
+  workflow path) and GateFailureSpill.Render (every ordinary session) - and my unit test was green
+  while the live fix session was handed "(no gate output captured)". Read the composed prompt off disk.
+RIG FACTS, measured: VerifyEachDelivery DEFAULTS TRUE, so History[1] in a multi-session rig is the
+  verifier, not session 2. And a cmd.exe fake agent DIES on a fix session (prompt is an argument,
+  cmd caps at 8191 chars, the fix prompt is 8.1k) - use powershell.exe.
+DB WARNING: the tree is schema v15 now (gate_pass_sets); the installed engine driving this run is
+  v14 and REFUSES a newer db. Never point a fresh build at this repo's .conductor/run.db.
+next: KS4.3 mutation gate kind (Stryker.NET, diff-scoped). Bugs #53/#54/#55/#57 open.
 
 
 ## Baseline numbers (from run.db)
@@ -25,8 +27,8 @@ next: KS4.2 regression gate class. Bugs #53/#54/#55/#57 open.
 | Metric | Value |
 |---|---|
 | Total checkpoints | 24 |
-| Done | 10 |
-| Claimed (unconfirmed) | 4 |
+| Done | 14 |
+| Claimed (unconfirmed) | 1 |
 
 ## Checkpoints
 
@@ -57,16 +59,16 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS6.1 | Curated Roslynator set (~25 design-shaped rules) as errors, everything else explicitly off, each rule adopted with a one-line reason | DONE | af6d93e | .conductor/evidence/KS6/KS6.1-curated-roslynator.md |
-| KS6.2 | Analyzer-debt count ratchet extending ratchet.ps1 semantics; the referee not editable by the agent - a seeded baseline rewrite goes red | DONE | 0cb514d | .conductor/evidence/KS6/KS6.2-analyzer-debt-ratchet.md |
-| KS6.3 | Complexity budgets (CA1502/1505/1506) with ratchets; first targets the largest partial surfaces - VerdictEngine (8 files) and ControlPlaneServer (11) | DONE | 094c5c3 | .conductor/evidence/KS6/KS6.3-complexity-budgets.md |
-| KS6.4 | The pure evidence-to-verdict function extracted from VerdictEngine - the taxonomy testable without the loop; the seam KS4.5 plugs into | DONE | 5da5260 | .conductor/evidence/KS6/KS6.4-pure-verdict-function.md |
+| KS6.1 | Curated Roslynator set (~25 design-shaped rules) as errors, everything else explicitly off, each rule adopted with a one-line reason | DONE ✓ | af6d93e | .conductor/evidence/KS6/KS6.1-curated-roslynator.md |
+| KS6.2 | Analyzer-debt count ratchet extending ratchet.ps1 semantics; the referee not editable by the agent - a seeded baseline rewrite goes red | DONE ✓ | 0cb514d | .conductor/evidence/KS6/KS6.2-analyzer-debt-ratchet.md |
+| KS6.3 | Complexity budgets (CA1502/1505/1506) with ratchets; first targets the largest partial surfaces - VerdictEngine (8 files) and ControlPlaneServer (11) | DONE ✓ | 094c5c3 | .conductor/evidence/KS6/KS6.3-complexity-budgets.md |
+| KS6.4 | The pure evidence-to-verdict function extracted from VerdictEngine - the taxonomy testable without the loop; the seam KS4.5 plugs into | DONE ✓ | 5da5260 | .conductor/evidence/KS6/KS6.4-pure-verdict-function.md |
 
 ### KS4 — Verification that can't be gamed
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS4.1 | Holdout gates: a visibility holdout gate class excluded from prompts, tool contract and agent-readable logs, run only at verdict time; grep of composed prompt + transcript proves absence; a seeded gaming fake-agent passes visible gates, fails holdout, verdict red | TODO | - | - |
+| KS4.1 | Holdout gates: a visibility holdout gate class excluded from prompts, tool contract and agent-readable logs, run only at verdict time; grep of composed prompt + transcript proves absence; a seeded gaming fake-agent passes visible gates, fails holdout, verdict red | DONE | 3365a3d | .conductor/evidence/KS4/KS4.1-holdout-gates.md |
 | KS4.2 | Regression gate class (PASS-TO-PASS semantics): nothing-that-worked-broke as a named class with distinct reporting; a seeded regression flips the verdict with the class named in evidence | TODO | - | - |
 | KS4.3 | Mutation gate kind: mutation-score >= threshold, diff-scoped, Stryker.NET first; a checkpoint adding tests must clear the score on changed files; an era-boundary run on conductor's own suite recorded | TODO | - | - |
 | KS4.4 | Worktree-per-stage-attempt: each attempt in a worktree, failed attempt drops the tree, verdict receives the clean attempt diff, merge ff-only on green, never branch -D an unmerged branch (lanes L1.3 fix per ND-8, amendment committed); Windows lock/removal proven; orphan sweep at startup | TODO | - | - |
