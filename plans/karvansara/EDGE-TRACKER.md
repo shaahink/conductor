@@ -26,7 +26,7 @@ next: KS6.4, the funded VerdictEngine extraction. Bugs #53/#54/#55 still open.
 |---|---|
 | Total checkpoints | 24 |
 | Done | 10 |
-| Claimed (unconfirmed) | 2 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -59,7 +59,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | KS6.1 | Curated Roslynator set (~25 design-shaped rules) as errors, everything else explicitly off, each rule adopted with a one-line reason | DONE | af6d93e | .conductor/evidence/KS6/KS6.1-curated-roslynator.md |
 | KS6.2 | Analyzer-debt count ratchet extending ratchet.ps1 semantics; the referee not editable by the agent - a seeded baseline rewrite goes red | DONE | 0cb514d | .conductor/evidence/KS6/KS6.2-analyzer-debt-ratchet.md |
-| KS6.3 | Complexity budgets (CA1502/1505/1506) with ratchets; first targets the largest partial surfaces - VerdictEngine (8 files) and ControlPlaneServer (11) | TODO | - | - |
+| KS6.3 | Complexity budgets (CA1502/1505/1506) with ratchets; first targets the largest partial surfaces - VerdictEngine (8 files) and ControlPlaneServer (11) | DONE | 094c5c3 | .conductor/evidence/KS6/KS6.3-complexity-budgets.md |
 | KS6.4 | The pure evidence-to-verdict function extracted from VerdictEngine - the taxonomy testable without the loop; the seam KS4.5 plugs into | TODO | - | - |
 
 ### KS4 — Verification that can't be gamed
