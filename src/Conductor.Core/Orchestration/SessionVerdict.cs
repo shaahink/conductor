@@ -197,7 +197,11 @@ public static class SessionVerdict
         // Deliver is guarded by the regression class explicitly, and stays guarded if a later change
         // ever lets a regressing battery report green.
         var regressed = e.Regressions.Count > 0;
-        if (e.GatesGreen && !regressed && delivered && !e.AgentErrored)
+        // KS4.3: the two named classes are red for reasons an exit code does not carry, so they are
+        // asked as one question everywhere the verdict branches and answered separately only where
+        // the reader is TOLD what happened.
+        var classRed = regressed || e.MutationShortfalls.Count > 0;
+        if (e.GatesGreen && !classRed && delivered && !e.AgentErrored)
         {
             return new VerdictDecision
             {
@@ -209,7 +213,7 @@ public static class SessionVerdict
         }
 
         var outcome = e.AgentErrored ? SessionOutcome.AgentError
-                    : regressed ? SessionOutcome.GatesRed
+                    : classRed ? SessionOutcome.GatesRed
                     : e.GatesGreen ? SessionOutcome.NoProgress
                     : SessionOutcome.GatesRed;
 
@@ -229,11 +233,30 @@ public static class SessionVerdict
                 Disposition = VerdictDisposition.QueueFix,
                 Outcome = outcome,
                 Attempts = AttemptEffect.Increment,
-                Reason = regressed ? RegressionReason(e.Regressions) : "",
-                Log = regressed ? "verdict: " + RegressionReason(e.Regressions) : null,
+                Reason = classRed ? ClassReason(e) : "",
+                Log = classRed ? "verdict: " + ClassReason(e) : null,
                 ReturnToIdle = true,
             };
     }
+
+    /// <summary>KS4.2/KS4.3: the verdict in the class's own words, and both classes if both fired.
+    /// Joined rather than ranked — a session that deleted a check AND left mutants alive has two
+    /// things to fix, and picking one of them for the fix brief loses the other.</summary>
+    private static string ClassReason(SessionEvidence e)
+        => string.Join(" | ", new[]
+        {
+            e.Regressions.Count > 0 ? RegressionReason(e.Regressions) : null,
+            e.MutationShortfalls.Count > 0 ? MutationReason(e.MutationShortfalls) : null,
+        }.OfType<string>());
+
+    /// <summary>KS4.3: said as the class means it. "a gate failed" is wrong twice over here — the
+    /// gate exited 0, and what is broken is the tests rather than the code under them.</summary>
+    private static string MutationReason(IReadOnlyList<MutationEvidence> rows)
+        => "mutation class (mutation score): " + string.Join("; ", rows.Select(r => r.Note is { } note
+            ? $"gate '{r.Gate}' {note}"
+            : $"gate '{r.Gate}' passed but the suite killed only {r.Score:0.##}% of the {r.Counted} mutants " +
+              $"planted in the changed files (bar {r.Threshold:0.##}%) — {r.Survivors.Count} survived: " +
+              $"{string.Join(", ", r.Survivors.Take(5))}{(r.Survivors.Count > 5 ? $" (and {r.Survivors.Count - 5} more)" : "")}"));
 
     /// <summary>KS4.2: the verdict said in the class's own words. "a gate failed" sends a fix session
     /// looking for a failing assertion that does not exist — the gate exited 0.</summary>

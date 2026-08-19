@@ -52,5 +52,30 @@ public static class GateRules
         foreach (var g in gates.Where(g => g.IsRegression && g.IsHoldout))
             yield return $"gate '{g.Name}' is both '{GateVisibility.Holdout}' and '{GateClass.Regression}' — a regression " +
                          "reports the checks that stopped passing by name, which is exactly what a holdout may not do";
+
+        // KS4.3, the same shape as the regression rules above and for the same reason: a mutation
+        // gate whose report the engine cannot find or whose bar is unset is an ordinary gate wearing
+        // the name of a stronger one, and the exit code would never say so.
+        foreach (var g in gates.Where(g => g.IsMutation && !MutationConfig.IsKnownFormat(g.Mutation?.Format)))
+            yield return $"gate '{g.Name}' is class '{GateClass.Mutation}' but its mutation.format is " +
+                         $"'{g.Mutation?.Format ?? "(unset)"}' — a mutation gate must say how its report is read " +
+                         $"({string.Join(", ", MutationConfig.Formats)})";
+
+        foreach (var g in gates.Where(g => g.IsMutation && string.IsNullOrWhiteSpace(g.Mutation?.Path)))
+            yield return $"gate '{g.Name}' is class '{GateClass.Mutation}' but declares no mutation.path — the engine " +
+                         "scores the report the gate wrote, so it has to be told where the gate wrote it";
+
+        // A zero threshold is the switch-it-off value and reads in a plan diff as a number rather
+        // than as a removal, so it is refused rather than honoured. Above 100 is unreachable, which
+        // is a gate that can only ever be red.
+        foreach (var g in gates.Where(g => g.IsMutation && g.Mutation is { } m && (m.Threshold <= 0 || m.Threshold > 100)))
+            yield return $"gate '{g.Name}' has mutation.threshold {g.Mutation!.Threshold} — a mutation score is a " +
+                         "percentage, so the bar has to be above 0 and at most 100";
+
+        // Refused for the reason the regression/holdout pair is: the fix brief for this class NAMES
+        // the surviving mutants, file and line, and that is the one thing a holdout may not say.
+        foreach (var g in gates.Where(g => g.IsMutation && g.IsHoldout))
+            yield return $"gate '{g.Name}' is both '{GateVisibility.Holdout}' and '{GateClass.Mutation}' — a mutation " +
+                         "gate reports the surviving mutants by file and line, which is exactly what a holdout may not do";
     }
 }

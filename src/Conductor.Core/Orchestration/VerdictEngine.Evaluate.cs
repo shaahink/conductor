@@ -227,6 +227,12 @@ public sealed partial class VerdictEngine
             // own row so the verdict can name it rather than reporting "a gate failed".
             Regressions = gates.Where(g => g.HasRegressions)
                 .Select(g => new RegressionEvidence(g.Name, g.Regressions, g.RegressionNote)).ToList(),
+            // KS4.3: the same, for the mutation class. A separate row rather than a second kind of
+            // regression, because the fix they ask for is the opposite one - a regression says put
+            // back the check you removed, a shortfall says the checks you kept assert nothing.
+            MutationShortfalls = gates.Where(g => g.HasMutationShortfall && g.Mutation is not null)
+                .Select(g => new MutationEvidence(g.Name, g.Mutation!.Score, g.Mutation.Threshold,
+                    g.Mutation.Counted, g.Mutation.Survivors, g.Mutation.Note)).ToList(),
             WorkCommitCount = workCommits.Count,
             NewlyDoneCount = rec.NewlyDone.Count,
             NewlyBlocked = newlyBlocked,

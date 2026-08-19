@@ -8,3 +8,7 @@ publish/
 *.log
 .claude/settings.local.json
 TestResults/
+
+# KS4.3: Stryker.NET writes its run into a timestamped output tree; the report the mutation
+# gate reads is an artifact, not a source.
+StrykerOutput/

@@ -1,10 +1,11 @@
 namespace Conductor.Models;
 
 /// <summary>
-/// KS4.2 — the gate <b>class</b>. Where <see cref="GateVisibility"/> says who may see a gate, this
-/// says what KIND of assertion the gate makes, and the one kind that is not "run this and read the
-/// exit code" is <see cref="Regression"/>: SWE-bench's PASS_TO_PASS semantics, <i>nothing that
-/// worked before is broken now</i>.
+/// KS4.2/KS4.3 — the gate <b>class</b>. Where <see cref="GateVisibility"/> says who may see a gate,
+/// this says what KIND of assertion the gate makes. Two of the three are not "run this and read the
+/// exit code": <see cref="Regression"/> is SWE-bench's PASS_TO_PASS semantics, <i>nothing that
+/// worked before is broken now</i>, and <see cref="Mutation"/> is <i>the tests you just wrote can
+/// actually tell a broken implementation from a working one</i>.
 /// </summary>
 /// <remarks>
 /// <para><b>Why an exit code cannot say it.</b> A test command answers one question — is anything
@@ -39,8 +40,12 @@ public static class GateClass
     /// the last set it reported. See the remarks on <see cref="GateClass"/>.</summary>
     public const string Regression = "regression";
 
+    /// <summary>KS4.3. The gate's exit code AND the mutation score the engine computes from the
+    /// gate's report, over the files THIS BRANCH CHANGED. See <see cref="MutationConfig"/>.</summary>
+    public const string Mutation = "mutation";
+
     /// <summary>The accepted spellings, for the plan-load refusal message.</summary>
-    public static readonly string[] Known = [Standard, Regression];
+    public static readonly string[] Known = [Standard, Regression, Mutation];
 
     public static bool IsKnown(string? value)
         => value is null || Known.Contains(value.Trim(), StringComparer.OrdinalIgnoreCase);
@@ -55,4 +60,18 @@ public static class GateClass
     public const string EmptyPassSetNotice =
         "exited 0 but reported no passing checks at all — a regression gate that cannot be read is " +
         "treated as red, because 'the pass set moved' and 'everything passed' are the same exit code";
+
+    /// <summary>KS4.3, and deliberately not "FAIL" for the same reason <see cref="Glyph"/> is not: a
+    /// mutation gate that is red EXITED 0. A reader who sees FAIL looks for a failing assertion and
+    /// finds a green suite, which is precisely the state this class exists to call out.</summary>
+    public const string MutationGlyph = "MUTANTS";
+
+    /// <summary>KS4.3 fail-closed: the branch changed mutable source and the gate's report covers
+    /// none of it. Indistinguishable from a perfect score by exit code alone, and the cheapest way
+    /// there is to switch this class off from inside the repo — point the report path at a stale
+    /// file, or narrow the mutate glob until the changed file falls outside it.</summary>
+    public const string UnreadableMutationNotice =
+        "exited 0, but its mutation report scores none of the source files this branch changed — a " +
+        "mutation gate that cannot be read over the diff is treated as red, because 'the report is " +
+        "stale or mis-scoped' and 'every mutant died' are the same exit code";
 }

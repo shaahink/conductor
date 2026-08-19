@@ -3,6 +3,23 @@ using Conductor.Models;
 
 namespace Conductor.Core;
 
+/// <summary>
+/// KS4.3 — what the mutation class found on one gate: the score the ENGINE computed from the report
+/// the gate wrote, over the files this branch changed, and the bar it had to clear.
+/// </summary>
+/// <remarks>A finding exists on every mutation gate that ran, green or red, because the score is
+/// worth recording when it passes too — it is the number the era-boundary run is made of. What makes
+/// it red is <see cref="IsShortfall"/>, and a <see cref="Note"/> is the fail-closed case: the class
+/// could not be evaluated at all, which is red rather than absent.</remarks>
+public sealed record MutationFinding(
+    double? Score, double Threshold, int Counted, int Survived, int NoCoverage,
+    IReadOnlyList<string> Survivors, string? Note)
+{
+    /// <summary>Red. Note that <c>Score is null</c> alone is NOT a shortfall — a branch that changed
+    /// no mutable source has nothing to score, and that case carries no finding at all.</summary>
+    public bool IsShortfall => Note is not null || (Score is { } s && s < Threshold);
+}
+
 public sealed record GateResult(string Name, bool Passed, bool Skipped, bool Optional, int ExitCode, TimeSpan Duration, string Tail)
 {
     public bool Cached { get; init; }
@@ -26,12 +43,24 @@ public sealed record GateResult(string Name, bool Passed, bool Skipped, bool Opt
     /// <summary>KS4.2: the one predicate the rest of the engine asks. Note that a gate can PASS and
     /// have this true — that is the whole point of the class.</summary>
     public bool HasRegressions => Regressions.Count > 0 || RegressionNote is not null;
+    /// <summary>KS4.3: what the mutation class measured on this gate, or null on every other gate —
+    /// and on a mutation gate whose branch changed no mutable source, which is not a failure.</summary>
+    public MutationFinding? Mutation { get; init; }
+    /// <summary>KS4.3: the mutation score is below its threshold, or could not be read at all.</summary>
+    public bool HasMutationShortfall => Mutation is { IsShortfall: true };
+    /// <summary>KS4.2/KS4.3: this gate is red for a reason its EXIT CODE does not carry. Every place
+    /// that filters a battery for "what went wrong" has to ask this and not <c>!Passed</c>, or the
+    /// one failure the classes exist to surface is the one the reader is not shown.</summary>
+    public bool HasClassFailure => HasRegressions || HasMutationShortfall;
     /// <summary>SC4.1: wall time the discarded first attempt burned. Counted in the cost estimate,
     /// kept OUT of <see cref="Duration"/> so a duration-vs-last-pass comparison stays like-for-like.</summary>
     public TimeSpan FirstAttemptDuration { get; init; }
-    // KS4.2: the regression is checked FIRST because it is the case the other glyphs get wrong. A
-    // regressing gate exited 0, so every branch below it would spell it OK.
+    // KS4.2/KS4.3: the class failures are checked FIRST because they are the case the other glyphs
+    // get wrong. A regressing or under-mutation-score gate exited 0, so every branch below would
+    // spell it OK. They keep separate words: a reader sent to look for a deleted test when what
+    // happened is an unkilled mutant has been sent to the wrong file.
     public string Glyph => HasRegressions ? (Optional ? GateClass.Glyph + "-warn" : GateClass.Glyph)
+        : HasMutationShortfall ? (Optional ? GateClass.MutationGlyph + "-warn" : GateClass.MutationGlyph)
         : Cached ? "cached" : Skipped ? "-"
         : Passed ? (Retried ? "OK-retry" : "OK")
         : Optional ? "warn" : (Retried ? "FAIL-retry" : "FAIL");
@@ -45,7 +74,7 @@ public sealed record GateResult(string Name, bool Passed, bool Skipped, bool Opt
     /// other consumer of <see cref="GateRunner.AllRequiredPassed"/> treat it as red without knowing
     /// the class exists. An <see cref="Optional"/> gate keeps its contract — it reports and never
     /// blocks — which is also the only way to declare a regression gate you are still calibrating.</summary>
-    public bool IsGreen => Skipped || Cached || Optional || (Passed && !HasRegressions);
+    public bool IsGreen => Skipped || Cached || Optional || (Passed && !HasClassFailure);
 }
 
 public static class GateRunner
@@ -100,7 +129,10 @@ public static class GateRunner
             // the same HEAD over different working trees share a key. For an ordinary gate that
             // costs a stale pass; for this class it costs the only look at whether a check that used
             // to pass still exists, which is the one thing the class is for.
-            if (db != null && runId != null && headSha != null && !gate.IsHoldout && !gate.IsRegression)
+            // KS4.3: and a mutation gate is excluded for the same reason — its verdict is computed
+            // from a report on disk against the CURRENT diff, so a cached pass from an earlier
+            // battery at this HEAD would answer for a different set of changed files.
+            if (db != null && runId != null && headSha != null && !gate.IsHoldout && !gate.IsClassed)
             {
                 var cachedResult = db.GetLastPassingGateResult(runId, gate.Name, gate.Tier, CacheKey(plan, gate, headSha));
                 if (cachedResult is true)
@@ -184,6 +216,15 @@ public static class GateRunner
             results[i] = ApplyRegressionClass(gates[i], r, db, runId, headSha, onProgress);
         }
 
+        // KS4.3: the mutation class, on the same terms and after the same retries. Only a gate that
+        // PASSED is scored: a Stryker run that fell over wrote no report, and reading "0% of nothing"
+        // out of that would report an unkilled-mutant problem where the real one is a broken runner.
+        for (var i = 0; i < gates.Count && !ct.IsCancellationRequested; i++)
+        {
+            if (!gates[i].IsMutation || results[i] is not { } r || !r.Passed || r.Skipped || r.Cached) continue;
+            results[i] = await ApplyMutationClassAsync(plan, gates[i], r, onProgress, ct).ConfigureAwait(false);
+        }
+
         // any not-yet-populated slots (e.g. cancelled before reached) get a skipped placeholder
         return results.Select((r, i) => r ?? new GateResult(Label(gates[i]), false, true, gates[i].Optional, 0, TimeSpan.Zero, "not run (cancelled)")
         { Holdout = gates[i].IsHoldout }).ToList();
@@ -234,6 +275,59 @@ public static class GateRunner
         onProgress?.Invoke($"gate {gate.Name}: {GateClass.Glyph} — the gate exited 0, but {lost.Count} check(s) " +
                            $"that passed before no longer pass: {Names(lost)}");
         return result with { Regressions = lost };
+    }
+
+    /// <summary>KS4.3 — the whole of the mutation decision for one passing mutation gate: work out
+    /// which files this branch changed, score the gate's report over exactly those, and compare the
+    /// result to the plan's threshold.</summary>
+    /// <remarks>
+    /// <para>Three outcomes, and the middle one is the one worth naming. <b>Nothing to score</b> — the
+    /// branch changed no mutable source — carries no finding and is green, because a docs checkpoint
+    /// has no mutants and pretending otherwise would teach everyone to ignore the class. <b>Nothing
+    /// readable</b> — it changed mutable source and the report scores none of it — is RED, because
+    /// that is what a stale report, a mis-pointed path and a narrowed mutate glob all look like, and
+    /// none of them is distinguishable from a perfect score by exit code. <b>A number</b> is compared
+    /// to the bar.</para>
+    /// </remarks>
+    internal static async Task<GateResult> ApplyMutationClassAsync(
+        PlanConfig plan, GateConfig gate, GateResult result, Action<string>? onProgress, CancellationToken ct)
+    {
+        if (gate.Mutation is not { } cfg) return result;
+        var cwd = ResolveCwd(plan, gate);
+
+        IReadOnlyCollection<string>? scope = null;
+        if (!cfg.WholeReport)
+        {
+            var changed = Git.ChangedFiles(plan.Repo, cfg.BaseRev)
+                .Where(MutationConfig.IsMutableSource).ToList();
+            if (changed.Count == 0)
+            {
+                onProgress?.Invoke($"gate {gate.Name}: nothing to score — this branch changed no mutable source against {cfg.BaseRev}");
+                return result;
+            }
+            scope = changed;
+        }
+
+        var score = await MutationReportReader.ReadFileAsync(cfg, cwd, scope, ct).ConfigureAwait(false);
+        var where = MutationReportReader.Locate(cfg, cwd) ?? cfg.Path;
+        if (score is null || score.Counted == 0)
+        {
+            var note = $"{GateClass.UnreadableMutationNotice} (report: {where}" +
+                       (scope is null ? ")" : $"; changed files: {Names(scope.ToList())})");
+            onProgress?.Invoke($"gate {gate.Name}: {GateClass.MutationGlyph} — {note}");
+            return result with { Mutation = new MutationFinding(null, cfg.Threshold, 0, 0, 0, [], note) };
+        }
+
+        var finding = new MutationFinding(score.Percent, cfg.Threshold, score.Counted, score.Survived,
+            score.NoCoverage, score.Survivors.Select(s => s.ToString()).ToList(), null);
+        if (finding.IsShortfall)
+            onProgress?.Invoke($"gate {gate.Name}: {GateClass.MutationGlyph} — the gate exited 0, but only " +
+                               $"{score.Percent:0.##}% of {score.Counted} mutants in the changed files were killed " +
+                               $"(threshold {cfg.Threshold:0.##}%); {score.Survivors.Count} survived");
+        else
+            onProgress?.Invoke($"gate {gate.Name}: mutation score {score.Percent:0.##}% over {score.Counted} mutants " +
+                               $"in {score.ScoredFiles.Count} changed file(s) — clears {cfg.Threshold:0.##}%");
+        return result with { Mutation = finding };
     }
 
     /// <summary>KS4.2, the set difference the class is: baseline names absent from the current pass
@@ -510,7 +604,7 @@ public static class GateRunner
     public static string FailureDetails(IEnumerable<GateResult> results, int maxCharsPerGate = 4000)
     {
         var parts = results
-            .Where(r => (!r.Passed && !r.Skipped) || r.HasRegressions)
+            .Where(r => (!r.Passed && !r.Skipped) || r.HasClassFailure)
             .Select(r =>
             {
                 // KS4.2: the fix brief a regression writes is a different brief. There is no failing
@@ -518,6 +612,10 @@ public static class GateRunner
                 // says what the class found and names it, or a fix session spends its first move
                 // re-running a gate that will pass again.
                 if (r.HasRegressions) return RegressionDetail(r);
+                // KS4.3: same shape, different finding. Walked to BOTH renderers deliberately — the
+                // KS4.2 lesson was that this engine has two fix-brief writers and a unit test can be
+                // green while the prompt a real fix session reads says "(no gate output captured)".
+                if (r.HasMutationShortfall) return MutationDetail(r);
                 var tail = r.Tail.Length > maxCharsPerGate ? "…" + r.Tail[^maxCharsPerGate..] : r.Tail;
                 // SC4.1: say it was retried. A fix session that knows the gate failed TWICE does not
                 // waste its first move re-running it to see whether the battery was just unlucky.
@@ -540,6 +638,25 @@ public static class GateRunner
                "These are not new failures — they are checks that have stopped being reported as passing at all " +
                "(deleted, renamed, skipped, filtered out of the run, or excluded from the project). Restore them, " +
                "or the delivery is not a delivery. The baseline was NOT advanced, so this will be asked again.";
+    }
+
+    /// <summary>KS4.3 — the fix brief a mutation shortfall writes. Like a regression it has no failing
+    /// assertion to paste, so the block has to carry the whole finding: the score, the bar, and the
+    /// surviving mutants by file and line, which are the exact places a test asserts nothing.</summary>
+    internal static string MutationDetail(GateResult r)
+    {
+        if (r.Mutation is not { } m) return "";
+        if (m.Note is { } note)
+            return $"### Gate `{r.Name}` — {GateClass.MutationGlyph} CLASS\n```\n{note}\n```";
+        var shown = string.Join("\n", m.Survivors.Take(50).Select(c => "  - " + c));
+        var more = m.Survivors.Count > 50 ? $"\n  … and {m.Survivors.Count - 50} more" : "";
+        return $"### Gate `{r.Name}` — {GateClass.MutationGlyph} CLASS (mutation score): the gate EXITED 0, and " +
+               $"the suite killed {m.Score:0.##}% of the {m.Counted} mutants planted in the files this branch " +
+               $"changed — the bar is {m.Threshold:0.##}%.\n```\n{shown}{more}\n```\n" +
+               $"{m.Survived} mutant(s) survived a passing test run and {m.NoCoverage} were never executed at all. " +
+               "Each line above is a change to the implementation that NO test noticed. This is not a coverage " +
+               "number and cannot be raised by executing more lines: add or strengthen assertions until a broken " +
+               "implementation makes a test go red, or delete the code no behaviour depends on.";
     }
 
     public static string TailOf(string output, int lines)

@@ -26,12 +26,15 @@ public sealed class GateConfig
     /// agent — see <see cref="GateVisibility"/> for the contract and why it is enforced in the
     /// runner rather than at each rendering surface.</summary>
     public string Visibility { get; set; } = GateVisibility.Visible;
-    /// <summary>KS4.2: <c>standard</c> (default) or <c>regression</c>. A regression gate carries
-    /// PASS-TO-PASS semantics on top of its exit code — see <see cref="GateClass"/>.</summary>
+    /// <summary>KS4.2/KS4.3: <c>standard</c> (default), <c>regression</c> or <c>mutation</c>. The
+    /// two named classes carry an assertion on top of the exit code — see <see cref="GateClass"/>.</summary>
     public string Class { get; set; } = GateClass.Standard;
     /// <summary>KS4.2: how a <see cref="GateClass.Regression"/> gate's run is read for the set of
     /// checks that passed. Required for that class, refused at plan load without it.</summary>
     public PassSetConfig? PassSet { get; set; }
+    /// <summary>KS4.3: how a <see cref="GateClass.Mutation"/> gate's report is read and what score it
+    /// must clear. Required for that class, refused at plan load without it.</summary>
+    public MutationConfig? Mutation { get; set; }
     /// <summary>Gates sharing a truthy parallel flag run concurrently within their battery.</summary>
     public bool Parallel { get; set; }
     /// <summary>If set, this gate only runs while the current stage id is in this list (doc-scoped
@@ -61,6 +64,15 @@ public sealed class GateConfig
     /// <summary>KS4.2: this gate's exit code is not the whole of its verdict — the set of checks it
     /// reported passing is compared against the last set it reported. See <see cref="GateClass"/>.</summary>
     [JsonIgnore] public bool IsRegression => Class.Equals(GateClass.Regression, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>KS4.3: this gate's exit code is not the whole of its verdict — the engine scores the
+    /// report it wrote over the files this branch changed. See <see cref="MutationConfig"/>.</summary>
+    [JsonIgnore] public bool IsMutation => Class.Equals(GateClass.Mutation, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>KS4.2/KS4.3: this gate belongs to a class whose verdict outlives its exit code, so it
+    /// is never served from the per-gate SHA cache and its result is post-processed after the retry
+    /// pass. One predicate rather than a growing <c>||</c> chain at each of those sites.</summary>
+    [JsonIgnore] public bool IsClassed => IsRegression || IsMutation;
 
     [JsonIgnore] public bool IsFast => Tier.Equals("fast", StringComparison.OrdinalIgnoreCase);
     [JsonIgnore] public bool IsTruth => Tier.Equals("truth", StringComparison.OrdinalIgnoreCase);

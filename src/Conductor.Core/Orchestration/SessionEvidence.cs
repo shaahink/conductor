@@ -25,6 +25,19 @@ public sealed record AdvisoryEvidence(string Source, string Verdict, int? Score,
 public sealed record RegressionEvidence(string Gate, IReadOnlyList<string> BrokenChecks, string? Note);
 
 /// <summary>
+/// KS4.3 — one mutation-class gate's finding: the share of deliberately broken implementations the
+/// suite noticed, over the files this branch changed, against the bar the plan set.
+/// </summary>
+/// <remarks>A row exists only when the bar was MISSED (or the score could not be read at all), for
+/// the same reason <see cref="RegressionEvidence"/> only exists on a real loss — so a non-empty
+/// <see cref="SessionEvidence.MutationShortfalls"/> IS the finding, and the verdict can say
+/// "the tests do not test" instead of "a gate failed". Like the regression row this is a
+/// measurement rather than a judgement, which is why it is read by
+/// <see cref="SessionVerdict.Decide"/> and <see cref="AdvisoryEvidence"/> is not.</remarks>
+public sealed record MutationEvidence(
+    string Gate, double? Score, double Threshold, int Counted, IReadOnlyList<string> Survivors, string? Note);
+
+/// <summary>
 /// The evidence taxonomy, as data. Every row a session verdict has ever rested on, and nothing else —
 /// no run context, no store, no repository, no clock. Filled in three passes, marked by
 /// <see cref="GatesRun"/> and <see cref="WorkEvidenceRead"/>, because the engine buys gate evidence
@@ -88,6 +101,10 @@ public sealed record SessionEvidence
     /// <summary>KS4.2: what the regression class found, per gate. Empty on every ordinary battery.
     /// Filled with <see cref="GatesGreen"/>, from the same battery, in the same pass.</summary>
     public IReadOnlyList<RegressionEvidence> Regressions { get; init; } = [];
+
+    /// <summary>KS4.3: what the mutation class found, per gate, when it found a shortfall. Empty on
+    /// every ordinary battery. Filled with <see cref="GatesGreen"/>, from the same battery.</summary>
+    public IReadOnlyList<MutationEvidence> MutationShortfalls { get; init; } = [];
 
     public int WorkCommitCount { get; init; }
 

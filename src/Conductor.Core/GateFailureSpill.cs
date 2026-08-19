@@ -43,7 +43,9 @@ public static class GateFailureSpill
         // the ordinary filter drops it and the fix session is told "(no gate output captured)" about
         // the one failure it most needs explained. This is the same lesson KS4.1 paid for: the
         // engine has two fix-brief renderers and only one of them is on the path a real run takes.
-        var failed = results.Where(r => (!r.Passed && !r.Skipped) || r.HasRegressions).ToList();
+        // KS4.3 walks the same lesson: the mutation class is the second failure shape whose gate
+        // EXITED 0, so it joins the filter here on the same predicate rather than at one renderer.
+        var failed = results.Where(r => (!r.Passed && !r.Skipped) || r.HasClassFailure).ToList();
         if (failed.Count == 0) return "";
 
         var dir = Prepare(stateDir);
@@ -53,6 +55,7 @@ public static class GateFailureSpill
             // Nothing to spill: the gate's own output is a success message. What the fix session
             // needs is the class's finding, and all of it fits in the prompt.
             if (r.HasRegressions) { parts.Add(GateRunner.RegressionDetail(r)); continue; }
+            if (r.HasMutationShortfall) { parts.Add(GateRunner.MutationDetail(r)); continue; }
             var path = dir is null ? null : Spill(dir, r, sessionNumber);
             var excerpt = r.Tail.Length > ExcerptChars ? "…" + r.Tail[^ExcerptChars..] : r.Tail;
             // SC4.1: say it was retried. A fix session that knows the gate failed TWICE does not waste

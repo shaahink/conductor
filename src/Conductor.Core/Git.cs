@@ -9,6 +9,43 @@ public static class Git
 
     public static string Branch(string repo) => Exec(repo, "rev-parse", "--abbrev-ref", "HEAD").Output.Trim();
 
+    /// <summary>KS4.3 — every repo-relative path that differs between <paramref name="baseRev"/> and
+    /// the WORKING TREE, untracked files included.</summary>
+    /// <remarks>
+    /// <para>Three commands, not one, and each covers a hole the others leave. <c>diff --name-only
+    /// &lt;rev&gt;</c> compares the rev to the working tree, so with a branch name it already spans
+    /// "committed on this branch" and "edited and not yet committed" together. It does not see a file
+    /// git has never been told about, which is exactly the shape of a brand-new source file a session
+    /// just wrote — so <c>ls-files --others</c> is unioned in. And the staged-only case
+    /// (<c>git add</c> then nothing else) is covered by <c>diff --cached</c>, because the first
+    /// command against a <em>rev</em> sees it but against <c>HEAD</c> the index is not the tree.</para>
+    /// <para>An unresolvable base rev returns EMPTY rather than "everything". A caller that scopes a
+    /// measurement by this set must treat empty as "I could not tell what changed" and fail closed;
+    /// returning the whole repository instead would silently turn a diff-scoped gate into a
+    /// whole-repository one and blow its budget rather than its verdict, which is the harder failure
+    /// to notice.</para>
+    /// </remarks>
+    public static List<string> ChangedFiles(string repo, string baseRev)
+    {
+        if (string.IsNullOrWhiteSpace(baseRev)) return new List<string>();
+        if (Exec(repo, "rev-parse", "--verify", "--quiet", baseRev + "^{commit}").ExitCode != 0)
+            return new List<string>();
+        var paths = new List<string>();
+        foreach (var args in new[]
+        {
+            new[] { "diff", "--name-only", "--diff-filter=d", baseRev },
+            new[] { "diff", "--name-only", "--diff-filter=d", "--cached", baseRev },
+            new[] { "ls-files", "--others", "--exclude-standard" },
+        })
+        {
+            var r = Exec(repo, args);
+            if (r.ExitCode != 0) continue;
+            paths.AddRange(r.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim().Replace('\\', '/')));
+        }
+        return paths.Where(p => p.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
     public static List<string> CommitsSince(string repo, string sha)
     {
         if (string.IsNullOrWhiteSpace(sha)) return new List<string>();

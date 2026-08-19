@@ -60,6 +60,10 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
             return $"gate {g.Name}: {GateClass.Glyph} ({secs}) — " + (g.RegressionNote ??
                 $"exited 0, but {g.Regressions.Count} check(s) that passed earlier in this run no longer pass: " +
                 GateRunner.Names(g.Regressions));
+        if (g.HasMutationShortfall && g.Mutation is { } m)
+            return $"gate {g.Name}: {GateClass.MutationGlyph} ({secs}) — " + (m.Note ??
+                $"exited 0, but the suite killed only {m.Score:0.##}% of {m.Counted} mutants in the changed files " +
+                $"(bar {m.Threshold:0.##}%); {m.Survivors.Count} survived: " + GateRunner.Names(m.Survivors, 5));
         if (g.Passed)
             return g.Retried
                 ? $"gate {g.Name}: PASS on retry ({secs}; the first attempt failed after {g.FirstAttemptDuration.TotalSeconds:0}s)"
