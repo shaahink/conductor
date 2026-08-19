@@ -4,19 +4,19 @@
 
 ## Handoff (overwrite this block, <=12 lines, no history)
 
-last: KS7.3 DONE (5794417) and KS7.4 DONE (87b5364). `conductor otel` exports a run as an OTLP trace -
-  official otelcol 0.159.0 rendered 27 spans of this run; the per-turn curve reconciles EXACTLY with
-  K4.1 on all 7 finished sessions. Fork measured: --fork-session composes with --session-id, costs
-  0.15% more than resume and $0.0001 less, so fix/audit sessions can branch without losing id control.
-KS7.5 IS PARTIAL AND UNCLAIMED - the tree is green, the work is committed, do not redo it.
-  landed: GateFailureSpill (wired at all 3 VerdictEngine sites), RepoMapBattery + DefinitionOfDoneBattery
-  written but NOT YET REGISTERED in PromptBuilder.BatterySection - that is the single next action,
-  plus BatteriesConfig flags, tests, and the subagent-delegation line in PromptBuilder.BuiltIns.
-read the amendment on the KS7.5 card first: measured, a whole composed prompt is 17.7k-26.3k CHARS
-  (4.4k-6.6k tokens) against a 135k-195k mean turn - 3-4% of a turn. Prompt trimming CANNOT move the
-  66%. The exit as written needs N future sessions under the new prompts; one session cannot produce it.
-build: use the MSBuild switches nodeReuse:false and UseSharedCompilation=false (bug #54) or you get 9
-  bogus Conductor.Planning analyzer errors. Bug #53: cache_creation 5m/1h TTL split is dropped.
+last: KS7.5 DONE (3d7414a) - stage KS7 is complete. RepoMapBattery and DefinitionOfDoneBattery are
+  now REGISTERED in PromptBuilder.BatterySection (which takes the folded board + effective stage), both
+  opt-in via batteries.repoMap / batteries.definitionOfDone; the search-delegation guidance is in
+  ToolContract so it reaches session/fix/resume/verify/audit. 12 new facts, suite slice 171 green.
+BEFORE YOU ADD ANY PROMPT TEXT, read this: a prompt is also an ARGUMENT. 8191 chars through a cmd/bat
+  shim; the shipped prompt measures 7598 (doctor argv lint, scratch plan) and 28 test files spawn their
+  fake agent through cmd.exe. A 640-char addition took it to 8207 and killed two live-run rigs with
+  "the fake agent never started" - nothing mentions length. Ratchet test
+  KS7_5ContextEconomicsTests.ShippedPromptStaysUnderTheCmdExeArgvCeiling now fails first instead.
+  Pay for a new paragraph by trimming an old one. Bug #55: the lint under-measures the live spawn by
+  350-500 chars (battery, tail sections, --mcp-config).
+build: MSBuild switches nodeReuse:false and UseSharedCompilation=false (bug #54) or you get 9 bogus
+  Conductor.Planning analyzer errors. Bug #53: cache_creation 5m/1h TTL split still dropped.
 
 
 ## Baseline numbers (from run.db)
@@ -25,7 +25,7 @@ build: use the MSBuild switches nodeReuse:false and UseSharedCompilation=false (
 |---|---|
 | Total checkpoints | 24 |
 | Done | 5 |
-| Claimed (unconfirmed) | 2 |
+| Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
 
@@ -48,9 +48,9 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | KS7.1 | Permission posture: an allowlist/deny settings profile replaces dangerously-skip-permissions for unattended runs if the installed CLI sustains it - a karvan-class stage runs green under the restricted profile with refusals telemetered, OR a filed finding says precisely why not; blast-radius posture stated honestly in ARCHITECTURE.md | DONE | 0c3380f | .conductor/evidence/KS7/ks7-1-posture.md |
 | KS7.2 | Hooks as ground truth: tool events by hook (extending the hook-budget channel) become the primary source, transcript parsing the fallback; hook-derived digests match transcript-derived on a replay corpus; a hook-less agent still works; digest claim-counting (bug 19 class) fixed; skills-vs-promptExtra decided and recorded | DONE | 5b8d56e | .conductor/evidence/KS7/ks7-2-hooks-as-ground-truth.md |
-| KS7.3 | Cost/usage: per-turn usage with cache split parsed from the stream; OTel emit mirroring gen_ai names from the event log; an OTLP collector renders a run's spans; the per-turn context curve reconciles with K4.1's derivation | TODO | - | - |
-| KS7.4 | Session lifecycle: fork-instead-of-cold-resume for fix/audit sessions where supported, with the measured token delta vs the resume baseline; resume flags re-verified; model lineup and context ceilings re-measured into TOKEN-BUDGET-TUNING | TODO | - | - |
-| KS7.5 | Context economics (B7): gate output truncated in-prompt with full text as an evidence file; RepoMapBattery + definition-of-done recap battery on the IPromptBattery seam; templates teach search-delegation; measured cache-read tokens per session DROP vs the karvan baseline on a comparable stage, reported by conductor budget | TODO | - | - |
+| KS7.3 | Cost/usage: per-turn usage with cache split parsed from the stream; OTel emit mirroring gen_ai names from the event log; an OTLP collector renders a run's spans; the per-turn context curve reconciles with K4.1's derivation | DONE | 5794417 | .conductor/evidence/KS7/ks7-3-cost-usage-and-otel.md |
+| KS7.4 | Session lifecycle: fork-instead-of-cold-resume for fix/audit sessions where supported, with the measured token delta vs the resume baseline; resume flags re-verified; model lineup and context ceilings re-measured into TOKEN-BUDGET-TUNING | DONE | 5794417 | .conductor/evidence/KS7/ks7-4-fork-lifecycle.md |
+| KS7.5 | Context economics (B7): gate output truncated in-prompt with full text as an evidence file; RepoMapBattery + definition-of-done recap battery on the IPromptBattery seam; templates teach search-delegation; measured cache-read tokens per session DROP vs the karvan baseline on a comparable stage, reported by conductor budget | IN PROGRESS | - | - |
 
 ### KS6 — Quality lane - hygiene that buys design
 
