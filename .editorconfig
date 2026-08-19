@@ -36,6 +36,18 @@ dotnet_diagnostic.CA1031.severity = suggestion # catch general exception (many l
 dotnet_diagnostic.CA1051.severity = suggestion # visible instance fields: record/DTO shapes here are deliberate, not encapsulation bugs
 dotnet_diagnostic.CA1848.severity = none       # LoggerMessage delegates: revisit at B2 (Serilog/ILogger)
 dotnet_diagnostic.CA1303.severity = none       # localize literals: N/A (InvariantGlobalization CLI tool)
+
+# --- Complexity budgets (KS6.3): the three code-metrics rules, at error, with per-project thresholds ---
+# The thresholds live in each project's CodeMetricsConfig.txt (an AdditionalFile), not here - .editorconfig
+# decides only whether the rule can fail the build, and all three can. They are OFF by default in the
+# analyzer package, so these three lines are the whole of what turns them on.
+dotnet_diagnostic.CA1502.severity = error      # cyclomatic complexity per method - the branch count a reader has to hold
+dotnet_diagnostic.CA1505.severity = error      # maintainability index - the composite that catches long AND branchy AND dense
+dotnet_diagnostic.CA1506.severity = error      # class coupling - how many distinct types one type has to know about
+dotnet_diagnostic.CA1509.severity = error      # invalid entry in CodeMetricsConfig.txt. Measured 2026-08-19: it does NOT
+# fire - a malformed line voids all three rules above in silence, no AD0001 either. Kept at error because
+# a rule that should catch this costing nothing is worth having if a later analyzer version starts firing
+# it; what actually defends the budget is complexity-budget.ps1's grammar check plus the canary test.
 dotnet_diagnostic.CA1861.severity = suggestion # constant arrays as args
 
 # --- Meziantou analyzers (MA): async-correctness theme as errors ---

@@ -23,6 +23,17 @@
     <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
   </PropertyGroup>
 
+  <!-- Complexity budgets (KS6.3). CA1502/CA1505/CA1506 read their thresholds from an AdditionalFile
+       named CodeMetricsConfig.txt, and the budget is PER PROJECT because the numbers are per project:
+       Conductor.Planning holds a cyclomatic budget of 10 while Conductor.Core carries 91, and one
+       repo-wide number would have to be the loosest of them. A project with no such file silently
+       falls back to the analyzer defaults (25/10/95), which is a loosening for every project here -
+       tools/gates/complexity-budget.ps1 refuses a missing file for exactly that reason. -->
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildProjectDirectory)/CodeMetricsConfig.txt"
+                     Condition="Exists('$(MSBuildProjectDirectory)/CodeMetricsConfig.txt')" />
+  </ItemGroup>
+
   <!-- Analyzers applied to every project (version pinned in Directory.Packages.props). -->
   <ItemGroup>
     <PackageReference Include="Meziantou.Analyzer">

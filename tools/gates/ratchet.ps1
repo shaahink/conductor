@@ -244,6 +244,27 @@ else {
     Write-Host ""
 }
 
+# --- 6. complexity budgets, per project, bar derived from git (KS6.3) --------------------------------
+# Sections 1-5 count how much of the ruleset is switched off. This one counts how much the ruleset is
+# ALLOWED, which is the same bar seen from the other side: CA1502/CA1505/CA1506 stay at error and their
+# per-project thresholds may only ever tighten. Invoked exactly like the analyzer-debt gate above and for
+# the same reason - the plan's existing gate command picks it up with no plan edit, and deleting this call
+# is a diff under tools/gates that section 3d already refuses.
+$budgetScript = Join-Path $PSScriptRoot "complexity-budget.ps1"
+if (-not (Test-Path $budgetScript)) {
+    $failures.Add("THE COMPLEXITY-BUDGET GATE IS MISSING: $budgetScript. It is part of this gate, not an optional extra.")
+}
+else {
+    Write-Host ""
+    $hostExe2 = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+    if ($base) { & $hostExe2 -NoProfile -ExecutionPolicy Bypass -File $budgetScript -Anchor $base }
+    else       { & $hostExe2 -NoProfile -ExecutionPolicy Bypass -File $budgetScript }
+    if ($LASTEXITCODE -ne 0) {
+        $failures.Add("THE COMPLEXITY-BUDGET GATE FAILED - see its named reasons above. A budget raised to fit the code is the code deciding the bar.")
+    }
+    Write-Host ""
+}
+
 # --- verdict ----------------------------------------------------------------------------------------
 if ($failures.Count -gt 0) {
     Write-Host ""

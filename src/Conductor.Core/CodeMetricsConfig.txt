@@ -1,0 +1,25 @@
+# Complexity budget for Conductor.Core (KS6.3). Read by CA1502 / CA1505 / CA1506 through <AdditionalFiles>
+# in Directory.Build.props; the three rules are set to error in .editorconfig, so these numbers fail
+# the build, they do not advise it.
+#
+# THE NUMBERS ARE THIS PROJECT'S MEASURED WORST, NOT A ROUND NUMBER SOMEBODY LIKED. Every budget here
+# was taken from a build of this tree with the thresholds wound down to 5 / 40 / 20, and set to the
+# extreme that came back. The tree is therefore exactly AT its bar: one more branch in the worst method
+# turns the build red. That is the ratchet, and tools/gates/complexity-budget.ps1 is what stops the
+# number going the other way - it may only ever come DOWN.
+#
+# THE GRAMMAR IS NOT FORGIVING AND IT FAILS SILENT. Measured 2026-08-19: one line the analyzer cannot
+# parse - a symbol NAME in the parentheses, a typo, a stray word - disables EVERY code-metrics rule in
+# this compilation with no diagnostic at all. Not AD0001, not CA1509 (enabled at error and still silent).
+# Only 'RuleId: N' and 'RuleId(SymbolKind): N' parse. complexity-budget.ps1 validates every line against
+# that grammar and KS6_3ComplexityBudgetTests compiles a canary to prove the rules are still LIVE.
+#
+# The other named surface lives here: VerdictEngine, 9 partial files, 144 coupled types - under the
+# 182 that RunLoop already costs, so KS6.4's extraction lowers the SECOND-highest first. CA1502 = 91
+# and CA1505 = 8 are both one method (RunLoop.RunAsync); this project's budget is that method's shadow.
+# CA1502 - cyclomatic complexity, per method. Analyzer default: 25.
+CA1502: 91
+# CA1505 - maintainability index (0-100, HIGHER is better); fires BELOW this. Analyzer default: 10.
+CA1505: 8
+# CA1506 - class coupling: distinct types a type or member depends on. Analyzer default: 95.
+CA1506: 182
