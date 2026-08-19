@@ -33,7 +33,7 @@ dotnet_diagnostic.CA1849.severity = error      # call async methods when in an a
 dotnet_diagnostic.CA2000.severity = warning    # dispose objects before losing scope
 dotnet_diagnostic.CA1063.severity = warning    # implement IDisposable correctly
 dotnet_diagnostic.CA1031.severity = suggestion # catch general exception (many legit boundary catches; ADR-0001)
-dotnet_diagnostic.CA1051.severity = suggestion
+dotnet_diagnostic.CA1051.severity = suggestion # visible instance fields: record/DTO shapes here are deliberate, not encapsulation bugs
 dotnet_diagnostic.CA1848.severity = none       # LoggerMessage delegates: revisit at B2 (Serilog/ILogger)
 dotnet_diagnostic.CA1303.severity = none       # localize literals: N/A (InvariantGlobalization CLI tool)
 dotnet_diagnostic.CA1861.severity = suggestion # constant arrays as args
@@ -111,7 +111,7 @@ dotnet_diagnostic.RCS1233.severity = none     # short-circuiting operator: its o
 # --- Test project: relax library-only + culture rules (xUnit asserts on ASCII literals) ---
 [tests/**/*.cs]
 dotnet_diagnostic.CA2007.severity = none       # ConfigureAwait not required in test code
-dotnet_diagnostic.MA0004.severity = none
+dotnet_diagnostic.MA0004.severity = none       # ConfigureAwait not required in test code (same reason as CA2007 above)
 dotnet_diagnostic.MA0045.severity = none       # sync file I/O is fine in test helpers
 dotnet_diagnostic.MA0002.severity = none       # test string comparisons don't need explicit comparers
 dotnet_diagnostic.MA0074.severity = none       # Assert.Contains on literals: culture-invariant by construction

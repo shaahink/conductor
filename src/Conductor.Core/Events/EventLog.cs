@@ -163,8 +163,6 @@ public sealed class EventLog : IEventSink, IAsyncDisposable, IDisposable
     public void Dispose()
     {
         _channel.Writer.TryComplete();
-#pragma warning disable MA0045 // IDisposable.Dispose is sync by contract; drain blocks only at the run boundary
         _drain.GetAwaiter().GetResult();
-#pragma warning restore MA0045
     }
 }

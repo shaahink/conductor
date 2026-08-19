@@ -172,7 +172,6 @@ public static partial class SoftBreak
 
     // ── files ──────────────────────────────────────────────────────────────────────────────────
 
-#pragma warning disable MA0045 // small local files, written from the poll loop and a short-lived hook
     public static void WriteSignal(string stateDir, Signal signal)
     {
         try { File.WriteAllText(Path.Combine(stateDir, SignalFileName), JsonSerializer.Serialize(signal, Json)); }
@@ -217,5 +216,4 @@ public static partial class SoftBreak
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         return next;
     }
-#pragma warning restore MA0045
 }

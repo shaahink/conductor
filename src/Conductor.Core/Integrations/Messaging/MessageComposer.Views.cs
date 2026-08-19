@@ -129,9 +129,7 @@ public sealed partial class MessageComposer
                     ? "all recent gates passed"
                     : string.Join(", ", failures.Select(g => $"FAIL {g.Name} ({g.StageId})"));
             }
-#pragma warning disable CA1031
             catch { /* best-effort: digest is advisory */ }
-#pragma warning restore CA1031
         }
 
         if (ProofLine(gates, []) is { Length: > 0 } proof)

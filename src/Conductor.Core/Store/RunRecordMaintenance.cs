@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Conductor.Core.Store;
 
-#pragma warning disable MA0045 // Sync DB access by design — a one-shot maintenance pass over local
                                // files, driven by a CLI command that has nothing else to do
                                // meanwhile. Same posture as StateRepair.cs.
 

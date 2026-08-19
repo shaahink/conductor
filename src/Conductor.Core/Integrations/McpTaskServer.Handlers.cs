@@ -109,9 +109,7 @@ public partial class McpTaskServer
         if (_store != null)
         {
             try { _store.WriteLedger(_runId, _sessionNumber, null, "blocked-until", $"Blocked until {resolved:yyyy-MM-dd HH:mm:ss}Z: {reason.Trim()}"); }
-#pragma warning disable CA1031 // best-effort: the event above is the control signal, the ledger is the note
-            catch { }
-#pragma warning restore CA1031
+            catch { /* best-effort: the event above is the control signal, the ledger is only the note */ }
         }
 
         return JsonSerializer.SerializeToElement(new
@@ -149,9 +147,7 @@ public partial class McpTaskServer
             {
                 _store.WriteLedger(_runId, null, string.IsNullOrWhiteSpace(stageId) ? null : stageId, kind, content);
             }
-#pragma warning disable CA1031 // catch is best-effort here — journal write is the fallback
-            catch { }
-#pragma warning restore CA1031
+            catch { /* best-effort: the journal write a few lines down is the fallback */ }
         }
 
         // Also emit an event so the note appears in event-log projections. W2.2 lands it in run.db
@@ -340,7 +336,6 @@ public partial class McpTaskServer
 
         try
         {
-#pragma warning disable MA0045 // sync read is deliberate — called from sync MCP handlers
             // SF0.3 (bug #13): a bg child's log is held open for Write by the shell doing the `>`
             // redirect, and `File.ReadAllLines` asks for FileShare.Read — which on Windows must also
             // permit what the existing handle holds, and does not. So this failed with a sharing
@@ -348,7 +343,6 @@ public partial class McpTaskServer
             // SC2.4 fixed the CLI with SharedFileRead and left this path bare; the agent-stream branch
             // a few lines up already uses it, which is why only half the verb worked.
             var allLines = SharedFileRead.ReadAllLines(logFile);
-#pragma warning restore MA0045
             var lines = allLines.Count <= tail ? allLines : allLines.Skip(allLines.Count - tail).ToList();
             return JsonSerializer.SerializeToElement(new { ok = true, pid, tail, totalLines = allLines.Count, lines });
         }

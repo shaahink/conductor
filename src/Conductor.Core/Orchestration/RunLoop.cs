@@ -15,7 +15,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Conductor.Core.Orchestration;
 
-#pragma warning disable MA0045 // sync file I/O by design — fast local writes, not hot-path
 public sealed partial class RunLoop
 {
     private readonly RunContext _ctx;

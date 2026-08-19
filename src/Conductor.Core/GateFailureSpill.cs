@@ -88,7 +88,7 @@ public static class GateFailureSpill
             var path = Path.Combine(dir, $"s{sessionNumber.ToString("000", CultureInfo.InvariantCulture)}-{safe}.log");
             // Sync I/O at a sync boundary: PendingFix is built inside the verdict engine's synchronous
             // decision path, and a few KB of gate text is not worth making that path async.
-#pragma warning disable MA0045
+#pragma warning disable MA0045 // sync write at the verdict engine sync decision path - see the two lines above
             File.WriteAllText(path, r.Tail);
 #pragma warning restore MA0045
             return path;

@@ -9,7 +9,6 @@ namespace Conductor.Commands;
 
 internal static class BgLogsHandler
 {
-#pragma warning disable MA0045 // sync file I/O at the Spectre.Cli sync boundary (same pattern as GateCommand/StatusCommand)
     public static int ExecuteLogs(BgCommand.Settings settings)
     {
         var target = settings.PidOrPurpose;
@@ -141,5 +140,4 @@ internal static class BgLogsHandler
         }
         return 0;
     }
-#pragma warning restore MA0045
 }

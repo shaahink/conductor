@@ -108,9 +108,7 @@ public sealed partial class VerdictEngine
         try
         {
             var args = n.Args.Select(a => a.Replace("{message}", message));
-#pragma warning disable MA0045 // fire-and-forget notify — sync Run is the caller's expectation, same as original Orchestrator.Plumbing
             ProcessRunner.Run(n.Command, args, _ctx.Plan.Repo, TimeSpan.FromMinutes(1));
-#pragma warning restore MA0045
         }
         catch (Exception ex) { _ctx.Log($"notify failed: {ex.Message}"); }
     }

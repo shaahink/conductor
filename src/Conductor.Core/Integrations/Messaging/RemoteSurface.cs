@@ -314,9 +314,8 @@ public sealed class RemoteSurface
                 null, ct).ConfigureAwait(false);
             _log(instruction, _state.CurrentStage);
         }
-#pragma warning disable CA1031 // an inbound command must never take the poll loop down with it
+        // Catch-all on purpose: an inbound command must never take the poll loop down with it.
         catch (Exception ex)
-#pragma warning restore CA1031
         {
             await ReplyAsync(chatId, $"Failed to inject: {MessageComposer.EscapeHtml(ex.Message)}", null, ct)
                 .ConfigureAwait(false);

@@ -216,6 +216,30 @@ else {
     }
 }
 
+# --- 5. analyzer debt, all five kinds, bar derived from git (KS6.2) ----------------------------------
+# The pragma count above is ONE spelling of analyzer debt measured against a number in a file. It cannot
+# see [SuppressMessage], NoWarn, a severity downgrade, or a pragma parked under tests/ or tools/, so a
+# suppression MIGRATED into one of those reads as an improvement. analyzer-debt.ps1 counts all five kinds
+# and derives its bar from the anchor commit instead of a baseline file. It is invoked from here so the
+# plan's existing gate command picks it up with no plan edit; editing it, or deleting this call, is a diff
+# under tools/gates, which section 3d above already refuses.
+$debtScript = Join-Path $PSScriptRoot "analyzer-debt.ps1"
+if (-not (Test-Path $debtScript)) {
+    $failures.Add("THE ANALYZER-DEBT GATE IS MISSING: $debtScript. It is part of this gate, not an optional extra.")
+}
+else {
+    Write-Host ""
+    # Spawned as a child of THIS host (powershell.exe or pwsh.exe) rather than called in-process: a native
+    # command's exit code lands in $LASTEXITCODE unambiguously, and an 'exit' inside a dot-called script
+    # does not. A gate that mistakes "failed" for "returned" is a gate that passes everything.
+    $hostExe = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+    & $hostExe -NoProfile -ExecutionPolicy Bypass -File $debtScript
+    if ($LASTEXITCODE -ne 0) {
+        $failures.Add("THE ANALYZER-DEBT GATE FAILED - see its named reasons above. Suppressions are debt in every spelling, not just the pragma one.")
+    }
+    Write-Host ""
+}
+
 # --- verdict ----------------------------------------------------------------------------------------
 if ($failures.Count -gt 0) {
     Write-Host ""

@@ -176,7 +176,6 @@ public sealed class AuditCommand : Command<AuditCommand.Settings>
         return sb.ToString();
     }
 
-#pragma warning disable MA0045, CA1849 // CLI --replay sync boundary, no concurrent async work to protect (same category as Spectre.Cli sync boundary)
     private static string RunAgent(AgentConfig cfg, string prompt, TimeSpan timeout)
     {
         var scratch = Path.Combine(Path.GetTempPath(), "conductor-audit-" + Guid.NewGuid().ToString("N")[..8]);
@@ -206,5 +205,4 @@ public sealed class AuditCommand : Command<AuditCommand.Settings>
             try { Directory.Delete(scratch, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
         }
     }
-#pragma warning restore MA0045, CA1849
 }

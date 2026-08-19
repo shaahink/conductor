@@ -2,5 +2,6 @@
   "_comment": "Absolute floors for the ratchet gate (tools/gates/ratchet.ps1). minTests counts [Fact]/[Theory] ATTRIBUTES under tests/, not executed cases (a [Theory] with 10 InlineData is one attribute, ten cases). minTests only ever goes UP as work lands; maxPragmas only ever goes DOWN. Lowering minTests or raising maxPragmas is a human decision, and the gate rejects it against the pushed branch.",
   "_minTests": "KS1.6 raised the floor from 550 - the number left behind when M1.1 deleted 73 TUI attributes - to what the suite actually carries on this branch, measured by the gate itself. A floor three-quarters below the real count is not a ratchet, it is a formality: the suite could have lost 1,382 attributes without the gate saying a word.",
   "minTests": 1932,
-  "maxPragmas": 38
+  "_maxPragmas": "KS6.2 ratcheted this DOWN 38 -> 31 by measurement, not by argument: 14 of the 45 disables were proved dead (they covered zero diagnostics of a rule that can fail this build) and were removed. The live count is now the number of real sync boundaries a CLI has. This absolute number is the coarse half of the gate; the fine half is tools/gates/analyzer-debt.ps1, which counts all five spellings of a suppression against an anchor commit rather than against a number in this file.",
+  "maxPragmas": 31
 }

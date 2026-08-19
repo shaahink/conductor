@@ -251,12 +251,10 @@ public partial class McpTaskServer
             {
                 _store.WriteInjection(_runId, "mcp", null, string.IsNullOrWhiteSpace(stageId) ? null : stageId, content);
             }
-#pragma warning disable CA1031
             catch (Exception ex)
             {
                 return JsonSerializer.SerializeToElement(new { ok = false, error = $"Failed to write injection: {ex.Message}" });
             }
-#pragma warning restore CA1031
         }
 
         return JsonSerializer.SerializeToElement(new { ok = true, stageId = string.IsNullOrWhiteSpace(stageId) ? null : stageId });
@@ -264,7 +262,7 @@ public partial class McpTaskServer
 
     private void WriteJournal(ConductorEvent evt)
     {
-#pragma warning disable MA0045
+#pragma warning disable MA0045 // sync journal append - WriteJournal is the fallback path, called from sync MCP handlers
         var stamped = evt with
         {
             Ts = DateTime.UtcNow,
