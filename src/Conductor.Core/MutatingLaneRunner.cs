@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Conductor.Core.Events;
+using Conductor.Core.Worktrees;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -135,11 +136,16 @@ public static class MutatingLaneRunner
                 plan, lane, plan.Repo, stagingPath, stagingBranch,
                 scratchBranch, baseBranch, log, ct).ConfigureAwait(false);
 
-            // 6. Clean up staging worktree regardless of outcome
-            try { Git.WorktreeRemove(plan.Repo, stagingPath); }
-            catch { /* best-effort cleanup */ }
-            try { Git.DeleteBranch(plan.Repo, stagingBranch); }
-            catch { /* best-effort cleanup */ }
+            // 6. Clean up the staging worktree regardless of outcome. KS4.4: through the same safe drop
+            // as the lane tree. A staging branch is disposable in principle — it is base + scratch, both
+            // of which still exist — but "in principle" is exactly the reasoning that made `-D` look
+            // fine here, so the reachability check stays git's to make. A refusal leaves a small named
+            // branch behind, which `conductor worktree` lists and a human can reap.
+            try { WorktreeDrop.DropAttempt(plan.Repo, stagingPath, stagingBranch, log); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                log?.Invoke($"mutating lane '{lane.Id}': staging teardown could not finish — {ex.Message}");
+            }
 
             // 7. Emit lane finished event
             events?.Emit(new MutatingLaneFinished
@@ -207,12 +213,17 @@ public static class MutatingLaneRunner
         }
         finally
         {
-            // Clean up the lane worktree and scratch branch
-            try { Git.WorktreeRemove(plan.Repo, lanePath); }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
-            try { Git.DeleteBranch(plan.Repo, scratchBranch); }
-            catch { /* branch might already be merged/deleted */ }
+            // KS4.4 (lanes L1.3): this used to be `worktree remove --force` followed by `branch -D`,
+            // and both halves were wrong in the same direction — they threw work away to keep the
+            // teardown quiet. `-D` in a `finally` means a lane whose merge gate went red, or whose
+            // merge lost a race to another lane, had its entire committed session force-deleted with
+            // only the reflog holding it. WorktreeDrop keeps git's reachability check intact: a branch
+            // that still holds unique commits SURVIVES and its name goes to the log.
+            try { WorktreeDrop.DropAttempt(plan.Repo, lanePath, scratchBranch, log); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                log?.Invoke($"mutating lane '{lane.Id}': teardown could not finish — {ex.Message}");
+            }
         }
     }
 
