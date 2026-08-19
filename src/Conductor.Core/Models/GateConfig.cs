@@ -26,6 +26,12 @@ public sealed class GateConfig
     /// agent — see <see cref="GateVisibility"/> for the contract and why it is enforced in the
     /// runner rather than at each rendering surface.</summary>
     public string Visibility { get; set; } = GateVisibility.Visible;
+    /// <summary>KS4.2: <c>standard</c> (default) or <c>regression</c>. A regression gate carries
+    /// PASS-TO-PASS semantics on top of its exit code — see <see cref="GateClass"/>.</summary>
+    public string Class { get; set; } = GateClass.Standard;
+    /// <summary>KS4.2: how a <see cref="GateClass.Regression"/> gate's run is read for the set of
+    /// checks that passed. Required for that class, refused at plan load without it.</summary>
+    public PassSetConfig? PassSet { get; set; }
     /// <summary>Gates sharing a truthy parallel flag run concurrently within their battery.</summary>
     public bool Parallel { get; set; }
     /// <summary>If set, this gate only runs while the current stage id is in this list (doc-scoped
@@ -51,6 +57,10 @@ public sealed class GateConfig
     /// <see cref="Conductor.Core.GateRunner"/> must respect — use
     /// <see cref="GateVisibility.VisibleOnly"/> rather than testing this by hand.</summary>
     [JsonIgnore] public bool IsHoldout => Visibility.Equals(GateVisibility.Holdout, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>KS4.2: this gate's exit code is not the whole of its verdict — the set of checks it
+    /// reported passing is compared against the last set it reported. See <see cref="GateClass"/>.</summary>
+    [JsonIgnore] public bool IsRegression => Class.Equals(GateClass.Regression, StringComparison.OrdinalIgnoreCase);
 
     [JsonIgnore] public bool IsFast => Tier.Equals("fast", StringComparison.OrdinalIgnoreCase);
     [JsonIgnore] public bool IsTruth => Tier.Equals("truth", StringComparison.OrdinalIgnoreCase);

@@ -28,5 +28,29 @@ public static class GateRules
         // filename and the store row — the one place the anonymity could be read backwards.
         if (gates.Any(g => !g.IsHoldout && g.Name.Equals(GateVisibility.RedactedName, StringComparison.OrdinalIgnoreCase)))
             yield return $"a visible gate is named '{GateVisibility.RedactedName}' — that name is reserved for redacted holdout results; rename the gate";
+
+        // KS4.2, same reasoning as the visibility rule above: an unknown class must not project to
+        // "standard" in silence, or a plan that asked for PASS-TO-PASS gets an ordinary exit-code
+        // gate and no one is told the difference.
+        foreach (var g in gates.Where(g => !GateClass.IsKnown(g.Class)))
+            yield return $"gate '{g.Name}' has class '{g.Class}' — only {string.Join(" or ", GateClass.Known)} are accepted";
+
+        // A regression gate that cannot say how to read its passing checks has no baseline to
+        // compare, so it would be an ordinary gate wearing the name of a stronger one.
+        foreach (var g in gates.Where(g => g.IsRegression && !PassSetConfig.IsKnownFormat(g.PassSet?.Format)))
+            yield return $"gate '{g.Name}' is class '{GateClass.Regression}' but its passSet.format is " +
+                         $"'{g.PassSet?.Format ?? "(unset)"}' — a regression gate must say how to read the set of " +
+                         $"checks that passed ({string.Join(", ", PassSetConfig.Formats)})";
+
+        foreach (var g in gates.Where(g => g.IsRegression && g.PassSet is { } p && p.Is(PassSetConfig.Trx) && string.IsNullOrWhiteSpace(p.Path)))
+            yield return $"gate '{g.Name}' reads its pass set from a trx file but declares no passSet.path";
+
+        // Refused rather than half-supported. A holdout's whole contract is that its name, its
+        // command and its output never reach the agent (KS4.1) — and a regression's whole value is
+        // naming the checks that stopped passing. One of the two has to lose, so the plan is told to
+        // choose instead of silently getting the weaker of them.
+        foreach (var g in gates.Where(g => g.IsRegression && g.IsHoldout))
+            yield return $"gate '{g.Name}' is both '{GateVisibility.Holdout}' and '{GateClass.Regression}' — a regression " +
+                         "reports the checks that stopped passing by name, which is exactly what a holdout may not do";
     }
 }

@@ -12,6 +12,19 @@ namespace Conductor.Core.Orchestration;
 public sealed record AdvisoryEvidence(string Source, string Verdict, int? Score, string Detail);
 
 /// <summary>
+/// KS4.2 — one regression-class gate's finding: checks that passed earlier in this run and do not
+/// pass now. A row exists only when something was actually lost, so a non-empty
+/// <see cref="SessionEvidence.Regressions"/> IS the regression.
+/// </summary>
+/// <remarks>This is a measurement, not a judgement, so unlike <see cref="AdvisoryEvidence"/> it is
+/// read by <see cref="SessionVerdict.Decide"/> — and it is read separately from
+/// <see cref="SessionEvidence.GatesGreen"/> even though a regression already turns that false. The
+/// separate row is what lets the verdict SAY "regression" instead of "a gate failed", which for this
+/// class is the difference between a fix session that looks for a failing assertion and one that
+/// looks for the check that went missing.</remarks>
+public sealed record RegressionEvidence(string Gate, IReadOnlyList<string> BrokenChecks, string? Note);
+
+/// <summary>
 /// The evidence taxonomy, as data. Every row a session verdict has ever rested on, and nothing else —
 /// no run context, no store, no repository, no clock. Filled in three passes, marked by
 /// <see cref="GatesRun"/> and <see cref="WorkEvidenceRead"/>, because the engine buys gate evidence
@@ -71,6 +84,10 @@ public sealed record SessionEvidence
     // ── work rows: the deterministic evidence a delivery verdict is made of ──
 
     public bool GatesGreen { get; init; }
+
+    /// <summary>KS4.2: what the regression class found, per gate. Empty on every ordinary battery.
+    /// Filled with <see cref="GatesGreen"/>, from the same battery, in the same pass.</summary>
+    public IReadOnlyList<RegressionEvidence> Regressions { get; init; } = [];
 
     public int WorkCommitCount { get; init; }
 

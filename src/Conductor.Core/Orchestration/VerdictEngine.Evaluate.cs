@@ -223,6 +223,10 @@ public sealed partial class VerdictEngine
         {
             WorkEvidenceRead = true,
             GatesGreen = GateRunner.AllRequiredPassed(gates),
+            // KS4.2: from the same battery, in the same pass — the class's finding, carried as its
+            // own row so the verdict can name it rather than reporting "a gate failed".
+            Regressions = gates.Where(g => g.HasRegressions)
+                .Select(g => new RegressionEvidence(g.Name, g.Regressions, g.RegressionNote)).ToList(),
             WorkCommitCount = workCommits.Count,
             NewlyDoneCount = rec.NewlyDone.Count,
             NewlyBlocked = newlyBlocked,

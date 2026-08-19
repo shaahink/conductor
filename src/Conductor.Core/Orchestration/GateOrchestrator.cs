@@ -38,7 +38,10 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
         await GateRunner.RunHookAsync(_plan, _plan.Teardown, "teardown", log, ct).ConfigureAwait(false);
         foreach (var g in gates)
         {
-            var outcome = g.Cached ? "cached" : g.Skipped ? "skip" : g.Passed ? "pass" : g.Optional ? "warn" : "fail";
+            // KS4.2: the regression is tested first because it is the one outcome the exit code gets
+            // wrong — a regressing gate passed, and every branch after this would say so.
+            var outcome = g.HasRegressions ? (g.Optional ? "warn" : "fail")
+                : g.Cached ? "cached" : g.Skipped ? "skip" : g.Passed ? "pass" : g.Optional ? "warn" : "fail";
             logWithOutcome(OutcomeLine(g), outcome);
         }
         return gates;
@@ -53,6 +56,10 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
         if (g.Cached) return $"gate {g.Name}: CACHED (0s)";
         if (g.Skipped) return $"gate {g.Name}: SKIP";
         var secs = $"{g.Duration.TotalSeconds:0}s";
+        if (g.HasRegressions)
+            return $"gate {g.Name}: {GateClass.Glyph} ({secs}) — " + (g.RegressionNote ??
+                $"exited 0, but {g.Regressions.Count} check(s) that passed earlier in this run no longer pass: " +
+                GateRunner.Names(g.Regressions));
         if (g.Passed)
             return g.Retried
                 ? $"gate {g.Name}: PASS on retry ({secs}; the first attempt failed after {g.FirstAttemptDuration.TotalSeconds:0}s)"

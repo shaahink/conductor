@@ -94,6 +94,15 @@ public interface IRunStore : IDisposable
     /// nothing. Null when this run has no passing run of the gate on record.</summary>
     long? GetLastPassingGateDurationMs(string runId, string gateName, string tier);
 
+    /// <summary>KS4.2: the PASS-TO-PASS baseline — the checks this regression gate last reported
+    /// passing on a clean run. Null when the gate has never reported one, which is the first
+    /// sighting and never a regression.</summary>
+    IReadOnlyList<string>? GetGatePassSet(string runId, string gateName);
+
+    /// <summary>KS4.2: advance the baseline. Called ONLY when the gate passed and lost nothing — see
+    /// the anti-laundering note in <c>v15_gate_pass_sets.sql</c> and <see cref="Models.GateClass"/>.</summary>
+    void RecordGatePassSet(string runId, string gateName, string? sha, IReadOnlyList<string> names);
+
     // ---------------------------------------------------------------- scores
 
     void WriteScore(string runId, int sessionNumber, string? stageId, int score, string verdict, string findings);

@@ -285,6 +285,8 @@ typo costs a startup message instead of a stage.
 | `stageKinds` | string[] | Only run when the current stage's `kind` is in this list. Applies in addition to `stages`. |
 | `timeoutMinutes` | int | Per-gate timeout. Default 20. |
 | `visibility` | string | `"visible"` (default) or `"holdout"`. A holdout gate is engine-only — see below. |
+| `class` | string | `"standard"` (default) or `"regression"`. A regression gate carries PASS-TO-PASS semantics on top of its exit code — see below. |
+| `passSet` | object | How a `regression` gate's run is read for the checks that passed: `format` (`"trx"`, `"go-test"` or `"lines"`) and, for `trx`, `path`. Required for that class. |
 
 ### `holdoutGates` — gates the agent cannot see (KS4.1)
 
@@ -324,6 +326,51 @@ each naming the offending path:
 
 Two vocabulary refusals as well: an unknown `visibility` value is rejected by name, and a *visible*
 gate may not be named `holdout`, because that is the name every redacted result wears.
+
+### `class: "regression"` — nothing that worked broke (KS4.2)
+
+A test command answers one question — *is anything failing right now* — and it answers "no" just as
+happily when the failing test has been deleted, renamed away, skipped, filtered out of the run, or
+excluded from the project file. A **regression** gate adds the question the exit code cannot ask:
+SWE-bench's PASS_TO_PASS semantics, *is everything that passed before still passing*.
+
+The gate declares how to read the set of checks it reported **passing** out of its own run:
+
+```jsonc
+{
+  "name": "tests",
+  "command": "dotnet test Conductor.slnx --logger \"trx;LogFileName=gate.trx\"",
+  "class": "regression",
+  "passSet": { "format": "trx", "path": "TestResults/gate.trx" }
+}
+```
+
+| `format` | Reads |
+|---|---|
+| `trx` | Every `UnitTestResult` with `outcome="Passed"` in `path` (relative to the gate's `cwd`; a `*` resolves to the newest match). |
+| `go-test` | Every `--- PASS: Name` line of stdout, subtests included. Pair with `go test -v`. |
+| `lines` | Every non-blank line of stdout is one check name — the escape hatch for any other runner. |
+
+The engine keeps the last set as the **baseline**, per run and per gate. A name in the baseline that
+is not in the current set is a regression, **whatever the exit code says**: the gate goes red, the
+summary glyph is `REGRESSION` rather than `FAIL`, the verdict names the class, and the fix brief
+lists the checks by name instead of pasting an output tail that says nothing went wrong.
+
+Three properties worth knowing before you turn it on:
+
+- **The baseline only ever grows.** It advances when the gate passes *clean*; a regressing battery
+  deliberately leaves it where it was, so the next session is asked the same question rather than
+  inheriting the smaller set as the new normal. There is no verb that resets a baseline — every verb
+  this engine has is one the coding agent can call.
+- **A legitimate rename reads as a regression**, because from here a rename and a deletion are the
+  same event. Land renames on a gate marked `optional: true` until the new names are in the baseline.
+- **Never cache-served, and red on an unreadable pass set.** A cached pass would mean nobody looked;
+  a gate that exits 0 and reports no checks at all is red, because "the trx moved" and "everything
+  passed" are the same exit code.
+
+Load-time refusals: an unknown `class`; `class: "regression"` with no (or an unknown) `passSet.format`;
+`format: "trx"` with no `path`; and a gate that is both `holdout` and `regression` — a regression
+names the checks that stopped passing, which is exactly what a holdout may not do.
 
 **Leave `shell` unset for portable gates.** `conductor init` does, which is why a scaffolded plan
 (`dotnet build`, `npm test`, `go test ./...`, `cargo test`, `pytest -q`) runs unchanged on any host.

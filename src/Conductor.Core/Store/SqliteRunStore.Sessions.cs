@@ -202,6 +202,34 @@ public sealed partial class SqliteRunStore
             ("@tail", (object?)tail ?? DBNull.Value));
     }
 
+    /// <summary>KS4.2: the baseline set, or null when this gate has never filed one. Null and empty
+    /// are different answers and the caller depends on the difference — a gate with no baseline is a
+    /// first sighting, a gate with an empty one would be a gate that once passed nothing.</summary>
+    public IReadOnlyList<string>? GetGatePassSet(string runId, string gateName)
+    {
+        if (_disposed != 0) return null;
+        var rows = Query(
+            """SELECT names FROM gate_pass_sets WHERE run_id = @runId AND gate = @gate LIMIT 1""",
+            ("@runId", runId), ("@gate", gateName));
+        if (rows.Count == 0) return null;
+        var names = rows[0]["names"]?.ToString() ?? "";
+        return names.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    public void RecordGatePassSet(string runId, string gateName, string? sha, IReadOnlyList<string> names)
+    {
+        ArgumentNullException.ThrowIfNull(names);
+        TryExecute(
+            "INSERT INTO gate_pass_sets (run_id, gate, sha, names, count, updated_utc) " +
+            "VALUES (@runId, @gate, @sha, @names, @count, @now) " +
+            "ON CONFLICT(run_id, gate) DO UPDATE SET sha = @sha, names = @names, count = @count, updated_utc = @now",
+            ("@runId", runId), ("@gate", gateName),
+            ("@sha", (object?)sha ?? DBNull.Value),
+            ("@names", string.Join('\n', names)),
+            ("@count", names.Count),
+            ("@now", DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture)));
+    }
+
     public bool? GetLastPassingGateResult(string runId, string gateName, string tier, string sha)
     {
         if (_disposed != 0) return null;

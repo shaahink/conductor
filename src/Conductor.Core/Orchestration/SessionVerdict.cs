@@ -192,7 +192,12 @@ public static class SessionVerdict
         // SC4.2/SC4.3: NoProgress has to mean no progress. A checkpoint claimed through the work graph
         // IS delivery even when this repo's git log is empty, and so is a commit in a declared satellite.
         var delivered = e.WorkCommitCount > 0 || e.NewlyDoneCount > 0 || e.StageComplete;
-        if (e.GatesGreen && delivered && !e.AgentErrored)
+        // KS4.2: read separately from GatesGreen on purpose. A regression already turns that false in
+        // the runner, so this changes no verdict on its own — it is here so that the ONE path to
+        // Deliver is guarded by the regression class explicitly, and stays guarded if a later change
+        // ever lets a regressing battery report green.
+        var regressed = e.Regressions.Count > 0;
+        if (e.GatesGreen && !regressed && delivered && !e.AgentErrored)
         {
             return new VerdictDecision
             {
@@ -204,6 +209,7 @@ public static class SessionVerdict
         }
 
         var outcome = e.AgentErrored ? SessionOutcome.AgentError
+                    : regressed ? SessionOutcome.GatesRed
                     : e.GatesGreen ? SessionOutcome.NoProgress
                     : SessionOutcome.GatesRed;
 
@@ -223,7 +229,17 @@ public static class SessionVerdict
                 Disposition = VerdictDisposition.QueueFix,
                 Outcome = outcome,
                 Attempts = AttemptEffect.Increment,
+                Reason = regressed ? RegressionReason(e.Regressions) : "",
+                Log = regressed ? "verdict: " + RegressionReason(e.Regressions) : null,
                 ReturnToIdle = true,
             };
     }
+
+    /// <summary>KS4.2: the verdict said in the class's own words. "a gate failed" sends a fix session
+    /// looking for a failing assertion that does not exist — the gate exited 0.</summary>
+    private static string RegressionReason(IReadOnlyList<RegressionEvidence> rows)
+        => "regression class (PASS-TO-PASS): " + string.Join("; ", rows.Select(r => r.Note is { } note
+            ? $"gate '{r.Gate}' {note}"
+            : $"gate '{r.Gate}' passed but {r.BrokenChecks.Count} check(s) that passed earlier in this run no longer " +
+              $"pass: {string.Join(", ", r.BrokenChecks.Take(5))}{(r.BrokenChecks.Count > 5 ? $" (and {r.BrokenChecks.Count - 5} more)" : "")}"));
 }

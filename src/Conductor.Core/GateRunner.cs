@@ -13,10 +13,26 @@ public sealed record GateResult(string Name, bool Passed, bool Skipped, bool Opt
     public bool Holdout { get; init; }
     /// <summary>SC4.1: this result is the SECOND run of the gate — the first one failed.</summary>
     public bool Retried { get; init; }
+    /// <summary>KS4.2: the checks this <see cref="GateClass.Regression"/> gate reported PASSING on
+    /// this run. Empty for every other gate — and empty from a gate that PASSED is the fail-closed
+    /// case, not a quiet nothing (see <see cref="GateClass.EmptyPassSetNotice"/>).</summary>
+    public IReadOnlyList<string> PassSet { get; init; } = [];
+    /// <summary>KS4.2: baseline check names that are no longer in <see cref="PassSet"/> — things
+    /// that worked and do not now. Non-empty makes this result NOT green whatever the exit code was.</summary>
+    public IReadOnlyList<string> Regressions { get; init; } = [];
+    /// <summary>KS4.2: set when the class could not be evaluated at all (a passing regression gate
+    /// that reported no checks). Red for the same reason and reported in the same place.</summary>
+    public string? RegressionNote { get; init; }
+    /// <summary>KS4.2: the one predicate the rest of the engine asks. Note that a gate can PASS and
+    /// have this true — that is the whole point of the class.</summary>
+    public bool HasRegressions => Regressions.Count > 0 || RegressionNote is not null;
     /// <summary>SC4.1: wall time the discarded first attempt burned. Counted in the cost estimate,
     /// kept OUT of <see cref="Duration"/> so a duration-vs-last-pass comparison stays like-for-like.</summary>
     public TimeSpan FirstAttemptDuration { get; init; }
-    public string Glyph => Cached ? "cached" : Skipped ? "-"
+    // KS4.2: the regression is checked FIRST because it is the case the other glyphs get wrong. A
+    // regressing gate exited 0, so every branch below it would spell it OK.
+    public string Glyph => HasRegressions ? (Optional ? GateClass.Glyph + "-warn" : GateClass.Glyph)
+        : Cached ? "cached" : Skipped ? "-"
         : Passed ? (Retried ? "OK-retry" : "OK")
         : Optional ? "warn" : (Retried ? "FAIL-retry" : "FAIL");
     /// <summary>Estimated overhead cost = Duration × rate (O3). Skipped or cached gates contribute zero.
@@ -24,7 +40,12 @@ public sealed record GateResult(string Name, bool Passed, bool Skipped, bool Opt
     public decimal EstimatedCostUsd(decimal ratePerSecond) =>
         (Skipped || Cached) ? 0m : (decimal)(Duration + FirstAttemptDuration).TotalSeconds * ratePerSecond;
 
-    public bool IsGreen => Skipped || Passed || Optional || Cached;
+    /// <summary>KS4.2 changed this line and nothing else had to change with it: a regression makes a
+    /// result not-green, so the phase gate, the lane merge battery, the session verdict and every
+    /// other consumer of <see cref="GateRunner.AllRequiredPassed"/> treat it as red without knowing
+    /// the class exists. An <see cref="Optional"/> gate keeps its contract — it reports and never
+    /// blocks — which is also the only way to declare a regression gate you are still calibrating.</summary>
+    public bool IsGreen => Skipped || Cached || Optional || (Passed && !HasRegressions);
 }
 
 public static class GateRunner
@@ -74,7 +95,12 @@ public static class GateRunner
             // KS4.1: holdout gates are never cache-served. The cache is keyed by gate NAME and their
             // stored name is the shared redacted one, so a lookup would answer for the wrong gate —
             // and a holdout that can be skipped by a cached pass is a holdout that can be replayed.
-            if (db != null && runId != null && headSha != null && !gate.IsHoldout)
+            // KS4.2: nor is a regression gate, for a reason of its own. The cache key is built from
+            // HEAD, and a session's work is uncommitted for most of its length — so two batteries at
+            // the same HEAD over different working trees share a key. For an ordinary gate that
+            // costs a stale pass; for this class it costs the only look at whether a check that used
+            // to pass still exists, which is the one thing the class is for.
+            if (db != null && runId != null && headSha != null && !gate.IsHoldout && !gate.IsRegression)
             {
                 var cachedResult = db.GetLastPassingGateResult(runId, gate.Name, gate.Tier, CacheKey(plan, gate, headSha));
                 if (cachedResult is true)
@@ -147,10 +173,84 @@ public static class GateRunner
             Mark(i, new GateProgress(Label(gates[i]), second.Passed ? "pass" : second.Optional ? "warn" : "fail", second.Duration));
         }
 
+        // KS4.2: PASS-TO-PASS, after the retries and never before them — a gate that failed and then
+        // passed on the retry must be compared on the run that counted. A regression is computed
+        // only for a gate that PASSED: a compile error yields an empty pass set, and calling every
+        // check in the baseline "regressed" because the build broke is noise that would train the
+        // reader to ignore the class.
+        for (var i = 0; i < gates.Count && !ct.IsCancellationRequested; i++)
+        {
+            if (!gates[i].IsRegression || results[i] is not { } r || !r.Passed || r.Skipped || r.Cached) continue;
+            results[i] = ApplyRegressionClass(gates[i], r, db, runId, headSha, onProgress);
+        }
+
         // any not-yet-populated slots (e.g. cancelled before reached) get a skipped placeholder
         return results.Select((r, i) => r ?? new GateResult(Label(gates[i]), false, true, gates[i].Optional, 0, TimeSpan.Zero, "not run (cancelled)")
         { Holdout = gates[i].IsHoldout }).ToList();
     }
+
+    /// <summary>KS4.2: the whole of the PASS-TO-PASS decision for one passing regression gate —
+    /// compare against the baseline, report what was lost, and advance the baseline only if nothing
+    /// was. Separated from the battery loop because the set arithmetic is the part worth reading.
+    /// </summary>
+    /// <remarks>With no store there is nothing to compare against (an ad-hoc <c>conductor gate</c>
+    /// run): the gate reports its count and the class degrades to a measurement with no memory,
+    /// which is said out loud rather than passing as a clean comparison.</remarks>
+    private static GateResult ApplyRegressionClass(
+        GateConfig gate, GateResult result, IRunStore? db, string? runId, string? headSha, Action<string>? onProgress)
+    {
+        if (result.PassSet.Count == 0)
+        {
+            onProgress?.Invoke($"gate {gate.Name}: {GateClass.Glyph} — {GateClass.EmptyPassSetNotice}");
+            return result with { RegressionNote = GateClass.EmptyPassSetNotice };
+        }
+
+        if (db is null || runId is null)
+        {
+            onProgress?.Invoke($"gate {gate.Name}: {result.PassSet.Count} checks passed — no run store, so nothing to compare them against");
+            return result;
+        }
+
+        var baseline = db.GetGatePassSet(runId, gate.Name);
+        if (baseline is null)
+        {
+            db.RecordGatePassSet(runId, gate.Name, headSha, result.PassSet);
+            onProgress?.Invoke($"gate {gate.Name}: {result.PassSet.Count} checks passed — first sighting, recorded as the PASS-TO-PASS baseline");
+            return result;
+        }
+
+        var lost = LostChecks(baseline, result.PassSet);
+        if (lost.Count == 0)
+        {
+            db.RecordGatePassSet(runId, gate.Name, headSha, result.PassSet);
+            var gained = result.PassSet.Count - baseline.Count;
+            onProgress?.Invoke($"gate {gate.Name}: {result.PassSet.Count} checks passed, all {baseline.Count} in the baseline still pass" +
+                               (gained > 0 ? $" (+{gained} new)" : ""));
+            return result;
+        }
+
+        // Deliberately NOT recorded: see the anti-laundering note on GateClass. The baseline stays
+        // where it was, so the next session is asked the same question this one answered wrong.
+        onProgress?.Invoke($"gate {gate.Name}: {GateClass.Glyph} — the gate exited 0, but {lost.Count} check(s) " +
+                           $"that passed before no longer pass: {Names(lost)}");
+        return result with { Regressions = lost };
+    }
+
+    /// <summary>KS4.2, the set difference the class is: baseline names absent from the current pass
+    /// set. A rename is a loss and a deletion is a loss, because from here they are the same event —
+    /// the check that was passing is not passing now, under any name this gate reports.</summary>
+    public static IReadOnlyList<string> LostChecks(IEnumerable<string> baseline, IEnumerable<string> current)
+    {
+        ArgumentNullException.ThrowIfNull(baseline);
+        ArgumentNullException.ThrowIfNull(current);
+        var now = new HashSet<string>(current, StringComparer.Ordinal);
+        return baseline.Where(b => !now.Contains(b)).Distinct(StringComparer.Ordinal)
+            .OrderBy(b => b, StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>Lost checks for a log line: enough names to act on, never the whole of a suite.</summary>
+    internal static string Names(IReadOnlyList<string> lost, int max = 10)
+        => string.Join(", ", lost.Take(max)) + (lost.Count > max ? $" (and {lost.Count - max} more)" : "");
 
     /// <summary>KS4.1: the ONLY name a gate is allowed to be called outside this class. Every result,
     /// progress row and log line this runner emits goes through it, which is what makes a holdout's
@@ -327,8 +427,14 @@ public static class GateRunner
         onProgress?.Invoke(g.IsHoldout
             ? $"gate {GateVisibility.RedactedName}: {(passed ? "PASS" : "FAIL")} in {r.Duration.TotalSeconds:0}s"
             : $"gate {g.Name}: {(passed ? "PASS" : $"FAIL (exit {r.ExitCode}{(r.TimedOut ? ", timeout" : "")})")} in {r.Duration.TotalSeconds:0}s");
-        return Result(g, passed, false, r.ExitCode, r.Duration,
+        var result = Result(g, passed, false, r.ExitCode, r.Duration,
             TailOf(r.Output, 60) + (r.TimedOut ? $"\n[conductor] gate timed out after {g.TimeoutMinutes}m and was killed" : ""));
+        // KS4.2: read the pass set HERE, where the gate's whole output still exists. Everything
+        // downstream sees TailOf(…, 60), and the checks a suite reports passing are not in the last
+        // sixty lines of anything.
+        return passed && g.IsRegression && g.PassSet is { } ps && !g.IsHoldout
+            ? result with { PassSet = await PassSetExtractor.ExtractAsync(ps, r.Output, cwd, ct).ConfigureAwait(false) }
+            : result;
     }
 
     public static bool AllRequiredPassed(IEnumerable<GateResult> results)
@@ -404,9 +510,14 @@ public static class GateRunner
     public static string FailureDetails(IEnumerable<GateResult> results, int maxCharsPerGate = 4000)
     {
         var parts = results
-            .Where(r => !r.Passed && !r.Skipped)
+            .Where(r => (!r.Passed && !r.Skipped) || r.HasRegressions)
             .Select(r =>
             {
+                // KS4.2: the fix brief a regression writes is a different brief. There is no failing
+                // assertion to read and no tail worth pasting — the gate exited 0 — so the block
+                // says what the class found and names it, or a fix session spends its first move
+                // re-running a gate that will pass again.
+                if (r.HasRegressions) return RegressionDetail(r);
                 var tail = r.Tail.Length > maxCharsPerGate ? "…" + r.Tail[^maxCharsPerGate..] : r.Tail;
                 // SC4.1: say it was retried. A fix session that knows the gate failed TWICE does not
                 // waste its first move re-running it to see whether the battery was just unlucky.
@@ -414,6 +525,20 @@ public static class GateRunner
                 return $"### Gate `{r.Name}` FAILED (exit {r.ExitCode}, {r.Duration.TotalSeconds:0}s{retried})\n```\n{tail}\n```";
             });
         return string.Join("\n\n", parts);
+    }
+
+    /// <summary>KS4.2's distinct reporting, in the one place a fix session actually reads.</summary>
+    private static string RegressionDetail(GateResult r)
+    {
+        if (r.RegressionNote is { } note)
+            return $"### Gate `{r.Name}` — {GateClass.Glyph} CLASS\n```\n{note}\n```";
+        var shown = string.Join("\n", r.Regressions.Take(50).Select(c => "  - " + c));
+        var more = r.Regressions.Count > 50 ? $"\n  … and {r.Regressions.Count - 50} more" : "";
+        return $"### Gate `{r.Name}` — {GateClass.Glyph} CLASS (PASS-TO-PASS): the gate EXITED 0, and " +
+               $"{r.Regressions.Count} check(s) that passed earlier in this run no longer pass.\n```\n{shown}{more}\n```\n" +
+               "These are not new failures — they are checks that have stopped being reported as passing at all " +
+               "(deleted, renamed, skipped, filtered out of the run, or excluded from the project). Restore them, " +
+               "or the delivery is not a delivery. The baseline was NOT advanced, so this will be asked again.";
     }
 
     public static string TailOf(string output, int lines)
