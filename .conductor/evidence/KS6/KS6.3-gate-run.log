@@ -1,0 +1,26 @@
+=== tools/gates/complexity-budget.ps1, working tree, 2026-08-19T12:10:40Z ===
+complexity-budget: bar is the STRICTEST value over the last 25 commits that touched a budget (8 found) - no single commit moves it
+complexity-budget: src/Conductor.Core/CodeMetricsConfig.txt       CA1502         bar=91    now=91
+complexity-budget: src/Conductor.Core/CodeMetricsConfig.txt       CA1505         bar=8     now=8
+complexity-budget: src/Conductor.Core/CodeMetricsConfig.txt       CA1506         bar=182   now=182
+complexity-budget: src/Conductor.Planning/CodeMetricsConfig.txt   CA1502         bar=10    now=10
+complexity-budget: src/Conductor.Planning/CodeMetricsConfig.txt   CA1505         bar=40    now=40
+complexity-budget: src/Conductor.Planning/CodeMetricsConfig.txt   CA1506         bar=25    now=25
+complexity-budget: src/Conductor/CodeMetricsConfig.txt            CA1502         bar=39    now=39
+complexity-budget: src/Conductor/CodeMetricsConfig.txt            CA1505         bar=21    now=21
+complexity-budget: src/Conductor/CodeMetricsConfig.txt            CA1506         bar=240   now=240
+complexity-budget: tests/Conductor.Tests/CodeMetricsConfig.txt    CA1502         bar=39    now=39
+complexity-budget: tests/Conductor.Tests/CodeMetricsConfig.txt    CA1505         bar=35    now=35
+complexity-budget: tests/Conductor.Tests/CodeMetricsConfig.txt    CA1506         bar=135   now=135
+complexity-budget: tools/plan-lint/CodeMetricsConfig.txt          CA1502         bar=39    now=39
+complexity-budget: tools/plan-lint/CodeMetricsConfig.txt          CA1505         bar=18    now=18
+complexity-budget: tools/plan-lint/CodeMetricsConfig.txt          CA1506         bar=42    now=42
+complexity-budget: OK - all three rules enforced, every project budgeted, nothing loosened.
+exit=0
+
+=== dotnet test --filter KS6_3ComplexityBudgetTests (14 seeded loosenings + the canary) ===
+Passed!  - Failed:     0, Passed:    14, Skipped:     0, Total:    14, Duration: 15 s - Conductor.Tests.dll (net10.0)
+
+=== the canary, run by hand: Conductor.Planning budget CA1502 10 -> 9 ===
+error CA1502: 'ClaimItems' has a cyclomatic complexity of '10'. Rewrite or refactor the code to decrease its complexity below '10'.
+Build FAILED.   (restored to 10 -> Build succeeded.)
