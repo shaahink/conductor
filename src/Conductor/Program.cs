@@ -133,6 +133,8 @@ app.Configure(c =>
         .WithDescription("Post-hoc audit replay: run an audit prompt against a completed stage (read-only diagnostic). Requires --replay flag. Output written to .conductor/audits/.");
     c.AddCommand<McpServeCommand>("mcp-serve")
         .WithDescription("Run the MCP task server (JSON-RPC 2.0 over stdio) for agent task management.");
+    c.AddCommand<McpObserveCommand>("mcp-observe")
+        .WithDescription("KS8.1: read-only MCP surface (JSON-RPC 2.0 over stdio) - history, status and money as resources, no tools.");
     // Hidden: run by the agent CLI as a PostToolUse hook, not by a person.
     c.AddCommand<HookBudgetCommand>("hook-budget").IsHidden();
     // KS2.1: what bare `conductor` reaches (see HubWhenBare). Hidden because the name is not the way

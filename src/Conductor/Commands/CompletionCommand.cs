@@ -41,7 +41,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
     private const string Verbs =
         "run journey preflight face status watch watches gate log report pause resume approve kill skip inject abort " +
         "retry-stage rollback pause-after-stage goto rollover heartbeat plan tasks task new-plan note " +
-        "bug init doctor audit mcp-serve completion chat bg ps history catalogue budget money otel spend " +
+        "bug init doctor audit mcp-serve mcp-observe completion chat bg ps history catalogue budget money otel spend " +
         "worktree " +
         "version update demo github";
 
@@ -146,7 +146,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                     return
                 fi
                 case "${COMP_WORDS[1]}" in
-                    run|journey|preflight|face|status|gate|log|report|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|rollover|heartbeat|tasks|task|note|bug|init|doctor|mcp-serve|chat|bg)
+                    run|journey|preflight|face|status|gate|log|report|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|rollover|heartbeat|tasks|task|note|bug|init|doctor|mcp-serve|mcp-observe|chat|bg)
                         COMPREPLY=($(compgen -W "-p --plan --yes --force --dry-run --once --max-sessions --paused --headless --deep --full -o --output --name --repo --no-auth-check --no-update-check" -- "$cur"))
                         ;;
                     watch)

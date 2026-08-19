@@ -1,0 +1,171 @@
+### 1. initialize -> capabilities carry resources and NOT tools
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": {
+      "resources": {
+        "subscribe": false,
+        "listChanged": false
+      }
+    },
+    "serverInfo": {
+      "name": "conductor-observe",
+      "version": "1.0.0"
+    },
+    "instructions": "conductor-observe is read-only: it serves resources and has no tools. Control operations (run, pause, resume, abort, approve, skip, inject, task writes) are excluded by design \u2014 see docs/dev/adr/0007-read-only-mcp-surface.md."
+  }
+}
+
+### 2. resources/list -> 61 resources
+[
+  {
+    "uri": "conductor://history",
+    "name": "history",
+    "description": "Every run in this machine's catalogue, newest activity first \u2014 plan, repo, reconciled status, stored status, sessions, billed cost and tokens.",
+    "mimeType": "application/json"
+  },
+  {
+    "uri": "conductor://runs/9491891f/status",
+    "name": "9491891f status",
+    "description": "Karvansara edge - gates that can't be gamed, and the courier in conductor \u2014 reconciled status, stage rail and checkpoint counts.",
+    "mimeType": "application/json"
+  },
+  {
+    "uri": "conductor://runs/9491891f/money",
+    "name": "9491891f money",
+    "description": "Karvansara edge - gates that can't be gamed, and the courier in conductor \u2014 billed spend by month, stage, window and category.",
+    "mimeType": "application/json"
+  }
+]
+... (60 run resources follow)
+
+### 3. resources/read conductor://history -> 35 runs
+shortId    plan                   repo           status       stored         cost   sess
+9491891f   Karvansara edge - gate conductor      running      running      271.38     19
+           ks75-argv              ks75-argv      gone                        0.00      0
+c5fe473d   KS7.2 hook-ground-trut ks72-rig       orphaned     running        0.16      2
+380c587c   KS7.1 posture rig      ks71-rig       orphaned     running        0.14      1
+           KS11.2 scratch rig     ks11-2-rig     gone                        0.00      0
+           BookToCourse MVP       BookToCourse   gone                        0.00      0
+6cf402fe   Test                   Test           orphaned     paused         0.00      1
+9647f1b8   Karvansara core - the  conductor      Aborted      Aborted      147.55     24
+           plan                   plan           gone                        0.00      0
+           plan                   plan           gone                        0.00      0
+fe33af65   informadex.com build   website        Completed    Completed     34.67      5
+8faf849d   DevContext pre-release DevContext2-de Completed    Completed    189.30     25
+d6fd22ba   DevContext pre-release DevContext2-en Completed    Completed    219.85     29
+105b2731   DevContext agent probe DevContext2    Completed    Completed     51.74      7
+0ebd34b6   Cyber Assistant recons cyber-assistan Completed    Completed    331.46     25
+0d8d372e   KUK — Pouyan Ghahreman pouyan-site    Completed    Completed    191.35     18
+f5066ddc   conductor-site - a fie conductor-site closed       closed       144.85     18
+df9c4af8   Karvan core - the engi conductor      Completed    Completed    317.84     32
+2349f46b   w5-rehearsal           conductor-w5-b Completed    Completed      0.00     10
+f1c4d068   conductor-demo         k5-1-demo      Completed    Completed      0.00      6
+7195e538   A NAME AND A WAY OUT   sk-studio      Completed    Completed    110.93     15
+79cacf31   CI health - the public conductor-cihe Completed    Completed     37.99     12
+1ddd2036   THE SECOND REEL        sk-studio      Completed    Completed     97.48     15
+bae63ba0   DevContext graph-v2 —  DevContext2    Completed    Completed    358.42     26
+7951c3ca   NINE STREETS           sk-studio      Completed    Completed    421.46     69
+8cefa5de   Sarban face - the watc conductor      Completed    Completed    297.24     41
+e9e21d10   Sarban core - the engi conductor      Completed    Completed    360.14     28
+a007ef6c   sk-fleet round five    sk-platform    Completed    Completed    222.63     17
+3dd4564a   sk-fleet round four    sk-platform    Completed    Completed    425.12     28
+13a91f1d   sk-fleet 09.6 finish t sk-platform    Completed    Completed    224.28     24
+fc2e69df   sk-fleet shared CI + 4 site-template  Completed    Completed      2.91      1
+1a7c1714   Conductor UX (U-series conductor-bato closed       closed       139.68     11
+02cf8280   Conductor UX (U-series conductor-bato Aborted      Aborted        0.00      1
+1e942d7e   Maestro                conductor-bato closed       closed         0.17      3
+0031daaa   Maestro                conductor-bato closed       closed         0.00      1
+
+RECONCILED != STORED on these rows: c5fe473d (running -> orphaned), 380c587c (running -> orphaned), 6cf402fe (paused -> orphaned)
+
+### 4. resources/read conductor://runs/c5fe473d/status
+{
+  "runId": "c5fe473d381c46aaad55d92763a3c10d",
+  "plan": "KS7.2 hook-ground-truth rig",
+  "status": "orphaned",
+  "storedStatus": "running",
+  "storeLooksLive": false,
+  "engine": "0.4.2-alpha.0.25+5b8d56ed1604.dirty",
+  "state": {
+    "status": "orphaned",
+    "stageId": "R1",
+    "stageTitle": "Posture proof",
+    "doneCount": 1,
+    "totalCount": 1,
+    "totalCostUsd": 0.15720507459
+  }
+}
+
+### 5. resources/read conductor://runs/c5fe473d/money -> billed only
+{
+  "scope": "c5fe473d",
+  "total": {
+    "label": "project total",
+    "sessions": 2,
+    "tokens": 701653,
+    "cacheReadTokens": 667465,
+    "cacheReadShare": 0.95128,
+    "inputTokens": 29147,
+    "outputTokens": 5041,
+    "costUsd": 0.1572,
+    "checkpoints": 0,
+    "costPerMillionTokens": 0.224
+  },
+  "categories": [
+    {
+      "label": "agent",
+      "sessions": 2,
+      "tokens": 701653,
+      "cacheReadTokens": 667465,
+      "cacheReadShare": 0.95128,
+      "inputTokens": 29147,
+      "outputTokens": 5041,
+      "costUsd": 0.1571,
+      "checkpoints": 0,
+      "costPerMillionTokens": 0.2239
+    },
+    {
+      "label": "gate",
+      "sessions": 1,
+      "tokens": 0,
+      "cacheReadTokens": 0,
+      "cacheReadShare": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "costUsd": 0.0001,
+      "checkpoints": 0
+    }
+  ]
+}
+
+### 6. tools/list -> the empty array
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "result": {
+    "tools": []
+  }
+}
+
+### 7. tools/call task_update          -> {"code": -32601, "message": "conductor-observe is read-only: it serves resources and has no tools. Control operations (run, pause, resume, abort, approve, skip, inject, task writes) are excluded by design \u2014 see docs/dev/adr/0007-read-only-mcp-surface.md."}
+### 7. tools/call inject_instruction   -> {"code": -32601, "message": "conductor-observe is read-only: it serves resources and has no tools. Control operations (run, pause, resume, abort, approve, skip, inject, task writes) are excluded by design \u2014 see docs/dev/adr/0007-read-only-mcp-surface.md."}
+### 7. tools/call bg_start             -> {"code": -32601, "message": "conductor-observe is read-only: it serves resources and has no tools. Control operations (run, pause, resume, abort, approve, skip, inject, task writes) are excluded by design \u2014 see docs/dev/adr/0007-read-only-mcp-surface.md."}
+### 7. tools/call conductor_note       -> {"code": -32601, "message": "conductor-observe is read-only: it serves resources and has no tools. Control operations (run, pause, resume, abort, approve, skip, inject, task writes) are excluded by design \u2014 see docs/dev/adr/0007-read-only-mcp-surface.md."}
+### 7. tools/call bug_new              -> {"code": -32601, "message": "conductor-observe is read-only: it serves resources and has no tools. Control operations (run, pause, resume, abort, approve, skip, inject, task writes) are excluded by design \u2014 see docs/dev/adr/0007-read-only-mcp-surface.md."}
+### 7. tools/call run_query            -> {"code": -32601, "message": "conductor-observe is read-only: it serves resources and has no tools. Control operations (run, pause, resume, abort, approve, skip, inject, task writes) are excluded by design \u2014 see docs/dev/adr/0007-read-only-mcp-surface.md."}
+
+### 8. an invented write view is refused by name
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "error": {
+    "code": -32602,
+    "message": "unknown view 'abort' \u2014 this surface serves /status and /money."
+  }
+}
+
+### stderr from the server process (empty = the stdio wire was clean)
+''

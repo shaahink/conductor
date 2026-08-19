@@ -140,7 +140,9 @@ They answer after a run has ended, and from any directory.
 
 ### Infra
 `bg start\|status\|logs\|stop` (long-running commands, so they don't look like a stall) ·
-`mcp-serve` (the MCP task server the engine wires into each session) · `completion <shell>` ·
+`mcp-serve` (the MCP task server the engine wires into each session) ·
+`mcp-observe` (the read-only MCP surface: history, status and money as resources, no tools — ADR-0007) ·
+`completion <shell>` ·
 `audit <stage> --replay` (post-hoc read-only audit of a completed stage) ·
 `version [--json] [--short]` (semver, git sha, build date — stamped at build — and *which file
 answered*; takes no plan and works in any directory) ·
