@@ -4,19 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS6.2 DONE (0cb514d, 4b25081, 42f846f). tools/gates/analyzer-debt.ps1 counts SIX kinds of
-  suppression, not one, wired from ratchet.ps1 so no plan edit was needed. Bug 44 CLOSED downward: 14
-  of the 45 pragmas measured dead and removed, 45 -> 31, maxPragmas ratcheted DOWN 38 -> 31, zero
-  unjustified. Evidence: .conductor/evidence/KS6/KS6.2-analyzer-debt-ratchet.md + -seeded-attacks.log.
-THE FINDING KS6.3 MUST NOT REPEAT: ALL of ratchet.ps1 section 3 is vacuous in this run's flow. It
-  anchors on origin/<branch>, but a session commits AND PUSHES before conductor runs the battery, so
-  at gate time origin/<branch> IS HEAD and 3a/3b/3c/3d compare the tree against itself - attack 8 in
-  the log commits a suppression and walks through. Do NOT write KS6.3's complexity ratchets against
-  origin/<branch>; use the window minimum (Get-AnchorCommits, one function, 25 commits, ~7s).
-  Same hole leaves 3c open with minTests=1932 against an actual 2487: 555 attributes could go silently.
-Two traps that cost me time: a $-anchored regex silently misses every CRLF line here, and a proof
-  script that git reset --hard ate an hour of uncommitted gate work. Commit first, then seed.
-next: KS6.3 complexity budgets. Bugs #53/#54/#55 still open.
+last: KS6.3 DONE (094c5c3, 71c1e64, 3901ac1). CA1502/CA1505/CA1506 on at error with per-project
+  CodeMetricsConfig.txt budgets set to each project's MEASURED WORST, so the tree carries zero slack.
+  tools/gates/complexity-budget.ps1 wired from ratchet.ps1 section 6; 14 seeded loosenings in
+  KS6_3ComplexityBudgetTests. Evidence: .conductor/evidence/KS6/KS6.3-complexity-budgets.md.
+THE THING KS6.4 MUST KNOW BEFORE IT WRITES ITS EXIT CRITERION: VerdictEngine is NOT the binding
+  constraint on Conductor.Core. RunLoop is - 182 coupling against VerdictEngine's 144, and 91
+  cyclomatic (RunLoop.RunAsync) against EvaluateSessionAsync's 70. Extract the pure verdict function
+  and the project budget does not move. Do not phrase the checkpoint as "the budget drops". The
+  surfaces are 9 and 12 partial files now, not the plan's 8 and 11. Full table in evidence section 7.
+Two traps paid for: ONE unparseable line in CodeMetricsConfig.txt silently kills all three rules (no
+  AD0001, no CA1509) - never hand-edit one without re-running the gate; and 'git ls-tree -- *.csproj'
+  returns nothing while 'git ls-files -- *.csproj' returns five, which made my gate vacuous until the
+  seeded tests caught it. Never trust a git pathspec to glob without a known-nonzero check.
+next: KS6.4, the funded VerdictEngine extraction. Bugs #53/#54/#55 still open.
 
 
 ## Baseline numbers (from run.db)
@@ -24,8 +25,8 @@ next: KS6.3 complexity budgets. Bugs #53/#54/#55 still open.
 | Metric | Value |
 |---|---|
 | Total checkpoints | 24 |
-| Done | 5 |
-| Claimed (unconfirmed) | 5 |
+| Done | 10 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -46,18 +47,18 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS7.1 | Permission posture: an allowlist/deny settings profile replaces dangerously-skip-permissions for unattended runs if the installed CLI sustains it - a karvan-class stage runs green under the restricted profile with refusals telemetered, OR a filed finding says precisely why not; blast-radius posture stated honestly in ARCHITECTURE.md | DONE | 0c3380f | .conductor/evidence/KS7/ks7-1-posture.md |
-| KS7.2 | Hooks as ground truth: tool events by hook (extending the hook-budget channel) become the primary source, transcript parsing the fallback; hook-derived digests match transcript-derived on a replay corpus; a hook-less agent still works; digest claim-counting (bug 19 class) fixed; skills-vs-promptExtra decided and recorded | DONE | 5b8d56e | .conductor/evidence/KS7/ks7-2-hooks-as-ground-truth.md |
-| KS7.3 | Cost/usage: per-turn usage with cache split parsed from the stream; OTel emit mirroring gen_ai names from the event log; an OTLP collector renders a run's spans; the per-turn context curve reconciles with K4.1's derivation | DONE | 5794417 | .conductor/evidence/KS7/KS7-fix-s10-gates-green.md |
-| KS7.4 | Session lifecycle: fork-instead-of-cold-resume for fix/audit sessions where supported, with the measured token delta vs the resume baseline; resume flags re-verified; model lineup and context ceilings re-measured into TOKEN-BUDGET-TUNING | DONE | 5794417 | .conductor/evidence/KS7/KS7-fix-s10-gates-green.md |
-| KS7.5 | Context economics (B7): gate output truncated in-prompt with full text as an evidence file; RepoMapBattery + definition-of-done recap battery on the IPromptBattery seam; templates teach search-delegation; measured cache-read tokens per session DROP vs the karvan baseline on a comparable stage, reported by conductor budget | DONE | 3d7414a | .conductor/evidence/KS7/KS7-fix-s10-gates-green.md |
+| KS7.1 | Permission posture: an allowlist/deny settings profile replaces dangerously-skip-permissions for unattended runs if the installed CLI sustains it - a karvan-class stage runs green under the restricted profile with refusals telemetered, OR a filed finding says precisely why not; blast-radius posture stated honestly in ARCHITECTURE.md | DONE ✓ | 0c3380f | .conductor/evidence/KS7/ks7-1-posture.md |
+| KS7.2 | Hooks as ground truth: tool events by hook (extending the hook-budget channel) become the primary source, transcript parsing the fallback; hook-derived digests match transcript-derived on a replay corpus; a hook-less agent still works; digest claim-counting (bug 19 class) fixed; skills-vs-promptExtra decided and recorded | DONE ✓ | 5b8d56e | .conductor/evidence/KS7/ks7-2-hooks-as-ground-truth.md |
+| KS7.3 | Cost/usage: per-turn usage with cache split parsed from the stream; OTel emit mirroring gen_ai names from the event log; an OTLP collector renders a run's spans; the per-turn context curve reconciles with K4.1's derivation | DONE ✓ | 5794417 | .conductor/evidence/KS7/KS7-fix-s10-gates-green.md |
+| KS7.4 | Session lifecycle: fork-instead-of-cold-resume for fix/audit sessions where supported, with the measured token delta vs the resume baseline; resume flags re-verified; model lineup and context ceilings re-measured into TOKEN-BUDGET-TUNING | DONE ✓ | 5794417 | .conductor/evidence/KS7/KS7-fix-s10-gates-green.md |
+| KS7.5 | Context economics (B7): gate output truncated in-prompt with full text as an evidence file; RepoMapBattery + definition-of-done recap battery on the IPromptBattery seam; templates teach search-delegation; measured cache-read tokens per session DROP vs the karvan baseline on a comparable stage, reported by conductor budget | DONE ✓ | 3d7414a | .conductor/evidence/KS7/KS7-fix-s10-gates-green.md |
 
 ### KS6 — Quality lane - hygiene that buys design
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS6.1 | Curated Roslynator set (~25 design-shaped rules) as errors, everything else explicitly off, each rule adopted with a one-line reason | TODO | - | - |
-| KS6.2 | Analyzer-debt count ratchet extending ratchet.ps1 semantics; the referee not editable by the agent - a seeded baseline rewrite goes red | TODO | - | - |
+| KS6.1 | Curated Roslynator set (~25 design-shaped rules) as errors, everything else explicitly off, each rule adopted with a one-line reason | DONE | af6d93e | .conductor/evidence/KS6/KS6.1-curated-roslynator.md |
+| KS6.2 | Analyzer-debt count ratchet extending ratchet.ps1 semantics; the referee not editable by the agent - a seeded baseline rewrite goes red | DONE | 0cb514d | .conductor/evidence/KS6/KS6.2-analyzer-debt-ratchet.md |
 | KS6.3 | Complexity budgets (CA1502/1505/1506) with ratchets; first targets the largest partial surfaces - VerdictEngine (8 files) and ControlPlaneServer (11) | TODO | - | - |
 | KS6.4 | The pure evidence-to-verdict function extracted from VerdictEngine - the taxonomy testable without the loop; the seam KS4.5 plugs into | TODO | - | - |
 

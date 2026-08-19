@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvansara edge - gates that can't be gamed, and the courier run report
 
-_Updated 2026-08-19 00:39 UTC · branch `feat/karvansara-edge` · HEAD `f16780d`_
+_Updated 2026-08-19 02:08 UTC · branch `feat/karvansara-edge` · HEAD `8ddbe37`_
 
-**Status:** Idle
-**Stage:** KS7 — Platform catch-up - posture, hooks, usage, lifecycle, context economics · attempts used 0
-**Checkpoints:** 10/24 done · **Sessions run:** 10 · **Cost:** $130.4079 (agent $130.3214 + gates $0.0865) · **Tokens:** 1,969,234 in / 859,316 out
+**Status:** Paused
+**Stage:** KS6 — Quality lane - hygiene that buys design · attempts used 0 · working ▸ KS6.3
+**Checkpoints:** 12/24 done · **Sessions run:** 12 · **Cost:** $163.1368 (agent $163.0315 + gates $0.1053) · **Tokens:** 2,425,855 in / 1,123,313 out
 **Confirmed phases:** KS11, KS7
 
 ## Stage progress
@@ -13,7 +13,7 @@ _Updated 2026-08-19 00:39 UTC · branch `feat/karvansara-edge` · HEAD `f16780d`
 |---|---|---|---|
 | KS11 | Chapar - the remote surface: profiles, onboarding, evidence on demand | ██████████ 5/5 | confirmed ✓ |
 | KS7 | Platform catch-up - posture, hooks, usage, lifecycle, context economics | ██████████ 5/5 | confirmed ✓ |
-| KS6 | Quality lane - hygiene that buys design | ░░░░░░░░░░ 0/4 | todo |
+| KS6 | Quality lane - hygiene that buys design | █████░░░░░ 2/4 | **← active** |
 | KS4 | Verification that can't be gamed | ░░░░░░░░░░ 0/5 | todo |
 | KS8 | Interop - the run as a readable artifact (cut-first) | ░░░░░░░░░░ 0/2 | todo |
 | KS12 | Ship edge - close the era | ░░░░░░░░░░ 0/3 | todo |
@@ -42,12 +42,12 @@ _Updated 2026-08-19 00:39 UTC · branch `feat/karvansara-edge` · HEAD `f16780d`
 
 </details>
 
-<details><summary>KS6 — Quality lane - hygiene that buys design (0/4)</summary>
+<details><summary>KS6 — Quality lane - hygiene that buys design (2/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| KS6.1 | Curated Roslynator set (~25 design-shaped rules) as errors, everything else explicitly off, each rule adopted with a one-line reason | ⬜ TODO | - |
-| KS6.2 | Analyzer-debt count ratchet extending ratchet.ps1 semantics; the referee not editable by the agent - a seeded baseline rewrite goes red | ⬜ TODO | - |
+| KS6.1 | Curated Roslynator set (~25 design-shaped rules) as errors, everything else explicitly off, each rule adopted with a one-line reason | ✅ DONE | [`af6d93e`](https://github.com/shaahink/conductor/commit/af6d93e) |
+| KS6.2 | Analyzer-debt count ratchet extending ratchet.ps1 semantics; the referee not editable by the agent - a seeded baseline rewrite goes red | ✅ DONE | [`0cb514d`](https://github.com/shaahink/conductor/commit/0cb514d) |
 | KS6.3 | Complexity budgets (CA1502/1505/1506) with ratchets; first targets the largest partial surfaces - VerdictEngine (8 files) and ControlPlaneServer (11) | ⬜ TODO | - |
 | KS6.4 | The pure evidence-to-verdict function extracted from VerdictEngine - the taxonomy testable without the loop; the seam KS4.5 plugs into | ⬜ TODO | - |
 
@@ -98,6 +98,8 @@ _Updated 2026-08-19 00:39 UTC · branch `feat/karvansara-edge` · HEAD `f16780d`
 | 8 | KS7 | Deliver | 1 | 08-18 22:25 | 0:47 | Advanced | KS7.3 KS7.4 | 3 | engine-fast:OK · face-fast:OK | $20.2494 | $0.0092 | 249,486/130,261 |
 | 9 | KS7 | Deliver | 1 | 08-18 23:14 | 0:46 | Advanced | KS7.5 | 2 | engine-fast:OK · face-fast:OK | $10.9477 | $0.0083 | 171,145/78,053 |
 | 10 | KS7 | Fix | 2 | 08-19 00:11 | 0:22 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $5.3947 | $0.0114 | 113,064/40,939 |
+| 11 | KS6 | Deliver | 1 | 08-19 00:39 | 0:52 | Advanced | KS6.1 | 2 | engine-fast:OK · face-fast:OK | $20.6082 | $0.0103 | 256,670/149,412 |
+| 12 | KS6 | Deliver | 1 | 08-19 01:33 | 0:33 | Advanced | KS6.2 | 5 | engine-fast:OK · face-fast:OK | $12.1019 | $0.0086 | 199,951/114,585 |
 
 ## Money
 
@@ -105,28 +107,19 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 10 | 181M | 98.5% | $130.41 | 10 | 18.1M | $13.04 |
+| **run total** | 12 | 224.8M | 98.5% | $163.14 | 12 | 18.7M | $13.59 |
 | stage KS11 | 5 | 83.9M | 98.4% | $61.37 | 5 | 16.8M | $12.27 |
 | stage KS7 | 5 | 97.1M | 98.5% | $69.03 | 5 | 19.4M | $13.81 |
-| 2026-08 | 10 | 181M | 98.5% | $130.41 | 10 | 18.1M | $13.04 |
+| stage KS6 | 2 | 43.8M | 98.4% | $32.73 | 2 | 21.9M | $16.36 |
+| 2026-08 | 12 | 224.8M | 98.5% | $163.14 | 12 | 18.7M | $13.59 |
 
-_Where the money goes: agent $130.32 (100%) · gate $0.09 (0%) · blended $0.72/M tokens._
+_Where the money goes: agent $163.03 (100%) · gate $0.11 (0%) · blended $0.73/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-18 22:02:47  ✓ checkpoint KS11.1 confirmed
-08-18 22:02:47  ✓ checkpoint KS11.2 confirmed
-08-18 22:02:47  ✓ checkpoint KS11.3 confirmed
-08-18 22:02:47  ✓ checkpoint KS11.4 confirmed
-08-18 22:02:47  ✓ checkpoint KS11.5 confirmed
-08-18 22:02:47  ▸ stage KS11 confirmed  (2h53m20s)
-08-18 22:02:47  ▸ stage KS7 entered — Platform catch-up - posture, hooks, usage, lifecycle, context economics
-08-18 22:02:47  • session #6 KS7 Deliver started (attempt 1/10)
-08-18 22:46:17  ▪ gate engine-fast pass [session]  (1m02s)
-08-18 22:46:17  ▪ gate face-fast pass [session]  (27.4s)
 08-18 22:46:18  • session #6 KS7 → Advanced · done KS7.1 · 4 commit(s)  (43m30s)
 08-18 22:46:19  • session #7 KS7 Deliver started (attempt 1/10)
 08-18 23:25:28  ▪ gate engine-fast pass [session]  (1m30s)
@@ -157,6 +150,16 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-19 01:39:50  ✓ checkpoint KS7.3 confirmed
 08-19 01:39:50  ✓ checkpoint KS7.4 confirmed
 08-19 01:39:50  ✓ checkpoint KS7.5 confirmed
+08-19 01:39:50  ▸ stage KS7 confirmed  (3h37m02s)
+08-19 01:39:50  ▸ stage KS6 entered — Quality lane - hygiene that buys design
+08-19 01:39:50  • session #11 KS6 Deliver started (attempt 1/8)
+08-19 02:33:43  ▪ gate engine-fast pass [session]  (1m11s)
+08-19 02:33:43  ▪ gate face-fast pass [session]  (30.9s)
+08-19 02:33:43  • session #11 KS6 → Advanced · done KS6.1 · 2 commit(s)  (53m52s)
+08-19 02:33:48  • session #12 KS6 Deliver started (attempt 1/8)
+08-19 03:08:47  ▪ gate engine-fast pass [session]  (1m09s)
+08-19 03:08:47  ▪ gate face-fast pass [session]  (16.1s)
+08-19 03:08:47  • session #12 KS6 → Advanced · done KS6.2 · 5 commit(s)  (34m59s)
 ```
 
 ## Health
@@ -164,7 +167,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 10 · retries 1 (10 %) · overall Warn
+sessions 12 · retries 1 (8 %) · overall Warn
+⚠ [context-saturation] session #11: 28,600,968 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #3: 28,433,638 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 25,994,603 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #8: 28,984,293 context tokens (≥ 20,000,000)
@@ -181,15 +185,6 @@ working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
 
 ### Commits by session
 
-- **s3 (KS11 Deliver)** — 3 commit(s):
-  - [`278602d`](https://github.com/shaahink/conductor/commit/278602d) feat(ks11): onboarding per profile, and pushes that read like evidence
-  - [`7641396`](https://github.com/shaahink/conductor/commit/7641396) docs(tracker): KS11.2 - the handoff, pointing KS11.3 at the browse list
-  - [`1471ef9`](https://github.com/shaahink/conductor/commit/1471ef9) feat(ks11): chat profiles - one gate, and the closed observer surface
-- **s4 (KS11 Deliver)** — 4 commit(s):
-  - [`192d287`](https://github.com/shaahink/conductor/commit/192d287) docs(tracker): KS11.4 - the handoff, pointing KS11.5 at the same six goldens
-  - [`88ec389`](https://github.com/shaahink/conductor/commit/88ec389) docs(ks11): /evidence in operating.md, and CH-6's caveat said out loud
-  - [`cb84b1e`](https://github.com/shaahink/conductor/commit/cb84b1e) test(ks11): rebaseline the six ask-line goldens for /evidence
-  - [`df5048e`](https://github.com/shaahink/conductor/commit/df5048e) feat(ks11): evidence on demand - a reader asks, and the artifact arrives
 - **s5 (KS11 Deliver)** — 6 commit(s):
   - [`cfbcb3e`](https://github.com/shaahink/conductor/commit/cfbcb3e) docs(ks11): correct the wire rig's per-checkpoint figure in the KS11.5 evidence
   - [`acfc042`](https://github.com/shaahink/conductor/commit/acfc042) test(ks11): the full suite behind the KS11.5 claim - 2787/2787, nothing red
@@ -215,6 +210,15 @@ working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
 - **s10 (KS7 Fix)** — 2 commit(s):
   - [`f16780d`](https://github.com/shaahink/conductor/commit/f16780d) docs(ks7): the handoff for the next session - the battery is green, and the argv number that was measured on the wrong prompt
   - [`a36ea6d`](https://github.com/shaahink/conductor/commit/a36ea6d) fix(ks7): the record catches up with the code, and the prompt gets back under its ceiling
+- **s11 (KS6 Deliver)** — 2 commit(s):
+  - [`876cc78`](https://github.com/shaahink/conductor/commit/876cc78) docs(ks6): the handoff for the next session - the inert switch, and what the 45 pragmas actually are
+  - [`af6d93e`](https://github.com/shaahink/conductor/commit/af6d93e) feat(ks6): a curated Roslynator set, and the master switch that turned out to be inert
+- **s12 (KS6 Deliver)** — 5 commit(s):
+  - [`8ddbe37`](https://github.com/shaahink/conductor/commit/8ddbe37) fix(ks6): a pragma is only a pragma at the start of a line
+  - [`965e7ac`](https://github.com/shaahink/conductor/commit/965e7ac) docs(ks6): the handoff for the next session - the referee that was refereeing itself
+  - [`42f846f`](https://github.com/shaahink/conductor/commit/42f846f) test(ks6): the eight seeded attacks, made permanent
+  - [`4b25081`](https://github.com/shaahink/conductor/commit/4b25081) fix(ks6): the anchor was one commit, and one commit is inside the game
+  - [`0cb514d`](https://github.com/shaahink/conductor/commit/0cb514d) feat(ks6): the analyzer-debt ratchet, and 14 pragmas that were guarding nothing
 
 ## Phase handovers (audit)
 
@@ -237,38 +241,35 @@ working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> **KS7 battery green - nine reds fixed, no gate weakened**
-> - One unregistered verb (`otel`) was four of the nine; five undocumented plan keys were two more — record now matches code in `cli.md`, `operating.md`, `plan-config.md`, `NEXT-FEATURES.md` and `CompletionCommand.Verbs`
-> - The argv budget was paid, not raised: five `ToolContract` paragraphs compressed, deliver 7942→7808 and fix 7909→7775 against the 7900 ceiling, every pinned phrase intact
-> - The ninth red (preflight `rebuild`) was this session editing `src/` mid-suite, not a defect — recorded in the ledger so nobody chases it
+> **KS6.2 analyzer-debt ratchet landed; bug 44 closed downward, 45 to 31 pragmas**
+> - Six suppression kinds counted, bar is a window minimum over history - the single-commit anchor was provably inside the game, and so is all of ratchet section 3
+> - 14 pragmas proved dead by build measurement and removed; maxPragmas ratcheted down 38 to 31; zero unjustified suppressions of any kind
+> - Eight seeded attacks caught; five made permanent as tests; ratchet exit 0, 35/35 scoped tests pass
 >
-> artefacts: a36ea6d, f16780d, src/Conductor.Core/ToolContract.cs, src/Conductor/Commands/CompletionCommand.cs, docs/cli.md, docs/operating.md, docs/plan-config.md, docs/dev/NEXT-FEATURES.md
+> artefacts: tools/gates/analyzer-debt.ps1, tools/gates/ratchet.ps1, tools/gates/ratchet-baseline.json, tests/Conductor.Tests/KS6_2AnalyzerDebtRatchetTests.cs, .editorconfig, 12 src files, commits 0cb514d 4b25081 42f846f 965e7ac 8ddbe37
 >
-> evidence: .conductor/evidence/KS7/KS7-fix-s10-gates-green.md, .conductor/bg-logs/full-suite-green-20260819-002850258.log
+> evidence: .conductor/evidence/KS6/KS6.2-analyzer-debt-ratchet.md, .conductor/evidence/KS6/KS6.2-seeded-attacks.log
 >
-> gaps: none
+> gaps: ratchet 3c "tests may not be deleted" has the same vacuous-anchor hole and minTests=1932 sits against an actual 2494, so 562 test attributes could be deleted with both halves of the gate silent - recorded in the ledger, not owned by this checkpoint. Bugs #53/#54/#55 still open.
 
 ## Tracker handoff
 
 ```
-last: fix session #10 - the KS7 battery is GREEN, 2878/2878 in 2m33s
-  (.conductor/bg-logs/full-suite-green-20260819-002850258.log, commit a36ea6d). Nine reds, none of
-  them the known flake, all of them KS7.3-7.5 landing code without landing its record. KS7.3/7.4/7.5
-  re-claimed on .conductor/evidence/KS7/KS7-fix-s10-gates-green.md.
-WHAT THE NINE WERE, so you do not repeat the shape: one unregistered verb (otel) is FOUR reds -
-  completion, cli.md, operating.md S2, and the three-way agreement test all read the verb list off
-  Program.cs. A new config property is a DOCS obligation - PlanKeySchema derives the expectation, so
-  five KS7.4/7.5 keys with no row in plan-config.md were two more. Ship a verb or a key: update the
-  record in the same commit.
-THE ARGV NUMBER IN THE OLD HANDOFF WAS THE WRONG PROMPT. doctor's lint renders the SINGLE-repo
-  prompt; SF6_1's budget renders the MULTI-repo one, ~400 chars bigger, and that is the one that was
-  over (deliver 7942 / fix 7909 against 7900). After compressing five ToolContract paragraphs it
-  measures deliver=7808, fix=7775 - 92 chars of margin. Check BOTH before adding prose.
-preflight's rebuild leg goes red if you edit src/ while a bg suite is running - your own hand, not a
-  defect. Bugs #53 (cache TTL split), #54 (nodeReuse:false), #55 (lint under-measures) still open.
-next: KS8. Stage KS7 is closed and confirmed green.
+last: KS6.2 DONE (0cb514d, 4b25081, 42f846f). tools/gates/analyzer-debt.ps1 counts SIX kinds of
+  suppression, not one, wired from ratchet.ps1 so no plan edit was needed. Bug 44 CLOSED downward: 14
+  of the 45 pragmas measured dead and removed, 45 -> 31, maxPragmas ratcheted DOWN 38 -> 31, zero
+  unjustified. Evidence: .conductor/evidence/KS6/KS6.2-analyzer-debt-ratchet.md + -seeded-attacks.log.
+THE FINDING KS6.3 MUST NOT REPEAT: ALL of ratchet.ps1 section 3 is vacuous in this run's flow. It
+  anchors on origin/<branch>, but a session commits AND PUSHES before conductor runs the battery, so
+  at gate time origin/<branch> IS HEAD and 3a/3b/3c/3d compare the tree against itself - attack 8 in
+  the log commits a suppression and walks through. Do NOT write KS6.3's complexity ratchets against
+  origin/<branch>; use the window minimum (Get-AnchorCommits, one function, 25 commits, ~7s).
+  Same hole leaves 3c open with minTests=1932 against an actual 2487: 555 attributes could go silently.
+Two traps that cost me time: a $-anchored regex silently misses every CRLF line here, and a proof
+  script that git reset --hard ate an hour of uncommitted gate work. Commit first, then seed.
+next: KS6.3 complexity budgets. Bugs #53/#54/#55 still open.
 ```
