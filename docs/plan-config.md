@@ -285,8 +285,9 @@ typo costs a startup message instead of a stage.
 | `stageKinds` | string[] | Only run when the current stage's `kind` is in this list. Applies in addition to `stages`. |
 | `timeoutMinutes` | int | Per-gate timeout. Default 20. |
 | `visibility` | string | `"visible"` (default) or `"holdout"`. A holdout gate is engine-only — see below. |
-| `class` | string | `"standard"` (default) or `"regression"`. A regression gate carries PASS-TO-PASS semantics on top of its exit code — see below. |
+| `class` | string | `"standard"` (default), `"regression"` or `"mutation"`. The two named classes carry an assertion on top of the exit code — see below. |
 | `passSet` | object | How a `regression` gate's run is read for the checks that passed: `format` (`"trx"`, `"go-test"` or `"lines"`) and, for `trx`, `path`. Required for that class. |
+| `mutation` | object | How a `mutation` gate's report is read and what score it must clear: `format` (`"stryker-json"`), `path`, `threshold`, and optionally `diffBase` and `wholeReport`. Required for that class. |
 
 ### `holdoutGates` — gates the agent cannot see (KS4.1)
 
@@ -371,6 +372,68 @@ Three properties worth knowing before you turn it on:
 Load-time refusals: an unknown `class`; `class: "regression"` with no (or an unknown) `passSet.format`;
 `format: "trx"` with no `path`; and a gate that is both `holdout` and `regression` — a regression
 names the checks that stopped passing, which is exactly what a holdout may not do.
+
+### `class: "mutation"` — the tests can actually fail (KS4.3)
+
+Every other gate asks *do the tests pass*. When the same agent writes the code and the tests, that
+question is answerable by writing tests that cannot fail — an assertion on a constant, a mock that
+returns the value under test, a test that exercises no branch. A **mutation** gate asks the one
+question that move does not survive: break the implementation on purpose, and does anything go red.
+
+```jsonc
+{
+  "name": "mutation",
+  "command": "pwsh tools/mutation-run.ps1",
+  "class": "mutation",
+  "mutation": {
+    "format": "stryker-json",
+    "path": "StrykerOutput/*/reports/mutation-report.json",
+    "threshold": 60,
+    "diffBase": "master"
+  }
+}
+```
+
+The gate's only job is to **produce a report**. The threshold, the diff scoping and the comparison
+all happen in the engine, because a gate that carries its own bar carries it inside the repository
+the coding agent edits, next to a runner with a dozen flags that each narrow what gets mutated. Do
+not pass Stryker's own `--break-at`.
+
+| field | meaning |
+|-------|---------|
+| `format` | `"stryker-json"` — Stryker.NET's `mutation-report.json` (mutation-testing-elements schema). |
+| `path` | The report, relative to the gate's working directory. A `*` is allowed and resolves to the **newest** match, because Stryker stamps its output directory with the clock. |
+| `threshold` | The percent the changed files must reach. Must be above 0 and at most 100; there is no "off" value. |
+| `diffBase` | The git revision the changed-file set is computed against. Default `"HEAD"` — uncommitted work. **A run whose sessions commit as they go must name its integration branch here**, or the diff is empty by the time the battery runs. |
+| `wholeReport` | Score every file in the report instead of only the changed ones. Off by default; its use is an era-boundary measurement, not a per-session gate. |
+
+**Diff-scoped, and that is not only about cost.** A whole-repository score is unaffordable — every
+mutant is a test run — and it is also the wrong measurement: a hundred thousand already-killed
+mutants elsewhere drown the twenty a session just wrote, so a checkpoint that adds assertion-free
+tests moves the number by nothing.
+
+**The score counts NO-COVERAGE mutants in the denominator.** Stryker also publishes a score that
+omits them, and that is the number a checkpoint adding untested code would rather be judged by — it
+*rises* when a mutant is never executed at all. This class cannot be raised by not testing.
+
+Two ways it goes red, and one way it does not:
+
+- **Below the bar.** Reported as `MUTANTS` — not `FAIL`, because the gate exited 0, and not
+  `REGRESSION`, because the fix is the opposite one. The fix brief names every surviving mutant by
+  file and line, the verdict names the class, and the evidence carries its own row.
+- **Unreadable over the diff.** The branch changed mutable source and the report scores none of it.
+  A stale report, a mis-pointed path and a mutate glob narrowed past the changed file all arrive
+  here, and none of them differs from a perfect score by exit code — so it fails closed.
+- **Nothing to score.** The branch changed no `.cs` file at all. That is green and says so; a docs
+  checkpoint has no mutants, and reddening it would teach every reader to ignore the class.
+
+Never cache-served, for the same reason a regression gate is not: the verdict is computed against the
+*current* diff, so a cached pass from an earlier battery at this HEAD would answer for a different
+set of changed files.
+
+Load-time refusals: `class: "mutation"` with no (or an unknown) `mutation.format`; no `mutation.path`;
+a `threshold` outside `(0, 100]`; and a gate that is both `holdout` and `mutation` — this class
+reports surviving mutants by file and line, which is exactly what a holdout may not do.
 
 **Leave `shell` unset for portable gates.** `conductor init` does, which is why a scaffolded plan
 (`dotnet build`, `npm test`, `go test ./...`, `cargo test`, `pytest -q`) runs unchanged on any host.

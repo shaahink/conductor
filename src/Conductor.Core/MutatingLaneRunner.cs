@@ -289,8 +289,10 @@ public static class MutatingLaneRunner
             };
         }
 
-        var passedCount = gateResults.Count(g => g.Passed || g.Skipped);
-        var failedCount = gateResults.Count(g => !g.Passed && !g.Skipped);
+        // KS4.2/KS4.3: counted by IsGreen, not by the exit code, or a lane blocked by a class
+        // failure logs "0 failed" next to its own refusal to merge.
+        var passedCount = gateResults.Count(g => g.IsGreen);
+        var failedCount = gateResults.Count(g => !g.IsGreen && !g.Skipped);
         var allPassed = GateRunner.AllRequiredPassed(gateResults);
 
         // Build summary for log/events

@@ -53,7 +53,10 @@ public static class FailureCircuitBreaker
     {
         if (gates == null) return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         return gates
-            .Where(g => !g.Passed && !g.Skipped)
+            // KS4.2/KS4.3: a gate red for its CLASS exited 0, so the exit-code test alone leaves it
+            // out of the fingerprint — and two consecutive sessions failing the same way for the
+            // same reason is exactly what this breaker exists to notice.
+            .Where(g => (!g.Passed || g.HasClassFailure) && !g.Skipped)
             .Select(g => g.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }

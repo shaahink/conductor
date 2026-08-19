@@ -44,12 +44,18 @@ public sealed class GateCommand : Command<GateCommand.Settings>
         AnsiConsole.MarkupLine($"[bold aqua]conductor gate[/] ({ (settings.Full ? "full" : "fast") }): {verdict} — {Markup.Escape(summary)}");
         foreach (var g in gates)
         {
-            var icon = g.Skipped ? "[grey]-[/]"
+            // KS4.2/KS4.3: the class glyph FIRST. A gate red for its class exited 0, so every
+            // branch below would print it green and the one line this verb exists to show would be
+            // the one it hides.
+            var icon = g.HasClassFailure ? $"[red]{g.Glyph}[/]"
+                : g.Skipped ? "[grey]-[/]"
                 : g.Passed ? "[green]OK[/]"
                 : g.Optional ? "[yellow]warn[/]"
                 : "[red]FAIL[/]";
             AnsiConsole.MarkupLine($"  {icon} {Markup.Escape(g.Name)} ({g.Duration.TotalSeconds:0.0}s)");
-            if (!g.Passed && !g.Skipped)
+            if (g.HasClassFailure)
+                AnsiConsole.WriteLine(g.HasRegressions ? GateRunner.RegressionDetail(g) : GateRunner.MutationDetail(g));
+            else if (!g.Passed && !g.Skipped)
                 AnsiConsole.WriteLine(g.Tail);
         }
 
