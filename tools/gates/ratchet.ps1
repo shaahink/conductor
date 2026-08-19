@@ -233,7 +233,11 @@ else {
     # command's exit code lands in $LASTEXITCODE unambiguously, and an 'exit' inside a dot-called script
     # does not. A gate that mistakes "failed" for "returned" is a gate that passes everything.
     $hostExe = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
-    & $hostExe -NoProfile -ExecutionPolicy Bypass -File $debtScript
+    # -BaseRef has to reach the child, or the two halves of this gate measure different commits: a seeded
+    # run with -BaseRef HEAD caught the ceiling rewrite here while the child was still comparing against
+    # origin/, and passed. With no explicit base, the child picks its own window of history.
+    if ($base) { & $hostExe -NoProfile -ExecutionPolicy Bypass -File $debtScript -Anchor $base }
+    else       { & $hostExe -NoProfile -ExecutionPolicy Bypass -File $debtScript }
     if ($LASTEXITCODE -ne 0) {
         $failures.Add("THE ANALYZER-DEBT GATE FAILED - see its named reasons above. Suppressions are debt in every spelling, not just the pragma one.")
     }
