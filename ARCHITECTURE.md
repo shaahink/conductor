@@ -33,17 +33,17 @@ looking for a `BackgroundService` that owns the run, you will not find it.
 
 ### 1. Dispatch — which stage, which checkpoint, which session kind
 
-`Orchestrator` is a wiring hub whose `RunAsync` is one line — `src/Conductor.Core/Orchestrator.cs:101`
-delegates to `RunLoop`. The loop is the `while` at `Orchestration/RunLoop.cs:104`, and one turn of it is
+`Orchestrator` is a wiring hub whose `RunAsync` is one line — `src/Conductor.Core/Orchestrator.cs:103`
+delegates to `RunLoop`. The loop is the `while` at `Orchestration/RunLoop.cs:131`, and one turn of it is
 one session:
 
 | Step | Where |
 |---|---|
-| Plan hot-swap at the session boundary (reload pending, or the plan file changed on disk) | `RunLoop.cs:112` |
-| Read the work — declared tracker rows overlaid with graph status | `RunLoop.cs:199` → `Planning/WorkSnapshot.cs` |
-| A pending phase gate pre-empts everything | `RunLoop.cs:206` |
-| Pick the stage — first incomplete stage whose `dependsOn` is satisfied | `RunLoop.Plumbing.cs:25` (`SelectStage`) |
-| Dispatch the session | `RunLoop.cs:399` → `SessionRunner.RunAsync` (`Orchestration/SessionRunner.cs:58`) |
+| Plan hot-swap at the session boundary (reload pending, or the plan file changed on disk) | `RunLoop.cs:141` (`ReloadThenCheckCap`) |
+| Read the work — declared tracker rows overlaid with graph status | `RunLoop.cs:163` (`_ctx.ReadWork()`) → `Planning/WorkSnapshot.cs` |
+| A pending phase gate pre-empts everything | `RunLoop.cs:199` |
+| Pick the stage — first incomplete stage whose `dependsOn` is satisfied | `Orchestration/StageSelection.cs:56` (`StageSelection.Select`) |
+| Dispatch the session | `RunLoop.cs:414` → `SessionRunner.RunAsync` (`Orchestration/SessionRunner.cs:58`) |
 
 `SessionRunner` first decides what *kind* of session this is — deliver, fix, resume, audit, verify,
 review — at `SessionRunner.Kinds.cs:37`. The kind picks the template and the prompt shape.
@@ -53,37 +53,37 @@ review — at `SessionRunner.Kinds.cs:37`. The kind picks the template and the p
 `PromptBuilder` resolves a template by name, preferring the plan's own directory and falling back to a
 built-in string:
 
-- `PromptBuilder.cs:150` `ResolveTemplatePath` — `<planDir>/<templatesDir>/<name>.md`, then
+- `PromptBuilder.cs:169` `ResolveTemplatePath` — `<planDir>/<templatesDir>/<name>.md`, then
   `<planDir>/<name>.md`, else the built-in in `PromptBuilder.BuiltIns.cs`.
-- `PromptBuilder.cs:203` `Render` — reads the template, substitutes `{key}` from the variable table
+- `PromptBuilder.cs:222` `Render` — reads the template, substitutes `{key}` from the variable table
   (readOrder, stage notes, lessons, the tools contract, packs, the verifier threshold), then calls
   `PromptValidator.ThrowIfUnresolved` at `PromptValidator.cs:29`. **An unresolved `{token}` throws**, the
   loop parks on it, and the refusal is why a stray brace in a template file kills a run.
-- `PromptBuilder.cs:269` `BatterySection` — the knowledge ledger and open bugs, contributed by
+- `PromptBuilder.cs:288` `BatterySection` — the knowledge ledger and open bugs, contributed by
   `IPromptBattery` implementations, appended after the template body.
 - Work items and per-card context are composed in `SessionRunner.cs` around `:167`–`:199`.
 
 **The handoff block is not substituted into a deliver prompt.** The template tells the agent to read
 `{tracker}` itself. The parsed handoff is injected verbatim only into advisor and analysis-lane prompts.
-The final rendered prompt is written to `logs/session-NNN.prompt.md` (`SessionRunner.cs:212`) — that file
+The final rendered prompt is written to `logs/session-NNN.prompt.md` (`SessionRunner.cs:175`) — that file
 is the ground truth for "what did the agent actually receive".
 
 ### 3. The agent
 
-`AgentSession.Start` (`src/Conductor.Core/AgentSession.cs:111`) spawns whatever `agent.command` names —
+`AgentSession.Start` (`src/Conductor.Core/AgentSession.cs:137`) spawns whatever `agent.command` names —
 typically `claude -p --output-format stream-json`. Arguments are templated (`{prompt}`, `{sessionId}`,
 `{model}`, `{claudeSessionId}`), MCP config args are appended, and the child gets `CONDUCTOR_PLAN` and
 `CONDUCTOR_PID` in its environment so in-worker `conductor` verbs address the right run.
 
 Every stdout line is teed to `logs/session-NNN.jsonl` and then handed to the provider
-(`AgentSession.cs:166`), inside a catch-all so one malformed line cannot kill the run. The provider is
+(`AgentSession.cs:181`), inside a catch-all so one malformed line cannot kill the run. The provider is
 chosen by `IAgentProvider.Create` (`Providers/IAgentProvider.cs:35`). For Claude, live token deltas are
-deduplicated by message id and folded onto session state at `Providers/ClaudeProvider.cs:130`; the
+deduplicated by message id and folded onto session state at `Providers/ClaudeProvider.cs:147` (`EmitLiveUsage`); the
 authoritative totals come off the terminal `result` envelope.
 
 While the agent runs, the poll loop watches three rails: the **soft break**
-(`SessionRunner.Mcp.cs:20` — at `softBreakRatio × ceiling`, writes the signal file and emits
-`SoftBreakRequested`), the **hard ceiling** (`SessionRunner.Mcp.cs:93`, kills the agent), and the
+(`SessionRunner.Mcp.cs:21` (`CheckSoftBreak`) — at `softBreakRatio × ceiling`, writes the signal file and emits
+`SoftBreakRequested`), the **hard ceiling** (`SessionRunner.Mcp.cs:99` (`EndOnBudget`), kills the agent), and the
 watchdog thread. Hitting the ceiling takes the rollover branch at `SessionRunner.cs:420`: commits and
 claims are recorded, **no attempt is burned and no gate battery runs**, and the next turn of the loop
 starts a fresh session.
@@ -184,7 +184,7 @@ KS7.5's to spend, through `--plugin-dir` pointed at the state dir.
 
 ### 4. Verdict
 
-`VerdictEngine.EvaluateSessionAsync` (`Orchestration/VerdictEngine.cs:116`) judges what happened. It
+`VerdictEngine.EvaluateSessionAsync` (`Orchestration/VerdictEngine.Evaluate.cs:111`) judges what happened. It
 handles control outcomes first (killed, stalled, blocked-until), then branches by session kind — an
 audit queues the phase gate, a verify parses the agent's JSON score, a delivery runs the gate battery.
 
@@ -194,15 +194,33 @@ fallback), newly-blocked items, whether gates are green, and whether the tree is
 "evidence or it did not happen" is made of. Green emits `Advanced`/`Progress` and a pending-confirmation
 set; red queues a fix session carrying the gate failure tails.
 
+**The taxonomy is a pure function, and it is not in the loop (KS6.4).** `EvaluateSessionAsync` now
+*gathers* evidence into a `SessionEvidence` record (`Orchestration/SessionEvidence.cs:20`), hands it to
+`SessionVerdict.Decide` (`Orchestration/SessionVerdict.cs:19`) and *applies* the returned
+`VerdictDecision` (`Orchestration/VerdictDecision.cs:28`). `Decide` is total, deterministic and
+allocation-only: same evidence in, same decision out, on any machine, with no run in progress. Before
+this, every branch of the taxonomy could only be reached by standing up a `RunContext`, a store, a git
+repo and an agent process — which is why the taxonomy was the least-tested part of the engine and is
+now the best-tested. When it needs more evidence than it was given it returns a **continuation**
+(`VerdictDisposition.RunGateBattery`, `.ReadWorkEvidence`, `.HonourBlockUntil`) rather than reaching for
+it, so the impure half stays in the caller.
+
+**A second model may review the work; it may not score it (KS4.5).** `VerdictEngine.Judge.cs` runs the
+configured review command and folds the result in as an `AdvisoryEvidence` row
+(`SessionEvidence.cs:12`) tagged `judge:<command>` — one more line of evidence beside the gates and the
+claims. `SessionVerdict.Decide` never reads `AdvisoryRows` to reach a disposition; the rows reach the
+fix prompt and the record, and nothing else. That is enforced by test, not by convention: no code path
+lets a judge's score flip a gate verdict.
+
 ### 5. Gates
 
-`GateRunner` is a static class (`src/Conductor.Core/GateRunner.cs:25`); `RunAllAsync` at `:35` is the
+`GateRunner` is a static **partial** class (`src/Conductor.Core/GateRunner.cs:6`); `RunAllAsync` at `:22` is the
 whole battery. Gates are declared in `plan.gates`, filtered by stage and tier, cached per commit SHA, run
 in parallel batches with non-parallel gates as barriers, and **every failed required gate is retried once
 unconditionally** before the battery is called red.
 
 The **phase gate** — the one that confirms a stage rather than a session — is
-`VerdictEngine.Phase.cs:29`. Green runs the audit and then `ConfirmStageAsync` (`Phase.cs:140`), which is
+`VerdictEngine.Phase.cs:25`. Green runs the audit and then `ConfirmStageAsync` (`Phase.cs:136`), which is
 the only path that turns `DONE` into `DONE ✓`. Red increments the stage attempt and queues a fix.
 
 `rollback` is not bookkeeping — it is **`git reset --hard`** onto `state.CurrentStageStartHead`, the
@@ -216,13 +234,44 @@ every commit made since that head**. It is refused when no stage-start head has 
 and leaves the run `Idle` (`:199`). *(Citations re-measured at KS10.1, 2026-08-15; they had drifted
 by 6-8 lines. The semantics had not moved at all.)*
 
+### 5b. Gate classes — the three things an exit code cannot tell you (KS4)
+
+A gate that exits 0 has said one thing: *this command succeeded*. Three failure modes hide inside that,
+and each is a **class** declared on the gate in the plan rather than a new kind of code.
+
+- **Holdout** (`Models/GateVisibility.cs:28`, `visibility: "holdout"`). A holdout gate is redacted
+  **where it is produced**, not where it is shown: `GateRunner.RunAllAsync` takes `includeHoldout`
+  (`GateRunner.cs:26`) and filters at `:29`, and everything a session can see — progress lines, the
+  fix brief, the tail — carries `GateVisibility.RedactedName` via `GateRunner.Label` (`:162`). The
+  session cannot tune to a gate whose name it never learns. `GateOrchestrator.cs:37` is the **only**
+  call site in the engine that passes `includeHoldout: true` — the phase gate. Holdouts never run per
+  session, so there is no per-session signal to tune against.
+- **Regression** (`Models/GateClass.cs:34`, `class: "regression"`). Reads what still *passes* rather
+  than what failed: `GateRunner.LostChecks` (`GateRunner.Classes.cs:117`) diffs this run's passing
+  check names against the baseline and `ApplyRegressionClass` (`:21`) turns a lost check into a red
+  gate **even though the command exited 0**. Deleting a test to get green is therefore a gate failure.
+  An empty pass set is reported as `GateClass.EmptyPassSetNotice`, never as a silent pass.
+- **Mutation** (`class: "mutation"`). `ApplyMutationClassAsync` (`GateRunner.Classes.cs:73`) reads a
+  mutation report the gate produced and fails on a score shortfall — the suite that runs but asserts
+  nothing. An unreadable report is a `MutationFinding` carrying `UnreadableMutationNotice`, not a pass.
+
+All three say their verdict **in the class's own words** (`SessionVerdict.cs:242-261`): "a gate failed"
+is wrong twice over for a classed failure, because the gate exited 0 and what is broken is the checks
+rather than the code under them. A fix session told "a gate failed" goes looking for an assertion that
+does not exist.
+
+**The attempt diff (KS4.4)** is the fourth thing an exit code cannot tell you: *what this attempt
+actually changed*. Each attempt gets a git worktree, the diff against its start head joins the evidence
+set, and the engine's own commits (tracker regeneration, REPORT.md) are excluded so the diff carries
+the session's work and nothing else. Orphaned attempt worktrees are swept at startup.
+
 ### 6. The claim, and the tracker
 
 `conductor task --done <id>` is the only claim path, and it is one function deep:
 
 ```
 TaskCommand → TaskBoard.Move (src/Conductor/Commands/TaskBoard.cs:19)
-            → SqliteRunStore.ApplyTaskStatus (Store/SqliteRunStore.Sessions.cs:249)
+            → SqliteRunStore.ApplyTaskStatus (Store/SqliteRunStore.Sessions.cs:367)
             → TaskWrites.BuildStatusChange (Events/TaskWrites.cs:26)   ← validates the transition
             → event appended
 ```
@@ -230,8 +279,8 @@ TaskCommand → TaskBoard.Move (src/Conductor/Commands/TaskBoard.cs:19)
 `TaskBoard.Move` reports the **post-fold** status and exits non-zero on a refused transition, which is why
 the CLI's output is trustworthy and intent is not.
 
-The tracker markdown is a **generated view**: `RunLoop.RegenerateTracker` (`RunLoop.Plumbing.cs:301`) →
-`TrackerGenerator.Write` (`TrackerGenerator.cs:151`), rows from the database, handoff from the latest
+The tracker markdown is a **generated view**: `RunLoop.RegenerateTracker` (`RunLoop.Plumbing.cs:313`) →
+`TrackerGenerator.Write` (`TrackerGenerator.cs:158`), rows from the database, handoff from the latest
 recorded handover. Editing a checkpoint row by hand changes nothing; editing the handoff block does,
 because that block is parsed back out and stored.
 
@@ -249,18 +298,20 @@ events itself, to find an interrupted session.
 
 ## The seams
 
-`src/Conductor.Core` declares exactly **nine** `public interface I*`. That is the whole list — the
-abstraction count is small on purpose.
+`src/Conductor.Core` declares exactly **ten** `public interface I*`. That is the whole list — the
+abstraction count is small on purpose. *(Counted again at KS12.1, 2026-08-19: it was nine until
+KS11.1 extracted `IMessageChannel`, and the count in this sentence was stale for the whole edge era.)*
 
 | Seam | Job | Implementations |
 |---|---|---|
 | `IRunStore` `Store/IRunStore.cs:10` | The run's durable write + query surface | `SqliteRunStore` (7 partials). Tests point it at a temp sqlite file rather than faking it. |
 | `IAgentProvider` `Providers/IAgentProvider.cs:6` | Adapt one agent CLI's argv and stdout to the session loop | `ClaudeProvider`, `OpencodeProvider`, `GenericTextProvider`; factory at `:35` |
 | `IProgressProvider` `Planning/IProgressProvider.cs:12` | Answer "how far along is this stage?" from an external source | `MarkdownTableProvider`, `ScriptProvider`, `PlanCheckpointProvider` |
-| `IPromptBattery` `PromptBattery.cs:10` | Contribute one optional block of context to the next prompt | `LedgerBattery`, `BugsBattery`, `LessonsBattery`, `RecentFailureBattery`, `LaneArtifactBattery` |
+| `IPromptBattery` `PromptBattery.cs:10` | Contribute one optional block of context to the next prompt | `LedgerBattery`, `BugsBattery`, `LessonsBattery`, `RecentFailureBattery`, `LaneArtifactBattery`, and KS7.5's two: `RepoMapBattery` (`PromptBattery.Context.cs:23`), `DefinitionOfDoneBattery` (`:113`) |
 | `IEventSink` `Events/EventLog.cs:8` | Append one `ConductorEvent` | `EventLog`, `SqliteRunStore`, `NullEventSink` (dry run) |
 | `IProgressSink` `Progress.cs:67` | Push snapshots/logs out to an operator, poll control commands back in | `PlainSink`; test doubles record |
-| `ITelegramService` `Integrations/TelegramService.cs:22` | The notify + remote-control channel | `TelegramService`, `NoOpTelegramService` (null object when the plan has no telegram block) |
+| `IRunNotifier` `Integrations/TelegramService.cs:22` | The notify + remote-control channel | `TelegramService`, `NoOpTelegramService` (null object when the plan has no telegram block) |
+| `IMessageChannel` `Integrations/Messaging/IMessageChannel.cs:15` | **KS11.1 — the tenth.** One messenger *transport*: send a message, upload a document, poll for inbound commands | `TelegramService` (the only real one); `FakeChannel` in the tests drives the whole surface with no wire |
 | `IPlanner` `IPlanner.cs:7` | Decide the next checkpoint | `CheckpointPlanner` |
 | `IReportsStartOutcome` `IReportsStartOutcome.cs:17` | Let a hosted service say it declined to start on purpose | `TelegramService` |
 
@@ -279,7 +330,7 @@ other implementation would be a fake, the seam belongs at the transport, not at 
 - **Process launch** — `public static class ProcessRunner` (`ProcessRunner.cs:8`). Not injectable; the
   escape hatches are `ProcessSupervisor` and a per-call environment override.
 - **Git** — `public static class Git` (`Git.cs:3`), shelling straight to `git -C <repo>`. Not mockable.
-- **Gate execution** — `public static class GateRunner` (`GateRunner.cs:25`). Its seams are *parameters*
+- **Gate execution** — `public static partial class GateRunner` (`GateRunner.cs:6`). Its seams are *parameters*
   (`onProgress`, `onGates`, an optional `IRunStore` for the per-SHA cache), not types.
 - **GitHub sync** — `GithubClient` + `GithubMirror` (`Integrations/Github/`). Push-only by design
   (ADR-0005): nothing is ever read back from GitHub into the run, so there is nothing for a seam to
@@ -321,11 +372,11 @@ Three of the GETs are SSE streams rather than snapshots: `/events`, `/transcript
 `face-go/` is a Bubble Tea TUI in its own module, talking to the control plane over HTTP. It is **not**
 push-only and **not** poll-only:
 
-- **Discovery**: `discoverControlPlane()` (`face-go/cmd/conductor-face/main.go:187`) walks *up* from the
+- **Discovery**: `discoverControlPlane()` (`face-go/cmd/conductor-face/main.go:280`) walks *up* from the
   cwd looking for `.conductor/control-plane.json` and reads `baseUrl` + `token`. `--port`/`--token` and
   `CONDUCTOR_TOKEN` override it. The state directory is discovered separately, because the engine deletes
   the discovery file on shutdown and the Face must still render a finished run.
-- **Polling**, once a second (`internal/tui/messages.go:187`), fanning out to `/state`, `/tasks`,
+- **Polling**, once a second (`internal/tui/messages.go:189`, `CmdTick`), fanning out to `/state`, `/tasks`,
   `/processes`, `/sessions`, plus knowledge and the owner queue. The polls fail independently.
   **Connectedness is derived from a healthy `/state` poll, not from stream liveness.**
 - **Streaming**, over SSE (`internal/api/sse.go:20`) for the three stream endpoints, resuming from a
@@ -337,6 +388,39 @@ push-only and **not** poll-only:
   name**; the mapping happens in the `/control` handler, so change both ends together.
 - **Demo mode**: `DataSource` (`internal/api/types.go:10`) has two implementations, live and demo, which
   is how `conductor demo` renders a whole run with no engine and no credentials.
+
+### A third, added at KS8.1 — the read-only MCP surface
+
+*(The heading above says "two" because it was written when there were two. `conductor mcp-observe`
+makes it three, and it is listed here rather than renamed away because the third is deliberately
+unlike the other two.)*
+
+`McpObserveCommand` (`src/Conductor/Commands/McpObserveCommand.cs:22`) serves MCP JSON-RPC over stdio
+from `McpObserveServer` (`Integrations/McpObserveServer.cs:24`, resources in `.Resources.cs:15`). It
+publishes run history, status and money as MCP **resources**. It declares **no tools capability**,
+`tools/list` returns an empty array, and `tools/call` is refused `-32601` for every agent-surface tool.
+Read-only is not a matter of discipline: the store is opened through `RunArchive`
+(`History/RunArchive.cs:24`) with `Mode=ReadOnly`, so SQLite itself rejects a write — the refusal is at
+the connection, not at a policy check. ADR-0007
+records why control operations are excluded by design.
+
+`conductor history export --atif` (`Core/Interop/AtifExport.cs:38`) is the other half of the same idea:
+a run leaves as an ATIF-v1.7 trajectory, billed costs included, for tooling that was never going to
+speak conductor's schema.
+
+### The messenger, and why it is no longer "the telegram service" (KS11)
+
+`Integrations/Messaging/` is the channel-agnostic half of the courier: composition
+(`MessageComposer`, `:24`), the command router (`CommandRouter.cs:76`), chat profiles
+(`ChatProfile.cs:11`), evidence browsing, rate limiting and the push grammar. `TelegramService` is now
+one `IMessageChannel` implementation — the transport — and the tests drive the whole surface through a
+`FakeChannel` with no wire at all.
+
+**Profiles are per chat, and the observer surface is closed.** `ChatProfiles.TryParse`
+(`ChatProfile.cs:46`) refuses an unknown profile string **by name at plan load**, not at first use.
+An observer chat may ask for status, tasks, progress, evidence and the daily digest; a control verb
+from an observer chat is refused. Plans written against the old `allowedChatIds` shape behave
+byte-identically, which is pinned by golden replay rather than asserted in prose.
 
 ## The file-organisation convention
 
@@ -414,7 +498,7 @@ The second column is where the thing lives. The third is what silently lies if y
 |---|---|---|
 | **an HTTP endpoint** | request/result records in `Core/Http/Contracts/<feature>/`, handler in the matching `ControlPlaneServer.<Feature>.cs` partial | the `switch` at `ControlPlaneServer.cs:207`; **register every DTO in `ControlPlaneJsonContext`** or it will not serialise; `face-go/internal/api/client.go` if the Face calls it |
 | **an event** | `Core/Events/Kinds/<subject>Events.cs` — never beside the code that raises it | `ArchitectureBoundaryTests.EventTypesStayInTheEventNamespace` fails the build; `RunStateProjection.Fold` if it changes run state |
-| **a CLI verb** | `src/Conductor/Commands/<Verb>Command.cs` | `c.AddCommand<…>("verb")` in `Program.cs:74`ff; `docs/cli.md` |
+| **a CLI verb** | `src/Conductor/Commands/<Verb>Command.cs` | `c.AddCommand<…>("verb")` in `Program.cs:46`ff; `docs/cli.md` |
 | **a gate** | `plan.gates` in the plan JSON — gates are configuration, not code (`Models/GateConfig.cs:5`) | nothing in the engine; get the path right, a wrong one can exit 0 |
 | **support for another agent CLI** | `Core/Providers/<Name>Provider.cs` implementing `IAgentProvider` | the factory switch at `Providers/IAgentProvider.cs:35` |
 | **a block of context in every prompt** | an `IPromptBattery` in `Core/PromptBattery.*.cs` | the assembly list in `PromptBuilder.BatterySection` (`PromptBuilder.cs:273`ff) |

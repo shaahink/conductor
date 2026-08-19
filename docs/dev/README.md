@@ -9,9 +9,12 @@ what a good change looks like. The material here is what sits behind that page.
 
 | Doc | What it is |
 |---|---|
-| [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) | The map: the three assemblies and which way they point, one session's lifecycle end to end, the seams, the two surfaces, and where to add a new thing. Start here. |
+| [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) | The map: the three assemblies and which way they point, one session's lifecycle end to end, the seams, the surfaces (three since KS8.1), and where to add a new thing. Start here. Reconciled against the engine at KS12.1, 2026-08-19 - 27 drifted `file:line` citations corrected and the edge era's own sections added. |
 | [`KARVANSARA-PLAN-2026-08-13.md`](KARVANSARA-PLAN-2026-08-13.md) | The KS-series plan — the open door: one command over every run the machine ever ran, plan authoring without hand-written config, budget truth, GitHub sync. **The design authority for current work.** Its per-checkpoint contracts are in [`../../plans/karvansara/contracts/`](../../plans/karvansara/contracts/). |
-| [`../../plans/karvansara/CORE-TRACKER.md`](../../plans/karvansara/CORE-TRACKER.md) | The live **tracker** — checkpoint table + handoff block, beside its plan in `plans/karvansara/`. Conductor drives itself with it. A generated view: the checkpoint rows are overwritten from the database, and the handoff block is the part a session writes. |
+| [`../../plans/karvansara/EDGE-TRACKER.md`](../../plans/karvansara/EDGE-TRACKER.md) | The live **tracker** for `edge.plan.json` - gates that can't be gamed, and the courier. Same generated-view rules as the core tracker below. |
+| [`CHAPAR-REMOTE-SURFACE-2026-08-18.md`](CHAPAR-REMOTE-SURFACE-2026-08-18.md) | The messenger/remote-surface spec KS11 was built from - the channel seam, chat profiles, the push grammar, evidence and metrics on demand. |
+| [`GITHUB-SYNC-DESIGN-2026-08-13.md`](GITHUB-SYNC-DESIGN-2026-08-13.md) | The committed design KS9 implemented: one-way push, off by default, nothing inbound. Settled by [ADR-0005](adr/0005-push-only-remote-observability.md). |
+| [`../../plans/karvansara/CORE-TRACKER.md`](../../plans/karvansara/CORE-TRACKER.md) | The **closed** core tracker, 30/30, shipped as v0.4.1 on 2026-08-15. It stays here rather than in `history/` only until KS12.3 moves both trackers together. A generated view: the checkpoint rows are overwritten from the database, and the handoff block is the part a session writes. |
 | [`../history/CONDUCTOR-KARVAN.md`](../history/CONDUCTOR-KARVAN.md) | The **closed** K-series brief. Moved to `history/` when Karvan tagged, per the convention below; it is the design authority for nothing current. |
 | [`GAP-ANALYSIS.md`](GAP-ANALYSIS.md) | The owner-commissioned analysis that produced the W-series: why the loop broke and the road back. Still the reference for why the rails exist. |
 
@@ -32,9 +35,16 @@ moves when the lanes plan does.
 
 **Karvansara keeps BOTH files, and this is the reason** (recorded at KS10.3, 2026-08-15, when the
 core plan shipped as v0.4.1): what closed is the *core plan*, not the era. `karvansara-edge` — KS4
-(verification that can't be gamed), KS6 (quality lane), KS7 (platform catch-up), KS8 — is unauthored,
-belongs in `plans/karvansara/` beside the plan that just finished, and its design is the same brief
-that would move. `plans/karvansara/core.plan.json:36` names `CORE-TRACKER.md` as its `tracker`, and
+(verification that can't be gamed), KS6 (quality lane), KS7 (platform catch-up), KS8 — was unauthored
+at the time, belongs in `plans/karvansara/` beside the plan that just finished, and its design is the
+same brief that would move. **Updated at KS12.1 (2026-08-19):** edge was authored on 2026-08-18 as
+`plans/karvansara/edge.plan.json` (24 checkpoints, KS11 Chapar added as the remote surface), it has
+run KS11/KS7/KS6/KS4/KS8 to green, and it is closing now at KS12. **KS12.3 is the checkpoint that
+performs the move this paragraph promises** — `CORE-TRACKER.md`, `EDGE-TRACKER.md` and
+`KARVANSARA-PLAN-2026-08-13.md` go to `history/` together, both trackers to
+`history/archive/trackers/`. Nothing may move before it: `edge.plan.json` names `EDGE-TRACKER.md` as
+its `tracker` and the plan's `readOrder` names the brief by path, so moving either mid-run leaves the
+next session reading nothing. `plans/karvansara/core.plan.json:36` names `CORE-TRACKER.md` as its `tracker`, and
 `.conductor/contracts/KS2face.json` and `KS9-10.json` address the brief by path. So the tracker stays
 in `plans/karvansara/` and `KARVANSARA-PLAN-2026-08-13.md` stays here; both move when edge closes.
 Same trap, one era later.
@@ -53,8 +63,9 @@ Same trap, one era later.
 
 | Doc | What it is |
 |---|---|
-| [`adr/`](adr/) | Architecture decision records — **[0001](adr/0001-tooling-and-ruleset.md)** tooling/ruleset, **[0002](adr/0002-event-sourcing.md)** event sourcing (amended by W1.1 for the unified work graph), **[0003](adr/0003-cross-platform-packaging-closeout.md)** packaging, **[0004](adr/0004-face-tab-consolidation.md)** Face tab consolidation, **[0005](adr/0005-push-only-remote-observability.md)** push-only remote observability, **[0006](adr/0006-tui-conventions.md)** TUI conventions (scroll idiom, key namespace, markdown). If you change something an ADR settled, amend the ADR in the same PR. |
+| [`adr/`](adr/) | Architecture decision records — **[0001](adr/0001-tooling-and-ruleset.md)** tooling/ruleset, **[0002](adr/0002-event-sourcing.md)** event sourcing (amended by W1.1 for the unified work graph), **[0003](adr/0003-cross-platform-packaging-closeout.md)** packaging, **[0004](adr/0004-face-tab-consolidation.md)** Face tab consolidation, **[0005](adr/0005-push-only-remote-observability.md)** push-only remote observability, **[0006](adr/0006-tui-conventions.md)** TUI conventions (scroll idiom, key namespace, markdown), **[0007](adr/0007-read-only-mcp-surface.md)** the read-only MCP surface - why `mcp-observe` publishes resources and exposes no tools, with MCP's 2026 attack record as the reason. If you change something an ADR settled, amend the ADR in the same PR. |
 | [`../../face-go/STYLE.md`](../../face-go/STYLE.md) | The Face's live keybinding + layout reference. Read it before touching the UI. |
+| [`TOKEN-BUDGET-TUNING.md`](TOKEN-BUDGET-TUNING.md) | **How the ceiling and the nudge are set, and what every era actually measured.** Section 12 carries the current prescription; a new plan compiles against it. Never guess these two numbers - re-run `conductor budget`. |
 | [`RESEARCH.md`](RESEARCH.md) | Survey of comparable orchestrators and terminal-UX patterns. |
 | [`NEXT-FEATURES.md`](NEXT-FEATURES.md) | Backlog of captured-but-unbuilt ideas. |
 | [`templates/start-new-iteration.md`](templates/start-new-iteration.md) | Copy-and-fill template for starting a new plan iteration. |

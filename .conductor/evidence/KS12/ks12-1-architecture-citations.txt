@@ -1,0 +1,91 @@
+31	src/Conductor/Commands/RunCommand.cs:153	exitCode = await host.Services.GetRequiredService<Orchestrator>().RunA	| hosted services, then awaits the orchestrator at `src/Conductor/Commands/RunCommand.cs:153`. If you go
+36	src/Conductor.Core/Orchestrator.cs:103	public Task<int> RunAsync(CancellationToken ct) => Loop.RunAsync(ct);	| `Orchestrator` is a wiring hub whose `RunAsync` is one line — `src/Conductor.Core/Orchestrator.cs:103`
+37	Orchestration/RunLoop.cs:131	while (!ct.IsCancellationRequested)	| delegates to `RunLoop`. The loop is the `while` at `Orchestration/RunLoop.cs:131`, and one turn of it is
+42	RunLoop.cs:141	if (ReloadThenCheckCap()) continue;	| | Plan hot-swap at the session boundary (reload pending, or the plan file changed on disk) | `RunLoop.cs:141` (`ReloadThenCheckCap
+43	RunLoop.cs:163	var track = _ctx.ReadWork();	| | Read the work — declared tracker rows overlaid with graph status | `RunLoop.cs:163` (`_ctx.ReadWork()`) → `Planning/WorkSnapshot
+44	RunLoop.cs:199	await _verdicts.RunPhaseGateAsync(_ctx.State.PendingPhaseGate!, ct).Co	| | A pending phase gate pre-empts everything | `RunLoop.cs:199` |
+45	Orchestration/StageSelection.cs:56	public static StageConfig? Select(PlanConfig plan, RunState state, Tra	| | Pick the stage — first incomplete stage whose `dependsOn` is satisfied | `Orchestration/StageSelection.cs:56` (`StageSelection.S
+46	RunLoop.cs:414	try { await _sessions.RunAsync(stage, track, ct).ConfigureAwait(false)	| | Dispatch the session | `RunLoop.cs:414` → `SessionRunner.RunAsync` (`Orchestration/SessionRunner.cs:58`) |
+46	Orchestration/SessionRunner.cs:58	public async Task RunAsync(StageConfig stage, TrackerSnapshot preTrack	| | Dispatch the session | `RunLoop.cs:414` → `SessionRunner.RunAsync` (`Orchestration/SessionRunner.cs:58`) |
+49	SessionRunner.Kinds.cs:37	private SessionKind ResolveSessionKind(	| review — at `SessionRunner.Kinds.cs:37`. The kind picks the template and the prompt shape.
+56	PromptBuilder.cs:169	internal string ResolveTemplatePath(string templateFile)	| - `PromptBuilder.cs:169` `ResolveTemplatePath` — `<planDir>/<templatesDir>/<name>.md`, then
+58	PromptBuilder.cs:222	private string Render(string templateFile, Dictionary<string, string> 	| - `PromptBuilder.cs:222` `Render` — reads the template, substitutes `{key}` from the variable table
+60	PromptValidator.cs:29	public static void ThrowIfUnresolved(string rendered, string templateN	| `PromptValidator.ThrowIfUnresolved` at `PromptValidator.cs:29`. **An unresolved `{token}` throws**, the
+62	PromptBuilder.cs:288	public string BatterySection(RunState? state, IRunStore? store = null,	| - `PromptBuilder.cs:288` `BatterySection` — the knowledge ledger and open bugs, contributed by
+68	SessionRunner.cs:175	await File.WriteAllTextAsync(Path.Combine(logsDir, $"session-{rec.Numb	| The final rendered prompt is written to `logs/session-NNN.prompt.md` (`SessionRunner.cs:175`) — that file
+73	src/Conductor.Core/AgentSession.cs:137	public static AgentSession Start(AgentConfig cfg, string cwd, string p	| `AgentSession.Start` (`src/Conductor.Core/AgentSession.cs:137`) spawns whatever `agent.command` names —
+79	AgentSession.cs:181	proc.OutputDataReceived += (_, e) => session.OnLine(e.Data, stderr: fa	| (`AgentSession.cs:181`), inside a catch-all so one malformed line cannot kill the run. The provider is
+80	Providers/IAgentProvider.cs:35	public static IAgentProvider Create(AgentConfig cfg)	| chosen by `IAgentProvider.Create` (`Providers/IAgentProvider.cs:35`). For Claude, live token deltas are
+81	Providers/ClaudeProvider.cs:147	private static void EmitLiveUsage(JsonElement msg, AgentStreamState st	| deduplicated by message id and folded onto session state at `Providers/ClaudeProvider.cs:147` (`EmitLiveUsage`); the
+85	SessionRunner.Mcp.cs:21	private void CheckSoftBreak(AgentSession agent, TrackerSnapshot preTra	| (`SessionRunner.Mcp.cs:21` (`CheckSoftBreak`) — at `softBreakRatio × ceiling`, writes the signal file and emits
+86	SessionRunner.Mcp.cs:99	private bool EndOnBudget(AgentSession agent, SessionRecord rec)	| `SoftBreakRequested`), the **hard ceiling** (`SessionRunner.Mcp.cs:99` (`EndOnBudget`), kills the agent), and the
+87	SessionRunner.cs:420	if (_ctx.EffectiveMaxSessionTokens is { } maxTok && (budgetKilled || r	| watchdog thread. Hitting the ceiling takes the rollover branch at `SessionRunner.cs:420`: commits and
+151	SessionRunner.Activity.cs:44	private void PromoteHookDigest(SessionRecord rec)	| (`SessionRunner.Activity.cs:44`) rebuilds the digest from that file; the digest records the `source`
+187	Orchestration/VerdictEngine.Evaluate.cs:111	public async Task EvaluateSessionAsync(SessionRecord rec, StageConfig 	| `VerdictEngine.EvaluateSessionAsync` (`Orchestration/VerdictEngine.Evaluate.cs:111`) judges what happened. It
+192	VerdictEngine.Claims.cs:71	private List<string> ResolveClaims(SessionRecord rec, string stageId,	| (`VerdictEngine.Claims.cs:71` — resolved from the work graph, with a tracker diff only as a flagged
+198	Orchestration/SessionEvidence.cs:20	public sealed record SessionEvidence	| *gathers* evidence into a `SessionEvidence` record (`Orchestration/SessionEvidence.cs:20`), hands it to
+199	Orchestration/SessionVerdict.cs:19	public static VerdictDecision Decide(SessionEvidence e)	| `SessionVerdict.Decide` (`Orchestration/SessionVerdict.cs:19`) and *applies* the returned
+200	Orchestration/VerdictDecision.cs:28	public sealed record VerdictDecision	| `VerdictDecision` (`Orchestration/VerdictDecision.cs:28`). `Decide` is total, deterministic and
+210	SessionEvidence.cs:12	public sealed record AdvisoryEvidence(string Source, string Verdict, i	| (`SessionEvidence.cs:12`) tagged `judge:<command>` — one more line of evidence beside the gates and the
+217	src/Conductor.Core/GateRunner.cs:6	public static partial class GateRunner	| `GateRunner` is a static **partial** class (`src/Conductor.Core/GateRunner.cs:6`); `RunAllAsync` at `:22` is the
+223	VerdictEngine.Phase.cs:25	internal async Task RunPhaseGateAsync(PendingPhaseGate pg, Cancellatio	| `VerdictEngine.Phase.cs:25`. Green runs the audit and then `ConfirmStageAsync` (`Phase.cs:136`), which is
+223	Phase.cs:136	NOFILE	| `VerdictEngine.Phase.cs:25`. Green runs the audit and then `ConfirmStageAsync` (`Phase.cs:136`), which is
+228	src/Conductor.Core/Commands/ControlDispatcher.cs:197	Git.Exec(_plan.Repo, "reset", "--hard", sha);	| (`src/Conductor.Core/Commands/ControlDispatcher.cs:197`). It **destroys uncommitted work and drops
+242	Models/GateVisibility.cs:28	public static class GateVisibility	| - **Holdout** (`Models/GateVisibility.cs:28`, `visibility: "holdout"`). A holdout gate is redacted
+244	GateRunner.cs:26	bool includeHoldout = false)	| (`GateRunner.cs:26`) and filters at `:29`, and everything a session can see — progress lines, the
+246	GateOrchestrator.cs:37	store, state.RunId, headSha, includeHoldout: true).ConfigureAwait(fals	| session cannot tune to a gate whose name it never learns. `GateOrchestrator.cs:37` is the **only**
+249	Models/GateClass.cs:34	public static class GateClass	| - **Regression** (`Models/GateClass.cs:34`, `class: "regression"`). Reads what still *passes* rather
+250	GateRunner.Classes.cs:117	public static IReadOnlyList<string> LostChecks(IEnumerable<string> bas	| than what failed: `GateRunner.LostChecks` (`GateRunner.Classes.cs:117`) diffs this run's passing
+254	GateRunner.Classes.cs:73	internal static async Task<GateResult> ApplyMutationClassAsync(	| - **Mutation** (`class: "mutation"`). `ApplyMutationClassAsync` (`GateRunner.Classes.cs:73`) reads a
+258	SessionVerdict.cs:242	/// <summary>KS4.2/KS4.3: the verdict in the class's own words, and bo	| All three say their verdict **in the class's own words** (`SessionVerdict.cs:242-261`): "a gate failed"
+273	src/Conductor/Commands/TaskBoard.cs:19	public static TaskBoardResult Move(IRunStore store, string runId, stri	| TaskCommand → TaskBoard.Move (src/Conductor/Commands/TaskBoard.cs:19)
+274	Store/SqliteRunStore.Sessions.cs:367	public (string? Status, string? Error) ApplyTaskStatus(string runId, s	| → SqliteRunStore.ApplyTaskStatus (Store/SqliteRunStore.Sessions.cs:367)
+275	Events/TaskWrites.cs:26	public static (TaskStatusChanged? Event, string? Error) BuildStatusCha	| → TaskWrites.BuildStatusChange (Events/TaskWrites.cs:26)   ← validates the transition
+282	RunLoop.Plumbing.cs:313	private void RegenerateTracker(TrackerSnapshot currentTrack)	| The tracker markdown is a **generated view**: `RunLoop.RegenerateTracker` (`RunLoop.Plumbing.cs:313`) →
+283	TrackerGenerator.cs:158	public static void Write(PlanConfig plan, IRunStore db, string runId, 	| `TrackerGenerator.Write` (`TrackerGenerator.cs:158`), rows from the database, handoff from the latest
+290	Store/SqliteRunStore.Events.cs:150	nextSeq[runId] = ++seq;	| `seq` is **re-assigned from the database inside the transaction** (`Store/SqliteRunStore.Events.cs:150`)
+294	Events/RunStateProjection.cs:23	public static RunState Fold(IEnumerable<ConductorEvent> events)	| `RunStateProjection.Fold` (`Events/RunStateProjection.cs:23`) folds events into a `RunState`. Note which
+307	Store/IRunStore.cs:10	public interface IRunStore : IDisposable	| | `IRunStore` `Store/IRunStore.cs:10` | The run's durable write + query surface | `SqliteRunStore` (7 partials). Tests point it at
+308	Providers/IAgentProvider.cs:6	public interface IAgentProvider	| | `IAgentProvider` `Providers/IAgentProvider.cs:6` | Adapt one agent CLI's argv and stdout to the session loop | `ClaudeProvider`,
+309	Planning/IProgressProvider.cs:12	public interface IProgressProvider	| | `IProgressProvider` `Planning/IProgressProvider.cs:12` | Answer "how far along is this stage?" from an external source | `Markdo
+310	PromptBattery.cs:10	public interface IPromptBattery	| | `IPromptBattery` `PromptBattery.cs:10` | Contribute one optional block of context to the next prompt | `LedgerBattery`, `BugsBat
+310	PromptBattery.Context.cs:23	public sealed class RepoMapBattery : IPromptBattery	| | `IPromptBattery` `PromptBattery.cs:10` | Contribute one optional block of context to the next prompt | `LedgerBattery`, `BugsBat
+311	Events/EventLog.cs:8	public interface IEventSink	| | `IEventSink` `Events/EventLog.cs:8` | Append one `ConductorEvent` | `EventLog`, `SqliteRunStore`, `NullEventSink` (dry run) |
+312	Progress.cs:67	public interface IProgressSink	| | `IProgressSink` `Progress.cs:67` | Push snapshots/logs out to an operator, poll control commands back in | `PlainSink`; test dou
+313	Integrations/TelegramService.cs:22	public interface IRunNotifier	| | `IRunNotifier` `Integrations/TelegramService.cs:22` | The notify + remote-control channel | `TelegramService`, `NoOpTelegramServ
+314	Integrations/Messaging/IMessageChannel.cs:15	public interface IMessageChannel	| | `IMessageChannel` `Integrations/Messaging/IMessageChannel.cs:15` | **KS11.1 — the tenth.** One messenger *transport*: send a mes
+315	IPlanner.cs:7	public interface IPlanner	| | `IPlanner` `IPlanner.cs:7` | Decide the next checkpoint | `CheckpointPlanner` |
+316	IReportsStartOutcome.cs:17	public interface IReportsStartOutcome	| | `IReportsStartOutcome` `IReportsStartOutcome.cs:17` | Let a hosted service say it declined to start on purpose | `TelegramServic
+330	ProcessRunner.cs:8	public static class ProcessRunner	| - **Process launch** — `public static class ProcessRunner` (`ProcessRunner.cs:8`). Not injectable; the
+332	Git.cs:3	public static partial class Git	| - **Git** — `public static class Git` (`Git.cs:3`), shelling straight to `git -C <repo>`. Not mockable.
+333	GateRunner.cs:6	public static partial class GateRunner	| - **Gate execution** — `public static partial class GateRunner` (`GateRunner.cs:6`). Its seams are *parameters*
+346	src/Conductor/Http/ControlPlaneServer.cs:34	public sealed partial class ControlPlaneServer : IDisposable	| `ControlPlaneServer` (`src/Conductor/Http/ControlPlaneServer.cs:34`) is a `sealed partial class` across
+348	Conductor.Core/Http/ControlPlaneDiscovery.cs:17	public static string PathFor(string stateDir) => Path.Combine(stateDir	| convention (`Conductor.Core/Http/ControlPlaneDiscovery.cs:17`) and the wire contracts under
+352	ControlPlaneServer.cs:50	private const int PortScanRange = 20;	| - **Port**: prefers 4317 and scans forward 20 ports (`ControlPlaneServer.cs:50`), so concurrent runs on
+354	src/Conductor/Commands/RunCommand.cs:123	var server = host.Services.GetService<ControlPlaneServer>();	| - **Started** explicitly by `RunCommand` (`src/Conductor/Commands/RunCommand.cs:123`); a bind failure is
+375	face-go/cmd/conductor-face/main.go:280	func discoverControlPlane() (baseURL, token string) {	| - **Discovery**: `discoverControlPlane()` (`face-go/cmd/conductor-face/main.go:280`) walks *up* from the
+379	internal/tui/messages.go:189	func CmdTick() tea.Cmd {	| - **Polling**, once a second (`internal/tui/messages.go:189`, `CmdTick`), fanning out to `/state`, `/tasks`,
+382	internal/api/sse.go:20	func subscribeSSE(ctx context.Context, url string, handler sseHandler,	| - **Streaming**, over SSE (`internal/api/sse.go:20`) for the three stream endpoints, resuming from a
+385	internal/tui/cmdbar.go:66	{Key: "pause", Desc: "Pause after current session ends", Safe: true, G	| `internal/tui/cmdbar.go:66` (run group: pause/resume/stop-after/approve/heartbeat/reload-plan; stage
+389	internal/api/types.go:10	type DataSource interface {	| - **Demo mode**: `DataSource` (`internal/api/types.go:10`) has two implementations, live and demo, which
+398	src/Conductor/Commands/McpObserveCommand.cs:22	public sealed class McpObserveCommand : Command<McpObserveCommand.Sett	| `McpObserveCommand` (`src/Conductor/Commands/McpObserveCommand.cs:22`) serves MCP JSON-RPC over stdio
+399	Integrations/McpObserveServer.cs:24	public sealed partial class McpObserveServer	| from `McpObserveServer` (`Integrations/McpObserveServer.cs:24`, resources in `.Resources.cs:15`). It
+399	.Resources.cs:15	NOFILE	| from `McpObserveServer` (`Integrations/McpObserveServer.cs:24`, resources in `.Resources.cs:15`). It
+403	History/RunArchive.cs:24	// Mode=ReadOnly is the guarantee. Cache=Private keeps this reader out	| (`History/RunArchive.cs:24`) with `Mode=ReadOnly`, so SQLite itself rejects a write — the refusal is at
+407	Core/Interop/AtifExport.cs:38	public static class AtifExport	| `conductor history export --atif` (`Core/Interop/AtifExport.cs:38`) is the other half of the same idea:
+414	CommandRouter.cs:76	public sealed class CommandRouter	| (`MessageComposer`, `:24`), the command router (`CommandRouter.cs:76`), chat profiles
+415	ChatProfile.cs:11	public enum ChatProfile	| (`ChatProfile.cs:11`), evidence browsing, rate limiting and the push grammar. `TelegramService` is now
+420	ChatProfile.cs:46	public static ChatProfile? TryParse(string? text) => text?.Trim().ToLo	| (`ChatProfile.cs:46`) refuses an unknown profile string **by name at plan load**, not at first use.
+437	tools/gates/ratchet.ps1:173	if ($newArch.lineCeiling -gt $oldArch.lineCeiling -or $newArch.maxType	| `RunContext.Mirror.cs`. `tools/gates/ratchet.ps1:173` fails the gate if either ceiling is raised, and
+499	ControlPlaneServer.cs:207	switch (method, path)	| | **an HTTP endpoint** | request/result records in `Core/Http/Contracts/<feature>/`, handler in the matching `ControlPlaneServer.<
+501	Program.cs:46	c.AddCommand<RunCommand>("run")	| | **a CLI verb** | `src/Conductor/Commands/<Verb>Command.cs` | `c.AddCommand<…>("verb")` in `Program.cs:46`ff; `docs/cli.md` |
+502	Models/GateConfig.cs:5	public sealed class GateConfig	| | **a gate** | `plan.gates` in the plan JSON — gates are configuration, not code (`Models/GateConfig.cs:5`) | nothing in the engin
+503	Providers/IAgentProvider.cs:35	public static IAgentProvider Create(AgentConfig cfg)	| | **support for another agent CLI** | `Core/Providers/<Name>Provider.cs` implementing `IAgentProvider` | the factory switch at `Pr
+504	PromptBuilder.cs:273	internal static string InsertAfterRoleLine(string text, string block)	| | **a block of context in every prompt** | an `IPromptBattery` in `Core/PromptBattery.*.cs` | the assembly list in `PromptBuilder.
+505	SessionRunner.Kinds.cs:37	private SessionKind ResolveSessionKind(	| | **a session kind or a template** | template file under the plan's `templatesDir`, with a built-in fallback in `PromptBuilder.Bui
+506	PlanConfig.cs:9	public sealed partial class PlanConfig	| | **a plan config key** | the record in `Core/Models/` (`PlanConfig.cs:9`, `LimitsConfig.cs:5`) | `docs/plan-config.md`; give it a
+506	LimitsConfig.cs:5	public sealed class LimitsConfig	| | **a plan config key** | the record in `Core/Models/` (`PlanConfig.cs:9`, `LimitsConfig.cs:5`) | `docs/plan-config.md`; give it a
+507	model.go:59	var tabKey = [tabCount]string{"h", "a", "s", "o", "e", "p", "r", "k", 	| | **a tab or panel in the Face** | `face-go/internal/tui/tab_<name>.go` | the `tabKey` mnemonic map at `model.go:59` **and** the h
+508	cmdbar.go:66	{Key: "pause", Desc: "Pause after current session ends", Safe: true, G	| | **a control verb** | `ControlAction` in `Core/Progress.Control.cs` and the `/control` handler | the Face's verb table at `cmdbar
+510	MigrationRunner.cs:11	public const int CurrentVersion = 15;	| | **a store column or table** | a new `Core/Store/Migrations/vNN_<what>.sql`, embedded as a resource | **`MigrationRunner.CurrentV
+510	MigrationRunner.cs:21	public static void Run(SqliteConnection conn, ILogger logger)	| | **a store column or table** | a new `Core/Store/Migrations/vNN_<what>.sql`, embedded as a resource | **`MigrationRunner.CurrentV
