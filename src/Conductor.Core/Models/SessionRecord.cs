@@ -30,6 +30,12 @@ public sealed class SessionRecord
     public long? TokensReasoning { get; set; }
     public long? TokensCacheRead { get; set; }
     public int Attempt { get; set; }
+
+    /// <summary>KS4.4: the file holding this attempt's clean diff, under
+    /// <c>&lt;stateDir&gt;/attempts/</c>. Null when the attempt changed nothing. Registered in the
+    /// evidence taxonomy at the session boundary, so the verdict and every later reader see the SHAPE of
+    /// an attempt rather than only its commit count.</summary>
+    public string? AttemptDiffPath { get; set; }
     public string ResultSummary { get; set; } = "";
 
     /// <summary>K4.1: how full the context window ran, per turn — high water, mean and the number of

@@ -434,6 +434,13 @@ public sealed partial class SessionRunner
                 return;
             }
 
+            // KS4.4: the clean attempt diff, captured BEFORE the verdict runs, so the verdict and every
+            // later reader see the same attempt — the phase gate and the report commit that follow both
+            // move the tree, and a diff taken after them is the attempt plus the engine's own edits.
+            // Measured from the ATTEMPT's start head, not the stage's: two attempts are two diffs.
+            rec.AttemptDiffPath = Worktrees.AttemptDiff.Write(
+                _ctx.Plan.Repo, _ctx.Plan.StateDir, stage.Id, rec.Attempt, rec.Number, startHead, _ctx.Log);
+
             await _evaluateSession(rec, stage, preTrack, startHead, stalled, timedOut, killedByUser,
                 agent.ResultIsError || (exit != 0 && !stalled && !timedOut && !killedByUser), ct).ConfigureAwait(false);
 

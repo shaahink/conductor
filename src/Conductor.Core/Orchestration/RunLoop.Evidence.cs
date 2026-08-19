@@ -44,6 +44,19 @@ public sealed partial class RunLoop
                 if (artifact is not null && registry.Add(artifact)) fresh.Add(artifact);
             }
 
+            // 1b. KS4.4: the attempt's own diff — the artifact the ENGINE made rather than one a session
+            //     claimed, which is why it carries its own source and lives outside the watched
+            //     directories. Registering it here means the verdict's evidence set carries the shape of
+            //     the attempt, not just its commit count, and a red attempt's fix brief has something to
+            //     describe. Never carries a checkpoint id: an attempt is not a claim.
+            if (rec.AttemptDiffPath is { Length: > 0 } attemptDiff)
+            {
+                var artifact = await EvidenceReader
+                    .ReadAsync(attemptDiff, repo, null, rec.Number, EvidenceArtifact.AttemptSource, ct: ct)
+                    .ConfigureAwait(false);
+                if (artifact is not null && registry.Add(artifact)) fresh.Add(artifact);
+            }
+
             // 2. What simply appeared. Checkpoint inferred from the file name when it follows the
             //    convention this repo's own evidence directory has used since Sarban.
             var scanned = await EvidenceWatcher.ScanAsync(

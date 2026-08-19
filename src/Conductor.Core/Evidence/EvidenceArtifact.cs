@@ -38,6 +38,13 @@ public sealed record EvidenceArtifact(
     /// <summary>Identity of an artifact: the bytes at a location. Two claims naming the same
     /// unchanged file are one artifact; the same path with different bytes is a new one.</summary>
     public string Key => Path + "@" + Sha256;
+
+    /// <summary>KS4.4: the <see cref="Source"/> an attempt diff carries. The engine MADE this artifact —
+    /// unlike "claim" (a session named it) and "scan" (it appeared in a watched directory) — so a
+    /// surface can tell machine-generated evidence from a session's own without inspecting the path.
+    /// It lives here, on the record whose field it fills, rather than on the writer, so the run loop's
+    /// registration leg can name it without taking on a coupling it has no budget for.</summary>
+    public const string AttemptSource = "attempt";
 }
 
 /// <summary>The kind vocabulary. Non-text kinds are first-class here because a screenshot is the case

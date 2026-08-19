@@ -118,38 +118,9 @@ public sealed class AttemptWorktree
         catch { return null; }
     }
 
-    /// <summary>The unified diff of everything this attempt did — committed or not, new files included —
-    /// measured from <see cref="BaseSha"/>. This is what the verdict's evidence set carries.</summary>
-    /// <remarks>Two commands, because one does not cover it: <c>diff &lt;base&gt;</c> spans committed and
-    /// uncommitted work but is blind to a file git has never been told about, and a brand-new source file
-    /// is the commonest single artifact of a delivery session. Untracked files are added with
-    /// <c>--no-index</c> against the null device so they appear as full additions.</remarks>
-    public string AttemptDiff(int maxChars = 200_000)
-    {
-        var parts = new List<string>();
-        var tracked = Git.Exec(Path, "diff", BaseSha);
-        if (tracked.ExitCode == 0 && tracked.Output.Trim().Length > 0) parts.Add(tracked.Output.TrimEnd());
-
-        foreach (var rel in UntrackedFiles())
-        {
-            var d = Git.Exec(Path, "diff", "--no-index", "--", NullDevice, rel);
-            // --no-index exits 1 when the files differ, which is the normal case here.
-            if (d.Output.Trim().Length > 0) parts.Add(d.Output.TrimEnd());
-        }
-
-        var all = string.Join("\n", parts);
-        return all.Length <= maxChars ? all : all[..maxChars] + $"\n... [attempt diff truncated at {maxChars} chars]";
-    }
-
-    private static string NullDevice => OperatingSystem.IsWindows() ? "NUL" : "/dev/null";
-
-    private List<string> UntrackedFiles()
-    {
-        var r = Git.Exec(Path, "ls-files", "--others", "--exclude-standard");
-        if (r.ExitCode != 0) return new List<string>();
-        return r.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
-    }
+    /// <summary>The clean attempt diff — see <see cref="AttemptDiff.Render"/>, which is shared with the
+    /// non-isolated path so the artifact is byte-identical whichever tree the attempt ran in.</summary>
+    public string AttemptDiff(int maxChars = 200_000) => Worktrees.AttemptDiff.Render(Path, BaseSha, maxChars);
 
     /// <summary>Repo-relative paths the attempt touched, for the diff-scoped gate classes.</summary>
     public List<string> ChangedFiles() => Git.ChangedFiles(Path, BaseSha);

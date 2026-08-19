@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Conductor.Core;
+using Conductor.Core.Evidence;
 using Conductor.Core.Worktrees;
 
 namespace Conductor.Tests;
@@ -354,6 +355,78 @@ public class KS4_4WorktreeAttemptTests
             if (wt is not null) wt.Drop();
             cleanup();
         }
+    }
+
+    // ---------------------------------------------------------------- the attempt diff as an artifact
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public void The_attempt_diff_is_written_under_the_state_dir_and_names_its_stage_attempt_and_session()
+    {
+        var (repo, cleanup) = CreateTestRepo();
+        try
+        {
+            var stateDir = Path.Combine(repo, ".conductor");
+            var baseSha = Git.Head(repo);
+
+            // Nothing happened yet: no artifact, because an empty diff is evidence of work that
+            // does not exist and would register as an artifact all the same.
+            Assert.Null(AttemptDiff.Write(repo, stateDir, "KS4", 1, 18, baseSha));
+
+            File.WriteAllText(Path.Combine(repo, "README.md"), "# Test Repo\nthe attempt edited this\n");
+            File.WriteAllText(Path.Combine(repo, "new-file.cs"), "// the attempt created this\n");
+
+            var path = AttemptDiff.Write(repo, stateDir, "KS4", 1, 18, baseSha);
+
+            Assert.NotNull(path);
+            Assert.Equal(Path.Combine(stateDir, "attempts", "KS4-a1-s018.diff"), path);
+            var body = File.ReadAllText(path!);
+            Assert.Contains("the attempt edited this", body, StringComparison.Ordinal);
+            Assert.Contains("new-file.cs", body, StringComparison.Ordinal);
+            Assert.Contains("the attempt created this", body, StringComparison.Ordinal);
+        }
+        finally { cleanup(); }
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public void A_second_attempt_diff_holds_only_the_second_attempts_work()
+    {
+        var (repo, cleanup) = CreateTestRepo();
+        try
+        {
+            var stateDir = Path.Combine(repo, ".conductor");
+
+            var firstBase = Git.Head(repo);
+            File.WriteAllText(Path.Combine(repo, "attempt-one.cs"), "// attempt 1\n");
+            Git.Exec(repo, "add", "attempt-one.cs");
+            Git.Exec(repo, "commit", "-m", "feat: attempt 1");
+            var first = AttemptDiff.Write(repo, stateDir, "KS4", 1, 18, firstBase);
+            Assert.NotNull(first);
+
+            var secondBase = Git.Head(repo);
+            File.WriteAllText(Path.Combine(repo, "attempt-two.cs"), "// attempt 2\n");
+            var second = AttemptDiff.Write(repo, stateDir, "KS4", 2, 19, secondBase);
+
+            Assert.NotNull(second);
+            Assert.NotEqual(first, second);
+            var body = File.ReadAllText(second!);
+            // Attempt 2 is measured from its OWN start head, so attempt 1's work is not credited twice.
+            Assert.Contains("attempt-two.cs", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("attempt-one.cs", body, StringComparison.Ordinal);
+        }
+        finally { cleanup(); }
+    }
+
+    [Fact]
+    public void The_run_loop_registers_the_attempt_diff_as_evidence_the_engine_made()
+    {
+        var evidence = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor.Core", "Orchestration", "RunLoop.Evidence.cs"));
+        // Registered with its own source, so a surface can tell an engine-made diff from a file a
+        // session claimed, and with no checkpoint id — an attempt is not a claim.
+        Assert.Contains("rec.AttemptDiffPath", evidence, StringComparison.Ordinal);
+        Assert.Contains("EvidenceArtifact.AttemptSource", evidence, StringComparison.Ordinal);
+        Assert.Equal("attempt", EvidenceArtifact.AttemptSource);
     }
 
     // ---------------------------------------------------------------- the rule, as a rule

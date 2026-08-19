@@ -114,6 +114,7 @@ public sealed partial class RunLoop
             // them says which run it is. Set once here, refreshed on every stage entry below.
             Core.Fleet.ProcessTitle.Set(_ctx.Plan.Repo, _ctx.Plan.Name, _ctx.State.RunId, _ctx.State.CurrentStage);
             _ctx.ProcessSupervisor?.ReapOrphans();
+            _ctx.SweepOrphanWorktrees();   // KS4.4 — see RunContext.Worktrees.cs
             SyncWorkGraphFromDeclared();
             WarnOnBranchPattern();
             WarnOnUnboundedSpend();

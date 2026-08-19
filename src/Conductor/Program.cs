@@ -59,6 +59,8 @@ app.Configure(c =>
         .WithDescription("What is armed on this machine: every live run, the supervisor block watching it, how much of its hourly fuse is burnt, where a remote wake goes, and the park-push cap in force. Read-only; --json for machines.");
     c.AddCommand<GateCommand>("gate")
         .WithDescription("Re-run the gate battery at HEAD (no agent spawned). --full for full battery, default fast-tier only. Clears pendingFix if all green.");
+    c.AddCommand<WorktreeCommand>("worktree")
+        .WithDescription("What attempt worktrees conductor has on disk: which run made each, which are orphans from a run that died, and which belong to a live run. Read-only; --reap removes the orphans (never a worktree you made, never a live run's).");
     c.AddCommand<ReportCommand>("report")
         .WithDescription("Regenerate .conductor/REPORT.md from current state.");
     c.AddCommand<HistoryCommand>("history")
