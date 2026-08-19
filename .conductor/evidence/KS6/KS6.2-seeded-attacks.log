@@ -1,0 +1,198 @@
+BASELINE: clean tree at 4b2508180, bar = the window minimum
+analyzer-debt: bar is the MINIMUM over the last 25 commits that touched a measured file (25 found) - no single commit moves it
+analyzer-debt: pragma-src           bar=31   now=31   unjustified=0
+analyzer-debt: pragma-tests-tools   bar=0    now=0    unjustified=0
+analyzer-debt: suppressmessage      bar=0    now=0    unjustified=0
+analyzer-debt: nowarn               bar=0    now=0    unjustified=0
+analyzer-debt: severity-downgrade   bar=15   now=17   unjustified=0   (count not ratcheted - see the per-rule check)
+analyzer-debt: severity-blanket     bar=0    now=0    unjustified=0
+analyzer-debt: TOTAL                bar=46   now=48   unjustified=0
+analyzer-debt: rules-enforced       bar=46   now=46   un-enforced=0
+analyzer-debt: OK - nothing silenced that was not silenced before, and every suppression says why.
+  analyzer-debt EXIT=0
+
+===================================================================
+ATTACK 1: a bare pragma added to src - the honest suppression, undocumented
+EXPECTED: RED twice: pragma-src rose, AND it is unjustified
+===================================================================
+analyzer-debt: bar is the MINIMUM over the last 25 commits that touched a measured file (25 found) - no single commit moves it
+analyzer-debt: pragma-src           bar=31   now=32   unjustified=1
+analyzer-debt: pragma-tests-tools   bar=0    now=0    unjustified=0
+analyzer-debt: suppressmessage      bar=0    now=0    unjustified=0
+analyzer-debt: nowarn               bar=0    now=0    unjustified=0
+analyzer-debt: severity-downgrade   bar=15   now=17   unjustified=0   (count not ratcheted - see the per-rule check)
+analyzer-debt: severity-blanket     bar=0    now=0    unjustified=0
+analyzer-debt: TOTAL                bar=46   now=49   unjustified=1
+analyzer-debt: rules-enforced       bar=46   now=46   un-enforced=0
+
+ANALYZER-DEBT GATE FAILED:
+  * SUPPRESSIONS ROSE - kind 'pragma-src' went 31 -> 32 (#pragma warning disable under src/). The bar of 31 was set by commit 0cb514df7, and committing this does not move it. Silencing the analyzer is not the fix: if a rule is genuinely wrong here, say so via 'conductor note' and take it out of the ruleset in the open.
+  * UNJUSTIFIED SUPPRESSIONS - kind 'pragma-src' has 1 with no reason on the line. Every suppression carries its reason where the next reader lands. Offenders: src/Conductor.Core/SoftBreak.cs: #pragma warning disable CA1031
+
+There is no baseline file to edit: the bar is what this branch's own history measured.
+  analyzer-debt EXIT=1
+
+===================================================================
+ATTACK 2: a pragma LAUNDERED into a global severity downgrade - the move the old gate scored as a WIN
+EXPECTED: RED: MA0045 was enforced in the window and is not now
+===================================================================
+  (old gate's view: the pragma count just went DOWN by one - it would call this an improvement)
+analyzer-debt: bar is the MINIMUM over the last 25 commits that touched a measured file (25 found) - no single commit moves it
+analyzer-debt: pragma-src           bar=31   now=30   unjustified=0
+analyzer-debt: pragma-tests-tools   bar=0    now=0    unjustified=0
+analyzer-debt: suppressmessage      bar=0    now=0    unjustified=0
+analyzer-debt: nowarn               bar=0    now=0    unjustified=0
+analyzer-debt: severity-downgrade   bar=15   now=18   unjustified=0   (count not ratcheted - see the per-rule check)
+analyzer-debt: severity-blanket     bar=0    now=0    unjustified=0
+analyzer-debt: TOTAL                bar=46   now=48   unjustified=0
+analyzer-debt: rules-enforced       bar=46   now=45   un-enforced=1
+
+ANALYZER-DEBT GATE FAILED:
+  * RULES QUIETLY UN-ENFORCED - 1 rule(s) that could fail this build no longer can: .editorconfig [*.cs] dotnet_diagnostic.MA0045.severity (now 'none', enforced at 8b70adf8c). Declining a rule this repo never enforced is free; taking the teeth out of one it did is not.
+
+There is no baseline file to edit: the bar is what this branch's own history measured.
+  analyzer-debt EXIT=1
+
+===================================================================
+ATTACK 3: a pragma parked under tests/ - outside the old gate's PathSpec entirely
+EXPECTED: RED: pragma-tests-tools rose 0 -> 1
+===================================================================
+analyzer-debt: bar is the MINIMUM over the last 25 commits that touched a measured file (25 found) - no single commit moves it
+analyzer-debt: pragma-src           bar=31   now=31   unjustified=0
+analyzer-debt: pragma-tests-tools   bar=0    now=1    unjustified=0
+analyzer-debt: suppressmessage      bar=0    now=0    unjustified=0
+analyzer-debt: nowarn               bar=0    now=0    unjustified=0
+analyzer-debt: severity-downgrade   bar=15   now=17   unjustified=0   (count not ratcheted - see the per-rule check)
+analyzer-debt: severity-blanket     bar=0    now=0    unjustified=0
+analyzer-debt: TOTAL                bar=46   now=49   unjustified=0
+analyzer-debt: rules-enforced       bar=46   now=46   un-enforced=0
+
+ANALYZER-DEBT GATE FAILED:
+  * SUPPRESSIONS ROSE - kind 'pragma-tests-tools' went 0 -> 1 (the same pragma parked where the old gate never looked). The bar of 0 was set by commit 0cb514df7, and committing this does not move it. Silencing the analyzer is not the fix: if a rule is genuinely wrong here, say so via 'conductor note' and take it out of the ruleset in the open.
+
+There is no baseline file to edit: the bar is what this branch's own history measured.
+  analyzer-debt EXIT=1
+
+===================================================================
+ATTACK 4: the REFEREE ITSELF rewritten to always pass
+EXPECTED: RED from ratchet.ps1 3d, naming tools/gates/analyzer-debt.ps1
+===================================================================
+  analyzer-debt EXIT=0
+  (the rewritten referee passes everything, as its attacker intended - so the OTHER referee has to catch it)
+ratchet: tests    floor=1932  now=2487
+ratchet: pragmas  ceil=31   now=31
+ratchet: comparing against HEAD
+ratchet: archdebt base=0  now=0
+ratchet: catalogue now=28 - no baseline captured, comparison skipped (run with -CatalogueBaseline first).
+
+
+
+RATCHET GATE FAILED - the bar was lowered:
+  * THE GATE SCRIPTS THEMSELVES WERE MODIFIED: tools/gates/analyzer-debt.ps1. You do not get to edit the referee.
+
+Retrying will not help. Fix the work, not the measurement.
+  ratchet EXIT=1
+
+===================================================================
+ATTACK 5: the BASELINE FILE rewritten - maxPragmas raised back to 45 to make room
+EXPECTED: RED from ratchet.ps1 3a: the ceiling only goes down
+===================================================================
+ratchet: tests    floor=1932  now=2487
+ratchet: pragmas  ceil=45   now=31
+ratchet: comparing against HEAD
+ratchet: archdebt base=0  now=0
+ratchet: catalogue now=28 - no baseline captured, comparison skipped (run with -CatalogueBaseline first).
+
+analyzer-debt: anchor is HEAD (named explicitly)
+analyzer-debt: pragma-src           bar=31   now=31   unjustified=0
+analyzer-debt: pragma-tests-tools   bar=0    now=0    unjustified=0
+analyzer-debt: suppressmessage      bar=0    now=0    unjustified=0
+analyzer-debt: nowarn               bar=0    now=0    unjustified=0
+analyzer-debt: severity-downgrade   bar=17   now=17   unjustified=0   (count not ratcheted - see the per-rule check)
+analyzer-debt: severity-blanket     bar=0    now=0    unjustified=0
+analyzer-debt: TOTAL                bar=48   now=48   unjustified=0
+analyzer-debt: rules-enforced       bar=46   now=46   un-enforced=0
+analyzer-debt: OK - nothing silenced that was not silenced before, and every suppression says why.
+
+
+RATCHET GATE FAILED - the bar was lowered:
+  * THE SUPPRESSION CEILING WAS RAISED (31 -> 45) in tools/gates/ratchet-baseline.json. Raising it is a human decision: put HUMAN: in the handoff and stop.
+  * THE GATE SCRIPTS THEMSELVES WERE MODIFIED: tools/gates/ratchet-baseline.json. You do not get to edit the referee.
+
+Retrying will not help. Fix the work, not the measurement.
+  ratchet EXIT=1
+
+===================================================================
+ATTACK 6: a rule quietly un-enforced - CA1849 error -> suggestion, no pragma, no new line
+EXPECTED: RED: rules-enforced, naming the rule and the commit that enforced it
+===================================================================
+analyzer-debt: bar is the MINIMUM over the last 25 commits that touched a measured file (25 found) - no single commit moves it
+analyzer-debt: pragma-src           bar=31   now=31   unjustified=0
+analyzer-debt: pragma-tests-tools   bar=0    now=0    unjustified=0
+analyzer-debt: suppressmessage      bar=0    now=0    unjustified=0
+analyzer-debt: nowarn               bar=0    now=0    unjustified=0
+analyzer-debt: severity-downgrade   bar=15   now=18   unjustified=0   (count not ratcheted - see the per-rule check)
+analyzer-debt: severity-blanket     bar=0    now=0    unjustified=0
+analyzer-debt: TOTAL                bar=46   now=49   unjustified=0
+analyzer-debt: rules-enforced       bar=46   now=45   un-enforced=1
+
+ANALYZER-DEBT GATE FAILED:
+  * RULES QUIETLY UN-ENFORCED - 1 rule(s) that could fail this build no longer can: .editorconfig [*.cs] dotnet_diagnostic.CA1849.severity (now 'suggestion', enforced at 8b70adf8c). Declining a rule this repo never enforced is free; taking the teeth out of one it did is not.
+
+There is no baseline file to edit: the bar is what this branch's own history measured.
+  analyzer-debt EXIT=1
+
+===================================================================
+ATTACK 7: a blanket - one line that silences every rule nobody listed by name
+EXPECTED: RED: severity-blanket rose 0 -> 1
+===================================================================
+analyzer-debt: bar is the MINIMUM over the last 25 commits that touched a measured file (25 found) - no single commit moves it
+analyzer-debt: pragma-src           bar=31   now=31   unjustified=0
+analyzer-debt: pragma-tests-tools   bar=0    now=0    unjustified=0
+analyzer-debt: suppressmessage      bar=0    now=0    unjustified=0
+analyzer-debt: nowarn               bar=0    now=0    unjustified=0
+analyzer-debt: severity-downgrade   bar=15   now=18   unjustified=0   (count not ratcheted - see the per-rule check)
+analyzer-debt: severity-blanket     bar=0    now=1    unjustified=0
+analyzer-debt: TOTAL                bar=46   now=50   unjustified=0
+analyzer-debt: rules-enforced       bar=46   now=46   un-enforced=0
+
+ANALYZER-DEBT GATE FAILED:
+  * SUPPRESSIONS ROSE - kind 'severity-blanket' went 0 -> 1 (dotnet_analyzer_diagnostic[.category-X].severity - a whole category at once). The bar of 0 was set by commit 0cb514df7, and committing this does not move it. Silencing the analyzer is not the fix: if a rule is genuinely wrong here, say so via 'conductor note' and take it out of the ruleset in the open.
+
+There is no baseline file to edit: the bar is what this branch's own history measured.
+  analyzer-debt EXIT=1
+
+===================================================================
+ATTACK 8: THE ONE THAT MATTERS: commit the suppression and push-shaped it away
+EXPECTED: RED anyway - the bar is a minimum over the window, and one commit cannot move a minimum
+===================================================================
+  committed as 2cf42b1 - origin/<branch> would now BE this commit, which is the hole the old gate had
+analyzer-debt: bar is the MINIMUM over the last 25 commits that touched a measured file (25 found) - no single commit moves it
+analyzer-debt: pragma-src           bar=31   now=32   unjustified=0
+analyzer-debt: pragma-tests-tools   bar=0    now=0    unjustified=0
+analyzer-debt: suppressmessage      bar=0    now=0    unjustified=0
+analyzer-debt: nowarn               bar=0    now=0    unjustified=0
+analyzer-debt: severity-downgrade   bar=15   now=17   unjustified=0   (count not ratcheted - see the per-rule check)
+analyzer-debt: severity-blanket     bar=0    now=0    unjustified=0
+analyzer-debt: TOTAL                bar=46   now=49   unjustified=0
+analyzer-debt: rules-enforced       bar=46   now=46   un-enforced=0
+
+ANALYZER-DEBT GATE FAILED:
+  * SUPPRESSIONS ROSE - kind 'pragma-src' went 31 -> 32 (#pragma warning disable under src/). The bar of 31 was set by commit 0cb514df7, and committing this does not move it. Silencing the analyzer is not the fix: if a rule is genuinely wrong here, say so via 'conductor note' and take it out of the ruleset in the open.
+
+There is no baseline file to edit: the bar is what this branch's own history measured.
+  analyzer-debt EXIT=1
+
+=== TREE RESTORED ===
+HEAD is back at 4b2508180
+analyzer-debt: bar is the MINIMUM over the last 25 commits that touched a measured file (25 found) - no single commit moves it
+analyzer-debt: pragma-src           bar=31   now=31   unjustified=0
+analyzer-debt: pragma-tests-tools   bar=0    now=0    unjustified=0
+analyzer-debt: suppressmessage      bar=0    now=0    unjustified=0
+analyzer-debt: nowarn               bar=0    now=0    unjustified=0
+analyzer-debt: severity-downgrade   bar=15   now=17   unjustified=0   (count not ratcheted - see the per-rule check)
+analyzer-debt: severity-blanket     bar=0    now=0    unjustified=0
+analyzer-debt: TOTAL                bar=46   now=48   unjustified=0
+analyzer-debt: rules-enforced       bar=46   now=46   un-enforced=0
+analyzer-debt: OK - nothing silenced that was not silenced before, and every suppression says why.
+  analyzer-debt EXIT=0
