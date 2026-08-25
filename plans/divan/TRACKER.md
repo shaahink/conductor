@@ -16,7 +16,9 @@ next: DV3.1 - inbound message kinds. Read the strand doc section DV3 names, not 
 watch: the architecture ratchet is real and it caught this session - comments count as lines.
   RunLoop and SessionRunner are both freshly split and sit near 495; RunLoop is ALSO on the CA1506
   coupling ratchet at 183/183, so one new coupled type fails the build.
-red: none.
+red: none known. Scoped suites all green (DV2_4* 20, HarnessTests 35, squash 18) and the
+  architecture ratchet re-checked after the split; the FULL suite was still running at session
+  end - log .conductor/bg-logs/dv24full3-*.log. Re-run it first if anything looks off.
 
 
 ## Baseline numbers (from run.db)
