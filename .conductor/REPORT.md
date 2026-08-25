@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvansara edge - gates that can't be gamed, and the courier run report
 
-_Updated 2026-08-19 19:35 UTC · branch `feat/karvansara-edge` · HEAD `872b1a8`_
+_Updated 2026-08-19 19:48 UTC · branch `feat/karvansara-edge` · HEAD `870786f`_
 
-**Status:** Idle
+**Status:** NeedsHuman — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume` [0s ago, 19:48:26Z]
 **Stage:** KS12 — Ship edge - close the era · attempts used 0 · working ▸ KS12.3
-**Checkpoints:** 23/24 done · **Sessions run:** 22 · **Cost:** $321.5824 (agent $321.3583 + gates $0.2241) · **Tokens:** 4,379,082 in / 2,061,762 out
+**Checkpoints:** 23/24 done · **Sessions run:** 23 · **Cost:** $324.0055 (agent $323.7642 + gates $0.2413) · **Tokens:** 4,455,753 in / 2,090,986 out
 **Confirmed phases:** KS11, KS7, KS6, KS4, KS8
 
 ## Stage progress
@@ -79,8 +79,8 @@ _Updated 2026-08-19 19:35 UTC · branch `feat/karvansara-edge` · HEAD `872b1a8`
 | # | Title | Status | Commit |
 |---|---|---|---|
 | KS12.1 | Internal record: ARCHITECTURE.md + docs/dev reconciled for everything edge changed; closure ledger naming every bug/followup row closed here or its living owner (bug 44 and the KS10.1 inherited gaps included); conductor budget re-measured into TOKEN-BUDGET-TUNING - the number the next era compiles against | ✅ DONE | [`eb87ad4`](https://github.com/shaahink/conductor/commit/eb87ad4) |
-| KS12.2 | Published surface: README + docs user set (operating.md carries the observer-profile and group-chat setup; plan-config.md carries the telegram chats shape and every key edge added) + CHANGELOG Unreleased written as the release body; docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushed to main | ✅ DONE | - |
-| KS12.3 | OWNER-ONLY: merge feat/karvansara-edge to master, tag and release through the pipeline with KS12.2's CHANGELOG section as the body, reinstall (no other live run on the machine first), github sync --backfill of THIS run, merge the payesh PR, and move CORE-TRACKER.md + EDGE-TRACKER.md + the era brief to docs/history - the Karvansara era closes | ⬜ TODO | - |
+| KS12.2 | Published surface: README + docs user set (operating.md carries the observer-profile and group-chat setup; plan-config.md carries the telegram chats shape and every key edge added) + CHANGELOG Unreleased written as the release body; docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushed to main | ✅ DONE | [`7ad41d8`](https://github.com/shaahink/conductor/commit/7ad41d8) |
+| KS12.3 | OWNER-ONLY: merge feat/karvansara-edge to master, tag and release through the pipeline with KS12.2's CHANGELOG section as the body, reinstall (no other live run on the machine first), github sync --backfill of THIS run, merge the payesh PR, and move CORE-TRACKER.md + EDGE-TRACKER.md + the era brief to docs/history - the Karvansara era closes | 🚫 BLOCKED | - |
 
 </details>
 
@@ -110,6 +110,7 @@ _Updated 2026-08-19 19:35 UTC · branch `feat/karvansara-edge` · HEAD `872b1a8`
 | 20 | KS8 | Deliver | 1 | 08-19 17:09 | 0:47 | Advanced | KS8.1 KS8.2 | 3 | engine-fast:OK · face-fast:OK | $18.6817 | $0.0100 | 242,899/124,524 |
 | 21 | KS12 | Deliver | 1 | 08-19 18:04 | 0:46 | Advanced | KS12.1 | 4 | engine-fast:OK · face-fast:OK | $20.9057 | $0.0164 | 293,076/127,565 |
 | 22 | KS12 | Deliver | 1 | 08-19 18:53 | 0:38 | Advanced | KS12.2 | 2 | engine-fast:OK · face-fast:OK | $10.5688 | $0.0177 | 149,761/55,899 |
+| 23 | KS12 | Deliver | 1 | 08-19 19:35 | 0:10 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $2.4059 | $0.0172 | 76,671/29,224 |
 
 ## Money
 
@@ -117,27 +118,22 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 21 | 396.8M | 98.4% | $311.00 | 22 | 18M | $14.14 |
+| **run total** | 23 | 414.3M | 98.4% | $324.01 | 23 | 18M | $14.09 |
 | stage KS11 | 5 | 83.9M | 98.4% | $61.37 | 5 | 16.8M | $12.27 |
 | stage KS7 | 5 | 97.1M | 98.5% | $69.03 | 5 | 19.4M | $13.81 |
 | stage KS6 | 4 | 63.5M | 98.0% | $51.30 | 4 | 15.9M | $12.83 |
 | stage KS4 | 5 | 95.8M | 98.6% | $89.67 | 5 | 19.2M | $17.93 |
 | stage KS8 | 1 | 26.5M | 98.6% | $18.69 | 2 | 13.3M | $9.35 |
-| stage KS12 | 1 | 30M | 98.6% | $20.92 | 1 | 30M | $20.92 |
-| 2026-08 | 21 | 396.8M | 98.4% | $311.00 | 22 | 18M | $14.14 |
+| stage KS12 | 3 | 47.4M | 98.5% | $33.93 | 2 | 23.7M | $16.97 |
+| 2026-08 | 23 | 414.3M | 98.4% | $324.01 | 23 | 18M | $14.09 |
 
-_Where the money goes: agent $310.79 (100%) · gate $0.21 (0%) · blended $0.78/M tokens._
+_Where the money goes: agent $323.76 (100%) · gate $0.24 (0%) · blended $0.78/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-19 16:26:42  ▪ gate face-fast pass [session]  (34.6s)
-08-19 16:26:43  • session #17 KS4 → Advanced · done KS4.3 · 8 commit(s)  (59m08s)
-08-19 16:26:47  • session #18 KS4 Deliver started (attempt 1/10)
-08-19 17:14:39  ▪ gate engine-fast pass [session]  (1m09s)
-08-19 17:14:39  ▪ gate face-fast pass [session]  (28.1s)
 08-19 17:14:39  • session #18 KS4 → Advanced · done KS4.4 · 4 commit(s)  (47m51s)
 08-19 17:14:44  • session #19 KS4 Deliver started (attempt 1/10)
 08-19 18:05:06  ▪ gate engine-fast pass [session]  (1m09s)
@@ -173,6 +169,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-19 19:53:47  • session #22 KS12 Deliver started (attempt 1/6)
 08-19 20:35:28  ▪ gate engine-fast pass [session]  (2m19s)
 08-19 20:35:28  ▪ gate face-fast pass [session]  (36.7s)
+08-19 20:35:29  • session #22 KS12 → Advanced · done KS12.2 · 2 commit(s)  (41m42s)
+08-19 20:35:30  • session #23 KS12 Deliver started (attempt 1/6)
+08-19 20:48:25  ▪ gate engine-fast pass [session]  (2m26s)
+08-19 20:48:25  ▪ gate face-fast pass [session]  (25.2s)
+08-19 20:48:26  • session #23 KS12 → Progress · 1 commit(s)  (12m56s)
 ```
 
 ## Health
@@ -180,7 +181,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 22 · retries 1 (5 %) · overall Warn
+sessions 23 · retries 1 (4 %) · overall Warn
 ⚠ [context-saturation] session #11: 28,600,968 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 20,892,539 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 28,639,251 context tokens (≥ 20,000,000)
@@ -198,15 +199,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvansara-edge
-working tree: clean
+working tree: M .conductor/REPORT.md, M plans/karvansara/EDGE-TRACKER.md
 ```
 
 ### Commits by session
 
-- **s15 (KS4 Deliver)** — 3 commit(s):
-  - [`cf5890f`](https://github.com/shaahink/conductor/commit/cf5890f) docs(ks4): the KS4.1 handoff - the rule the next checkpoint should reuse, and a build that lies
-  - [`daa6e8c`](https://github.com/shaahink/conductor/commit/daa6e8c) feat(ks4): the gaming agent that passes every gate it can see, and goes red anyway
-  - [`3365a3d`](https://github.com/shaahink/conductor/commit/3365a3d) feat(ks4): the holdout gate class - redacted where it is produced, not where it is shown
 - **s16 (KS4 Deliver)** — 3 commit(s):
   - [`fe0da1b`](https://github.com/shaahink/conductor/commit/fe0da1b) docs(ks4): the KS4.2 handoff - the renderer a unit test cannot reach
   - [`6c9168a`](https://github.com/shaahink/conductor/commit/6c9168a) feat(ks4): the fix brief a regression writes, and the live proof it is written
@@ -242,6 +239,8 @@ working tree: clean
   - [`872b1a8`](https://github.com/shaahink/conductor/commit/872b1a8) docs(ks12): the handoff for the owner - KS12.2 closes, and everything left needs a human
   - [`7ad41d8`](https://github.com/shaahink/conductor/commit/7ad41d8) docs(ks12): the front page catches up with the era, and one number it could not stand behind
   - `2ae2391` fix(harvest): a hand-closed run is not a finished one - the era-close re-harvest, and the word that broke the table [conductor-site]
+- **s23 (KS12 Deliver)** — 1 commit(s):
+  - [`870786f`](https://github.com/shaahink/conductor/commit/870786f) docs(ks12): the release pre-flighted, and the two reds it would have hit
 
 ## Phase handovers (audit)
 
@@ -268,39 +267,38 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> **KS12.2 landed - README, docs index, §7 re-measured, pin extended, payesh PR opened**
-> - README carried none of edge; added gate classes, chat profiles, the three read-only exits, and cut an unmeasured 30-50% token claim
-> - operating.md §7's "anti-cheat ratchet green" deleted as false - analyzer-debt exits 1 at pragma-src 33 vs bar 31; build re-measured 0w/0e
-> - README pin resolved verbs from the first word and called `history export` broken; now applies the engine's own argv rewrite, seeded red proven, 41/41 green
+> **KS12.3 parked on owner; release pre-flighted, two blocking reds found**
+> - KS12.3 verified owner-only from the plan's ownerGate, not inherited — card amended and BLOCKED, not claimed; every sub-action maps to a named owner-only trap
+> - RED: tag refused today (changelog-section.sh exits 1, CHANGELOG.md:22 still [Unreleased]); RED: tracker move needs 4-part commit or SF7_1 docs pin goes red at :116 and :119-127
+> - GREEN: merge is a fast-forward (0 behind/76 ahead); backfill verb present in fresh build, pass run id not slug; no foreign conductor run live
 >
-> artefacts: 7ad41d8, 872b1a8, README.md, docs/README.md, docs/operating.md, docs/quickstart.md, tests/Conductor.Tests/SF7_1DocsMatchRealityTests.Readme.cs, payesh PR #2
+> artefacts: .conductor/evidence/KS12/ks12-3-owner-runbook.md, plans/karvansara/EDGE-TRACKER.md, commit 870786f
 >
-> evidence: .conductor/evidence/KS12/ks12-2-published-surface.md
+> evidence: .conductor/evidence/KS12/ks12-3-owner-runbook.md
 >
-> gaps: analyzer-debt RED (bug 60, bar not raised); payesh anonymity red on "website" (bug 41, pre-existing); both Karvansara runs still excluded from the published corpus; KS12.3 is owner-only - merge, tag, reinstall, backfill, merge PR #2, move both trackers to docs/history
+> gaps: KS12.3 is entirely owner-only and remains BLOCKED — nothing left for a session. Two owner decisions escalated: the version number for the CHANGELOG rename (v0.4.1 latest, features-only reads v0.5.0, unstated in repo), and whether the two Karvansara runs join the published payesh corpus. Carried red and unfixed: analyzer-debt (bug 60, pragma-src 33 vs bar 31, bar may not be moved) and payesh anonym…
 
 ## Tracker handoff
 
 ```
-last: KS12.2 IS DONE and claimed (7ad41d8), evidence .conductor/evidence/KS12/ks12-2-published-surface.md.
-  README carried NONE of edge - grep for mcp-observe/atif/otel/holdout/observer hit zero - so it now has
-  the gate-class table, the Telegram browse/steer/control split with all 14 verbs from SurfaceCommands.cs,
-  admin-vs-observer chats, and the three read-only exits. One correction: the front page claimed battery
-  collapse saves "30-50% of output tokens" when plan-config.md:41 already retracted that as unmeasured.
-  operating.md section 7 re-dated to the edge close; its "anti-cheat ratchet green" line is DELETED as
-  false and replaced with the measurement - analyzer-debt exits 1, pragma-src 33 vs bar 31 (bug 60), and
-  the bar may not be moved. Build re-measured 0w/0e. docs/README.md, quickstart.md done; tracker.md needed
-  nothing - its runtime-file tree is pinned by the docs suite, which is 41/41 green.
-  The README pin was WRONG and caught me: it resolved a verb from the first word, so `conductor history
-  export --atif` read as `history`. It now applies the engine's own argv rewrite by reflection; seeded red
-  proven; 35/35. Payesh: PR shaahink/payesh#2 on ks12/harvest-era-close, NOT merged - the re-harvest broke
-  the site's corpus test because three runs are now `closed` in the store, which means closed BY HAND and
-  says nothing about finishing; `closed` now resolves through anonymise.json like `running`.
-next: KS12.3 is OWNER-ONLY - merge to master, tag with the CHANGELOG [Unreleased] section as the body,
-  reinstall (check no other conductor run is live first), github sync --backfill of this run, merge
-  payesh PR #2, and move CORE-TRACKER.md + EDGE-TRACKER.md + the era brief to docs/history. A session
-  cannot do any of it. Carry into it: analyzer-debt is RED (bug 60, stated in docs, not fixed, bar not
-  raised); payesh `npm run anonymity` is red on the word "website" (bug 41, pre-existing); and the two
-  Karvansara runs are still excluded from the published corpus by anonymise.json - publishing them is
-  an editorial call, not a session's.
+last: KS12.3 is PARKED ON THE OWNER, not claimed - and that was verified, not inherited:
+  edge.plan.json:142 sets ownerGate true on KS12, and each sub-action has its own owner-only trap
+  (1 merge/tag/reinstall, 0+5 the backfill of an unfinished run, 15 the payesh merge, 13+0 the
+  tracker move, which needs the forbidden plan reload). So I pre-flighted it instead:
+  .conductor/evidence/KS12/ks12-3-owner-runbook.md, five preconditions measured, TWO RED.
+  RED 1 - a tag pushed today is REFUSED before any platform compiles: tools/changelog-section.sh
+  0.5.0 exits 1 because CHANGELOG.md:22 is still `## [Unreleased]`. The rename is the owner's, it
+  carries the version number; the section extracts 112 clean lines and quotes no dated run figure.
+  RED 2 - the tracker move is NOT a git mv: SF7_1DocsMatchRealityTests.Karvansara.cs:116 and
+  :119-127 pin both old paths, so it is one commit of git mv + docs/dev/README.md table + that test
+  + edge.plan.json:39,40,229-230 + core.plan.json:36,37,225-226. GREEN: master is an ancestor
+  (0 behind/76 ahead, fast-forward, no conflict possible); `github sync --backfill` exists in the
+  fresh build - pass run id 9491891fe700463ba0d876c06280cce2, the slug is shared with core; no
+  foreign conductor run is live, though that must be re-checked before the reinstall.
+next: nothing is left for a session. Every remaining action is KS12.3 and the runbook has the order.
+HUMAN: two calls are yours before the release can run - the version number for the CHANGELOG rename
+  (v0.4.1 is latest; edge is features-only, which reads v0.5.0, but nothing in the repo states it),
+  and whether the two Karvansara runs join the published payesh corpus, which anonymise.json still
+  excludes. Still red and stated, not fixed: analyzer-debt (bug 60, pragma-src 33 vs bar 31, bar may
+  not be moved) and payesh `npm run anonymity` on the word "website" (bug 41, pre-existing).
 ```

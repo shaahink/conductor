@@ -25,6 +25,7 @@ HUMAN: two calls are yours before the release can run - the version number for t
   excludes. Still red and stated, not fixed: analyzer-debt (bug 60, pragma-src 33 vs bar 31, bar may
   not be moved) and payesh `npm run anonymity` on the word "website" (bug 41, pre-existing).
 
+
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
@@ -90,7 +91,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | KS12.1 | Internal record: ARCHITECTURE.md + docs/dev reconciled for everything edge changed; closure ledger naming every bug/followup row closed here or its living owner (bug 44 and the KS10.1 inherited gaps included); conductor budget re-measured into TOKEN-BUDGET-TUNING - the number the next era compiles against | DONE | eb87ad4 | .conductor/evidence/KS12/ks12-1-closure-ledger.md,.conductor/evidence/KS12/ks12-1-architecture-reconcile.md,.conductor/evidence/KS12/ks12-1-budget-remeasure.json |
 | KS12.2 | Published surface: README + docs user set (operating.md carries the observer-profile and group-chat setup; plan-config.md carries the telegram chats shape and every key edge added) + CHANGELOG Unreleased written as the release body; docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushed to main | DONE | 7ad41d8 | .conductor/evidence/KS12/ks12-2-published-surface.md |
-| KS12.3 | OWNER-ONLY: merge feat/karvansara-edge to master, tag and release through the pipeline with KS12.2's CHANGELOG section as the body, reinstall (no other live run on the machine first), github sync --backfill of THIS run, merge the payesh PR, and move CORE-TRACKER.md + EDGE-TRACKER.md + the era brief to docs/history - the Karvansara era closes | TODO | - | - |
+| KS12.3 | OWNER-ONLY: merge feat/karvansara-edge to master, tag and release through the pipeline with KS12.2's CHANGELOG section as the body, reinstall (no other live run on the machine first), github sync --backfill of THIS run, merge the payesh PR, and move CORE-TRACKER.md + EDGE-TRACKER.md + the era brief to docs/history - the Karvansara era closes | BLOCKED | - | - |
 
 ## Dependencies
 
