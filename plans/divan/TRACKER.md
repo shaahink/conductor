@@ -1,21 +1,21 @@
-﻿# Divan - the chancellery: inbox, courier, and the record that gets out - Phase Tracker
+﻿# Divan - the chancellery: inbox, courier, and the record that gets out Phase Tracker
 
 **Plan:** Divan - the chancellery: inbox, courier, and the record that gets out | **Branch:** `feat/divan` | **Design doc:** docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md
 
-## Handoff (overwrite this block, <=12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV1 is complete - both checkpoints claimed with evidence under .conductor/evidence/DV1/.
-  ChannelHealthProbe (src/Conductor.Core/Integrations/ChannelHealth.cs) is DERIVED from plan+env,
-  never stored, and four surfaces read it: REPORT.md header, /status, the owner queue, and doctor
-  (configured-but-dead is now a FAIL, never-configured stays a warn). The owner queue is pushed
-  one obligation per message to admin chats only, in the KS11.3 grammar, golden-pinned at the
-  wire. Suite 3126 passed / 0 failed.
-next: DV2.1 - the triage ledger. Read docs/dev/DIVAN-BUG-SWEEP-2026-08-25.md; every row of its
-  three ledgers needs a disposition and no row may be dropped. Note that four files in the
-  messaging area now sit within 55 lines of the 500-line architecture ceiling (Reporter.cs 497,
-  TelegramService.cs 497, MessageComposer.cs 451, RunContext.cs 446) - the next addition to any
-  of them must be an extraction into a partial, not an append. The knowledge ledger carries the
-  full DV1 wiring map; read it before touching any channel or push code.
+last: DV2.1 landed (c86dcec). The triage ledger is .conductor/evidence/DV2/dv2-1-triage-ledger.md -
+  50 defects, 14 FIX each with the regression test it needs, 36 DEFER each with a named owner.
+  TAKE YOUR IDS FROM THAT FILE, not from the prompt battery: this run's 12 new rows now fill all
+  12 battery slots and evict the carried karvansara rows that ARE cluster A's work.
+  Settled: bug 44 exists and is fixed - not dangling, not superseded by 60; the strand doc's "11
+  open" was the imported copy read by the repo-local path; #46 lost FOUR rows, not six, refiled
+  as #70-#73; field defects are #62-#69. Two strand-doc symptoms were wrong - read section 2 of
+  the ledger before touching #65 (telegram test is a FALSE FAILURE on a chats-only plan, not a
+  crash; it is already guarded) or #69 (SessionRunner.cs:411 already queues a rate-limit backoff).
+  Snapshot the store with run.db-wal and run.db-shm beside run.db or you read stale rows.
+next: DV2.2, cluster A: #62 #63 #15 #21 #55. #62 is BatteryGroup.Render truncating the JOINED
+  string (PromptBattery.cs:41-62); #63 is BugsBattery's silent 12-row cap (Knowledge.cs:51,70-76).
 
 ## Baseline numbers (from run.db)
 
@@ -23,78 +23,73 @@ next: DV2.1 - the triage ledger. Read docs/dev/DIVAN-BUG-SWEEP-2026-08-25.md; ev
 |---|---|
 | Total checkpoints | 23 |
 | Done | 0 |
-| Carried open bugs at authoring | 28 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
-Status in TODO - IN PROGRESS - DONE - DONE (confirmed by engine, shown with a check) - BLOCKED - SKIPPED.
-Evidence = artifact path produced by a run this phase (a code path is not evidence). Agent claims are
-marked DONE; the engine confirms.
+Status ∈ TODO · IN PROGRESS · DONE · DONE ✓ (confirmed) · BLOCKED · SKIPPED. Evidence = artifact path produced by a run this
+phase (a code path is not evidence). Agent claims are marked DONE; engine confirms as DONE ✓.
 
-### DV1 - The channel that says so
-
-| # | Checkpoint | Status | Commit | Evidence |
-|---|-----------|--------|--------|----------|
-| DV1.1 | Channel health is loud: every configured outbound channel carries live state landing in the REPORT.md header, /status and the owner queue within one boundary of a failure; configured-but-dead refused at preflight or parked loudly, never logged-and-ignored; the seeded proof is the edge run's own github-block-without-token failure, pinned by test in all three surfaces | TODO | | |
-| DV1.2 | Owner queue pushed to admin chats on change: one item per push with the exact clearing command, KS11.3 grammar, golden-pinned; no-change-no-push proven so the channel is signal, not noise | TODO | | |
-
-### DV2 - The sweep
+### DV1 — The channel that says so - health made loud, the queue that reaches you
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | TODO | | |
-| DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | TODO | | |
-| DV2.3 | Cluster B, channels: getUpdates 409 handling that names the other consumer and backs off; the false will-deliver-nothing startup line reads the resolved ChatCount; the telegram test endpoint survives a chats-only plan; report-push failures log their reason - all proven at the stub seam with scratch tokens | TODO | | |
-| DV2.4 | Cluster C, state and verdict, and the close: budget counters persisted across engine restarts (the per-process-cap defect), the stage-boundary squash refuses to abort a STALE rebase and asserts ancestry after any abort, bug 27 first-write FK, 429-with-reset-time classified as backoff not AgentError, FU-F1-06 UpdateRunStatus lands; every fix-here row closed via the conductor bug verb, every remaining open row carries a named owner in the ledger | TODO | | |
+| DV1.1 | Channel health is loud: every configured outbound channel carries live state landing in the REPORT.md header, /status and the owner queue within one boundary of a failure; configured-but-dead refused at preflight or parked loudly, never logged-and-ignored; the seeded proof is the edge run's own github-block-without-token failure, pinned by test in all three surfaces | DONE | b9ea19f | .conductor/evidence/DV1/dv1-1-live-rig.txt |
+| DV1.2 | Owner queue pushed to admin chats on change: one item per push with the exact clearing command, KS11.3 grammar, golden-pinned; no-change-no-push proven so the channel is signal, not noise | DONE | b9ea19f | .conductor/evidence/DV1/dv1-2-owner-queue-push.txt |
 
-### DV3 - The inbox
+### DV2 — The sweep - every known defect triaged, the clusters burned down
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV3.1 | Inbound message kinds: voice, audio, document, photo, caption, reply_to_message, message_thread_id on the DTO; getFile download; the 20 MB bot-API cap refused by name to the sender, never dropped; a stub-wire test drives each kind end to end | TODO | | |
-| DV3.2 | The per-project inbox: durable store under .conductor/inbox (never committed - no gitignore allowlist entry, this repo is public), media beside transcript, atomic writes, append-only index deduped by update_id, read cursor with seen-by-session marks; InboxBattery on the IPromptBattery seam, fenced and framed, with an architecture test proving the fencing is always present; a note filed with no run live is read by the next session of the next run, proven in the rig | TODO | | |
-| DV3.3 | Transcription: configured local command (faster-whisper on this machine's GPU), per-segment confidence marked in the stored note, unset command files the note untranscribed with audio kept and the reply saying so; conductor inbox prune is the only deletion path; a real .ogg transcribes in the rig | TODO | | |
-| DV3.4 | Routing: a voice note sent as a reply to a checkpoint push files against that push's project with no command typed; sticky /project selection; message_thread_id topics in supergroups; unknown slug refused by name; unroutable notes parked in a machine-level dead-letter directory, never dropped | TODO | | |
+| DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | TODO | - | - |
+| DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | TODO | - | - |
+| DV2.3 | Cluster B, channels: getUpdates 409 handling that names the other consumer and backs off; the false will-deliver-nothing startup line reads the resolved ChatCount; the telegram test endpoint survives a chats-only plan; report-push failures log their reason - all proven at the stub seam with scratch tokens | TODO | - | - |
+| DV2.4 | Cluster C, state and verdict, and the close: budget counters persisted across engine restarts (the per-process-cap defect), the stage-boundary squash refuses to abort a STALE rebase and asserts ancestry after any abort, bug 27 first-write FK, 429-with-reset-time classified as backoff not AgentError, FU-F1-06 UpdateRunStatus lands; every fix-here row closed via the conductor bug verb, every remaining open row carries a named owner in the ledger | TODO | - | - |
 
-### DV4 - The courier
-
-| # | Checkpoint | Status | Commit | Evidence |
-|---|-----------|--------|--------|----------|
-| DV4.1 | The daemon: conductor courier owns the token, polls always, routes to per-project inboxes via an explicit allowlist; durable poll offset in the state home plus update_id dedup - kill the courier between receive and acknowledge, restart, and the note files exactly once; the 24-hour Telegram retention limit stated in docs | TODO | | |
-| DV4.2 | Lifecycle: courier install / uninstall / restart / status as a per-user Scheduled Task with restart-on-failure; tools/install.ps1 stops and restarts a running courier; version handshake at the loopback hello refuses a stale courier by name, naming the restart command; live proof registers a scratch-named task and unregisters it - the real install is the owner's at DV7.3 | TODO | | |
-| DV4.3 | The seam: loopback-only listener, per-install shared secret file-permission-protected, own named port; CourierChannel on IMessageChannel so live runs push through the daemon; when a courier is configured, in-run polling refuses to start and names it; courier-less machines byte-identical by golden replay; killing the daemon makes a live run's REPORT.md, /status and owner queue all say so within one boundary | TODO | | |
-| DV4.4 | Promotion: note to followups.md row to Tier-B lane by an explicit button on the acknowledgement; auto-inject from an inbox note refused by design with a negative test proving no code path does it; filing stays admin-only | TODO | | |
-
-### DV5 - The cloud, the safe shapes
+### DV3 — The inbox - feedback that arrives when you have it, and survives the run
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV5.1 | The /cloud admin verb: flags verified against the installed CLI first; preflight requires clean tree and pushed, current branch, refusing by name in the chat with the exact git state; session id and URL returned to the chat and recorded in the event log as an owner action; follow-ups ride claude -p --cloud | TODO | | |
-| DV5.2 | The cloud lane behind a flag, default off: only work needing no conductor tools and no verdict; branch consumed, every gate re-run locally, the referee never moves; cost recorded and reported as unknown, pinned by a test that no code path prints zero for a cloud lane; droppable without losing DV5.1 | TODO | | |
+| DV3.1 | Inbound message kinds: voice, audio, document, photo, caption, reply_to_message, message_thread_id on the DTO; getFile download; the 20 MB bot-API cap refused by name to the sender, never dropped; a stub-wire test drives each kind end to end | TODO | - | - |
+| DV3.2 | The per-project inbox: durable store under .conductor/inbox (never committed - no gitignore allowlist entry, this repo is public), media beside transcript, atomic writes, append-only index deduped by update_id, read cursor with seen-by-session marks; InboxBattery on the IPromptBattery seam, fenced and framed, with an architecture test proving the fencing is always present; a note filed with no run live is read by the next session of the next run, proven in the rig | TODO | - | - |
+| DV3.3 | Transcription: configured local command (faster-whisper on this machine's GPU), per-segment confidence marked in the stored note, unset command files the note untranscribed with audio kept and the reply saying so; conductor inbox prune is the only deletion path; a real .ogg transcribes in the rig | TODO | - | - |
+| DV3.4 | Routing: a voice note sent as a reply to a checkpoint push files against that push's project with no command typed; sticky /project selection; message_thread_id topics in supergroups; unknown slug refused by name; unroutable notes parked in a machine-level dead-letter directory, never dropped | TODO | - | - |
 
-### DV6 - The record that gets out
-
-| # | Checkpoint | Status | Commit | Evidence |
-|---|-----------|--------|--------|----------|
-| DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | TODO | | |
-| DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | TODO | | |
-| DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | TODO | | |
-| DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | TODO | | |
-
-### DV7 - Ship Divan - close the era
+### DV4 — The courier - one bot, always awake, outliving the run
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV7.1 | The internal record: ARCHITECTURE.md and docs/dev reconciled for everything Divan changed, the courier's lifecycle section and ADR included; closure ledger reconciled against DV2's triage; conductor budget re-measured through the fresh build against a backup copy and written into TOKEN-BUDGET-TUNING for the next era | TODO | | |
-| DV7.2 | The published surface: README, cli.md, operating.md, plan-config.md, quickstart/troubleshooting where touched, docs index; CHANGELOG Unreleased written as the release body (it may still carry edge's entries - the split call is the owner's); docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushing main | TODO | | |
-| DV7.3 | OWNER-ONLY ship: merge (stacked on feat/karvansara-edge - KS12.3 lands first or together), tag, reinstall, real courier install, github sync backfill of this run, payesh PR merge, tracker and findings doc move to docs/history; a session pre-flights and parks with the runbook, it does not perform them | TODO | | |
+| DV4.1 | The daemon: conductor courier owns the token, polls always, routes to per-project inboxes via an explicit allowlist; durable poll offset in the state home plus update_id dedup - kill the courier between receive and acknowledge, restart, and the note files exactly once; the 24-hour Telegram retention limit stated in docs | TODO | - | - |
+| DV4.2 | Lifecycle: courier install / uninstall / restart / status as a per-user Scheduled Task with restart-on-failure; tools/install.ps1 stops and restarts a running courier; version handshake at the loopback hello refuses a stale courier by name, naming the restart command; live proof registers a scratch-named task and unregisters it - the real install is the owner's at DV7.3 | TODO | - | - |
+| DV4.3 | The seam: loopback-only listener, per-install shared secret file-permission-protected, own named port; CourierChannel on IMessageChannel so live runs push through the daemon; when a courier is configured, in-run polling refuses to start and names it; courier-less machines byte-identical by golden replay; killing the daemon makes a live run's REPORT.md, /status and owner queue all say so within one boundary | TODO | - | - |
+| DV4.4 | Promotion: note to followups.md row to Tier-B lane by an explicit button on the acknowledgement; auto-inject from an inbox note refused by design with a negative test proving no code path does it; filing stays admin-only | TODO | - | - |
 
-## Legend
+### DV5 — The cloud, the safe shapes - an owner verb, a flagged experiment
 
-- A checkpoint is DONE only when claimed through the conductor task verb with an evidence path;
-  the engine confirms it after its own battery. Prose claims move nothing.
-- Escalation: a line in the handoff block beginning with the word HUMAN followed by a colon parks
-  the run for the owner. The literal token appears only when escalating right now - never in
-  prose, notes or this legend's examples.
-- Evidence artifacts live under .conductor/evidence/DVn/ and are force-added (the directory is
-  gitignored by star).
+| # | Checkpoint | Status | Commit | Evidence |
+|---|-----------|--------|--------|----------|
+| DV5.1 | The /cloud admin verb: flags verified against the installed CLI first; preflight requires clean tree and pushed, current branch, refusing by name in the chat with the exact git state; session id and URL returned to the chat and recorded in the event log as an owner action; follow-ups ride claude -p --cloud | TODO | - | - |
+| DV5.2 | The cloud lane behind a flag, default off: only work needing no conductor tools and no verdict; branch consumed, every gate re-run locally, the referee never moves; cost recorded and reported as unknown, pinned by a test that no code path prints zero for a cloud lane; droppable without losing DV5.1 | TODO | - | - |
+
+### DV6 — The record that gets out - bugs that outlive the board, columns, the page
+
+| # | Checkpoint | Status | Commit | Evidence |
+|---|-----------|--------|--------|----------|
+| DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | TODO | - | - |
+| DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | TODO | - | - |
+| DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | TODO | - | - |
+| DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | TODO | - | - |
+
+### DV7 — Ship Divan - close the era
+
+| # | Checkpoint | Status | Commit | Evidence |
+|---|-----------|--------|--------|----------|
+| DV7.1 | The internal record: ARCHITECTURE.md and docs/dev reconciled for everything Divan changed, the courier's lifecycle section and ADR included; closure ledger reconciled against DV2's triage; conductor budget re-measured through the fresh build against a backup copy and written into TOKEN-BUDGET-TUNING for the next era | TODO | - | - |
+| DV7.2 | The published surface: README, cli.md, operating.md, plan-config.md, quickstart/troubleshooting where touched, docs index; CHANGELOG Unreleased written as the release body (it may still carry edge's entries - the split call is the owner's); docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushing main | TODO | - | - |
+| DV7.3 | OWNER-ONLY ship: merge (stacked on feat/karvansara-edge - KS12.3 lands first or together), tag, reinstall, real courier install, github sync backfill of this run, payesh PR merge, tracker and findings doc move to docs/history; a session pre-flights and parks with the runbook, it does not perform them | TODO | - | - |
+
+## Dependencies
+
+```
+(none — stages run sequentially by plan order)
+```
