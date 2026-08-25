@@ -7,6 +7,7 @@ sendMessage [silent]
     Stage: KS11  |  attempts used: 1
     Checkpoints: 1/4 done
     Sessions: 12  |  Cost: $42.0000
+    Channels: telegram ready · github off
     
     <b>KS11 checkpoints:</b>
       [DONE] KS11.1: the messenger seam
