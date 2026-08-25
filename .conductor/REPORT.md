@@ -1,18 +1,18 @@
 ﻿# Conductor — Divan - the chancellery: inbox, courier, and the record that gets out run report
 
-_Updated 2026-08-25 20:20 UTC · branch `feat/divan` · HEAD `103e387`_
+_Updated 2026-08-25 21:48 UTC · branch `feat/divan` · HEAD `292426a`_
 
 **Status:** Idle
-**Stage:** DV2 — The sweep - every known defect triaged, the clusters burned down · attempts used 0 · working ▸ DV2.3
-**Checkpoints:** 4/23 done · **Sessions run:** 3 · **Cost:** $39.5938 (agent $39.5705 + gates $0.0233) · **Tokens:** 474,596 in / 238,131 out
-**Confirmed phases:** DV1
+**Stage:** DV2 — The sweep - every known defect triaged, the clusters burned down · attempts used 0
+**Checkpoints:** 6/23 done · **Sessions run:** 5 · **Cost:** $68.8509 (agent $68.8118 + gates $0.0391) · **Tokens:** 848,065 in / 417,355 out
+**Confirmed phases:** DV1, DV2
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | DV1 | The channel that says so - health made loud, the queue that reaches you | ██████████ 2/2 | confirmed ✓ |
-| DV2 | The sweep - every known defect triaged, the clusters burned down | █████░░░░░ 2/4 | **← active** |
+| DV2 | The sweep - every known defect triaged, the clusters burned down | ██████████ 4/4 | confirmed ✓ |
 | DV3 | The inbox - feedback that arrives when you have it, and survives the run | ░░░░░░░░░░ 0/4 | todo |
 | DV4 | The courier - one bot, always awake, outliving the run | ░░░░░░░░░░ 0/4 | todo |
 | DV5 | The cloud, the safe shapes - an owner verb, a flagged experiment | ░░░░░░░░░░ 0/2 | todo |
@@ -28,14 +28,14 @@ _Updated 2026-08-25 20:20 UTC · branch `feat/divan` · HEAD `103e387`_
 
 </details>
 
-<details><summary>DV2 — The sweep - every known defect triaged, the clusters burned down (2/4)</summary>
+<details> ✅<summary>DV2 — The sweep - every known defect triaged, the clusters burned down (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | ✅ DONE | - |
-| DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | ✅ DONE | - |
-| DV2.3 | Cluster B, channels: getUpdates 409 handling that names the other consumer and backs off; the false will-deliver-nothing startup line reads the resolved ChatCount; the telegram test endpoint survives a chats-only plan; report-push failures log their reason - all proven at the stub seam with scratch tokens | ⬜ TODO | - |
-| DV2.4 | Cluster C, state and verdict, and the close: budget counters persisted across engine restarts (the per-process-cap defect), the stage-boundary squash refuses to abort a STALE rebase and asserts ancestry after any abort, bug 27 first-write FK, 429-with-reset-time classified as backoff not AgentError, FU-F1-06 UpdateRunStatus lands; every fix-here row closed via the conductor bug verb, every remaining open row carries a named owner in the ledger | ⬜ TODO | - |
+| DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | ✅ DONE | [`c86dcec`](https://github.com/shaahink/conductor/commit/c86dcec) |
+| DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | ✅ DONE | [`c86dcec`](https://github.com/shaahink/conductor/commit/c86dcec) |
+| DV2.3 | Cluster B, channels: getUpdates 409 handling that names the other consumer and backs off; the false will-deliver-nothing startup line reads the resolved ChatCount; the telegram test endpoint survives a chats-only plan; report-push failures log their reason - all proven at the stub seam with scratch tokens | ✅ DONE | [`2b37a01`](https://github.com/shaahink/conductor/commit/2b37a01) |
+| DV2.4 | Cluster C, state and verdict, and the close: budget counters persisted across engine restarts (the per-process-cap defect), the stage-boundary squash refuses to abort a STALE rebase and asserts ancestry after any abort, bug 27 first-write FK, 429-with-reset-time classified as backoff not AgentError, FU-F1-06 UpdateRunStatus lands; every fix-here row closed via the conductor bug verb, every remaining open row carries a named owner in the ledger | ✅ DONE | [`8c23aaf`](https://github.com/shaahink/conductor/commit/8c23aaf) |
 
 </details>
 
@@ -98,6 +98,8 @@ _Updated 2026-08-25 20:20 UTC · branch `feat/divan` · HEAD `103e387`_
 | 1 | DV1 | Deliver | 1 | 08-25 18:21 | 0:03 | Interrupted |  | 0 |  |  |  |  |
 | 2 | DV1 | Resume | 1r1 | 08-25 18:25 | 0:49 | Advanced | DV1.1 DV1.2 | 6 | engine-fast:OK · face-fast:OK | $16.0285 | $0.0140 | 200,295/93,184 |
 | 3 | DV2 | Deliver | 1 | 08-25 19:23 | 0:54 | Advanced | DV2.1 DV2.2 | 5 | engine-fast:OK · face-fast:OK | $23.5420 | $0.0093 | 274,301/144,947 |
+| 4 | DV2 | Deliver | 1 | 08-25 20:20 | 0:25 | Advanced | DV2.3 | 3 | engine-fast:OK · face-fast:OK | $7.3377 | $0.0065 | 127,564/54,350 |
+| 5 | DV2 | Deliver | 1 | 08-25 20:46 | 0:50 | Advanced | DV2.4 | 7 | engine-fast:OK · face-fast:OK | $21.9036 | $0.0093 | 245,905/124,874 |
 
 ## Money
 
@@ -105,11 +107,12 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 1 | 23.7M | 98.8% | $16.04 | 2 | 11.8M | $8.02 |
+| **run total** | 4 | 101M | 98.7% | $68.85 | 6 | 16.8M | $11.48 |
 | stage DV1 | 1 | 23.7M | 98.8% | $16.04 | 2 | 11.8M | $8.02 |
-| 2026-08 | 1 | 23.7M | 98.8% | $16.04 | 2 | 11.8M | $8.02 |
+| stage DV2 | 3 | 77.3M | 98.7% | $52.81 | 4 | 19.3M | $13.20 |
+| 2026-08 | 4 | 101M | 98.7% | $68.85 | 6 | 16.8M | $11.48 |
 
-_Where the money goes: agent $16.03 (100%) · gate $0.01 (0%) · blended $0.68/M tokens._
+_Where the money goes: agent $68.81 (100%) · gate $0.04 (0%) · blended $0.68/M tokens._
 
 ## Timeline
 
@@ -135,6 +138,23 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-25 20:23:55  • session #3 DV2 Deliver started (attempt 1/8)
 08-25 21:20:15  ▪ gate engine-fast pass [session]  (1m04s)
 08-25 21:20:15  ▪ gate face-fast pass [session]  (29.1s)
+08-25 21:20:15  • session #3 DV2 → Advanced · done DV2.1,DV2.2 · 5 commit(s)  (56m20s)
+08-25 21:20:17  • session #4 DV2 Deliver started (attempt 1/8)
+08-25 21:46:28  ▪ gate engine-fast pass [session]  (1m02s)
+08-25 21:46:28  ▪ gate face-fast pass [session]  (3.1s)
+08-25 21:46:29  • session #4 DV2 → Advanced · done DV2.3 · 3 commit(s)  (26m11s)
+08-25 21:46:30  • session #5 DV2 Deliver started (attempt 1/8)
+08-25 22:38:49  ▪ gate engine-fast pass [session]  (1m07s)
+08-25 22:38:49  ▪ gate face-fast pass [session]  (25.5s)
+08-25 22:38:50  • session #5 DV2 → Advanced · done DV2.4 · 7 commit(s)  (52m19s)
+08-25 22:48:30  ▪ gate engine-fast pass [phase]  (0.0s)
+08-25 22:48:30  ▪ gate face-fast pass [phase]  (0.0s)
+08-25 22:48:30  ▪ gate engine-full pass [phase]  (4m48s)
+08-25 22:48:30  ▪ gate face-full pass [phase]  (2.6s)
+08-25 22:48:30  ✓ checkpoint DV2.1 confirmed
+08-25 22:48:30  ✓ checkpoint DV2.2 confirmed
+08-25 22:48:30  ✓ checkpoint DV2.3 confirmed
+08-25 22:48:30  ✓ checkpoint DV2.4 confirmed
 ```
 
 ## Health
@@ -142,8 +162,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 3 · retries 0 (0 %) · overall Warn
+sessions 5 · retries 0 (0 %) · overall Warn
 ⚠ [context-saturation] session #2: 23,394,515 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #3: 34,336,668 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #5: 32,631,442 context tokens (≥ 20,000,000)
 ```
 
 ## Repo
@@ -152,7 +174,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/divan
-working tree: clean
+working tree: M .conductor/REPORT.md, M plans/divan/TRACKER.md
 vs upstream: up to date
 ```
 
@@ -171,6 +193,18 @@ vs upstream: up to date
   - [`b8efd63`](https://github.com/shaahink/conductor/commit/b8efd63) fix(DV2.2): the battery budget is shared, and the argv wall is checked where it is hit
   - [`d8dac20`](https://github.com/shaahink/conductor/commit/d8dac20) docs(divan): the handoff for DV2.2 - where the ids live now, and what the map got wrong
   - [`c86dcec`](https://github.com/shaahink/conductor/commit/c86dcec) triage(DV2.1): fifty defects, one disposition each, and three corrections to the map
+- **s4 (DV2 Deliver)** — 3 commit(s):
+  - [`50ca4a8`](https://github.com/shaahink/conductor/commit/50ca4a8) docs(divan): the handoff for DV2.4 - cluster C, and the probe that caught #66
+  - [`96433ec`](https://github.com/shaahink/conductor/commit/96433ec) test(DV2.3): the report push line end to end, and the evidence
+  - [`2b37a01`](https://github.com/shaahink/conductor/commit/2b37a01) test(DV2.3): cluster B's regression tests, and what the first one found
+- **s5 (DV2 Deliver)** — 7 commit(s):
+  - [`292426a`](https://github.com/shaahink/conductor/commit/292426a) docs(divan): say plainly that the full suite was still running at session end
+  - [`b3378e6`](https://github.com/shaahink/conductor/commit/b3378e6) docs(divan): the handoff for DV3.1 - the sweep is closed, and the tail that was never read
+  - [`658cfc8`](https://github.com/shaahink/conductor/commit/658cfc8) refactor(DV2.4): split RunLoop's teardown and SessionRunner's refusal helpers; DV2.4 evidence
+  - [`73f05d0`](https://github.com/shaahink/conductor/commit/73f05d0) fix(DV2.4): bug #69 - a rate limit parks the run instead of spending its attempts
+  - [`6aa028b`](https://github.com/shaahink/conductor/commit/6aa028b) test(DV2.4): FU-F1-06 - a parked run reads back as parked, proven end to end
+  - [`4866902`](https://github.com/shaahink/conductor/commit/4866902) fix(DV2.4): bug #68 - the budget reaches the store on every exit path; bug #71 pinned
+  - [`8c23aaf`](https://github.com/shaahink/conductor/commit/8c23aaf) fix(DV2.4): bug #67 - the squash refuses a stale rebase instead of rewinding the branch
 
 ## Phase handovers (audit)
 
@@ -193,34 +227,37 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK-retry · face-full:OK
 
 ## Last session result
 
-> **DV2.1 and DV2.2 landed with evidence; DV2.3 part-built and honestly unclaimed**
-> - DV2.1: 50 defects triaged, 14 FIX / 36 DEFER, numbering settled against the real table, four #46-lost rows recovered into the live store as #70-#73
-> - DV2.2: battery budget now shared per battery with a rendered notice (#62, #63); argv ceiling moved to Core and refused at spawn (#15), proven live on a scratch rig at 9732 vs 8191; #55 half-fixed and stated; #21 measured as already delivere…
-> - DV2.3 source fixes for #38/#64/#65/#66 committed and green, but tests and evidence are owed, so the card went back to TODO with an amendment
+> **DV2.4 done — cluster C closed, sweep closed, and a defect nobody had filed**
+> - #67 stale-rebase guard, #68 budget-to-store on every exit, #69 429-as-backoff; #71 and FU-F1-06 were already fixed in src, closed as already-fixed-now-proven with inversion-probed tests
+> - #69 was two defects: LastRawTail opened FileShare.Read while AgentSession held the file for writing, so the raw tail was ALWAYS empty and the classifier matched a blank string
+> - Architecture ratchet caught the growth; split into RunLoop.Teardown.cs and SessionRunner.Refusals.cs rather than touching a ceiling
 >
-> artefacts: c86dcec, b8efd63, 103e387, d8dac20, dad5030, src/Conductor.Core/ArgvLimits.cs, src/Conductor.Core/PromptBattery.cs, src/Conductor.Core/Integrations/TelegramService.Polling.cs
+> artefacts: 8c23aaf, 4866902, 6aa028b, 73f05d0, 658cfc8, b3378e6, 292426a
 >
-> evidence: .conductor/evidence/DV2/dv2-1-triage-ledger.md, .conductor/evidence/DV2/dv2-1-measurements.txt, .conductor/evidence/DV2/dv2-2-cluster-a.txt
+> evidence: .conductor/evidence/DV2/dv2-4-cluster-c.md
 >
-> gaps: DV2.3 needs stub-seam regression tests, an evidence artifact, and `conductor bug fix` for 38/64/65/66. The last full suite (3140 passed, 0 failed) predates the DV2.3 edits; only a scoped run covers them, so the next session should run a full one. DV2.4 untouched.
+> gaps: the full suite was still running at session end (.conductor/bg-logs/dv24full3-*.log); all scoped filters green (DV2_4* 20, HarnessTests 35, squash 18) and the architecture ratchet re-checked after the split
 
 ## Tracker handoff
 
 ```
-last: DV2.1 (c86dcec) and DV2.2 (b8efd63) are CLAIMED with evidence. DV2.3 is PART-BUILT and
-  deliberately NOT claimed - the source fixes are committed and green, the regression tests are not
-  written. The map for all of DV2 is .conductor/evidence/DV2/dv2-1-triage-ledger.md: 50 defects,
-  14 FIX, 36 DEFER with named owners. TAKE YOUR IDS FROM THAT FILE, not the prompt battery.
-next: finish DV2.3. Landed already, needing only tests + evidence: #66 ProcessRunner.FailureReason
-  (git writes refusals to STDERR, which is why the reason was empty); #64 the started line now
-  counts ChatCount; #65 the test endpoint uses Targets, admin first; #38 the new partial
-  TelegramService.Polling.cs detects 409, names the other consumer from Telegram's own Description
-  field, and backs off 5s per streak capped at 60s (ConflictBackoff is internal and deterministic
-  so a test can state the delay). Write the stub-seam tests - K5_4TransportTests' RecordingBotApi
-  is the harness - then evidence, `conductor bug fix 38 64 65 66`, and claim.
-red: none. Scoped suite green; the last full suite (3140/0) predates the DV2.3 edits, so run one.
+last: DV2.4 CLAIMED - cluster C closed and with it the whole sweep. #67 #68 #69 #71 and FU-F1-06
+  all done (evidence .conductor/evidence/DV2/dv2-4-cluster-c.md; commits 8c23aaf 4866902 6aa028b
+  73f05d0 658cfc8). #71 and FU-F1-06 were ALREADY fixed in src - the triage premise was stale - so
+  they closed as already-fixed-now-proven, each with an inversion-probed test.
+find: #69 was two defects, and the second was in no ledger. SessionRunner.LastRawTail used
+  File.ReadAllText (FileShare.Read) while AgentSession still held the same file open for WRITING,
+  so the read failed, the catch swallowed it, and the raw tail was ALWAYS empty. Every classifier
+  reading that tail has been matching a blank string. Look for the same shape elsewhere.
+next: DV3.1 - inbound message kinds. Read the strand doc section DV3 names, not the sweep doc.
+watch: the architecture ratchet is real and it caught this session - comments count as lines.
+  RunLoop and SessionRunner are both freshly split and sit near 495; RunLoop is ALSO on the CA1506
+  coupling ratchet at 183/183, so one new coupled type fails the build.
+red: none known. Scoped suites all green (DV2_4* 20, HarnessTests 35, squash 18) and the
+  architecture ratchet re-checked after the split; the FULL suite was still running at session
+  end - log .conductor/bg-logs/dv24full3-*.log. Re-run it first if anything looks off.
 ```

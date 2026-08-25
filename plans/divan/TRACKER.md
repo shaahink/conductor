@@ -2,24 +2,20 @@
 
 **Plan:** Divan - the chancellery: inbox, courier, and the record that gets out | **Branch:** `feat/divan` | **Design doc:** docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md
 
-## Handoff (overwrite this block, ≤ 12 lines, no history)
+## Handoff (overwrite this block, <=12 lines, no history)
 
-last: DV2.4 CLAIMED - cluster C closed and with it the whole sweep. #67 #68 #69 #71 and FU-F1-06
-  all done (evidence .conductor/evidence/DV2/dv2-4-cluster-c.md; commits 8c23aaf 4866902 6aa028b
-  73f05d0 658cfc8). #71 and FU-F1-06 were ALREADY fixed in src - the triage premise was stale - so
-  they closed as already-fixed-now-proven, each with an inversion-probed test.
-find: #69 was two defects, and the second was in no ledger. SessionRunner.LastRawTail used
-  File.ReadAllText (FileShare.Read) while AgentSession still held the same file open for WRITING,
-  so the read failed, the catch swallowed it, and the raw tail was ALWAYS empty. Every classifier
-  reading that tail has been matching a blank string. Look for the same shape elsewhere.
-next: DV3.1 - inbound message kinds. Read the strand doc section DV3 names, not the sweep doc.
-watch: the architecture ratchet is real and it caught this session - comments count as lines.
-  RunLoop and SessionRunner are both freshly split and sit near 495; RunLoop is ALSO on the CA1506
-  coupling ratchet at 183/183, so one new coupled type fails the build.
-red: none known. Scoped suites all green (DV2_4* 20, HarnessTests 35, squash 18) and the
-  architecture ratchet re-checked after the split; the FULL suite was still running at session
-  end - log .conductor/bg-logs/dv24full3-*.log. Re-run it first if anything looks off.
-
+last: DV3.1 CLAIMED. The DTO now carries caption/voice/audio/document/photo[]/reply_to_message/
+  message_thread_id, getFile downloads the bytes, and a file over 20 MB is refused BY NAME before
+  any round trip. 12 stub-wire tests, all green; 362 neighbour tests green (evidence
+  .conductor/evidence/DV3/dv3-1-inbound-kinds.md).
+find: KS11_1SeamBoundaryTests strips comments and greps for \bTelegram - a STRING LITERAL naming
+  Telegram in user-facing text fails the seam rule too. Sentence SHAPE lives in the seam
+  (InboundAck.Refused), the REASON in the adapter (TelegramLimits). Any new TelegramService.*.cs
+  partial must also be added to that test's AdapterFiles list.
+next: DV3.2 - the durable inbox. RemoteSurface.HandleNoteAsync (Messaging/RemoteSurface.Inbound.cs)
+  is the ONE place the write goes; media already lands at <stateDir>/inbox/media/<msgId>-<name>, so
+  the transcript goes beside it. .conductor/.gitignore stays untouched - a test now pins that.
+red: none known. Full battery not run by this session (conductor runs it after exit).
 
 ## Baseline numbers (from run.db)
 
@@ -27,7 +23,7 @@ red: none known. Scoped suites all green (DV2_4* 20, HarnessTests 35, squash 18)
 |---|---|
 | Total checkpoints | 23 |
 | Done | 2 |
-| Claimed (unconfirmed) | 3 |
+| Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
 
@@ -48,7 +44,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | DONE | c86dcec | .conductor/evidence/DV2/dv2-1-triage-ledger.md |
 | DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | DONE | c86dcec | .conductor/evidence/DV2/dv2-2-cluster-a.txt |
 | DV2.3 | Cluster B, channels: getUpdates 409 handling that names the other consumer and backs off; the false will-deliver-nothing startup line reads the resolved ChatCount; the telegram test endpoint survives a chats-only plan; report-push failures log their reason - all proven at the stub seam with scratch tokens | DONE | 2b37a01 | .conductor/evidence/DV2/dv2-3-cluster-b.md |
-| DV2.4 | Cluster C, state and verdict, and the close: budget counters persisted across engine restarts (the per-process-cap defect), the stage-boundary squash refuses to abort a STALE rebase and asserts ancestry after any abort, bug 27 first-write FK, 429-with-reset-time classified as backoff not AgentError, FU-F1-06 UpdateRunStatus lands; every fix-here row closed via the conductor bug verb, every remaining open row carries a named owner in the ledger | TODO | - | - |
+| DV2.4 | Cluster C, state and verdict, and the close: budget counters persisted across engine restarts (the per-process-cap defect), the stage-boundary squash refuses to abort a STALE rebase and asserts ancestry after any abort, bug 27 first-write FK, 429-with-reset-time classified as backoff not AgentError, FU-F1-06 UpdateRunStatus lands; every fix-here row closed via the conductor bug verb, every remaining open row carries a named owner in the ledger | DONE | 8c23aaf | .conductor/evidence/DV2/dv2-4-cluster-c.md |
 
 ### DV3 — The inbox - feedback that arrives when you have it, and survives the run
 
