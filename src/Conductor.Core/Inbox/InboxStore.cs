@@ -321,14 +321,7 @@ public sealed class InboxStore
             kind = note.Kind,
         }, Compact);
 
-        try
-        {
-            using var fs = new FileStream(IndexPath, FileMode.Append, FileAccess.Write,
-                FileShare.ReadWrite, 4096);
-            var bytes = Encoding.UTF8.GetBytes(line + "\n");
-            fs.Write(bytes, 0, bytes.Length);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        AppendJsonLine(IndexPath, line);
     }
 
     /// <summary>Temp file, then rename over the target. The same trick <see cref="Append"/> uses,
@@ -359,8 +352,8 @@ public sealed class InboxStore
     }
 
     /// <summary>One JSON object per line, appended, never rewritten. Retried a few times because a
-    /// second writer may hold the file for the microsecond its own append takes — losing an index
-    /// line is survivable (<see cref="All"/> repairs it), but only if we tried.</summary>
+    /// second writer holds the file for the microsecond its own append takes — losing an index line
+    /// is survivable (<see cref="All"/> repairs it), but only if we tried.</summary>
     public void AppendIndexLine(InboxNote note)
     {
         var line = JsonSerializer.Serialize(new
@@ -373,18 +366,61 @@ public sealed class InboxStore
             summary = note.Summary,
         }, Compact);
 
-        for (var attempt = 0; attempt < 5; attempt++)
+        AppendJsonLine(IndexPath, line);
+    }
+
+    /// <summary>Appends ONE whole line, or nothing at all.
+    ///
+    /// <para>The share mode is the entire point and it was wrong once. An append opened
+    /// <c>FileShare.ReadWrite</c> lets a second writer in, and a .NET <c>FileStream</c> in append
+    /// mode carries its OWN idea of where the end is — resolved when the handle opens, advanced by
+    /// its own writes. Two handles open at the same length therefore write over each other rather
+    /// than after each other, and what lands is not two lines or one line but a line spliced through
+    /// the middle of another: <c>All</c> can still repair a MISSING line, and can do nothing at all
+    /// with a corrupt one. Forty concurrent notes reproduced it every time.</para>
+    ///
+    /// <para>So the writer takes the file: <c>FileShare.Read</c> admits readers and refuses other
+    /// writers, and the loser retries instead of interleaving. The append itself is a handle open and
+    /// one small write, so the window it holds is microseconds and the backoff clears easily. If
+    /// every attempt still loses, the line is dropped rather than risked — a missing index line is
+    /// the failure this store is built to survive.</para>
+    ///
+    /// <para>Public for the same MA0045 public-member exemption as
+    /// <see cref="AppendPrunedLine"/>.</para></summary>
+    public static void AppendJsonLine(string path, string line)
+    {
+        var bytes = Encoding.UTF8.GetBytes(line + "\n");
+        for (var attempt = 0; attempt < 12; attempt++)
         {
             try
             {
-                using var fs = new FileStream(IndexPath, FileMode.Append, FileAccess.Write,
-                    FileShare.ReadWrite, 4096);
-                var bytes = Encoding.UTF8.GetBytes(line + "\n");
+                using var fs = new FileStream(path, FileMode.Append, FileAccess.Write,
+                    FileShare.Read, 4096);
                 fs.Write(bytes, 0, bytes.Length);
                 return;
             }
-            catch (IOException) { Thread.Sleep(5 * (attempt + 1)); }
+            catch (IOException) { Thread.Sleep(2 * (attempt + 1)); }
+            catch (UnauthorizedAccessException) { return; }
         }
+    }
+
+    /// <summary>Every line of a file that other writers may be APPENDING to right now.
+    ///
+    /// <para><c>File.ReadLines</c> would ask for <c>FileShare.Read</c>, which locks concurrent
+    /// appenders out for the whole length of the scan and turns a reader into the thing that drops
+    /// index lines. This asks for <c>FileShare.ReadWrite</c> instead, so a reader never costs a
+    /// writer anything; the worst it can see is a line being written as it passes, and a half-read
+    /// tail line is discarded by the JSON parse above rather than believed.</para>
+    ///
+    /// <para>Public for the same MA0045 public-member exemption as <see cref="ReadNote"/>: the whole
+    /// store is synchronous by design, because the prompt-battery seam above it is a property.</para></summary>
+    public static IReadOnlyList<string> ReadLinesShared(string path)
+    {
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096);
+        using var reader = new StreamReader(fs, Encoding.UTF8);
+        var lines = new List<string>();
+        while (reader.ReadLine() is { } line) lines.Add(line);
+        return lines;
     }
 
     private HashSet<long> IndexedIds()
@@ -393,7 +429,7 @@ public sealed class InboxStore
         if (!File.Exists(IndexPath)) return ids;
         try
         {
-            foreach (var line in File.ReadLines(IndexPath))
+            foreach (var line in ReadLinesShared(IndexPath))
             {
                 if (line.Length == 0) continue;
                 try

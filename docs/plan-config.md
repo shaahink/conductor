@@ -681,6 +681,10 @@ leaving the sender with a receipt and silence.
 }
 ```
 
+| key | what it does |
+|---|---|
+| `transcribe` | The local transcription command and its two dials — `command`, `timeoutSeconds` (default 900), `confidenceFloor` (default 0.45). Omit the whole block and a voice note is filed untranscribed with its audio kept. |
+
 A **command**, not a service: the model, the language and the hardware stay the owner's, and nothing
 about a run leaves the machine. `{audio}` is replaced with the path to the file; with no placeholder
 the path is appended as the last argument. `CONDUCTOR_TRANSCRIBE_COMMAND` overrides the plan, the
