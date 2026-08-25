@@ -4,18 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV2.1 landed (c86dcec). The triage ledger is .conductor/evidence/DV2/dv2-1-triage-ledger.md -
-  50 defects, 14 FIX each with the regression test it needs, 36 DEFER each with a named owner.
-  TAKE YOUR IDS FROM THAT FILE, not from the prompt battery: this run's 12 new rows now fill all
-  12 battery slots and evict the carried karvansara rows that ARE cluster A's work.
-  Settled: bug 44 exists and is fixed - not dangling, not superseded by 60; the strand doc's "11
-  open" was the imported copy read by the repo-local path; #46 lost FOUR rows, not six, refiled
-  as #70-#73; field defects are #62-#69. Two strand-doc symptoms were wrong - read section 2 of
-  the ledger before touching #65 (telegram test is a FALSE FAILURE on a chats-only plan, not a
-  crash; it is already guarded) or #69 (SessionRunner.cs:411 already queues a rate-limit backoff).
-  Snapshot the store with run.db-wal and run.db-shm beside run.db or you read stale rows.
-next: DV2.2, cluster A: #62 #63 #15 #21 #55. #62 is BatteryGroup.Render truncating the JOINED
-  string (PromptBattery.cs:41-62); #63 is BugsBattery's silent 12-row cap (Knowledge.cs:51,70-76).
+last: DV2.1 (c86dcec) + DV2.2 (b8efd63). The triage ledger is the map for the rest of DV2:
+  .conductor/evidence/DV2/dv2-1-triage-ledger.md - 50 defects, 14 FIX, 36 DEFER with named owners.
+  TAKE YOUR IDS FROM THAT FILE: bug #63 (fixed) proved only 12 rows ever reach a prompt, and this
+  run's own rows now hold most of those slots. Cluster A is closed - #62 #63 #15 #21 #55 all fixed
+  via the bug verb; #21 was ALREADY delivered by KS1.4 and merely unclosed, #55 is half-fixed and
+  says so in code (doctor cannot render a live run's tail sections; preflight can). Full suite
+  3140 passed / 0 failed. New file: src/Conductor.Core/ArgvLimits.cs is now the ONE home for the
+  argv ceilings - doctor delegates, AgentSession refuses at spawn.
+next: DV2.3, cluster B: #38 #64 #65 #66, stub seam and scratch tokens only. Read section 2 of the
+  triage ledger first - #65's symptom in the strand doc is WRONG (the empty-list index is guarded;
+  the real defect is a false failure on a chats-only plan, same raw-vs-resolved seam as #64). And
+  #66 reproduces for free: .conductor/evidence/DV2/dv2-2-cluster-a.txt section 1 has a live log
+  line reading "report push failed:" with nothing after the colon.
 
 ## Baseline numbers (from run.db)
 
