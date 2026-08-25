@@ -73,4 +73,66 @@ public sealed partial class HarnessTests
         Assert.Equal(state.PerRunCostUsd, persisted.PerRunCostUsd);
         Assert.Equal(state.PerRunTokens, persisted.PerRunTokens);
     }
+
+    /// <summary>
+    /// DV2.4, FU-F1-06 — the "immortal running" record. <c>runs.status</c> was written twice in a
+    /// run's life: <c>running</c> at every process start and a terminal word at completion, so a run
+    /// that stopped <c>Paused</c> or <c>NeedsHuman</c> — the two commonest ways a run stops — said
+    /// <c>running</c> for ever, and the row is what every other machine reads.
+    ///
+    /// <para>KS0.2 closed it with <c>IRunStore.UpdateRunStatus</c> and a call from
+    /// <c>RunContext.Save</c>, and <c>KS0_2RunRecordTests</c> pins the writer and the vocabulary. What
+    /// nothing pinned is the ROUTE: that a real engine parking a real run actually reaches the writer.
+    /// This drives the park end to end and reads the row back.</para>
+    /// </summary>
+    [Fact]
+    public async Task ARunParkedByTheEngine_ReadsBackAsParkedFromTheStore_NotAsRunning()
+    {
+        var plan = new PlanConfig
+        {
+            Name = "ParkedStatusPlan",
+            Repo = _repo,
+            Tracker = "TRACKER.md",
+            Stages = { new StageConfig { Id = "H0", Title = "Harness", Sessions = 1 } },
+            Agent = new AgentConfig
+            {
+                Command = "cmd.exe",
+                Args = { "/c", _agentScript, "{prompt}" },
+                Provider = "opencode",
+            },
+            GatePolicy = "perSession",
+            Gates = { new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 } },
+        };
+        plan.Report.Commit = false;
+
+        var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
+            new RunOptions(DryRun: false, Once: true, MaxSessions: 0, StartPaused: true), consoleSink: false);
+
+        var runTask = host.Services.GetRequiredService<Orchestrator>().RunAsync(CancellationToken.None);
+
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (state.Status != RunStatus.Paused && DateTime.UtcNow < deadline) await Task.Delay(50);
+        Assert.Equal(RunStatus.Paused, state.Status);
+
+        var store = host.Services.GetRequiredService<SqliteRunStore>();
+        var deadline2 = DateTime.UtcNow.AddSeconds(10);
+        IReadOnlyDictionary<string, object?>? row = null;
+        while (DateTime.UtcNow < deadline2)
+        {
+            row = store.Query($"SELECT status, ended_utc FROM runs WHERE run_id = '{state.RunId}'").FirstOrDefault();
+            if (row is not null && (row["status"] as string) == "paused") break;
+            await Task.Delay(100);
+        }
+
+        Assert.NotNull(row);
+        Assert.Equal("paused", row!["status"]);
+        // A park is not an ending: a resumable run may not carry an ended_utc.
+        Assert.True(row["ended_utc"] is null or DBNull, $"a parked run was stamped as ended: {row["ended_utc"]}");
+
+        host.Services.GetRequiredService<System.Collections.Concurrent.ConcurrentQueue<ControlCommand>>()
+            .Enqueue(ControlCommand.Of(ControlAction.ResumeRun));
+        Assert.Equal(0, await runTask.WaitAsync(TimeSpan.FromSeconds(60)));
+    }
 }
