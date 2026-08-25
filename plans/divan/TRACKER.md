@@ -4,21 +4,22 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV3.3 AND DV3.4 both CLAIMED and pushed - stage DV3 is complete. DV3.3: local transcribe
-  command, confidence marked inline as [?: ...], sidecar beside the audio, untranscribed/failed
-  answered by name, `conductor inbox list|show|add|transcribe|parked|prune` (bug #74 closed), and a
-  real .ogg through faster-whisper on the GPU in the rig. DV3.4: the routing ladder - reply-to-a-push
-  (no command typed) > topic > sticky /project > local run - refusals by name, and a machine-level
-  dead-letter box so an unroutable note is parked, never dropped. 39 new tests; DV3 83, KS11 134 green.
-find: the DV3.3 architecture test (prune is the only deletion path) is a SOURCE SWEEP over files that
-  mention InboxStore/InboxNote - any new temp-file cleanup in such a file must be named TryDelete or
-  it fails the sweep, which is what caught ChatRoutes.Write. Do not edit src while a bg `dotnet test`
-  is building: two runs died on a locked Conductor.Core.dll. Routing now reads the MACHINE catalogue
-  (StateHome.Root) from TelegramService; every rig must pass its own temp root (bug #73).
-next: DV4.1 the courier daemon. NoteRouter, ChatRoutes and DeadLetterBox are already machine-level so
-  they move to it unchanged; the durable poll offset and update_id dedup are the new work, and moving
-  polling off the run also moves the transcription block off the run's poll loop.
-red: none known. Full battery not run by this session (conductor runs it after exit).
+last: FIX session. The battery conductor ran after session 7 was RED - 7 failed, and it failed the
+  SC4.1 retry too, so none of it was flake. One real defect: InboxStore's index append opened
+  FileMode.Append with FileShare.ReadWrite, and a .NET append stream resolves end-of-file when the
+  HANDLE opens - two handles at the same length write OVER each other, splicing one JSON line through
+  another. All() repairs a MISSING index line and can do nothing with a corrupt one. Writer now takes
+  the file (FileShare.Read + retry), reader gives it back (ReadLinesShared). Three ratchet reds split,
+  never baselined; `inbox` and `courier.transcribe` added to the registries that pin them.
+find: session 7 wrote `red: none known. Full battery not run by this session` - four of the seven reds
+  are checks ONLY the full suite runs. Run it before claiming. And bug #75: `conductor note` keeps only
+  the FIRST LINE - ledger 465/466/467 survive as their headers alone, DV3.3 and DV3.4's acceptance
+  records are gone. Write every note as ONE line until that is fixed.
+next: DV4.1 the courier daemon, unchanged from session 7's handoff - NoteRouter, ChatRoutes and
+  DeadLetterBox are already machine-level and move across as-is; the durable poll offset and update_id
+  dedup are the new work. New file names to know: TranscriptionOutcome.cs, DeadLetterBox.cs,
+  TelegramService.TestConnection.cs (declared in KS11_1SeamBoundaryTests.AdapterFiles).
+red: none. engine-full 3268/3268 green, run by this session - see the evidence artifact.
 
 
 ## Baseline numbers (from run.db)
@@ -27,7 +28,7 @@ red: none known. Full battery not run by this session (conductor runs it after e
 |---|---|
 | Total checkpoints | 23 |
 | Done | 6 |
-| Claimed (unconfirmed) | 2 |
+| Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
 
@@ -56,8 +57,8 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | DV3.1 | Inbound message kinds: voice, audio, document, photo, caption, reply_to_message, message_thread_id on the DTO; getFile download; the 20 MB bot-API cap refused by name to the sender, never dropped; a stub-wire test drives each kind end to end | DONE | 2bebfbe | .conductor/evidence/DV3/dv3-1-inbound-kinds.md |
 | DV3.2 | The per-project inbox: durable store under .conductor/inbox (never committed - no gitignore allowlist entry, this repo is public), media beside transcript, atomic writes, append-only index deduped by update_id, read cursor with seen-by-session marks; InboxBattery on the IPromptBattery seam, fenced and framed, with an architecture test proving the fencing is always present; a note filed with no run live is read by the next session of the next run, proven in the rig | DONE | 2bebfbe | .conductor/evidence/DV3/dv3-2-the-inbox.md |
-| DV3.3 | Transcription: configured local command (faster-whisper on this machine's GPU), per-segment confidence marked in the stored note, unset command files the note untranscribed with audio kept and the reply saying so; conductor inbox prune is the only deletion path; a real .ogg transcribes in the rig | TODO | - | - |
-| DV3.4 | Routing: a voice note sent as a reply to a checkpoint push files against that push's project with no command typed; sticky /project selection; message_thread_id topics in supergroups; unknown slug refused by name; unroutable notes parked in a machine-level dead-letter directory, never dropped | TODO | - | - |
+| DV3.3 | Transcription: configured local command (faster-whisper on this machine's GPU), per-segment confidence marked in the stored note, unset command files the note untranscribed with audio kept and the reply saying so; conductor inbox prune is the only deletion path; a real .ogg transcribes in the rig | DONE | 4b1f04a | .conductor/evidence/DV3/dv3-3-transcription.md |
+| DV3.4 | Routing: a voice note sent as a reply to a checkpoint push files against that push's project with no command typed; sticky /project selection; message_thread_id topics in supergroups; unknown slug refused by name; unroutable notes parked in a machine-level dead-letter directory, never dropped | DONE | 4b1f04a | .conductor/evidence/DV3/dv3-4-routing.md |
 
 ### DV4 — The courier - one bot, always awake, outliving the run
 

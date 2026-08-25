@@ -34,6 +34,7 @@ public sealed class KS11_1SeamBoundaryTests
         "TelegramService.Polling.cs",   // DV2.3: the inbound long-poll and its 409 handling (#38)
         "TelegramService.Inbound.cs",    // DV3.1: getFile, the download, and the 20 MB cap
         "TelegramService.Transport.cs",
+        "TelegramService.TestConnection.cs",   // DV3 fix: the Test button's leg, split off the 500-line ceiling
         "TelegramReadiness.cs",
         "TelegramLimits.cs",
         "NoOpRunNotifier.cs",
