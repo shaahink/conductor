@@ -26,6 +26,7 @@ public sealed partial class MessageComposer
         sb.AppendLine($"Stage: {_state.CurrentStage ?? "-"}  |  attempts used: {_state.AttemptsThisStage}");
         sb.AppendLine($"Checkpoints: {track.Checkpoints.Count(c => c.IsDone)}/{track.Checkpoints.Count} done");
         sb.AppendLine($"Sessions: {_state.SessionCounter}  |  Cost: ${_state.TotalCostUsd:0.0000}");
+        AppendChannels(sb);
 
         if (_state.AttentionReason != null)
             sb.AppendLine($"\n{_state.AttentionReason}{Staleness.Since(_state.AttentionSinceUtc)}");
@@ -46,6 +47,32 @@ public sealed partial class MessageComposer
         }
 
         return sb.ToString().TrimEnd();
+    }
+
+    /// <summary>DV1.1 — the outbound channels, on the surface a reader asks from their phone.
+    ///
+    /// <para><c>/status</c> is the one question an away-from-keyboard operator asks, and until now it
+    /// could answer it in full while the run's github mirror had been dead since the first boundary.
+    /// The roll-up is unconditional — a reader must be able to tell "this build does not report
+    /// channels" from "the channels are fine" — and each broken one gets its own line with the exact
+    /// command that clears it.</para>
+    ///
+    /// <para>Started-ness is deliberately not passed even though this runs inside the engine: the
+    /// composer is constructed by <c>TelegramService.AdoptPlan</c> and asking the service that owns
+    /// it whether it has started, in order to answer a message the service itself just delivered, is
+    /// a question with only one answer.</para></summary>
+    private void AppendChannels(StringBuilder sb)
+    {
+        var channels = ChannelHealthProbe.Collect(_plan);
+        sb.AppendLine($"Channels: {EscapeHtml(ChannelHealthProbe.SummaryLine(channels))}");
+        foreach (var c in ChannelHealthProbe.Loud(channels))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"<b>{EscapeHtml(c.Channel)} {c.Word}</b> - {EscapeHtml(c.Detail)}");
+            sb.AppendLine(c.FixCommand.Length > 0
+                ? $"fix: <code>{EscapeHtml(c.FixCommand)}</code>"
+                : $"fix: {EscapeHtml(c.Fix)}");
+        }
     }
 
     /// <summary>What <c>/tasks</c> answers.</summary>

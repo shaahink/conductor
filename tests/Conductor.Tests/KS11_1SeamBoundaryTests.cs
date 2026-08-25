@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text.RegularExpressions;
 
 using Conductor.Core.Integrations.Messaging;
@@ -38,6 +38,11 @@ public sealed class KS11_1SeamBoundaryTests
         "SecretsStore.cs",       // reads the bot token out of the state dir; named for what it stores
         "ParkNotifier.cs",       // wraps IRunNotifier to mute a channel; never touches the wire
         "WatchRemote.cs",        // SF5.3's own Telegram push, outside the run loop — see below
+        // DV1.1 — the per-channel health probe. It names telegram and github BY DESIGN: its whole
+        // job is to answer "which configured channel is dead", which cannot be asked without naming
+        // the channels. It touches no transport — it reads TelegramReadiness' verdict, the same one
+        // doctor and GET /telegram/status read — so the seam below it is intact.
+        "ChannelHealth.cs",
     ];
 
     /// <summary>A Telegram identifier: the word itself, or one of the Bot API DTO prefixes this repo

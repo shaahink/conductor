@@ -1,4 +1,4 @@
-using Conductor.Commands;
+﻿using Conductor.Commands;
 using Conductor.Core;
 using Conductor.Core.Integrations;
 using Conductor.Models;
@@ -164,22 +164,26 @@ public sealed class DoctorCommandTests : IDisposable
         Assert.Contains("not configured", check.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>DV1.1 raised this from <c>warn</c> to <c>fail</c>. A plan that switches a channel on
+    /// and cannot deliver through it is the edge run's failure in miniature, and a yellow line the
+    /// exit code ignores is how a run starts anyway.</summary>
     [Fact]
-    public void CheckTelegram_Warn_WhenConfiguredButNoToken()
+    public void CheckTelegram_Fails_WhenConfiguredButNoToken()
     {
         var plan = Plan(p => { p.Repo = _dir; p.Telegram = new TelegramConfig(); });
         var check = DoctorCommand.CheckTelegram(plan);
-        Assert.Equal("warn", check.State);
+        Assert.Equal("fail", check.State);
         Assert.Contains("no bot token", check.Message, StringComparison.Ordinal);
     }
 
+    /// <inheritdoc cref="CheckTelegram_Fails_WhenConfiguredButNoToken"/>
     [Fact]
-    public void CheckTelegram_Warn_WhenTokenPresentButNoAllowedChatIds()
+    public void CheckTelegram_Fails_WhenTokenPresentButNoAllowedChatIds()
     {
         var plan = Plan(p => { p.Repo = _dir; p.Telegram = new TelegramConfig(); });
         SecretsStore.WriteTelegramToken(plan.StateDir, "fake-token");
         var check = DoctorCommand.CheckTelegram(plan);
-        Assert.Equal("warn", check.State);
+        Assert.Equal("fail", check.State);
         Assert.Contains("allowedChatIds", check.Message, StringComparison.Ordinal);
     }
 

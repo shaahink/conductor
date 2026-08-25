@@ -147,7 +147,7 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
         checks.Add(CheckBudget(plan, currentCostUsd, hasRun, budgetGrantUsd, budgetGrantTokens));
         checks.Add(CheckTokenBudget(plan));
         checks.Add(CheckState(plan));
-        checks.Add(CheckTelegram(plan));
+        checks.AddRange(CheckChannels(plan));
 
         // W3.2: the one check that talks to the model backend. A dead token is invisible to every
         // other check here and kills a run thirteen sessions in, so it is on by default — and it is
@@ -439,24 +439,42 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
     // CheckBudget lives in DoctorCommand.Budget.cs (KS5.4 round 3: extracted, not appended — this
     // file was at the 500-line ceiling when the check grew its token half).
 
-    /// <summary>SC1.2: the sentences live in <see cref="TelegramReadiness"/>, which
-    /// <c>GET /telegram/status</c> and <c>TelegramService.StartAsync</c> also read, so doctor and the
-    /// live surfaces cannot drift apart on what "working" means. Started-ness is passed as null:
-    /// doctor runs outside the engine and has no honest way to know it.</summary>
+    /// <summary>DV1.1 — preflight for EVERY outbound channel, and the one place a channel the plan
+    /// switched on can be refused before a run starts believing it.
+    ///
+    /// <para><b>The severity is the checkpoint.</b> A configured-but-dead channel used to be a
+    /// <c>warn</c>, which doctor prints in yellow and its exit code ignores; the Karvansara edge run
+    /// then started with <c>github.enabled</c> set, no token, and mirrored nothing for twenty-three
+    /// sessions. Configured-and-cannot-deliver is now <c>fail</c> — doctor exits non-zero and says
+    /// which channel. Never-configured stays a <c>warn</c>, exactly as it was: an optional channel
+    /// nobody asked for is not a fault, and quietly downgrading that line would be trading one
+    /// missing signal for another.</para>
+    ///
+    /// <para>The sentences still live in <see cref="TelegramReadiness"/> and
+    /// <c>GithubIdentity.MissingTokenRefusal</c>, now by way of <see cref="ChannelHealthProbe"/>,
+    /// which the REPORT.md header, <c>/status</c> and the owner queue read too — so five surfaces
+    /// cannot drift apart on what "working" means. Started-ness is passed as null: doctor runs
+    /// outside the engine and has no honest way to know it.</para></summary>
+    internal static IReadOnlyList<Check> CheckChannels(PlanConfig plan)
+        => [.. ChannelHealthProbe.Collect(plan).Select(c => new Check(
+            c.Channel,
+            c.State switch
+            {
+                ChannelState.Dead => "fail",
+                ChannelState.Ready => "ok",
+                _ => "warn",
+            },
+            // The message is the channel's own sentence and NOTHING else. SC1.2's anti-drift bar is
+            // an equality against `GET /telegram/status`, and every word appended here would be a
+            // word that endpoint does not say. The remedy is not lost: both sentences already name
+            // what to set, and the owner queue carries the literal command.
+            c.Detail))];
+
+    /// <summary>The telegram row of <see cref="CheckChannels"/>, by name — SC1.2's anti-drift test
+    /// asks doctor one question about one channel, and the answer must not depend on where in a list
+    /// it happens to sit.</summary>
     internal static Check CheckTelegram(PlanConfig plan)
-    {
-        var cfg = plan.Telegram;
-        var hasToken = Environment.GetEnvironmentVariable("CONDUCTOR_TELEGRAM_TOKEN") is { Length: > 0 }
-            || SecretsStore.TryReadTelegramToken(plan.StateDir) != null;
-
-        var missing = TelegramReadiness.MissingHalf(
-            hasBlock: cfg is not null, hasToken: hasToken,
-            allowedChatIds: cfg?.ChatCount ?? 0, started: null);
-
-        return missing is not null
-            ? new Check("telegram", "warn", missing)
-            : new Check("telegram", "ok", $"token present, {cfg!.ChatCount} allowed chat id(s)");
-    }
+        => CheckChannels(plan).First(c => c.Name == ChannelHealthProbe.TelegramChannel);
 
     private static string RenderCheck(Check c)
     {

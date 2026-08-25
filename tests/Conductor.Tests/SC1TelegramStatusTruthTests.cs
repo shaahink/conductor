@@ -205,7 +205,9 @@ public sealed class SC1TelegramStatusTruthTests : IDisposable
         var status = await GetStatusAsync(port);
 
         var doctor = DoctorCommand.CheckTelegram(noToken);
-        Assert.Equal("warn", doctor.State);
+        // DV1.1: the severity moved warn -> fail; the SENTENCE, which is what this test is about,
+        // did not, and the equality below is still the bar.
+        Assert.Equal("fail", doctor.State);
         Assert.Equal(doctor.Message, Str(status, "willDeliverReason"));
     }
 

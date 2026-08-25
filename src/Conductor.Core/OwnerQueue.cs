@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Text;
+using Conductor.Core.Integrations;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -53,10 +54,14 @@ public static class OwnerQueue
     private const int RankPark = 0;
     private const int RankHuman = 1;
     private const int RankGateNow = 2;
-    private const int RankWait = 3;
-    private const int RankCheckpoint = 4;
-    private const int RankSkipped = 5;
-    private const int RankGateAhead = 6;
+    // DV1.1 — a dead outbound channel does not stop the run, and that is exactly why it sits this
+    // high: the run carries on spending while the record of it reaches nobody. It ranks below the
+    // three parks (those are the run standing still) and above everything the run is merely owed.
+    private const int RankChannel = 3;
+    private const int RankWait = 4;
+    private const int RankCheckpoint = 5;
+    private const int RankSkipped = 6;
+    private const int RankGateAhead = 7;
 
     public static string QueuePath(PlanConfig plan)
     {
@@ -78,6 +83,7 @@ public static class OwnerQueue
         CollectWait(state, nowUtc, items);
         CollectBlockedCheckpoints(track, items);
         CollectSkippedStages(plan, state, items);
+        CollectDeadChannels(plan, items);
         return [.. items.OrderBy(i => i.Rank).ThenBy(i => i.Id, StringComparer.Ordinal)];
     }
 
@@ -238,6 +244,41 @@ public static class OwnerQueue
                 SinceUtc: null,
                 Rank: RankSkipped,
                 Detail: "review what was skipped: go back to the stage, or accept the gap deliberately"));
+        }
+    }
+
+    /// <summary>DV1.1 — an outbound channel the plan configured that cannot deliver.
+    ///
+    /// <para>The seventh source, and the first that is not about the run's own progress. The
+    /// Karvansara edge run's github mirror was enabled with no token: the mirror said so twice, to a
+    /// log file, and the queue — the surface whose entire purpose is "the things only you can do" —
+    /// listed nothing, for twenty-three sessions, while $324 of work went unrecorded. Nobody but the
+    /// owner can supply a token, so a dead channel is an owner obligation by definition, and it
+    /// belongs here for exactly the same reason an unapproved gate does.</para>
+    ///
+    /// <para>Derived like everything else on this board: <see cref="ChannelHealthProbe"/> re-asks the
+    /// plan and the environment on every render, so the entry disappears the moment the token
+    /// appears — no clearing step, and no way for it to outlive the fault. A channel with no typeable
+    /// command (a plan edit) carries <c>""</c>, which the renderer already words correctly.</para></summary>
+    private static void CollectDeadChannels(PlanConfig plan, List<OwnerQueueItem> items)
+    {
+        foreach (var c in ChannelHealthProbe.Loud(ChannelHealthProbe.Collect(plan)))
+        {
+            items.Add(new OwnerQueueItem(
+                Id: $"channel-{c.Channel}",
+                Kind: "channel",
+                Title: $"{c.Channel} is {c.Word} - {Clip(c.Detail, 200)}",
+                // Named precisely. A dead channel unblocks no STAGE, and saying it did would be the
+                // lie that costs the queue its credibility; what it costs is the record.
+                Unblocks: c.State == ChannelState.Dead
+                    ? $"nothing in the run - the run carries on. what it costs is the {c.Channel} record of it, which is being lost right now"
+                    : $"nothing in the run - part of what the plan asked {c.Channel} for is not running",
+                Command: c.FixCommand,
+                // Derived state carries no first-seen stamp on purpose (see the type doc); the render
+                // says "unknown" rather than inventing "just now" for a fault that may be hours old.
+                SinceUtc: null,
+                Rank: RankChannel,
+                Detail: c.Fix.Length > 0 ? c.Fix : null));
         }
     }
 

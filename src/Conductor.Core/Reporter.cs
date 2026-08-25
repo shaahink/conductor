@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Conductor.Core.Events;
 using Conductor.Core.Store;
 using Conductor.Models;
@@ -6,7 +6,7 @@ using Conductor.Models;
 namespace Conductor.Core;
 
 /// <summary>Writes .conductor/REPORT.md and (optionally) commits+pushes it — the AFK progress view.</summary>
-public static class Reporter
+public static partial class Reporter
 {
     // BOM so Windows PowerShell 5.1 / legacy tools read the em-dashes correctly
     public static readonly UTF8Encoding Utf8Bom = new(encoderShouldEmitUTF8Identifier: true);
@@ -47,6 +47,7 @@ public static class Reporter
             sb.AppendLine($"**Pending:** auto-fix audit for {state.PendingAudit.StageId}");
         if (state.SkippedStages.Count > 0)
             sb.AppendLine($"**⚠ Skipped stages (need human review):** {string.Join(", ", state.SkippedStages)}");
+        AppendChannels(sb, plan);
         sb.AppendLine();
 
         if (!string.IsNullOrWhiteSpace(liveActivity))
