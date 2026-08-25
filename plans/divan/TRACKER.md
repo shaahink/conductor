@@ -1,19 +1,21 @@
-# Divan - the chancellery: inbox, courier, and the record that gets out - Phase Tracker
+﻿# Divan - the chancellery: inbox, courier, and the record that gets out - Phase Tracker
 
 **Plan:** Divan - the chancellery: inbox, courier, and the record that gets out | **Branch:** `feat/divan` | **Design doc:** docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md
 
 ## Handoff (overwrite this block, <=12 lines, no history)
 
-last: era authored 2026-08-25, no session has run yet. The design authority is the findings doc
-  named above, INCLUDING its Part 6 amendments - the decided options are restated in the plan
-  file's header comment and each stage's notes; do not re-litigate them. The bug sweep's own
-  strand doc is docs/dev/DIVAN-BUG-SWEEP-2026-08-25.md - twenty-eight open bugs ride in from
-  earlier runs in the live state-home store and are in your open-bugs battery.
-next: DV1.1 - channel health made loud. The seeded regression is the edge run's own failure
-  (github block enabled, token absent, two log lines, nothing else). Read the stage notes and
-  OBSERVABILITY-AND-MARKET-2026-08-22.md section 2.2 cause 1 before touching anything.
-  Note: karvansara-edge's KS12.3 ship is PARKED WITH THE OWNER and is not this era's - this
-  branch stacks on feat/karvansara-edge, unmerged by design.
+last: DV1 is complete - both checkpoints claimed with evidence under .conductor/evidence/DV1/.
+  ChannelHealthProbe (src/Conductor.Core/Integrations/ChannelHealth.cs) is DERIVED from plan+env,
+  never stored, and four surfaces read it: REPORT.md header, /status, the owner queue, and doctor
+  (configured-but-dead is now a FAIL, never-configured stays a warn). The owner queue is pushed
+  one obligation per message to admin chats only, in the KS11.3 grammar, golden-pinned at the
+  wire. Suite 3126 passed / 0 failed.
+next: DV2.1 - the triage ledger. Read docs/dev/DIVAN-BUG-SWEEP-2026-08-25.md; every row of its
+  three ledgers needs a disposition and no row may be dropped. Note that four files in the
+  messaging area now sit within 55 lines of the 500-line architecture ceiling (Reporter.cs 497,
+  TelegramService.cs 497, MessageComposer.cs 451, RunContext.cs 446) - the next addition to any
+  of them must be an extraction into a partial, not an append. The knowledge ledger carries the
+  full DV1 wiring map; read it before touching any channel or push code.
 
 ## Baseline numbers (from run.db)
 
