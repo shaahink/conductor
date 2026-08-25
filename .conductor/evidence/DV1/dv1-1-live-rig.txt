@@ -1,0 +1,90 @@
+DV1.1 - channel health made loud: LIVE PROOF against a scratch rig
+generated 2026-08-25 19:53 local, commit 9ed3de1, branch feat/divan
+
+THE RIG: C:\Users\shahi\AppData\Local\Temp\dv11-rig - its own git repo, its own plan, its own CONDUCTOR_STATE_HOME.
+Its github block is the edge run's, verbatim in shape: enabled + liveMirror +
+runHistoryIssue, with NO token in the environment. Driven by the FRESH BUILD
+(dotnet run --project src/Conductor --no-build), never the conductor on PATH.
+
+--- the plan -------------------------------------------------------------
+{
+  "name": "dv11-rig",
+  "repo": "C:/Users/shahi/AppData/Local/Temp/dv11-rig",
+  "tracker": "TRACKER.md",
+  "agent": { "command": "echo", "args": ["{prompt}"] },
+  "stages": [ { "id": "R1", "title": "One stage", "sessions": 1 } ],
+  "github": { "enabled": true, "repo": "shaahink/nothing-here", "liveMirror": true, "runHistoryIssue": true },
+  "telegram": { "allowedChatIds": ["12345"] }
+}
+
+--- SURFACE 1: .conductor/REPORT.md header (dotnet run -- report) ----------
+# Conductor — dv11-rig run report
+
+_Updated 2026-08-25 18:48 UTC · branch `HEAD` · HEAD `HEAD`_
+
+**Status:** Idle
+**Stage:** - · attempts used 0
+**Checkpoints:** 0/1 done · **Sessions run:** 0 · **Cost:** $0.0000 (agent $0.0000 + gates $0.0000)
+**Channels:** telegram DEAD · github DEAD
+**⚠ Channel DEAD — telegram:** configured but no bot token — set CONDUCTOR_TELEGRAM_TOKEN, or save one from the Face's Telegram tab · fix: `setx CONDUCTOR_TELEGRAM_TOKEN <token>`
+**⚠ Channel DEAD — github:** enabled in the plan but no token - no GitHub token. nothing was contacted. looked at $CONDUCTOR_GITHUB_TOKEN (unset) and C:/Users/shahi/AppData/Local/Temp/dv11-rig\.conductor\secrets.local.json (no githubToken). · fix: `setx CONDUCTOR_GITHUB_TOKEN <token>`
+
+
+--- SURFACE 3: .conductor/OWNER-QUEUE.md ----------------------------------
+# Owner queue — dv11-rig
+
+_The things only you can do. Regenerated at every session boundary · 2026-08-25 18:48 UTC · run is Idle_
+
+**2 items need you.** Most urgent first.
+
+### 1. github is DEAD - enabled in the plan but no token - no GitHub token. nothing was contacted. looked at $CONDUCTOR_GITHUB_TOKEN (unset) and C:/Users/shahi/AppData/Local/Temp/dv11-rig\.conductor\secrets.local.json (no g…
+
+- **Unblocks:** nothing in the run - the run carries on. what it costs is the github record of it, which is being lost right now
+- **Age:** unknown — this source carries no timestamp
+- **Why you:** set CONDUCTOR_GITHUB_TOKEN in the engine's environment, or put a githubToken in C:/Users/shahi/AppData/Local/Temp/dv11-rig\.conductor\secrets.local.json, or set github.enabled to false
+- **Clears with:** `setx CONDUCTOR_GITHUB_TOKEN <token>`
+
+### 2. telegram is DEAD - configured but no bot token — set CONDUCTOR_TELEGRAM_TOKEN, or save one from the Face's Telegram tab
+
+- **Unblocks:** nothing in the run - the run carries on. what it costs is the telegram record of it, which is being lost right now
+- **Age:** unknown — this source carries no timestamp
+- **Why you:** set CONDUCTOR_TELEGRAM_TOKEN in the engine's environment (or save one from the Face's Telegram tab), or take the telegram block out of the plan
+- **Clears with:** `setx CONDUCTOR_TELEGRAM_TOKEN <token>`
+
+<!-- conductor:owner-queue keys: 867fc81a 497b6782 -->
+
+--- PREFLIGHT: dotnet run -- doctor --no-auth-check -----------------------
+✗ telegram configured but no bot token — set CONDUCTOR_TELEGRAM_TOKEN, or save 
+one from the Face's Telegram tab
+✗ github   enabled in the plan but no token - no GitHub token. nothing was 
+20 ok · 3 warn · 3 fail — 551ms
+doctor exit code: 1  (was 0 warns-only before DV1.1: both channels were yellow)
+
+--- SURFACE 2: /status -----------------------------------------------------
+Driven by KS11.1's recorded-wire golden rather than a live bot (trap 4: no rig
+may hold a real token - one getUpdates consumer per token, and a rig that polls
+one starves the owner's real bot). The golden IS the bytes a reader receives:
+9ed3de1 test(DV1.1): rebaseline the cmd-status golden for the channels line
+
+ tests/Conductor.Tests/testdata/ks11/cmd-status.txt | 1 +
+ 1 file changed, 1 insertion(+)
+diff --git a/tests/Conductor.Tests/testdata/ks11/cmd-status.txt b/tests/Conductor.Tests/testdata/ks11/cmd-status.txt
+index d1c089e..41d3021 100644
+--- a/tests/Conductor.Tests/testdata/ks11/cmd-status.txt
++++ b/tests/Conductor.Tests/testdata/ks11/cmd-status.txt
+@@ -7,6 +7,7 @@ sendMessage [silent]
+     Stage: KS11  |  attempts used: 1
+     Checkpoints: 1/4 done
+     Sessions: 12  |  Cost: $42.0000
++    Channels: telegram ready · github off
+     
+     <b>KS11 checkpoints:</b>
+       [DONE] KS11.1: the messenger seam
+
+DV1_1ChannelHealthTests.TheEdgeFailure_ReachesSlashStatus pins the dead case:
+  <b>github DEAD</b> ... <code>setx CONDUCTOR_GITHUB_TOKEN &lt;token&gt;</code>
+
+--- SUITE ------------------------------------------------------------------
+
+Passed!  - Failed:     0, Passed:  3113, Skipped:     0, Total:  3113, Duration: 3 m 52 s - Conductor.Tests.dll (net10.0)
+full log: .conductor/evidence/DV1/dv1-1-full-suite.txt
