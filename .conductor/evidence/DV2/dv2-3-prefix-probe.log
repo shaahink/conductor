@@ -1,0 +1,84 @@
+Test run for C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.82]     Conductor.Tests.DV2_3FailureReasonTests.A_real_failing_git_push_has_an_empty_stdout_and_a_reason_anyway [FAIL]
+[xUnit.net 00:00:00.82]     Conductor.Tests.DV2_3FailureReasonTests.The_first_lines_are_kept_and_joined_because_a_refusal_leads_with_its_reason [FAIL]
+  Failed Conductor.Tests.DV2_3FailureReasonTests.A_real_failing_git_push_has_an_empty_stdout_and_a_reason_anyway [131 ms]
+  Error Message:
+   Assert.Contains() Failure: Sub-string not found
+String:    "git remote add <name> <url> | and then pu"···
+Not found: "fatal"
+  Stack Trace:
+     at Conductor.Tests.DV2_3FailureReasonTests.A_real_failing_git_push_has_an_empty_stdout_and_a_reason_anyway() in C:\Code\conductor\tests\Conductor.Tests\DV2_3FailureReasonTests.cs:line 106
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Standard Output Messages:
+ exit=128
+ stdout=[]
+ stderr=[fatal: No configured push destination.
+ Either specify the URL from the command-line or configure a remote repository using
+ 
+     git remote add <name> <url>
+ 
+ and then push using the remote name
+ 
+     git push <name>
+ 
+ ]
+ FailureReason=[git remote add <name> <url> | and then push using the remote name | git push <name>]
+
+
+  Failed Conductor.Tests.DV2_3FailureReasonTests.The_first_lines_are_kept_and_joined_because_a_refusal_leads_with_its_reason [< 1 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "fatal: it went wrong | try this | or this"
+Actual:   "or this | or even this | last word"
+           ↑ (pos 0)
+  Stack Trace:
+     at Conductor.Tests.DV2_3FailureReasonTests.The_first_lines_are_kept_and_joined_because_a_refusal_leads_with_its_reason() in C:\Code\conductor\tests\Conductor.Tests\DV2_3FailureReasonTests.cs:line 56
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:30.74]     Conductor.Tests.DV2_3ChannelDefectTests.A_conflict_with_an_unreadable_body_still_says_what_a_409_means [FAIL]
+  Failed Conductor.Tests.DV2_3ChannelDefectTests.A_conflict_with_an_unreadable_body_still_says_what_a_409_means [30 s]
+  Error Message:
+   no conflict line was logged
+  Stack Trace:
+     at Conductor.Tests.DV2_3ChannelDefectTests.A_conflict_with_an_unreadable_body_still_says_what_a_409_means() in C:\Code\conductor\tests\Conductor.Tests\DV2_3ChannelDefectTests.cs:line 247
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:30.79]     Conductor.Tests.DV2_3ChannelDefectTests.Started_line_counts_the_resolved_chats_not_the_raw_allow_list [FAIL]
+[xUnit.net 00:00:30.80]     Conductor.Tests.DV2_3ChannelDefectTests.Test_connection_sends_to_the_resolved_admin_chat_on_a_chats_only_plan [FAIL]
+  Failed Conductor.Tests.DV2_3ChannelDefectTests.Started_line_counts_the_resolved_chats_not_the_raw_allow_list [21 ms]
+  Error Message:
+   Assert.DoesNotContain() Failure: Filter matched in collection
+             ↓ (pos 0)
+Collection: ["Warning|Telegram bot started (poll interval 60s) b"···]
+  Stack Trace:
+     at Conductor.Tests.DV2_3ChannelDefectTests.Started_line_counts_the_resolved_chats_not_the_raw_allow_list() in C:\Code\conductor\tests\Conductor.Tests\DV2_3ChannelDefectTests.cs:line 119
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ ---- start log, chats-block plan ----
+ Warning|Telegram bot started (poll interval 60s) but will deliver nothing: token present but no allowedChatIds — bot is push-only to nobody
+ ---- end ----
+
+
+  Failed Conductor.Tests.DV2_3ChannelDefectTests.Test_connection_sends_to_the_resolved_admin_chat_on_a_chats_only_plan [12 ms]
+  Error Message:
+   test connection failed: token present but no allowedChatIds — bot is push-only to nobody
+  Stack Trace:
+     at Conductor.Tests.DV2_3ChannelDefectTests.Test_connection_sends_to_the_resolved_admin_chat_on_a_chats_only_plan() in C:\Code\conductor\tests\Conductor.Tests\DV2_3ChannelDefectTests.cs:line 162
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ ---- bot API calls ----
+ ---- end ----
+ outcome: ok=False bot=dv23_stub_bot error=token present but no allowedChatIds — bot is push-only to nobody
+
+
+[xUnit.net 00:01:00.84]     Conductor.Tests.DV2_3ChannelDefectTests.A_getUpdates_conflict_names_the_other_consumer_and_is_loud_exactly_once [FAIL]
+  Failed Conductor.Tests.DV2_3ChannelDefectTests.A_getUpdates_conflict_names_the_other_consumer_and_is_loud_exactly_once [30 s]
+  Error Message:
+   the poll loop did not come back after the conflict (polls=1)
+  Stack Trace:
+     at Conductor.Tests.DV2_3ChannelDefectTests.A_getUpdates_conflict_names_the_other_consumer_and_is_loud_exactly_once() in C:\Code\conductor\tests\Conductor.Tests\DV2_3ChannelDefectTests.cs:line 208
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     6, Passed:    15, Skipped:     0, Total:    21, Duration: 1 m - Conductor.Tests.dll (net10.0)

@@ -1,0 +1,4 @@
+Test run for C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:  3161, Skipped:     0, Total:  3161, Duration: 3 m 51 s - Conductor.Tests.dll (net10.0)

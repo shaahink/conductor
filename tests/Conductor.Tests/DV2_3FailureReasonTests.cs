@@ -1,4 +1,5 @@
 using Conductor.Core;
+using Conductor.Models;
 
 using Xunit.Abstractions;
 
@@ -104,5 +105,57 @@ public sealed class DV2_3FailureReasonTests : IDisposable
         var reason = push.FailureReason();
         Assert.False(string.IsNullOrWhiteSpace(reason));
         Assert.Contains("fatal", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// The field line itself, end to end: a real report commit pushed from a repo with no remote,
+    /// through the real <see cref="Reporter.WriteAndPublish"/>, collecting what it logs. This is the
+    /// sentence that appeared on a live run — <c>report push failed:</c> and then nothing at all —
+    /// and it is the one the triage ledger's row for #66 asks for.
+    /// </summary>
+    [Fact]
+    public void The_report_push_failure_line_now_carries_a_reason()
+    {
+        Directory.CreateDirectory(_repo);
+        Git.Exec(_repo, "init", "-b", "main");
+        Git.Exec(_repo, "config", "user.email", "dv23@rig");
+        Git.Exec(_repo, "config", "user.name", "DV23");
+        Git.Exec(_repo, "config", "commit.gpgsign", "false");
+        File.WriteAllText(Path.Combine(_repo, "seed.txt"), "x");
+        Git.Exec(_repo, "add", "-A");
+        Git.Exec(_repo, "commit", "-m", "seed");
+
+        var plan = new PlanConfig
+        {
+            Name = "DV23",
+            Repo = _repo,
+            // Push with no remote configured: the same shape as the live failure, which was a push
+            // the upstream refused.
+            Report = new ReportConfig { Commit = true, Push = true },
+            Stages = { new StageConfig { Id = "DV2", Title = "The sweep" } },
+        };
+        var state = new RunState
+        {
+            PlanName = "DV23",
+            CurrentStage = "DV2",
+            Status = RunStatus.Idle,
+            History =
+            {
+                new SessionRecord
+                {
+                    Number = 1, Stage = "DV2", Attempt = 1,
+                    Kind = SessionKind.Deliver, Outcome = SessionOutcome.Advanced,
+                },
+            },
+        };
+
+        var logged = new List<string>();
+        Reporter.WriteAndPublish(plan, state, new TrackerSnapshot(), null, logged.Add);
+        foreach (var l in logged) _out.WriteLine(l);
+
+        var line = Assert.Single(logged, l => l.StartsWith("report push failed:", StringComparison.Ordinal));
+        var after = line["report push failed:".Length..].Trim();
+        Assert.NotEqual("", after);                 // the entire defect, in one assertion
+        Assert.Contains("fatal", after, StringComparison.OrdinalIgnoreCase);
     }
 }
