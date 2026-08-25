@@ -292,9 +292,16 @@ public sealed partial class PromptBuilder
 
         var list = new List<IPromptBattery>();
 
-        // M7.1/M7.2: knowledge that compounds — injected by default (no batteries block required), and
-        // added FIRST so the byte cap never truncates them away: the ledger and open bugs from prior
-        // sessions must reliably reach the next prompt (that is the whole point of M7).
+        // M7.1/M7.2: knowledge that compounds — injected by default (no batteries block required).
+        // The ledger and the open bugs from prior sessions must reliably reach the next prompt; that
+        // is the whole point of M7.
+        //
+        // DV2.2, bug #62: this used to say they were added FIRST "so the byte cap never truncates
+        // them away", and that was false. The cap applied to the CONCATENATION, so being first
+        // protected the ledger and fed it the bugs battery — measured on a 45-session run, the open
+        // bugs section vanished from prompt 038 onward with eleven bugs open. BatteryGroup now hands
+        // every battery its own share of the budget, so order no longer decides who survives; order
+        // here is about what a reader meets first, which is what it should always have been.
         if (store != null && state is { RunId.Length: > 0 })
         {
             if (cfg?.Ledger ?? true)

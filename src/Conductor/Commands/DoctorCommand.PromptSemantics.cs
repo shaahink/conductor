@@ -18,12 +18,12 @@ public sealed partial class DoctorCommand
 {
     /// <summary>CreateProcess' command-line ceiling. <c>AgentSession.Start</c> spawns with
     /// <c>UseShellExecute=false</c>, so this is the wall the engine actually hits.</summary>
-    internal const int CreateProcessCommandLineCeiling = 32767;
+    internal const int CreateProcessCommandLineCeiling = ArgvLimits.CreateProcessCommandLine;
 
     /// <summary>cmd.exe's much lower ceiling. It applies whenever the agent command resolves to a
     /// <c>.cmd</c>/<c>.bat</c> shim — an npm-installed CLI is exactly that — because Windows runs the
     /// shim through the command interpreter. Bug #15's "silently stops a cmd.exe-based agent".</summary>
-    internal const int CmdExeCommandLineCeiling = 8191;
+    internal const int CmdExeCommandLineCeiling = ArgvLimits.CmdExeCommandLine;
 
     /// <summary>The session kinds, per stage, that <see cref="CheckPrompt"/> renders and
     /// <see cref="CheckArgvLength"/> measures. One matrix, so the two can never disagree about what a
@@ -119,9 +119,38 @@ public sealed partial class DoctorCommand
             return new Check("argv", "warn",
                 $"{measured}, but {worstLength} is over the {CmdExeCommandLineCeiling}-char cmd.exe ceiling — " +
                 "this plan is fatal on any machine whose agent.command resolves to a .cmd/.bat shim (an npm-installed CLI is exactly that)");
-        return worstLength * 10 > ceiling * 9
-            ? new Check("argv", "warn", $"{measured} — under 10% headroom left")
+
+        // DV2.2, bug #55 — the remainder this lint used to leave out of its own number. PromptBuilder
+        // renders here with no store, so the knowledge batteries contribute NOTHING to worstLength
+        // while at spawn they contribute up to `batteries.maxBytes`; measured against the real spawn,
+        // doctor read 350-500 chars light. The battery cap is a true upper bound, so adding it turns
+        // an under-measurement into a stated bound rather than a second guess. The sections that need
+        // a live run to exist — the claimed-items list, the task-context cards, the parallel-audit
+        // findings — are named rather than estimated: doctor cannot know them before a run does, and
+        // `conductor preflight` measures them through SessionComposer for a run that exists.
+        var remainder = BatteryRemainder(plan);
+        var bound = worstLength + remainder;
+        if (bound > ceiling && worstLength <= ceiling)
+            return new Check("argv", "warn",
+                $"{measured} — but the knowledge batteries render from the live store at spawn and are not in that " +
+                $"number: with their cap it reaches {bound}, over the ceiling. Lower batteries.maxBytes or the prompt " +
+                "(`conductor preflight` measures a real session's tail sections too)");
+
+        return bound * 10 > ceiling * 9
+            ? new Check("argv", "warn",
+                $"{measured} — under 10% headroom left once the batteries' {remainder}-char cap is counted")
             : new Check("argv", "ok", measured);
+    }
+
+    /// <summary>What a launch adds to a doctor-composed argv and doctor cannot render: the whole
+    /// battery section's cap plus its two joining characters, and the width the launch's pid can add
+    /// over this process's (ToolContract embeds it; a Windows pid is at most ten digits). Zero when
+    /// both knowledge batteries are switched off — there is then nothing unrendered to allow for.</summary>
+    private static int BatteryRemainder(PlanConfig plan)
+    {
+        var cfg = plan.Batteries;
+        var on = (cfg?.Ledger ?? true) || (cfg?.Bugs ?? true) || (cfg?.Lessons ?? false);
+        return on ? (cfg?.MaxBytes ?? 2048) + 2 + PreflightCommand.PidSlack : 0;
     }
 
     /// <summary>Which argv template a spawn uses: <c>args</c> on a first start, <c>resumeArgs</c>
@@ -137,56 +166,21 @@ public sealed partial class DoctorCommand
     /// because it is the half of the lint that reads PATH: a caller that needs a verdict independent
     /// of how the agent CLI happens to be installed here passes its own pair to the stated-ceiling
     /// overload of <c>CheckArgvLength</c> instead of inheriting this one.</summary>
+    /// <para>DV2.2, bug #15: the resolution moved to <see cref="ArgvLimits"/> in Core so the SPAWN
+    /// can consult it too. It used to live only here, which is why the engine could walk into a wall
+    /// this very method knew about.</para>
     internal static (int Ceiling, string Why) ArgvCeiling(PlanConfig plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        var resolved = ResolveProgram(plan.Agent.Command, plan.Repo);
-        var ext = resolved is null ? "" : Path.GetExtension(resolved);
-        return ext.Equals(".cmd", StringComparison.OrdinalIgnoreCase) || ext.Equals(".bat", StringComparison.OrdinalIgnoreCase)
-            ? (CmdExeCommandLineCeiling, $"{Path.GetFileName(resolved)} is a command-interpreter shim")
-            : (CreateProcessCommandLineCeiling, "CreateProcess");
+        return ArgvLimits.CeilingFor(plan.Agent.Command, plan.Repo);
     }
 
     /// <summary>The length of the command line <c>ProcessStartInfo.ArgumentList</c> would build,
     /// quoting each argument by the same rules the runtime uses. Length, not the string: the point is
     /// the measurement, and a prompt does not belong in a doctor's memory twice.</summary>
     internal static int CommandLineLength(string fileName, IReadOnlyList<string> args)
-    {
-        ArgumentNullException.ThrowIfNull(args);
-        var sb = new StringBuilder();
-        AppendArgument(sb, fileName ?? "");
-        foreach (var a in args)
-        {
-            sb.Append(' ');
-            AppendArgument(sb, a);
-        }
-        return sb.Length;
-    }
+        => ArgvLimits.CommandLineLength(fileName, args);
 
-    private static void AppendArgument(StringBuilder sb, string arg)
-    {
-        if (arg.Length != 0 && !arg.AsSpan().ContainsAny(' ', '\t', '"'))
-        {
-            sb.Append(arg);
-            return;
-        }
-        sb.Append('"');
-        for (var i = 0; i < arg.Length;)
-        {
-            var c = arg[i++];
-            if (c == '\\')
-            {
-                var slashes = 1;
-                while (i < arg.Length && arg[i] == '\\') { i++; slashes++; }
-                if (i == arg.Length) sb.Append('\\', slashes * 2);
-                else if (arg[i] == '"') { sb.Append('\\', (slashes * 2) + 1).Append('"'); i++; }
-                else sb.Append('\\', slashes);
-            }
-            else if (c == '"') sb.Append('\\').Append('"');
-            else sb.Append(c);
-        }
-        sb.Append('"');
-    }
 
     /// <summary>KS1.4 (promptExtra trap 8) — the brace sweep. A template file is not part of the plan
     /// document, so plan validation never sees it; a typo'd <c>{name}</c> in one is refused at RENDER

@@ -213,22 +213,7 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
     /// <summary>The first file PATH would spawn for a bare command name, PATHEXT included. Internal
     /// since KS3.4 so <c>preflight</c>'s rebuild leg can name the <c>conductor</c> a hand-typed
     /// launch would actually run, without a second copy of this walk.</summary>
-    internal static string? ResolveOnPath(string command)
-    {
-        var dirs = (Environment.GetEnvironmentVariable("PATH") ?? "")
-            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
-        var exts = OperatingSystem.IsWindows()
-            ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD")
-                .Split(';', StringSplitOptions.RemoveEmptyEntries).Prepend("").ToArray()
-            : [""];
-        foreach (var dir in dirs)
-        foreach (var ext in exts)
-        {
-            var candidate = Path.Combine(dir, command + ext);
-            if (File.Exists(candidate)) return candidate;
-        }
-        return null;
-    }
+    internal static string? ResolveOnPath(string command) => ArgvLimits.ResolveOnPath(command);
 
     /// <summary>SC3.1 — the single most dangerous config trap found in the field (devcontext #2).
     /// <c>AgentSession.ResolveArgs</c> substitutes the model ONLY where the template already says

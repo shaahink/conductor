@@ -67,6 +67,18 @@ public sealed class BugsBattery : IPromptBattery
 
         var sb = new StringBuilder();
         sb.AppendLine("Open bugs filed by earlier sessions (via `conductor bug new`). Fix in scope, or avoid re-finding — do NOT re-file:");
+
+        // DV2.2, bug #63: the cap below is a SECOND, independent truncation from the BatteryGroup
+        // budget, and until now it was silent. Measured 2026-08-25 on this repo's own store: 28 open
+        // bugs, 12 rendered, 16 that reached no session at all — and a session reading twelve rows
+        // with no count beside them has every reason to believe it is reading the ledger. The count
+        // goes ABOVE the rows on purpose: if this section is itself trimmed for budget, the line that
+        // says the list is partial is the one thing that must survive.
+        var shown = Math.Min(rows.Count, maxEntries) + Math.Min(carried.Count, Math.Max(0, maxEntries - rows.Count));
+        var hidden = rows.Count + carried.Count - shown;
+        if (hidden > 0)
+            sb.AppendLine(FormattableString.Invariant($"THIS LIST IS PARTIAL: {hidden} more open bug(s) are not shown (this section holds at most {maxEntries}). Run `conductor bug list` for the whole ledger before concluding a defect is unfiled."));
+
         foreach (var b in rows.Take(maxEntries))
             Append(sb, b, "");
         // Carried rows fill what is left of the same cap, so this cannot grow the prompt past what one

@@ -154,6 +154,24 @@ public sealed class AgentSession : IDisposable
         // hatch. A posture that names no mode strips nothing: an existing plan is untouched.
         args = PermissionPosture.StripBypass(args, cfg.Permissions);
 
+        // DV2.2, bug #15 — the last chance to refuse, and the FIRST place the whole argv exists.
+        // Everything above adds to it: the plan's template, the orchestrator's own --mcp-config, the
+        // posture's edits. An argv over the ceiling does not fail loudly — a .cmd/.bat shim, which is
+        // what an npm-installed agent CLI is on Windows, truncates or refuses the command line, the
+        // agent does nothing at all, and the run scores the session as a short but successful one.
+        // Doctor and preflight both warn about this before a run; neither is consulted at spawn, so
+        // until now the warning and the launch were two different opinions and only one of them ran.
+        // PromptCompositionException is deliberate: RunLoop already parks a run on it (NeedsHuman
+        // with the reason), which is the honest outcome for a session that cannot be started.
+        var (ceiling, why) = ArgvLimits.CeilingFor(cfg.Command, cwd);
+        var argvLength = ArgvLimits.CommandLineLength(cfg.Command, args);
+        if (argvLength > ceiling)
+            throw new PromptCompositionException(
+                $"the composed argv is {argvLength} chars against the {ceiling}-char ceiling ({why}) — refusing to " +
+                "spawn, because over that ceiling the agent is truncated or refused and the run would score the " +
+                "session as if it had read everything. Shorten promptExtra/packs/stage notes, lower " +
+                "batteries.maxBytes, or point agent.command at the real executable rather than a .cmd/.bat shim.");
+
         var psi = new ProcessStartInfo(cfg.Command)
         {
             WorkingDirectory = cwd,

@@ -309,17 +309,7 @@ public sealed partial class DoctorCommand
 
     /// <summary>Resolves a program the way a spawn would: an absolute or relative path is probed on
     /// disk (with PATHEXT on Windows), a bare name goes to PATH. Null = nothing would start.</summary>
-    private static string? ResolveProgram(string token, string cwd)
-    {
-        if (!IsPathLike(token)) return ResolveOnPath(token);
-        var full = Path.IsPathRooted(token) ? token : Path.Combine(cwd, token);
-        if (File.Exists(full)) return full;
-        if (!OperatingSystem.IsWindows()) return null;
-        foreach (var ext in (Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD")
-                     .Split(';', StringSplitOptions.RemoveEmptyEntries))
-            if (File.Exists(full + ext)) return full + ext;
-        return null;
-    }
+    private static string? ResolveProgram(string token, string cwd) => ArgvLimits.ResolveProgram(token, cwd);
 
     private static bool PathExists(string path) => File.Exists(path) || Directory.Exists(path);
 }

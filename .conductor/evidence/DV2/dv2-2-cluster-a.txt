@@ -1,0 +1,193 @@
+DV2.2 - cluster A, prompt composition. Evidence, 2026-08-25, session 3, branch feat/divan.
+
+########## 1. THE LIVE PROOF OF #15: the engine REFUSES an over-ceiling argv and parks
+
+Driven through the FRESH BUILD (trap 2: dotnet run --project src/Conductor, never the
+conductor on PATH), against a scratch rig under the temp directory with its own plan, its
+own repo and its own store via CONDUCTOR_RUN_DB (trap 0: never this repo).
+
+  rig:   %LOCALAPPDATA%/Temp/dv22-rig/repo   plan: dv22-argv-rig
+  agent: agent-shim.cmd  (a .cmd shim - what an npm-installed agent CLI is on Windows)
+  plan:  batteries.maxBytes 8000, promptExtra padded to 2004 chars
+
+--- %LOCALAPPDATA%/Temp/dv22-rig/repo/.conductor/conductor.log, verbatim ---
+[21:01:31] session #1 start — Deliver S1 attempt 1/2
+[21:01:31] K1.4: opencode config inherits 5 operator MCP server(s) [cloudflare, cloudflare-docs, cloudflare-bindings, cloudflare-builds, cloudflare-observability] from C:\Users\shahi\.config\opencode\opencode.jsonc (5)
+[21:01:31] K1.4: claude config inherits 2 operator MCP server(s) [chrome-devtools, google] from C:\Users\shahi\.claude.json (2)
+[21:01:31] I1: MCP task server wired (claude) — opencode config C:/Users/shahi/AppData/Local/Temp/dv22-rig/repo\.conductor\mcp-config.json, claude --mcp-config C:/Users/shahi/AppData/Local/Temp/dv22-rig/repo\.conductor\mcp-config.claude.json
+[21:01:31] 🛑 NEEDS HUMAN: prompt for stage S1 could not be composed — the composed argv is 9732 chars against the 8191-char ceiling (agent-shim.cmd is a command-interpreter shim) — refusing to spawn, because over that ceiling the agent is truncated or refused and the run would score the session as if it had read everything. Shorten promptExtra/packs/stage notes, lower batteries.maxBytes, or point agent.command at the real executable rather than a .cmd/.bat shim. Fix the template or the plan, then `conductor resume` (a plan edit also needs `conductor plan reload`).
+[21:01:32] owner queue: 1 new item(s) — prompt for stage S1 could not be composed — the composed argv is 9732 chars against the 8191-char ceiling (agent-shim.cmd is a command-interpreter shim) — refusing to spawn, because over that ceiling the agent is trunca…
+[21:01:33] report push failed: 
+
+BEFORE this checkpoint that session SPAWNED. The shim truncates or refuses a command line over
+8191, the agent does nothing, and the run records a short successful session - bug #15 exactly.
+Doctor and preflight had warned about this ceiling for two eras; neither is consulted at spawn.
+
+NOTE, free of charge: the last line of that log is 'report push failed:' with an EMPTY reason.
+That is field defect 5 / bug #66, reproduced live here. DV2.3 owns it.
+
+########## 2. THE LIVE PROOF OF #55: doctor now counts the batteries it cannot render
+
+Same rig, same fresh build: dotnet run --no-build --project src/Conductor -- doctor -p <rig>
+
+  BEFORE (measured on the same rig before the shim was resolvable, ceiling 32767):
+    ok  argv  longest composed argv is 7470 chars ... against the 32767-char ceiling
+
+  AFTER, with agent.command resolving to the .cmd shim (ceiling 8191):
+    warn argv  longest composed argv is 7518 chars (stage 'S1' session.md through agent.args)
+               against the 8191-char ceiling (agent-shim.cmd is a command-interpreter shim)
+               - but the knowledge batteries render from the live store at spawn and are not
+               in that number: with their cap it reaches 15525, over the ceiling.
+
+7518 clears 8191 on its own. The old lint said so and stopped there; the run then spawned
+9732 chars (section 1 above) and hit the wall. The gap IS the battery section, which doctor
+renders with no store and therefore measured as zero - bug #55's '350-500 chars light'.
+
+########## 3. THE SOURCE OF #62, and what replaced it
+
+--- BEFORE, src/Conductor.Core/PromptBattery.cs (at commit 83427b4) ---
+
+    /// <summary>Rendered prompt section combining all non-empty batteries, or empty string.</summary>
+    public string Render()
+    {
+        var sb = new StringBuilder();
+        foreach (var b in _batteries)
+        {
+            if (b.IsEmpty) continue;
+            sb.AppendLine($"### {b.Name}");
+            sb.AppendLine(b.Section);
+            sb.AppendLine();
+        }
+        if (sb.Length == 0) return "";
+
+        var result = sb.ToString().TrimEnd();
+        if (result.Length > _maxBytes)
+        {
+            // Truncate at nearest paragraph boundary within budget
+            var cutoff = _maxBytes;
+            while (cutoff > 0 && result[cutoff] != '\n') cutoff--;
+            result = cutoff > 100 ? result[..cutoff].TrimEnd() + "\n…" : result[.._maxBytes].TrimEnd() + "…";
+        }
+        return result;
+
+The cut is applied to result - the CONCATENATION - so the LAST battery in the list dies first.
+PromptBuilder.cs:296-311 added the ledger, then the bugs, with a comment claiming the order
+protected them from the cap. Order protects only the FIRST battery. Measured on a 45-session
+run elsewhere on this machine: '### open bugs' present in prompts 026 and 032, gone from 038
+onward, with eleven bugs open the whole time.
+
+--- AFTER: max-min fair share, per battery, plus a notice ---
+    private static int[] FairShares(IReadOnlyList<int> wants, int budget)
+    {
+        var shares = new int[wants.Count];
+        var settled = new bool[wants.Count];
+        var remaining = budget;
+        var open = wants.Count;
+
+        while (open > 0)
+        {
+            var each = remaining / open;
+            var progressed = false;
+            for (var i = 0; i < wants.Count; i++)
+            {
+                if (settled[i] || wants[i] > each) continue;
+                shares[i] = wants[i];
+                settled[i] = true;
+                remaining -= wants[i];
+                open--;
+                progressed = true;
+            }
+            if (progressed) continue;
+
+            for (var i = 0; i < wants.Count; i++)
+                if (!settled[i]) shares[i] = remaining / open;
+            break;
+        }
+        return shares;
+    }
+
+########## 4. #63 - the SECOND truncation, found while triaging #62 and in no ledger
+
+--- src/Conductor.Core/PromptBattery.Knowledge.cs, the cap and the new notice ---
+    public BugsBattery(IRunStore store, string runId, int maxEntries = 12)
+        // DV2.2, bug #63: the cap below is a SECOND, independent truncation from the BatteryGroup
+        // budget, and until now it was silent. Measured 2026-08-25 on this repo's own store: 28 open
+        // bugs, 12 rendered, 16 that reached no session at all — and a session reading twelve rows
+        // with no count beside them has every reason to believe it is reading the ledger. The count
+        // goes ABOVE the rows on purpose: if this section is itself trimmed for budget, the line that
+        // says the list is partial is the one thing that must survive.
+        var shown = Math.Min(rows.Count, maxEntries) + Math.Min(carried.Count, Math.Max(0, maxEntries - rows.Count));
+        var hidden = rows.Count + carried.Count - shown;
+        if (hidden > 0)
+            sb.AppendLine(FormattableString.Invariant($"THIS LIST IS PARTIAL: {hidden} more open bug(s) are not shown (this section holds at most {maxEntries}). Run `conductor bug list` for the whole ledger before concluding a defect is unfiled."));
+
+        foreach (var b in rows.Take(maxEntries))
+
+Measured on this repo's own live store: 28 open at triage, 12 rendered, 16 invisible; after
+DV2.1 filed twelve rows, 40 open and 28 invisible. No line anywhere said the list was partial.
+
+########## 5. #21 - ALREADY DELIVERED. Measured, not assumed.
+
+The triage put #21 in this cluster. It is already implemented AND pinned; KS1.4 landed it and
+nobody closed the row. Do not re-implement it - the citations:
+
+114:        // Bug #21: clearing CreateProcess' ceiling is not clearing the ceiling. The same plan is fatal
+115-        // the moment agent.command lands on a .cmd/.bat shim — which is what an npm install of an agent
+116-        // CLI is on Windows, and it is one `agent.command` edit or one machine away. Saying nothing
+117-        // here would mean the only warning arrives on the box where it is already too late.
+118-        if (ceiling > CmdExeCommandLineCeiling && worstLength > CmdExeCommandLineCeiling)
+119-            return new Check("argv", "warn",
+120-                $"{measured}, but {worstLength} is over the {CmdExeCommandLineCeiling}-char cmd.exe ceiling — " +
+
+  and its tests, in tests/Conductor.Tests/KS1_4DoctorPlanLintsTests.cs:
+232:    public void ArgvLength_Green_OnAnOrdinaryPrompt()
+240:    public void ArgvLength_Red_AndStatesMeasuredVersusCeiling()
+253:    public void ArgvLength_UsesTheCmdShimCeiling_WhenTheAgentIsAShim()
+274:    public void ArgvLength_Warns_WhenOnlyTheShimCeilingIsExceeded()
+286:    public void ArgvLength_MeasuresTheQuotedCommandLine()
+
+########## 6. THE REGRESSION TESTS, and the run
+
+--- tests/Conductor.Tests/DV2_2PromptCompositionTests.cs ---
+38:    public void Dispose()
+47:    public void AGrownKnowledgeLedgerCanNoLongerStarveTheOpenBugsBattery()
+70:    public void TheBatteryThatLostRoomIsNamedInTheRenderedText_NotCutInSilence()
+83:    public void ABatteryWithNoRoomLeftIsDroppedByName_NotJustAbsent()
+102:    public void ASmallBatteryKeepsItsWholeSectionAndTheSurplusGoesToTheBigOne()
+119:    public void NothingIsTrimmedAndNoNoticeAppearsWhenEverythingFits()
+135:    public void BugsBatterySaysHowManyOpenBugsItDidNotShow()
+148:    public void BugsBatterySaysNothingAboutHiddenRowsWhenTheWholeLedgerFits()
+156:    public void ThePartialNoticeSitsAboveTheRows_SoTrimmingThisSectionCannotRemoveIt()
+170:    public void TheHiddenCountSpansThisRunsRowsAndTheRowsCarriedFromEarlierRuns()
+189:    public void AnArgvOverTheCeilingIsRefusedAtSpawn_NotSpawnedAndScoredAsSuccess()
+213:    public void TheCeilingFollowsHowTheAgentWasInstalled_ShimOrRealExecutable()
+231:    public void AnUnresolvableCommandGetsTheGenerousCeiling_NotTheStrictOne()
+242:    public void DoctorsArgvLintCountsTheBatteriesItCannotRender()
+267:    public void DoctorsArgvLintIsSilentWhenTheBatteryCapChangesNothing()
+
+The headline test asserts its own premise before it asserts the fix, so it can never pass
+vacuously: the ledger ALONE must overrun the budget, or the test fails with that message.
+
+--- scoped run ---
+  dotnet test --filter FullyQualifiedName~DV2_2PromptCompositionTests
+  Passed! - Failed: 0, Passed: 14, Skipped: 0, Total: 14
+
+--- FULL SUITE, after every change in this checkpoint (conductor bg, purpose dv22-suite2) ---
+Passed!  - Failed:     0, Passed:  3140, Skipped:     0, Total:  3140, Duration: 3 m 43 s - Conductor.Tests.dll (net10.0)
+
+  (the same suite before the argv guard, purpose dv22-suite:)
+Passed!  - Failed:     0, Passed:  3135, Skipped:     0, Total:  3135, Duration: 3 m 28 s - Conductor.Tests.dll (net10.0)
+
+########## 7. ONE SOURCE OF TRUTH FOR THE CEILING
+
+The ceilings, the ArgumentList quoting and the PATH walk moved to Conductor.Core/ArgvLimits.cs.
+Before, a grep for 8191/ArgvCeiling across src/ hit ONLY the Conductor CLI project - which is
+why the engine could walk into a wall its own diagnostic knew about. Doctor now delegates:
+src/Conductor/Commands/DoctorCommand.PromptSemantics.cs:21:    internal const int CreateProcessCommandLineCeiling = ArgvLimits.CreateProcessCommandLine;
+src/Conductor/Commands/DoctorCommand.PromptSemantics.cs:26:    internal const int CmdExeCommandLineCeiling = ArgvLimits.CmdExeCommandLine;
+src/Conductor/Commands/DoctorCommand.PromptSemantics.cs:175:        return ArgvLimits.CeilingFor(plan.Agent.Command, plan.Repo);
+src/Conductor/Commands/DoctorCommand.PromptSemantics.cs:182:        => ArgvLimits.CommandLineLength(fileName, args);
+src/Conductor/Commands/DoctorCommand.PlanSemantics.cs:312:    private static string? ResolveProgram(string token, string cwd) => ArgvLimits.ResolveProgram(token, cwd);
+src/Conductor/Commands/DoctorCommand.cs:216:    internal static string? ResolveOnPath(string command) => ArgvLimits.ResolveOnPath(command);
+src/Conductor.Core/AgentSession.cs:166:        var (ceiling, why) = ArgvLimits.CeilingFor(cfg.Command, cwd);
+src/Conductor.Core/AgentSession.cs:167:        var argvLength = ArgvLimits.CommandLineLength(cfg.Command, args);
