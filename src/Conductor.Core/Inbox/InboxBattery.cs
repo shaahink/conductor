@@ -120,6 +120,22 @@ public sealed class InboxBattery : IPromptBattery
             note.Kind,
         };
         if (note.MediaPath is { Length: > 0 } m) parts.Add("file kept at " + m);
+
+        // DV3.3: a transcript is a GUESS at what was said, and the reader cannot hear the audio.
+        // The marks are explained on the note that carries them rather than in the frame, so a note
+        // with none costs nothing and a note with some cannot be read without the warning.
+        if (note.Transcribed)
+        {
+            var sure = note.TranscriptConfidence is { } c
+                ? ", confidence " + (c * 100).ToString("0", CultureInfo.InvariantCulture) + "%"
+                : "";
+            parts.Add("TRANSCRIBED from audio" + sure + " — " + Transcript.DoubtOpen + "…"
+                      + Transcript.DoubtClose + " marks a stretch the transcriber was unsure of");
+        }
+        else if (note.Untranscribed)
+        {
+            parts.Add("audio NOT transcribed — the file is on disk, nobody has read it out");
+        }
         if (note.ReplyToMessageId is { } r)
             parts.Add("a reply to message " + r.ToString(CultureInfo.InvariantCulture));
         if (clipped) parts.Add("CLIPPED — `conductor inbox list` has all of it");

@@ -2,31 +2,33 @@
 
 **Plan:** Divan - the chancellery: inbox, courier, and the record that gets out | **Branch:** `feat/divan` | **Design doc:** docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md
 
-## Handoff (overwrite this block, <=12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV3.1 and DV3.2 both CLAIMED and pushed. Inbound kinds + getFile + the 20 MB refusal by name;
-  then the durable inbox (atomic notes/<update_id>.json, append-only index, read cursor) and
-  InboxBattery on the IPromptBattery seam. 44 new tests green, 688 neighbours green. Evidence
-  .conductor/evidence/DV3/dv3-1-inbound-kinds.md and dv3-2-the-inbox.md. DV3.3 was opened and put
-  straight back to TODO at the wrap-up nudge - nothing was edited for it, start it clean.
-find: BatteryGroup.Fit trims AT A LINE BOUNDARY, so a block quoted only by a ``` fence loses its
-  closing line and un-quotes owner text inside an autonomous prompt. The inbox uses a per-line "> "
-  marker plus a short frame headline first; the sweep test asserts that case is REACHABLE before
-  asserting it is safe. MA0045 exempts PUBLIC methods only - never answer it with a #pragma, the
-  analyzer ratchet counts those. An OPTIONAL param on BatterySection broke ControlPlaneServer's
-  CA1506 ratchet; a separate 5-arg overload fixed it and also keeps the preview out of the inbox.
-next: DV3.3 transcription. Land `conductor inbox list` with its prune (bug #74) - the battery
-  already names a verb that does not exist. RemoteSurface.HandleNoteAsync files the note;
-  InboxNote.TranscriptPath is the field DV3.3 fills, with the audio kept beside it.
+last: DV3.3 CLAIMED and pushed. Local transcribe command (courier.transcribe.command +
+  CONDUCTOR_TRANSCRIBE_COMMAND), per-segment confidence stored and MARKED inline as [?: ...],
+  sidecar beside the audio, untranscribed/failed/silent all filed with the audio and answered by
+  name. `conductor inbox list|show|add|transcribe|prune` now exists - bug #74 closed. Live proof:
+  a real .ogg, faster-whisper large-v3 on the GPU, 29s, via tools/dv3/dv3-3-live-proof.ps1.
+  23 new tests; DV3 67, Prompt 115, Telegram 74 green. Evidence dv3-3-transcription.md.
+find: MA0045 exempts PUBLIC members only, so a private sync file-IO helper in Core must be public
+  and a blocking GetAwaiter().GetResult() in a Spectre command forces AsyncCommand/ExecuteAsync -
+  never a pragma. `conductor bg start` cannot carry a --filter containing a pipe (cmd splits it):
+  one filter per child. A C# raw string whose content starts on the SAME line as """ cannot span
+  lines. Transcription currently blocks the poll loop for the length of one command; that moves to
+  the courier at DV4.1, and the note is already durable + acknowledged before it starts.
+next: DV3.4 routing - reply-to-a-push files against that push's project (InboxNote.ReplyToMessageId
+  and ReplyToText are already stored), sticky /project, message_thread_id topics, unknown slug
+  refused by name, unroutable notes parked in a machine-level dead-letter directory.
 red: none known. Full battery not run by this session (conductor runs it after exit).
+
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 23 |
-| Done | 2 |
-| Claimed (unconfirmed) | 4 |
+| Done | 6 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -44,17 +46,17 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | DONE | c86dcec | .conductor/evidence/DV2/dv2-1-triage-ledger.md |
-| DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | DONE | c86dcec | .conductor/evidence/DV2/dv2-2-cluster-a.txt |
-| DV2.3 | Cluster B, channels: getUpdates 409 handling that names the other consumer and backs off; the false will-deliver-nothing startup line reads the resolved ChatCount; the telegram test endpoint survives a chats-only plan; report-push failures log their reason - all proven at the stub seam with scratch tokens | DONE | 2b37a01 | .conductor/evidence/DV2/dv2-3-cluster-b.md |
-| DV2.4 | Cluster C, state and verdict, and the close: budget counters persisted across engine restarts (the per-process-cap defect), the stage-boundary squash refuses to abort a STALE rebase and asserts ancestry after any abort, bug 27 first-write FK, 429-with-reset-time classified as backoff not AgentError, FU-F1-06 UpdateRunStatus lands; every fix-here row closed via the conductor bug verb, every remaining open row carries a named owner in the ledger | DONE | 8c23aaf | .conductor/evidence/DV2/dv2-4-cluster-c.md |
+| DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | DONE ✓ | c86dcec | .conductor/evidence/DV2/dv2-1-triage-ledger.md |
+| DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | DONE ✓ | c86dcec | .conductor/evidence/DV2/dv2-2-cluster-a.txt |
+| DV2.3 | Cluster B, channels: getUpdates 409 handling that names the other consumer and backs off; the false will-deliver-nothing startup line reads the resolved ChatCount; the telegram test endpoint survives a chats-only plan; report-push failures log their reason - all proven at the stub seam with scratch tokens | DONE ✓ | 2b37a01 | .conductor/evidence/DV2/dv2-3-cluster-b.md |
+| DV2.4 | Cluster C, state and verdict, and the close: budget counters persisted across engine restarts (the per-process-cap defect), the stage-boundary squash refuses to abort a STALE rebase and asserts ancestry after any abort, bug 27 first-write FK, 429-with-reset-time classified as backoff not AgentError, FU-F1-06 UpdateRunStatus lands; every fix-here row closed via the conductor bug verb, every remaining open row carries a named owner in the ledger | DONE ✓ | 8c23aaf | .conductor/evidence/DV2/dv2-4-cluster-c.md |
 
 ### DV3 — The inbox - feedback that arrives when you have it, and survives the run
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV3.1 | Inbound message kinds: voice, audio, document, photo, caption, reply_to_message, message_thread_id on the DTO; getFile download; the 20 MB bot-API cap refused by name to the sender, never dropped; a stub-wire test drives each kind end to end | TODO | - | - |
-| DV3.2 | The per-project inbox: durable store under .conductor/inbox (never committed - no gitignore allowlist entry, this repo is public), media beside transcript, atomic writes, append-only index deduped by update_id, read cursor with seen-by-session marks; InboxBattery on the IPromptBattery seam, fenced and framed, with an architecture test proving the fencing is always present; a note filed with no run live is read by the next session of the next run, proven in the rig | TODO | - | - |
+| DV3.1 | Inbound message kinds: voice, audio, document, photo, caption, reply_to_message, message_thread_id on the DTO; getFile download; the 20 MB bot-API cap refused by name to the sender, never dropped; a stub-wire test drives each kind end to end | DONE | 2bebfbe | .conductor/evidence/DV3/dv3-1-inbound-kinds.md |
+| DV3.2 | The per-project inbox: durable store under .conductor/inbox (never committed - no gitignore allowlist entry, this repo is public), media beside transcript, atomic writes, append-only index deduped by update_id, read cursor with seen-by-session marks; InboxBattery on the IPromptBattery seam, fenced and framed, with an architecture test proving the fencing is always present; a note filed with no run live is read by the next session of the next run, proven in the rig | DONE | 2bebfbe | .conductor/evidence/DV3/dv3-2-the-inbox.md |
 | DV3.3 | Transcription: configured local command (faster-whisper on this machine's GPU), per-segment confidence marked in the stored note, unset command files the note untranscribed with audio kept and the reply saying so; conductor inbox prune is the only deletion path; a real .ogg transcribes in the rig | TODO | - | - |
 | DV3.4 | Routing: a voice note sent as a reply to a checkpoint push files against that push's project with no command typed; sticky /project selection; message_thread_id topics in supergroups; unknown slug refused by name; unroutable notes parked in a machine-level dead-letter directory, never dropped | TODO | - | - |
 
