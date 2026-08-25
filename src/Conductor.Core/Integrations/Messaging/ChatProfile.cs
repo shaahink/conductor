@@ -53,4 +53,14 @@ public static class ChatProfiles
     /// <summary>How a profile is written back — into a refusal, a status payload or a log line.</summary>
     public static string Name(ChatProfile profile) =>
         profile == ChatProfile.Observer ? ObserverName : AdminName;
+
+    /// <summary>DV3.1 / findings §1.8 — whether this chat may FILE: send a voice note, a document or
+    /// a photo that becomes text an autonomous agent reads. Inbound text becoming agent-prompt text
+    /// is prompt injection into an agent running unattended, so the gate is stated once, here,
+    /// rather than re-decided at each call site — and it is the same one place findings §6.7's
+    /// proposed <c>reporter</c> profile would be granted, if the owner ever accepts it.
+    ///
+    /// <para>Observer means READ, and it keeps meaning read: an observer's file is not fetched at
+    /// all, so an unauthorised sender cannot put bytes on this machine by sending them.</para></summary>
+    public static bool MayFile(ChatProfile profile) => profile == ChatProfile.Admin;
 }

@@ -342,8 +342,15 @@ public sealed partial class TelegramService
         {
             var chatId = msg.Chat?.Id.ToString(CultureInfo.InvariantCulture);
             if (!IsAllowed(chatId)) return;
-            await _surface.HandleMessageAsync(chatId!, ProfileFor(chatId!), msg.Text ?? "", ct)
-                .ConfigureAwait(false);
+
+            // DV3.1: text is text and takes the path it has always taken, byte for byte. A message
+            // carrying a file goes the inbound route instead (TelegramService.Inbound.cs), which
+            // fetches the bytes — or refuses them by name — before the surface sees the note.
+            if (KindOf(msg) is { } kind)
+                await HandleMediaMessageAsync(chatId!, ProfileFor(chatId!), msg, kind, ct).ConfigureAwait(false);
+            else
+                await _surface.HandleMessageAsync(chatId!, ProfileFor(chatId!), msg.Text ?? "", ct)
+                    .ConfigureAwait(false);
         }
         if (upd.CallbackQuery is { } cb)
         {

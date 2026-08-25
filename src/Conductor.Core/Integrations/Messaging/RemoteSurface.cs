@@ -17,7 +17,7 @@ namespace Conductor.Core.Integrations.Messaging;
 /// <para>Behaviour is deliberately unchanged here. KS11.1's goldens pin every byte this class now
 /// produces against what the un-extracted engine produced, and KS11.2–11.5 are what change what it
 /// says.</para></summary>
-public sealed class RemoteSurface
+public sealed partial class RemoteSurface
 {
     private readonly IMessageChannel _channel;
     private readonly MessageComposer _composer;

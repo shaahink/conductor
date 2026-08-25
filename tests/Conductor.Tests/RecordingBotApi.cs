@@ -75,11 +75,55 @@ public sealed class RecordingBotApi : IDisposable
     /// exchange are asserted against two different fakes.</summary>
     public void QueueCommand(string chatId, string text)
     {
-        lock (_gate) _pending.Enqueue((chatId, text));
+        lock (_gate) _pending.Enqueue(id =>
+            "{\"message_id\":" + id.ToString(CultureInfo.InvariantCulture)
+            + ",\"chat\":{\"id\":" + chatId + "}"
+            + ",\"text\":" + JsonSerializer.Serialize(text) + "}");
     }
 
-    private readonly Queue<(string ChatId, string Text)> _pending = new();
+    /// <summary>DV3.1 - queue a WHOLE message object, verbatim. A voice note, a document, a photo
+    /// array, a reply, a forum topic: every one of them is a shape <see cref="QueueCommand"/> cannot
+    /// express, and the point of driving them through this stub is that the engine deserialises the
+    /// same JSON Telegram sends rather than a DTO a test handed it.</summary>
+    /// <param name="messageJson">The complete <c>message</c> object, including <c>message_id</c> and
+    /// <c>chat</c>. The <c>update_id</c> around it is this stub's to assign.</param>
+    public void QueueMessage(string messageJson)
+    {
+        lock (_gate) _pending.Enqueue(_ => messageJson);
+    }
+
+    /// <summary>Each entry builds one message body once the stub has assigned its update id - the
+    /// id a text command uses as its <c>message_id</c> too, which is how it has always read.</summary>
+    private readonly Queue<Func<int, string>> _pending = new();
     private int _nextUpdateId = 1;
+
+    private readonly Dictionary<string, (string Path, byte[] Bytes)> _files = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _fileErrors = new(StringComparer.Ordinal);
+    private int _getFileCalls;
+
+    /// <summary>DV3.1 - register bytes this stub will serve for a <c>file_id</c>: <c>getFile</c>
+    /// answers with <paramref name="filePath"/> and a GET of <c>/file/bot&lt;token&gt;/{path}</c>
+    /// hands back exactly these bytes. Returns the path, so a test can assert what the engine was
+    /// told to fetch.</summary>
+    public string AddFile(string fileId, string filePath, byte[] bytes)
+    {
+        ArgumentNullException.ThrowIfNull(bytes);
+        lock (_gate) _files[fileId] = (filePath, bytes);
+        return filePath;
+    }
+
+    /// <summary>DV3.1 - make <c>getFile</c> REFUSE this file_id with the Bot API's own words. The
+    /// 20 MB ceiling is enforced on the server: an oversize file has a perfectly good file_id and
+    /// no downloadable path, which is a different failure from a missing file.</summary>
+    public void RefuseFile(string fileId, string description)
+    {
+        lock (_gate) _fileErrors[fileId] = description;
+    }
+
+    /// <summary>How many <c>getFile</c> calls arrived. Proving a fetch did NOT happen - for a chat
+    /// that may not file, or for a size refused before the round trip - needs a counter, because
+    /// "no call recorded" is also what a broken test looks like.</summary>
+    public int GetFileCalls { get { lock (_gate) return _getFileCalls; } }
 
     /// <summary>DV2.3, bug #38: make this stub behave like a Bot API that already has another
     /// consumer on the token — every <c>getUpdates</c> answered <c>409 Conflict</c> with this body,
@@ -113,7 +157,7 @@ public sealed class RecordingBotApi : IDisposable
     /// test.</summary>
     private string DrainUpdates()
     {
-        (string ChatId, string Text)[] batch;
+        Func<int, string>[] batch;
         int first;
         lock (_gate)
         {
@@ -128,12 +172,10 @@ public sealed class RecordingBotApi : IDisposable
         for (var i = 0; i < batch.Length; i++)
         {
             if (i > 0) sb.Append(',');
-            var id = (first + i).ToString(CultureInfo.InvariantCulture);
-            sb.Append("{\"update_id\":").Append(id)
-              .Append(",\"message\":{\"message_id\":").Append(id)
-              .Append(",\"chat\":{\"id\":").Append(batch[i].ChatId)
-              .Append("},\"text\":").Append(JsonSerializer.Serialize(batch[i].Text))
-              .Append("}}");
+            var id = first + i;
+            sb.Append("{\"update_id\":").Append(id.ToString(CultureInfo.InvariantCulture))
+              .Append(",\"message\":").Append(batch[i](id))
+              .Append('}');
         }
         return sb.Append("]}").ToString();
     }
@@ -155,8 +197,25 @@ public sealed class RecordingBotApi : IDisposable
             try { ctx = await _listener.GetContextAsync().ConfigureAwait(false); }
             catch (Exception) { return; }   // listener stopped — that is the exit condition
 
-            var method = (ctx.Request.Url?.AbsolutePath ?? "").Split('/')[^1];
+            var path = ctx.Request.Url?.AbsolutePath ?? "";
+
+            // DV3.1: the download endpoint is NOT /bot<token>/<method> - it is
+            // /file/bot<token>/<file_path>, so it has to be recognised by prefix before the last
+            // path segment is read as a method name.
+            if (path.Contains("/file/bot", StringComparison.Ordinal))
+            {
+                await ServeFileAsync(ctx, path).ConfigureAwait(false);
+                continue;
+            }
+
+            var method = path.Split('/')[^1];
             var body = await ReadBodyAsync(ctx.Request).ConfigureAwait(false);
+
+            if (string.Equals(method, "getFile", StringComparison.Ordinal))
+            {
+                await RespondAsync(ctx, GetFileBody(ctx.Request.Url?.Query ?? "")).ConfigureAwait(false);
+                continue;
+            }
 
             if (string.Equals(method, "getUpdates", StringComparison.Ordinal))
             {
@@ -297,6 +356,58 @@ public sealed class RecordingBotApi : IDisposable
 
     private static long? Num(JsonElement e, string name) =>
         e.TryGetProperty(name, out var v) && v.TryGetInt64(out var n) ? n : null;
+
+    /// <summary>The <c>getFile</c> answer for a file_id: a path, a refusal in the API's own words,
+    /// or the invalid-file_id error a made-up handle really gets.</summary>
+    private string GetFileBody(string query)
+    {
+        var fileId = "";
+        foreach (var part in query.TrimStart('?').Split('&'))
+            if (part.StartsWith("file_id=", StringComparison.Ordinal))
+                fileId = Uri.UnescapeDataString(part["file_id=".Length..]);
+
+        lock (_gate)
+        {
+            _getFileCalls++;
+            if (_fileErrors.TryGetValue(fileId, out var why))
+                return "{\"ok\":false,\"error_code\":400,\"description\":" + JsonSerializer.Serialize(why) + "}";
+            if (_files.TryGetValue(fileId, out var f))
+                return "{\"ok\":true,\"result\":{\"file_id\":" + JsonSerializer.Serialize(fileId)
+                     + ",\"file_size\":" + f.Bytes.Length.ToString(CultureInfo.InvariantCulture)
+                     + ",\"file_path\":" + JsonSerializer.Serialize(f.Path) + "}}";
+        }
+        return """{"ok":false,"error_code":400,"description":"Bad Request: invalid file_id"}""";
+    }
+
+    /// <summary>Serves the registered bytes for <c>/file/bot&lt;token&gt;/&lt;file_path&gt;</c>. The
+    /// token segment is skipped rather than matched: it is a secret on a developer machine and this
+    /// stub has never recorded one.</summary>
+    private async Task ServeFileAsync(HttpListenerContext ctx, string path)
+    {
+        var marker = path.IndexOf("/file/bot", StringComparison.Ordinal) + "/file/bot".Length;
+        var afterToken = path.IndexOf('/', marker);
+        var wanted = afterToken < 0 ? "" : path[(afterToken + 1)..];
+
+        byte[]? bytes = null;
+        lock (_gate)
+        {
+            foreach (var f in _files.Values)
+                if (string.Equals(f.Path, wanted, StringComparison.Ordinal)) { bytes = f.Bytes; break; }
+        }
+
+        if (bytes == null)
+        {
+            await RespondAsync(ctx, """{"ok":false,"error_code":404,"description":"Not Found"}""",
+                HttpStatusCode.NotFound).ConfigureAwait(false);
+            return;
+        }
+
+        ctx.Response.StatusCode = 200;
+        ctx.Response.ContentType = "application/octet-stream";
+        ctx.Response.ContentLength64 = bytes.Length;
+        await ctx.Response.OutputStream.WriteAsync(bytes).ConfigureAwait(false);
+        ctx.Response.Close();
+    }
 
     public void Dispose()
     {
