@@ -1,0 +1,198 @@
+DV2.1 raw measurements - 2026-08-25, session 3, branch feat/divan
+
+Store resolution: .conductor/state-pointer.json ->
+{
+  "runDb": "C:\\Users\\shahi\\AppData\\Local\\conductor\\runs\\conductor-karvansara-core---the-open-door-308cfb9b\\run.db",
+  "plan": "Karvansara core - the open door",
+  "note": "K3.1 state pointer. runDb is the absolute path to this tree\u0027s run.db. Delete this file to fall back to the derived path."
+}
+Method: every query runs against a sqlite3 snapshot (cp) of the store. No fresh build ever
+opened the live store (trap 18). NOTE, and this bit the first pass of this very artifact: the
+store is in WAL mode, so a snapshot MUST copy run.db-wal and run.db-shm alongside run.db. A
+cp of run.db alone answered '28 open' AFTER twelve rows had been committed - stale by exactly
+the writes still in the WAL. That is the same shape of error as reading the wrong store file.
+
+=== LIVE STORE, at triage time (before this checkpoint filed anything) ===
+fixed|21
+open|28
+open ids:
+15, 18, 19, 21, 23, 37, 38, 39, 40, 41, 42, 43, 45, 46, 47, 48, 49, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61
+
+=== LIVE STORE, after this checkpoint filed 12 rows ===
+fixed|21
+open|40
+open ids:
+15, 18, 19, 21, 23, 37, 38, 39, 40, 41, 42, 43, 45, 46, 47, 48, 49, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73
+
+=== The 12 rows this checkpoint filed (8 field defects + 4 recovered by #46) ===
+62 | high | DV2 | Batteries: BatteryGroup.Render truncates the CONCATENATION, so a grown knowledge ledger deletes the open-bugs batte
+63 | medium | DV2 | BugsBattery silently drops every open bug past the 12th - no 'N more' line, so most of the ledger is invisible to e
+64 | medium | DV2 | Telegram started log counts AllowedChatIds and says it will deliver nothing on a chats-only plan, contradicting /te
+65 | medium | DV2 | POST /telegram/test indexes _cfg.AllowedChatIds[0] - an empty list on a chats-only plan
+66 | medium | DV2 | 'report push failed:' logs with an EMPTY reason, so a repeated report-push failure is undiagnosable
+67 | high | DV2 | Stage-boundary squash can silently rewind the branch: the defensive rebase --abort of a KILLED session's stale reba
+68 | high | DV2 | Budget counters restart at zero on every engine process start, so maxRunCostUsd is a per-PROCESS cap, not a per-run
+69 | high | DV2 | A 429/rate-limit storm burns a stage's whole attempt budget in minutes and ends as NEEDS HUMAN
+70 | medium | K1 | AgentConfig.Merge silently drops Env: a stage-level agent override wipes the plan-level agent.env
+71 | medium | K2 | A brand-new run.db logs FOREIGN KEY constraint failed on the first run_state write
+72 | medium | K6 | face: bubbles/textarea cannot replace widgets.TextArea until key dispatch stops being a string
+73 | medium | K7 | tools/w3/window-close.ps1 and tools/sf1/sf1-2-live-proof.ps1 read run.db from the pre-K3.1 path and write scratch r
+
+=== The id 24-35 gap in the live store is real: rows present in that range ===
+0
+
+=== 41 / 44 / 60, against the real table: 44 EXISTS and is FIXED, so it was never dangling ===
+      id = 41
+  status = open
+stage_id = KS10
+   title = payesh anonymity gate fails closed on the generic word 'website': a catalogued repo named 'website' makes every page with ordinary prose or schema.org @type=WebSite a leak report
+
+      id = 44
+  status = fixed
+stage_id = KS9
+   title = ratchet gate is RED before this session: 43 analyzer suppressions against a ceiling of 38
+
+      id = 60
+  status = open
+stage_id = KS4
+   title = analyzer-debt ratchet is RED on feat/karvansara-edge: pragma-src 33 against a bar of 31, both added by KS4.4 (05696d4)
+
+=== 16 and 20 were NEVER lost: the strand doc widened #46 from the 4 rows it names to 6 ===
+16 | fixed | The gate battery can try to rebuild a conductor.exe that is currently running, and the bui
+20 | fixed | run resolves CONDUCTOR_PLAN over the CWD, so a scratch rig launched from inside a session 
+
+=== IMPORTED COPY .conductor/run.db (frozen pre-split): counts and open ids ===
+Eleven open - which is exactly the figure the strand doc's first draft reported for the LIVE
+store. That draft resolved the store by the repo-local path; this is the proof of it.
+fixed|24
+open|11
+15, 16, 18, 19, 20, 21, 23, 24, 27, 31, 35
+
+=== The four rows #46 names, recovered from the imported copy into the live store ===
+24 | open | K1 | AgentConfig.Merge silently drops Env: a stage-level agent override wipes the plan-level agent.env (e.g. OPENCO
+27 | open | K2 | A brand-new run.db logs FOREIGN KEY constraint failed on the first run_state write
+31 | open | K6 | face: bubbles/textarea cannot replace widgets.TextArea until the key dispatch stops being a string
+35 | open | K7 | tools/w3/window-close.ps1 and tools/sf1/sf1-2-live-proof.ps1 still read run.db from the pre-K3.1 path, and wri
+  old #24 -> new #70   old #27 -> new #71   old #31 -> new #72   old #35 -> new #73
+
+=== followups.md: 11 lines carry the token, 8 distinct rows are open ===
+line numbers containing OPEN (case-sensitive, the strand doc's own method):
+101 126 164 210 222 444 471 530 704 705 717 
+  101         = FU-B0-1 / FU-B1-1 / FU-B1-2  (three rows on ONE line)
+  126         = FU-B2-3
+  164/530/717 = FU-B11-3                     (ONE row, three restatements)
+  210         = prose about FU-OWNER-9, not a row
+  222         = FU-OWNER-9, whose own text ends 'This row is now fully CLOSED'
+  444         = FU-F1-06
+  471         = a cross-reference to bug #24, not a followup row
+  704 / 705   = the two KS5 gaps (face tokens cap; approve --yes/--force)
+  => 8 distinct open rows: FU-B0-1 FU-B1-1 FU-B1-2 FU-B2-3 FU-B11-3 FU-F1-06 KS5-tokens KS5-approve
+
+=== Correction 1: strand-doc ledger-3 item 4 names the wrong symptom ===
+--- src/Conductor.Core/Integrations/TelegramService.cs:229-238 : the guard, THEN the [0] index ---
+            // A test that sends nothing is not a passing test, however valid the token: with no
+            // allowed chat id there is nobody to deliver to, and the old "true" here is what let the
+            // Face tick step 3 of its guided setup on a bot that could never reach the owner.
+            if (_cfg.AllowedChatIds.Count == 0)
+                return new TelegramTestOutcome(false, me.Username, TelegramReadiness.NoChatIds, false,
+                    "the token is valid, but no test message was sent — there is no chat to send it to");
+
+            return _started
+                ? await SendTestViaQueueAsync(_cfg.AllowedChatIds[0], me.Username, ct).ConfigureAwait(false)
+                : await SendTestBypassingQueueAsync(_cfg.AllowedChatIds[0], me.Username, ct).ConfigureAwait(false);
+--- src/Conductor.Core/Models/TelegramConfig.cs:33-54 : ResolvedChats is Chats UNION AllowedChatIds ---
+    public IEnumerable<(string ChatId, string? Profile)> ResolvedChats()
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var entry in Chats)
+        {
+            var id = entry.ChatId?.Trim();
+            if (string.IsNullOrEmpty(id) || !seen.Add(id)) continue;
+            yield return (id, entry.Profile);
+        }
+
+        foreach (var id in AllowedChatIds)
+        {
+            var trimmed = id?.Trim();
+            if (string.IsNullOrEmpty(trimmed) || !seen.Add(trimmed)) continue;
+            yield return (trimmed, ChatProfiles.AdminName);
+        }
+    }
+
+    /// <summary>KS11.2: how many chats this bot actually serves — the number every readiness and
+    /// status answer must use. Counting <see cref="AllowedChatIds"/> alone would report a plan that
+    /// configures its chats the new way as "push-only to nobody" while it delivered perfectly.</summary>
+    public int ChatCount => ResolvedChats().Count();
+  => a chats-only plan has ChatCount>0 and AllowedChatIds.Count==0, so the guard fires and the
+     endpoint reports 'no chat to send it to' on a plan that delivers. A false failure, not a crash.
+
+--- item 3, CONFIRMED as written: TelegramService.Lifecycle.cs:53-56 counts the RAW list ---
+        var chatIds = _cfg!.AllowedChatIds.Count;
+        if (chatIds == 0)
+            _log.LogWarning("Telegram bot started (poll interval {Interval}s) but will deliver nothing: {Reason}",
+                _cfg.PollIntervalSeconds, TelegramReadiness.NoChatIds);
+
+=== Correction 2: item 8 is not 'no 429 handling exists' ===
+--- src/Conductor.Core/Orchestration/SessionRunner.cs:409-412 ---
+                    return;
+                }
+                _queueResume(rec, "usage/rate limit backoff", false, false);
+                _ctx.BackoffUntil = DateTime.UtcNow.AddMinutes(_ctx.Plan.Limits.BackoffMinutes);
+
+=== The two truncations, at source ===
+--- src/Conductor.Core/PromptBuilder.cs:294-311 : the comment claiming order protects them ---
+
+        // M7.1/M7.2: knowledge that compounds — injected by default (no batteries block required), and
+        // added FIRST so the byte cap never truncates them away: the ledger and open bugs from prior
+        // sessions must reliably reach the next prompt (that is the whole point of M7).
+        if (store != null && state is { RunId.Length: > 0 })
+        {
+            if (cfg?.Ledger ?? true)
+            {
+                var ledgerBattery = new LedgerBattery(store, state.RunId, cfg?.LedgerMaxEntries ?? 8);
+                if (!ledgerBattery.IsEmpty) list.Add(ledgerBattery);
+            }
+            if (cfg?.Bugs ?? true)
+            {
+                var bugsBattery = new BugsBattery(store, state.RunId);
+                if (!bugsBattery.IsEmpty) list.Add(bugsBattery);
+            }
+        }
+
+        if (cfg != null)
+--- src/Conductor.Core/PromptBattery.cs:41-62 : Render truncates the CONCATENATION ---
+    /// <summary>Rendered prompt section combining all non-empty batteries, or empty string.</summary>
+    public string Render()
+    {
+        var sb = new StringBuilder();
+        foreach (var b in _batteries)
+        {
+            if (b.IsEmpty) continue;
+            sb.AppendLine($"### {b.Name}");
+            sb.AppendLine(b.Section);
+            sb.AppendLine();
+        }
+        if (sb.Length == 0) return "";
+
+        var result = sb.ToString().TrimEnd();
+        if (result.Length > _maxBytes)
+        {
+            // Truncate at nearest paragraph boundary within budget
+            var cutoff = _maxBytes;
+            while (cutoff > 0 && result[cutoff] != '\n') cutoff--;
+            result = cutoff > 100 ? result[..cutoff].TrimEnd() + "\n…" : result[.._maxBytes].TrimEnd() + "…";
+        }
+        return result;
+--- src/Conductor.Core/PromptBattery.Knowledge.cs:51 + 68-77 : BugsBattery caps at 12, no 'N more' ---
+    public BugsBattery(IRunStore store, string runId, int maxEntries = 12)
+        var sb = new StringBuilder();
+        sb.AppendLine("Open bugs filed by earlier sessions (via `conductor bug new`). Fix in scope, or avoid re-finding — do NOT re-file:");
+        foreach (var b in rows.Take(maxEntries))
+            Append(sb, b, "");
+        // Carried rows fill what is left of the same cap, so this cannot grow the prompt past what one
+        // run's ledger already could — this run's own bugs keep priority for the slots.
+        foreach (var c in carried.Take(Math.Max(0, maxEntries - rows.Count)))
+            Append(sb, c.Bug, $" [carried from an earlier run: {Compact(c.PlanName)}]");
+        sb.Append("Mark one fixed with `conductor bug fix <id>` once you have genuinely resolved it.");
+        _section = sb.ToString().TrimEnd();
+  => 40 open, 12 rendered, 28 invisible to every session prompt as of this checkpoint.
