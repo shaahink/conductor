@@ -201,4 +201,31 @@ public static class ProcessRunner
     /// <summary>True-async twin of <see cref="RunPowerShell"/> — see <see cref="RunAsync"/>.</summary>
     public static Task<ProcResult> RunPowerShellAsync(string command, string cwd, TimeSpan timeout, CancellationToken ct = default)
         => RunShellAsync("powershell", command, cwd, timeout, ct);
+
+    /// <summary>DV2.3, bug #66 — why a process failed, in words, and NEVER the empty string.
+    ///
+    /// <para>The report push logged <c>report push failed:</c> with nothing after the colon, over and
+    /// over, on a run nobody could then diagnose. The cause is that it read <c>Output</c>: git writes
+    /// its refusals — a rejected non-fast-forward, an auth failure, "Everything up-to-date" — to
+    /// STDERR, so the one stream the message quoted was the one guaranteed to be empty. Preferring
+    /// stderr and falling back to stdout is the shape <c>Git.cs</c> already uses; what is new is the
+    /// last line: when a process fails with nothing on either stream, the exit code IS the reason and
+    /// saying so beats a colon with nothing after it.</para></summary>
+    public static string FailureReason(this ProcResult result, int lines = 3)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        var text = string.IsNullOrWhiteSpace(result.StdErr) ? result.Output : result.StdErr;
+        var kept = (text ?? "").Split('\n')
+            .Select(l => l.Trim())
+            .Where(l => l.Length > 0)
+            .TakeLast(Math.Max(1, lines))
+            .ToList();
+
+        if (kept.Count > 0)
+            return string.Join(" | ", kept) + (result.TimedOut ? " (timed out)" : "");
+
+        return result.TimedOut
+            ? FormattableString.Invariant($"timed out after {result.Duration.TotalSeconds:0.#}s, with no output on stdout or stderr")
+            : FormattableString.Invariant($"exit code {result.ExitCode}, with no output on stdout or stderr");
+    }
 }

@@ -50,7 +50,13 @@ public sealed partial class TelegramService
         _pollTask = Task.Run(() => PollLoopAsync(token), CancellationToken.None);
         _sendTask = Task.Run(() => SendLoopAsync(queue, token), CancellationToken.None);
 
-        var chatIds = _cfg!.AllowedChatIds.Count;
+        // DV2.3, bug #64: this counted AllowedChatIds — the RAW allow-list — while every other surface
+        // counts TelegramConfig.ChatCount, whose own doc comment names exactly this misreport as its
+        // reason to exist. On a plan that declares its chats the KS11.2 way (a `chats` block, no
+        // `allowedChatIds`) the raw list is empty and the resolved set is not, so the engine announced
+        // at startup that it would deliver nothing while delivering perfectly, and /telegram/status
+        // flatly contradicted the log line an operator had already read and believed.
+        var chatIds = _cfg!.ChatCount;
         if (chatIds == 0)
             _log.LogWarning("Telegram bot started (poll interval {Interval}s) but will deliver nothing: {Reason}",
                 _cfg.PollIntervalSeconds, TelegramReadiness.NoChatIds);

@@ -4,19 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV2.1 (c86dcec) + DV2.2 (b8efd63). The triage ledger is the map for the rest of DV2:
-  .conductor/evidence/DV2/dv2-1-triage-ledger.md - 50 defects, 14 FIX, 36 DEFER with named owners.
-  TAKE YOUR IDS FROM THAT FILE: bug #63 (fixed) proved only 12 rows ever reach a prompt, and this
-  run's own rows now hold most of those slots. Cluster A is closed - #62 #63 #15 #21 #55 all fixed
-  via the bug verb; #21 was ALREADY delivered by KS1.4 and merely unclosed, #55 is half-fixed and
-  says so in code (doctor cannot render a live run's tail sections; preflight can). Full suite
-  3140 passed / 0 failed. New file: src/Conductor.Core/ArgvLimits.cs is now the ONE home for the
-  argv ceilings - doctor delegates, AgentSession refuses at spawn.
-next: DV2.3, cluster B: #38 #64 #65 #66, stub seam and scratch tokens only. Read section 2 of the
-  triage ledger first - #65's symptom in the strand doc is WRONG (the empty-list index is guarded;
-  the real defect is a false failure on a chats-only plan, same raw-vs-resolved seam as #64). And
-  #66 reproduces for free: .conductor/evidence/DV2/dv2-2-cluster-a.txt section 1 has a live log
-  line reading "report push failed:" with nothing after the colon.
+last: DV2.1 (c86dcec) and DV2.2 (b8efd63) are CLAIMED with evidence. DV2.3 is PART-BUILT and
+  deliberately NOT claimed - the source fixes are committed and green, the regression tests are not
+  written. The map for all of DV2 is .conductor/evidence/DV2/dv2-1-triage-ledger.md: 50 defects,
+  14 FIX, 36 DEFER with named owners. TAKE YOUR IDS FROM THAT FILE, not the prompt battery.
+next: finish DV2.3. Landed already, needing only tests + evidence: #66 ProcessRunner.FailureReason
+  (git writes refusals to STDERR, which is why the reason was empty); #64 the started line now
+  counts ChatCount; #65 the test endpoint uses Targets, admin first; #38 the new partial
+  TelegramService.Polling.cs detects 409, names the other consumer from Telegram's own Description
+  field, and backs off 5s per streak capped at 60s (ConflictBackoff is internal and deterministic
+  so a test can state the delay). Write the stub-seam tests - K5_4TransportTests' RecordingBotApi
+  is the harness - then evidence, `conductor bug fix 38 64 65 66`, and claim.
+red: none. Scoped suite green; the last full suite (3140/0) predates the DV2.3 edits, so run one.
+
 
 ## Baseline numbers (from run.db)
 

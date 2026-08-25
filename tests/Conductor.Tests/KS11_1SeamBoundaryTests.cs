@@ -31,6 +31,7 @@ public sealed class KS11_1SeamBoundaryTests
         "TelegramService.cs",
         "TelegramService.Channel.cs",
         "TelegramService.Lifecycle.cs",
+        "TelegramService.Polling.cs",   // DV2.3: the inbound long-poll and its 409 handling (#38)
         "TelegramService.Transport.cs",
         "TelegramReadiness.cs",
         "TelegramLimits.cs",

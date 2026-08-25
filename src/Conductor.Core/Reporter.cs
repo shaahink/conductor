@@ -326,7 +326,7 @@ public static partial class Reporter
             // A plain push, still — an amend only ever happens to a commit the upstream has not seen
             // (see CanAmendReportCommit), so this never needs to become a force.
             var push = Git.Exec(plan.Repo, "push");
-            if (push.ExitCode != 0) log($"report push failed: {GateRunner.TailOf(push.Output, 3)}");
+            if (push.ExitCode != 0) log($"report push failed: {push.FailureReason()}");   // #66: git writes refusals to STDERR
         }
     }
 

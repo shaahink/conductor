@@ -226,16 +226,27 @@ public sealed partial class TelegramService
 
             _botUsername = me.Username;
 
-            // A test that sends nothing is not a passing test, however valid the token: with no
-            // allowed chat id there is nobody to deliver to, and the old "true" here is what let the
-            // Face tick step 3 of its guided setup on a bot that could never reach the owner.
-            if (_cfg.AllowedChatIds.Count == 0)
+            // A test that sends nothing is not a passing test, however valid the token: with no chat
+            // to deliver to there is nobody to reach, and the old "true" here is what let the Face
+            // tick step 3 of its guided setup on a bot that could never reach the owner.
+            //
+            // DV2.3, bug #65: the check and the send both read AllowedChatIds — the RAW allow-list.
+            // On a plan that declares its chats the KS11.2 way that list is empty while the resolved
+            // set is not, so this endpoint reported "there is no chat to send it to" for a bot that
+            // delivered perfectly, and a Face guided setup could not be completed on a correct plan.
+            // The strand doc filed it as an empty-list INDEX crash; it is not — the guard above the
+            // index is real. The defect is the false negative, from the same raw-vs-resolved read as
+            // the startup line (#64). Targets is the resolved set, and admin comes first because a
+            // test message is an admin's proof, not something to post into an observer chat.
+            var targets = Targets;
+            if (targets.Count == 0)
                 return new TelegramTestOutcome(false, me.Username, TelegramReadiness.NoChatIds, false,
                     "the token is valid, but no test message was sent — there is no chat to send it to");
+            var target = targets.FirstOrDefault(t => t.Profile == ChatProfile.Admin, targets[0]);
 
             return _started
-                ? await SendTestViaQueueAsync(_cfg.AllowedChatIds[0], me.Username, ct).ConfigureAwait(false)
-                : await SendTestBypassingQueueAsync(_cfg.AllowedChatIds[0], me.Username, ct).ConfigureAwait(false);
+                ? await SendTestViaQueueAsync(target.ChatId, me.Username, ct).ConfigureAwait(false)
+                : await SendTestBypassingQueueAsync(target.ChatId, me.Username, ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -321,43 +332,6 @@ public sealed partial class TelegramService
 
     public Task PushEvidenceAsync(IReadOnlyList<Evidence.EvidenceArtifact> artifacts,
         CancellationToken ct = default) => _surface.PushEvidenceAsync(artifacts, ct);
-
-    private async Task PollLoopAsync(CancellationToken ct)
-    {
-        var interval = TimeSpan.FromSeconds(_cfg!.PollIntervalSeconds);
-        while (!ct.IsCancellationRequested)
-        {
-            try
-            {
-                await PollOnceAsync(ct).ConfigureAwait(false);
-                await _surface.MaybeSendDailyDigestAsync(ct).ConfigureAwait(false);
-                _lastPollUtc = DateTime.UtcNow;
-                _lastError = null;
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
-            catch (Exception ex)
-            {
-                _lastError = ex.Message;
-                _log.LogWarning(ex, "Telegram poll error");
-            }
-            await Task.Delay(interval, ct).ConfigureAwait(false);
-        }
-    }
-
-    private async Task PollOnceAsync(CancellationToken ct)
-    {
-        var url = $"{_apiBase}{_token}/getUpdates?offset={_offset}&timeout=30";
-        var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
-        resp.EnsureSuccessStatusCode();
-        var body = await resp.Content.ReadFromJsonAsync<TgResponse>(JsonOpts, ct).ConfigureAwait(false);
-        if (body is not { Ok: true, Result: { Count: > 0 } updates }) return;
-
-        foreach (var upd in updates)
-        {
-            _offset = upd.UpdateId + 1;
-            await HandleUpdateAsync(upd, ct).ConfigureAwait(false);
-        }
-    }
 
     /// <summary>KS11.1 — the adapter's whole inbound job: unwrap the Bot API envelope, check the
     /// chat is one of ours, and hand plain text to the seam. What the text MEANS is
