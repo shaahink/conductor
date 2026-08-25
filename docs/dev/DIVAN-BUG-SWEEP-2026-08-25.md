@@ -10,32 +10,48 @@ existed only in the operator's field notes and would otherwise be rediscovered a
 
 ---
 
-## Ledger 1 — `run.db` `bugs` table: 11 open rows (measured 2026-08-25, ids 1–35, 24 fixed / 11 open)
+## Ledger 1 — the `bugs` table: 28 open rows in the LIVE store (measured 2026-08-25)
 
-Surfaced to every session by the open-bugs battery and `conductor bug list`. Close each with the
-`conductor bug` verb when its fix lands with a regression test. The open ids today: **15, 16, 18,
-19, 20, 21, 23, 24, 27, 31, 35.** Highlights the era cares about:
+**Resolve the store the way doctor does, never by the repo-local path.** The live run.db is in the
+state home via `.conductor/state-pointer.json` (doctor's `state` line names it); the file at
+`.conductor/run.db` is the pre-import COPY and answers every query with stale data. This document's
+first draft made exactly that mistake and reported 11 open bugs; the live store holds **28**, ids
+15–61 with gaps — and the gaps are themselves a filed bug (#46: the state-home split lost karvan's
+#16/#20/#24/#27/#31/#35, which are still marked open ONLY in the imported copy; triage recovers them
+from there).
 
-- **#15** — a composed prompt over ~8191 chars silently stops a cmd.exe-based agent (prompt-size class).
-- **#16** — the gate battery can try to rebuild a conductor.exe that is currently running (the
-  remainder of FU-OWNER-9; a live proof exists that the debug-build image is exactly what the next
-  `dotnet build Conductor.slnx` overwrites).
-- **#20** — `run` resolves `CONDUCTOR_PLAN` over the CWD, so a scratch rig launched from inside a
-  session can aim at the wrong plan.
-- **#21** — nothing warns when packs push the composed prompt past the argv ceiling.
-- **#24** — `AgentConfig.Merge` silently drops `Env` (`src/Conductor/Models/AgentConfig.cs:36-48`).
-- **#27** — a brand-new run.db logs `FOREIGN KEY constraint failed` on the first `run_state` write.
-- **#23** — CI Windows battery flake in `SF0_3PidsAndBackgroundWorkTests.McpBgStatus_…`.
-- **#18, #31** — face lane (bottom-bar clipping; textarea key dispatch).
-- **#35** — `tools/w3/window-close.ps1` and `tools/sf1/sf1-2-live-proof.ps1` read run.db from the
-  wrong place.
+Open in the live store today: **15, 18, 19, 21, 23, 37–43, 45–49, 51–61.** Surfaced to every
+session by the open-bugs battery; close each with the `conductor bug` verb when its fix lands with a
+regression test. The clusters the era cares about:
 
-**A numbering discrepancy to settle at triage:** the edge tracker's handoff names "bug 60"
-(analyzer-debt, pragma-src 33 vs bar 31) and "bug 41" (payesh `npm run anonymity` red on the word
-"website"), and older notes name "bug 44/45". The bugs table's ids stop at 35 — those numbers exist
-in no table row today. Triage finds the real rows or files them fresh; neither defect may be lost to
-a dangling number. (Bug 45's *lesson* — migration-version skew between a fresh build and the
-installed engine bricking the live store — is real regardless; it is trap 18 in the plan.)
+- **Prompt/argv class:** #15 (a composed prompt over ~8191 chars silently stops a cmd.exe agent),
+  #21 (no warning when packs cross the argv ceiling), #55 (doctor's argv lint under-measures the
+  real spawn by 350–500 chars — it misses the battery).
+- **Channels:** #38 (the getUpdates 409 conflict loop — the field-observed defect below is THIS bug;
+  fix it, do not re-file it).
+- **Store truth:** #45 (any verb from a newer build silently migrates the live run.db and locks the
+  running engine out — trap 18 exists because this happened), #46 (bugs lost in the state-home
+  split, above), #61 (`CONDUCTOR_RUN_DB` does not redirect the measuring verbs), #39 (an interrupted
+  session leaves a non-terminal 'running' row at $0.00 no verb can clear), #37 (`history --json`
+  misses non-terminal baton rows), #42 (catalogue repair cannot collapse a live-store duplicate),
+  #48 (`face` with no live run silently attaches to another repo's run).
+- **Verdict honesty:** #40 (satellite commits by ANYONE count as the session's own work),
+  #58 (`FailureCircuitBreaker.ParseFailingGates` matches glyphs the summary never emits),
+  #52 (the digest counts a claim attempt that FAILED), #19 (digest claims need MCP task_update).
+- **Build flakes:** #54/#57 (MSBuild node reuse serves stale analyzer config — red flaps),
+  #59 (`dotnet run --project src/Conductor` inside a bg child fails MA00xx), #49 (fold-test flake
+  under full suite), #23 (CI Windows battery flake).
+- **Ratchets and payesh:** #60 (analyzer-debt ratchet RED on the edge branch: pragma-src 33 against
+  a bar of 31 — the edge handoff says the bar may NOT simply be moved), #41 (payesh anonymity fails
+  closed on the generic word 'website'), #47 (a private repo named an ordinary noun makes the check
+  unfalsifiable).
+- **KS7 leftovers:** #51 (a restricted permission posture silently breaks the run's own claim path),
+  #53 (cache-write TTL split dropped from the cost model), #43 (4-digit import ids pass the
+  provider, fail elsewhere).
+- **Face lane:** #18 (bottom bar hard-clips contextual help).
+
+One number stays unaccounted: older notes reference a "bug 44" (43 pragmas vs a ceiling of 38);
+no open row carries it — triage confirms it fixed, superseded by #60, or refiles it.
 
 ## Ledger 2 — `.conductor/followups.md`: rows still marked OPEN
 
@@ -72,7 +88,8 @@ fixing, cite `file:line` in the evidence.
    `batteries.ledgerMaxEntries: 3` + `maxBytes: 6144`; the engine fix is this sweep's to land.
 2. **`TelegramService` has no `getUpdates` 409/Conflict handling** (grepped: zero hits). Two engines
    polling one token fight and steal each other's updates with no log line naming the cause. At
-   minimum: detect 409, log the other consumer's existence loudly, back off.
+   minimum: detect 409, log the other consumer's existence loudly, back off. **Already filed as
+   bug #38** — fix that row, do not file a twin.
 3. **False "will deliver nothing" startup warning on a chats-only plan.**
    `TelegramService.Lifecycle.cs:53` counts `_cfg.AllowedChatIds.Count` for the started log line
    while every other surface uses the resolved `TelegramConfig.ChatCount` (whose own doc comment
@@ -108,8 +125,8 @@ fixing, cite `file:line` in the evidence.
 - Every row above gets exactly one disposition: **fix-this-stage** (with the regression test named)
   or **deferred** (with a named owner and a reason). No row vanishes.
 - The triage output is a committed ledger table in the evidence directory, one row per defect,
-  cross-referencing the three sources — including resolving the 41/44/60 numbering against the real
-  table.
+  cross-referencing the three sources — including recovering the #46-lost karvan rows from the
+  imported copy and settling the dangling "bug 44" reference.
 - Fixing order inside the stage is the triage's call, but the prompt-composition cluster (1 above,
   #15, #21) outranks the rest: the era's own batteries land on that seam next stage.
 - A fix without a test that would have caught it is not a fix; close the bug with the `conductor

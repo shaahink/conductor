@@ -7,8 +7,8 @@
 last: era authored 2026-08-25, no session has run yet. The design authority is the findings doc
   named above, INCLUDING its Part 6 amendments - the decided options are restated in the plan
   file's header comment and each stage's notes; do not re-litigate them. The bug sweep's own
-  strand doc is docs/dev/DIVAN-BUG-SWEEP-2026-08-25.md - eleven open bugs ride in from earlier
-  runs in this repo's run.db and are in your open-bugs battery.
+  strand doc is docs/dev/DIVAN-BUG-SWEEP-2026-08-25.md - twenty-eight open bugs ride in from
+  earlier runs in the live state-home store and are in your open-bugs battery.
 next: DV1.1 - channel health made loud. The seeded regression is the edge run's own failure
   (github block enabled, token absent, two log lines, nothing else). Read the stage notes and
   OBSERVABILITY-AND-MARKET-2026-08-22.md section 2.2 cause 1 before touching anything.
@@ -21,7 +21,7 @@ next: DV1.1 - channel health made loud. The seeded regression is the edge run's 
 |---|---|
 | Total checkpoints | 23 |
 | Done | 0 |
-| Carried open bugs at authoring | 11 |
+| Carried open bugs at authoring | 28 |
 
 ## Checkpoints
 
@@ -40,7 +40,7 @@ marked DONE; the engine confirms.
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the 41/44/60 numbering resolved against the real bugs table; no row dropped | TODO | | |
+| DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | TODO | | |
 | DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | TODO | | |
 | DV2.3 | Cluster B, channels: getUpdates 409 handling that names the other consumer and backs off; the false will-deliver-nothing startup line reads the resolved ChatCount; the telegram test endpoint survives a chats-only plan; report-push failures log their reason - all proven at the stub seam with scratch tokens | TODO | | |
 | DV2.4 | Cluster C, state and verdict, and the close: budget counters persisted across engine restarts (the per-process-cap defect), the stage-boundary squash refuses to abort a STALE rebase and asserts ancestry after any abort, bug 27 first-write FK, 429-with-reset-time classified as backoff not AgentError, FU-F1-06 UpdateRunStatus lands; every fix-here row closed via the conductor bug verb, every remaining open row carries a named owner in the ledger | TODO | | |
