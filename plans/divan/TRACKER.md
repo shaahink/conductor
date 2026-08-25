@@ -2,20 +2,22 @@
 
 **Plan:** Divan - the chancellery: inbox, courier, and the record that gets out | **Branch:** `feat/divan` | **Design doc:** docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, ≤ 12 lines, no history)
 
-last: DV2.3 is CLAIMED (evidence .conductor/evidence/DV2/dv2-3-cluster-b.md, commits 2b37a01 and
-  96433ec). #38/#64/#65/#66 closed with `conductor bug fix`. 22 tests, and one of them found the
-  previous session's #66 fix was wrong: FailureReason kept the LAST 3 lines, so a real `git push`
-  refusal read as three lines of advice and none of the reason. It takes the head now.
-next: DV2.4, cluster C, from the same map (.conductor/evidence/DV2/dv2-1-triage-ledger.md, the
-  cluster C table): #67 stale-rebase squash guard, #68 budget restart-at-zero, #71 first-write FK,
-  #69 429-as-backoff, FU-F1-06 UpdateRunStatus - then close the ledger, every DEFER row owned.
-harness: two things worth reusing. RecordingBotApi now does getMe, an opt-in 409 body and a poll
-  counter (all default-off). And the pre-fix INVERSION PROBE: invert each fix in the source, re-run
-  the scoped filter, keep the log, `git checkout --` to restore - a regression test that has never
-  been red proves nothing, and this is what caught #66. See the probe table in the evidence.
-red: none. Full suite 3161/0 (.conductor/evidence/DV2/dv2-3-full-suite.log).
+last: DV2.4 CLAIMED - cluster C closed and with it the whole sweep. #67 #68 #69 #71 and FU-F1-06
+  all done (evidence .conductor/evidence/DV2/dv2-4-cluster-c.md; commits 8c23aaf 4866902 6aa028b
+  73f05d0 658cfc8). #71 and FU-F1-06 were ALREADY fixed in src - the triage premise was stale - so
+  they closed as already-fixed-now-proven, each with an inversion-probed test.
+find: #69 was two defects, and the second was in no ledger. SessionRunner.LastRawTail used
+  File.ReadAllText (FileShare.Read) while AgentSession still held the same file open for WRITING,
+  so the read failed, the catch swallowed it, and the raw tail was ALWAYS empty. Every classifier
+  reading that tail has been matching a blank string. Look for the same shape elsewhere.
+next: DV3.1 - inbound message kinds. Read the strand doc section DV3 names, not the sweep doc.
+watch: the architecture ratchet is real and it caught this session - comments count as lines.
+  RunLoop and SessionRunner are both freshly split and sit near 495; RunLoop is ALSO on the CA1506
+  coupling ratchet at 183/183, so one new coupled type fails the build.
+red: none.
+
 
 ## Baseline numbers (from run.db)
 
@@ -23,7 +25,7 @@ red: none. Full suite 3161/0 (.conductor/evidence/DV2/dv2-3-full-suite.log).
 |---|---|
 | Total checkpoints | 23 |
 | Done | 2 |
-| Claimed (unconfirmed) | 2 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -43,7 +45,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | DONE | c86dcec | .conductor/evidence/DV2/dv2-1-triage-ledger.md |
 | DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | DONE | c86dcec | .conductor/evidence/DV2/dv2-2-cluster-a.txt |
-| DV2.3 | Cluster B, channels: getUpdates 409 handling that names the other consumer and backs off; the false will-deliver-nothing startup line reads the resolved ChatCount; the telegram test endpoint survives a chats-only plan; report-push failures log their reason - all proven at the stub seam with scratch tokens | TODO | - | - |
+| DV2.3 | Cluster B, channels: getUpdates 409 handling that names the other consumer and backs off; the false will-deliver-nothing startup line reads the resolved ChatCount; the telegram test endpoint survives a chats-only plan; report-push failures log their reason - all proven at the stub seam with scratch tokens | DONE | 2b37a01 | .conductor/evidence/DV2/dv2-3-cluster-b.md |
 | DV2.4 | Cluster C, state and verdict, and the close: budget counters persisted across engine restarts (the per-process-cap defect), the stage-boundary squash refuses to abort a STALE rebase and asserts ancestry after any abort, bug 27 first-write FK, 429-with-reset-time classified as backoff not AgentError, FU-F1-06 UpdateRunStatus lands; every fix-here row closed via the conductor bug verb, every remaining open row carries a named owner in the ledger | TODO | - | - |
 
 ### DV3 — The inbox - feedback that arrives when you have it, and survives the run
