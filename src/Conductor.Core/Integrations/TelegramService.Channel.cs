@@ -1,4 +1,4 @@
-using Conductor.Core.Integrations.Messaging;
+﻿using Conductor.Core.Integrations.Messaging;
 using Conductor.Models;
 
 namespace Conductor.Core.Integrations;
@@ -8,6 +8,12 @@ namespace Conductor.Core.Integrations;
 /// two ways a message leaves. The rest of the type is Bot API plumbing the seam never sees.</summary>
 public sealed partial class TelegramService
 {
+    /// <summary>DV1.2 — the owner-queue push, straight through to the surface that knows which
+    /// chats may act. It lives on this page rather than beside the other IRunNotifier delegates
+    /// because TelegramService.cs stands at the 500-line architecture ceiling.</summary>
+    public Task PushOwnerQueueAsync(IReadOnlyList<OwnerQueueItem> items, DateTime nowUtc,
+        CancellationToken ct = default) => _surface.PushOwnerQueueAsync(items, nowUtc, ct);
+
     // ── IMessageChannel: the transport, which is all this class is now ──
 
     /// <summary>KS11.1: also the source an injection from this channel is attributed to in the

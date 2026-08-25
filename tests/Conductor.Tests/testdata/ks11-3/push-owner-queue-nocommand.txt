@@ -1,0 +1,5 @@
+<b>waiting until 15:12Z — deploy window full</b>
+unblocks: nothing you can hurry — the next session spawns by itself when the window opens
+why you: no command clears this; it is here so a sleeping run does not read as a dead one
+clears with: nothing to type — it clears itself
+<code>waiting 12m</code>

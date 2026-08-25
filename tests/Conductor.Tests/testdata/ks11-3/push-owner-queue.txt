@@ -1,0 +1,5 @@
+<b>approve KS12 — Ship it (the run is parked on it now)</b>
+unblocks: stage KS12 and everything after it
+why you: green gates are not enough for this stage — it advances only when you say so
+clears with: <code>conductor approve</code>
+<code>waiting 3h 0m</code>

@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Evidence;
 using Conductor.Core.Integrations;
 using Conductor.Core.Integrations.Messaging;
@@ -111,6 +111,11 @@ public sealed class KS11_3GrammarGoldenTests : IDisposable
     [InlineData("push-session-end-rollover")]
     [InlineData("push-run-complete")]
     [InlineData("push-evidence")]
+    // DV1.2 — the owner queue is a push like any other, so it is pinned like any other. Two cases,
+    // because the difference between them is the one thing this message must never get wrong: an
+    // obligation with a command, and one where nothing typed at a prompt clears it.
+    [InlineData("push-owner-queue")]
+    [InlineData("push-owner-queue-nocommand")]
     public async Task Every_push_type_reads_as_headline_proof_telemetry(string name)
     {
         AssertGolden(name, await ComposePushAsync(name));
@@ -207,9 +212,25 @@ public sealed class KS11_3GrammarGoldenTests : IDisposable
                 new EvidenceArtifact(".conductor/evidence/KS11/KS11.3-grammar.md", "text",
                     CheckpointId: "KS11.3", StageId: "KS11", SessionNumber: 7, Sha256: "0f1e2d3c",
                     Bytes: 2048, CreatedUtc: DateTimeOffset.UnixEpoch, Source: "claim"), 2),
+            "push-owner-queue" => await composer.OwnerQueueItemAsync(
+                new OwnerQueueItem("gate-KS12", "ownerGate", "approve KS12 — Ship it (the run is parked on it now)",
+                    "stage KS12 and everything after it", "conductor approve",
+                    GoldenNow.AddHours(-3), 2,
+                    "green gates are not enough for this stage — it advances only when you say so"),
+                GoldenNow),
+            "push-owner-queue-nocommand" => await composer.OwnerQueueItemAsync(
+                new OwnerQueueItem("wait", "wait", "waiting until 15:12Z — deploy window full",
+                    "nothing you can hurry — the next session spawns by itself when the window opens",
+                    "", GoldenNow.AddMinutes(-12), 3,
+                    "no command clears this; it is here so a sleeping run does not read as a dead one"),
+                GoldenNow),
             _ => throw new ArgumentOutOfRangeException(nameof(name), name, "no such push in the rig"),
         };
     }
+
+    /// <summary>DV1.2: the goldens pin an AGE, so the clock is a fixture like every other fact here.
+    /// A DateTime.UtcNow in this rig would rebaseline itself once a minute.</summary>
+    private static readonly DateTime GoldenNow = new(2026, 8, 25, 12, 0, 0, DateTimeKind.Utc);
 
     private static SessionEndPush SessionEnd() => new(
         Number: 7,

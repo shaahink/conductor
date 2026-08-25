@@ -1,4 +1,4 @@
-namespace Conductor.Core.Integrations.Messaging;
+﻿namespace Conductor.Core.Integrations.Messaging;
 
 /// <summary>K5.4 — the built-in shape of every composed push, as the templates an owner overrides.
 /// These ARE the templates: there is no second, hard-coded rendering path that the override merely
@@ -80,5 +80,25 @@ An agent is working through a plan on its own; this is where it reports.
     public const string EvidenceOverflow = """
 <b>evidence</b> — {count} further {noun}, not attached
 {lines}
+""";
+
+    /// <summary>DV1.2 — ONE owner-queue obligation, in CH-5's grammar. Facts: headline, unblocks,
+    /// why, clears, telemetry.
+    ///
+    /// <para>The grammar maps exactly: the headline is what it IS, <c>unblocks</c> and <c>why</c> are
+    /// what MAKES it the owner's rather than the engine's — CH-5's proof half — and <c>clears</c> is
+    /// the ask. The command is the last line and it is in monospace, because it is the one part of
+    /// the message a phone reader taps to copy.</para>
+    ///
+    /// <para>One obligation per message, never a digest. A digest of three is read as one thing to
+    /// deal with later, and the two under the first one are the ones that get lost; it also makes
+    /// "already announced" a property of an ITEM rather than of a batch, which is what lets the
+    /// same item stay unsent on every later boundary.</para></summary>
+    public const string OwnerQueueItem = """
+<b>{headline}</b>
+{unblocks}
+{why}
+{clears}
+{telemetry}
 """;
 }

@@ -1,4 +1,4 @@
-using Conductor.Core.Planning;
+﻿using Conductor.Core.Planning;
 using System.Globalization;
 using System.Text;
 
@@ -109,6 +109,42 @@ public sealed partial class MessageComposer
             ["report"] = ReportLink(),
             ["cost"] = MoneyLine.ForRun(_state.TotalCostUsd, CostCeiling()),
         });
+    }
+
+    /// <summary>DV1.2 — ONE owner-queue obligation, composed in CH-5's grammar.
+    ///
+    /// <para>The queue has been regenerated at every session boundary since SF4.1 and reached nobody:
+    /// <c>.conductor/OWNER-QUEUE.md</c> and <c>GET /owner/queue</c> both require someone to be
+    /// LOOKING, and the case the surface was written for is the one where nobody is. This is the push
+    /// half — and it is composed through <see cref="NotifyTemplate"/> like every other push, so the
+    /// owner can reshape it without rebuilding the engine that is driving their run.</para>
+    ///
+    /// <para><b>The age is the telemetry.</b> Every other push spends that line on money; an
+    /// obligation's number is how long it has been sitting there, which is the fact that decides
+    /// whether the owner deals with it now. A source that cannot date itself says so — a queue entry
+    /// that reads "just now" when it may be six hours old is worse than one that admits it does not
+    /// know (<see cref="OwnerQueueItem.SinceUtc"/>).</para></summary>
+    public Task<string> OwnerQueueItemAsync(OwnerQueueItem item, DateTime nowUtc)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        var age = item.AgeSeconds(nowUtc) is { } secs
+            ? "waiting " + Elapsed(TimeSpan.FromSeconds(secs))
+            : "waiting — age unknown";
+
+        return ComposeAsync("owner-queue", NotifyDefaults.OwnerQueueItem,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["headline"] = EscapeHtml(item.Title),
+                ["unblocks"] = EscapeHtml("unblocks: " + item.Unblocks),
+                ["why"] = item.Detail is { Length: > 0 } d ? EscapeHtml("why you: " + d) : "",
+                // The one line a reader acts on. Empty command is a FACT for a blocked-until wait,
+                // not a gap, and inventing one would send the owner to a keyboard for nothing.
+                ["clears"] = item.Command.Length > 0
+                    ? "clears with: <code>" + EscapeHtml(item.Command) + "</code>"
+                    : "clears with: nothing to type — it clears itself",
+                ["telemetry"] = Telemetry(age),
+            });
     }
 
     /// <summary>The caption that rides the file. Bounded by the caption limit — a quarter of the

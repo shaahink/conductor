@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text;
@@ -50,6 +50,12 @@ public interface IRunNotifier
     /// call site — which is how it came to name the plan twice and give the engine build string more
     /// room than anything the run had delivered.</summary>
     Task PushRunCompleteAsync(RunCompletePush push, CancellationToken ct = default);
+
+    /// <summary>DV1.2: the owner queue, pushed when it changes. One message per obligation, to
+    /// admin chats only, in CH-5's grammar. Defaulted for the same reason
+    /// <see cref="PushOnboardingAsync"/> is: a notifier that reaches nobody has nobody to tell.</summary>
+    Task PushOwnerQueueAsync(IReadOnlyList<OwnerQueueItem> items, DateTime nowUtc,
+        CancellationToken ct = default) => Task.CompletedTask;
 
     /// <summary>K5.3: the notification path can CARRY an evidence artifact. This announces them as
     /// text — K5.4 is what actually sends a photo or a document, and it replaces the body of this

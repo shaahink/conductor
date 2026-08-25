@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
 using Conductor.Core.Planning;
@@ -402,14 +402,19 @@ public sealed partial class RunContext
         catch (Exception) { return new TrackerSnapshot(); }
     }
 
-    /// <summary>SF4.2 — a queue item that arrives while the owner is away from the keyboard reaches
-    /// them. That is the entire point of the surface: `.conductor/OWNER-QUEUE.md` and
-    /// <c>GET /owner/queue</c> both require someone to be LOOKING, and the case this era was written
-    /// for is the one where nobody is.
+    /// <summary>SF4.2 / DV1.2 — a queue item that arrives while the owner is away from the keyboard
+    /// reaches them. That is the entire point of the surface: <c>.conductor/OWNER-QUEUE.md</c> and
+    /// <c>GET /owner/queue</c> both require someone to be LOOKING, and the case this was written for
+    /// is the one where nobody is.
     /// <para>Only NEW items — <see cref="OwnerQueue.Write"/> diffs against what the previous render
     /// already announced — so a run that writes its report twenty times in a session pushes once per
-    /// obligation, not twenty times. Each line carries the two things that make an alert actionable
-    /// rather than merely alarming: what it unblocks, and the exact command that clears it.</para>
+    /// obligation, not twenty times, and a boundary that changed nothing sends nothing at all.</para>
+    /// <para>DV1.2 moved the composition out of this method. It used to build one batched message
+    /// here with a StringBuilder: three obligations arrived as one notification, which reads as one
+    /// thing to deal with later, and it was the only push in the engine that was not an owner-editable
+    /// template. Now the surface sends one message per item in CH-5's grammar, to admin chats only.
+    /// The log line stays here, because the run log must record what was announced whether or not any
+    /// channel was live to carry it.</para>
     /// <para>It lives on the context rather than on <c>RunLoop</c> because the report write path has
     /// four call sites across three classes (RunLoop, SessionRunner, Orchestrator); a private method
     /// on one of them would leave the other two silently unable to announce anything.</para></summary>
@@ -417,27 +422,9 @@ public sealed partial class RunContext
     {
         if (items is not { Count: > 0 }) return;
 
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine(FormattableString.Invariant(
-            $"<b>Owner queue: {items.Count} new item{(items.Count == 1 ? "" : "s")}</b>"));
-        foreach (var item in items)
-        {
-            sb.AppendLine();
-            sb.AppendLine(EscapeHtml(item.Title));
-            sb.AppendLine($"unblocks: {EscapeHtml(item.Unblocks)}");
-            sb.AppendLine(item.Command.Length > 0
-                ? $"clears with: <code>{EscapeHtml(item.Command)}</code>"
-                : "clears with: nothing to type — it clears itself");
-        }
-
         Log($"owner queue: {items.Count} new item(s) — {string.Join("; ", items.Select(i => i.Title))}");
-        _ = Messenger.PushAsync(sb.ToString().TrimEnd());
+        _ = Messenger.PushOwnerQueueAsync(items, DateTime.UtcNow);
     }
-
-    private static string EscapeHtml(string s)
-        => s.Replace("&", "&amp;", StringComparison.Ordinal)
-            .Replace("<", "&lt;", StringComparison.Ordinal)
-            .Replace(">", "&gt;", StringComparison.Ordinal);
 
     /// <summary>W5.1: the work snapshot the engine SCHEDULES on — declared rows carrying the work
     /// graph's status, the same projection the Face's board and sidebar read. See

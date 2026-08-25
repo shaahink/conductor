@@ -1,4 +1,4 @@
-using Conductor.Models;
+﻿using Conductor.Models;
 using Conductor.Core.Evidence;
 using Conductor.Core.Store;
 
@@ -150,6 +150,40 @@ public sealed class RemoteSurface
             await _channel.EnqueueAsync(
                 new OutboundMessage(target.ChatId, message, buttons, Severity: PushSeverity.Alert), ct)
                 .ConfigureAwait(false);
+    }
+
+    /// <summary>DV1.2 — the owner queue reaches the owner. ONE message per obligation, to ADMIN
+    /// chats only.
+    ///
+    /// <para><b>One per item.</b> A digest of three reads as one thing to deal with later, and the
+    /// two under the first one are the ones that get lost. It also makes "already announced" a
+    /// property of an item rather than of a batch — <see cref="OwnerQueue.Write"/> diffs against the
+    /// key marker in the file it is about to overwrite, so an obligation is announced once and stays
+    /// unsent on every later boundary, and one that CLEARS is never announced at all.</para>
+    ///
+    /// <para><b>Admin only</b>, on CH-3's rule for keyboards: every entry carries a control command,
+    /// and a chat that may not run <c>conductor approve</c> is not helped by being told to. An
+    /// observer's copy of the run's STORY is unfiltered (the CH-3 bar, pinned in the grammar
+    /// goldens); the owner's to-do list is not part of that story.</para>
+    ///
+    /// <para><b>Alert, not quiet.</b> Every other severity decision here asks "must the owner act on
+    /// this" — and this surface is the definition of yes.</para></summary>
+    public async Task PushOwnerQueueAsync(IReadOnlyList<OwnerQueueItem> items, DateTime nowUtc, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        if (!_channel.IsLive || items.Count == 0) return;
+
+        var admins = _channel.Targets.Where(t => t.Profile == ChatProfile.Admin).ToList();
+        if (admins.Count == 0) return;
+
+        foreach (var item in items)
+        {
+            var body = await _composer.OwnerQueueItemAsync(item, nowUtc).ConfigureAwait(false);
+            foreach (var target in admins)
+                await _channel.EnqueueAsync(
+                    new OutboundMessage(target.ChatId, body, null, null, null, PushSeverity.Alert), ct)
+                    .ConfigureAwait(false);
+        }
     }
 
     /// <summary>The one write path onto the channel's queue: one copy per configured chat.</summary>
