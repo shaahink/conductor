@@ -4,17 +4,18 @@
 
 ## Handoff (overwrite this block, <=12 lines, no history)
 
-last: DV3.1 CLAIMED. The DTO now carries caption/voice/audio/document/photo[]/reply_to_message/
-  message_thread_id, getFile downloads the bytes, and a file over 20 MB is refused BY NAME before
-  any round trip. 12 stub-wire tests, all green; 362 neighbour tests green (evidence
-  .conductor/evidence/DV3/dv3-1-inbound-kinds.md).
-find: KS11_1SeamBoundaryTests strips comments and greps for \bTelegram - a STRING LITERAL naming
-  Telegram in user-facing text fails the seam rule too. Sentence SHAPE lives in the seam
-  (InboundAck.Refused), the REASON in the adapter (TelegramLimits). Any new TelegramService.*.cs
-  partial must also be added to that test's AdapterFiles list.
-next: DV3.2 - the durable inbox. RemoteSurface.HandleNoteAsync (Messaging/RemoteSurface.Inbound.cs)
-  is the ONE place the write goes; media already lands at <stateDir>/inbox/media/<msgId>-<name>, so
-  the transcript goes beside it. .conductor/.gitignore stays untouched - a test now pins that.
+last: DV3.1 and DV3.2 both CLAIMED. Inbound kinds + getFile + the 20 MB refusal by name; then the
+  durable inbox (atomic notes/<update_id>.json, append-only index, read cursor) and InboxBattery on
+  the IPromptBattery seam. 44 new tests green, 688 neighbours green. Evidence
+  .conductor/evidence/DV3/dv3-1-inbound-kinds.md and dv3-2-the-inbox.md.
+find: BatteryGroup.Fit trims AT A LINE BOUNDARY, so a block quoted only by a ``` fence loses its
+  closing line and un-quotes owner text inside an autonomous prompt. The inbox uses a per-line "> "
+  marker and a short frame headline first; the sweep test asserts that case is REACHABLE before
+  asserting it is safe. MA0045 exempts PUBLIC methods only - never answer it with a #pragma, the
+  analyzer ratchet counts those. An OPTIONAL param on BatterySection broke ControlPlaneServer's
+  CA1506 ratchet; a separate overload fixed it and also keeps the preview out of the inbox.
+next: DV3.3 transcription. Land `conductor inbox list` with its prune (bug #74) - the battery
+  already names a verb that does not exist.
 red: none known. Full battery not run by this session (conductor runs it after exit).
 
 ## Baseline numbers (from run.db)
