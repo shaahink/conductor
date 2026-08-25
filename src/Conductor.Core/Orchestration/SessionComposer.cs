@@ -122,7 +122,10 @@ public static class SessionComposer
 
         // KS7.5: the folded board and the effective stage reach the battery section, so the
         // definition-of-done recap names the card THIS session is holding rather than a placeholder.
-        var battery = prompts.BatterySection(state, store, graph?.Checkpoints(), stage.Id);
+        var battery = prompts.BatterySection(state, store, graph?.Checkpoints(), stage.Id,
+            // DV3.2: the real session boundary. The control plane's prompt preview calls the
+            // same method without this and therefore neither shows nor consumes the inbox.
+            new Inbox.InboxStore(plan.StateDir));
         var consumed = false;
         var prompt = AppendTail(plan, state, graph, kind, assignment,
             battery.Length > 0 ? core.TrimEnd() + "\n\n" + battery : core, ref consumed);

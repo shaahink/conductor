@@ -62,7 +62,7 @@ public sealed partial class TelegramService
     /// <summary>A message that carries a file: fetched if this chat may file, refused by name if it
     /// is too big, and acknowledged either way.</summary>
     private async Task HandleMediaMessageAsync(string chatId, ChatProfile profile, TgMessage msg,
-        InboundMediaKind kind, CancellationToken ct)
+        InboundMediaKind kind, long updateId, CancellationToken ct)
     {
         var file = FileOf(msg, kind);
         InboundMedia? media = null;
@@ -81,7 +81,8 @@ public sealed partial class TelegramService
             media,
             msg.ReplyToMessage?.MessageId,
             msg.ReplyToMessage?.Text ?? msg.ReplyToMessage?.Caption,
-            msg.MessageThreadId);
+            msg.MessageThreadId,
+            updateId);
 
         // One line per inbound note, with the two facts that decide WHERE it belongs (DV3.4): the
         // push it answers and the forum topic it arrived in. Neither is stored yet, and a routing

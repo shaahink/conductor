@@ -2,6 +2,8 @@
 using Conductor.Core.Store;
 using Conductor.Models;
 
+using Conductor.Core.Inbox;
+
 namespace Conductor.Core;
 
 /// <summary>
@@ -287,6 +289,19 @@ public sealed partial class PromptBuilder
     /// the ledger and the run's open bugs — are injected too, so knowledge compounds across sessions.</summary>
     public string BatterySection(RunState? state, IRunStore? store = null,
         IReadOnlyList<TaskItem>? checkpoints = null, string? stageId = null)
+        => BatterySection(state, store, checkpoints, stageId, null);
+
+    /// <summary>DV3.2 — the same composition, plus the project's inbox. A separate overload rather
+    /// than an optional parameter for a measured reason: an optional parameter puts
+    /// <c>InboxStore</c> in the SIGNATURE every caller binds to, which pushed
+    /// <c>ControlPlaneServer</c>'s CA1506 class coupling from 240 to 241 and failed the ratchet. The
+    /// control plane calls the four-argument form and is coupled to nothing new.</summary>
+    /// <param name="inbox">The project's inbox, supplied ONLY by the caller that is really composing
+    /// a session (<c>SessionComposer</c>). Handing it over is what MARKS the carried notes seen, so
+    /// the control-plane's prompt preview deliberately does not pass one: a preview that consumed
+    /// the owner's unread notes would be a read nobody could see.</param>
+    public string BatterySection(RunState? state, IRunStore? store,
+        IReadOnlyList<TaskItem>? checkpoints, string? stageId, Inbox.InboxStore? inbox)
     {
         var cfg = _plan.Batteries;
 
@@ -342,6 +357,21 @@ public sealed partial class PromptBuilder
         {
             var laneBattery = new LaneArtifactBattery(_plan.StateDir, state.CurrentStage ?? "");
             if (!laneBattery.IsEmpty) list.Add(laneBattery);
+        }
+
+        // DV3.2 — what the OWNER said, which no other battery carries. Last in the list on purpose:
+        // a reader meets the engine's own knowledge first and the untrusted text last, framed.
+        if (inbox != null)
+        {
+            var inboxBattery = new InboxBattery(inbox);
+            if (!inboxBattery.IsEmpty)
+            {
+                list.Add(inboxBattery);
+                // The boundary (findings §6.6). Marked here, where the notes have actually been put
+                // in front of a session, and only over what was CARRIED - the counted remainder
+                // stays unread and reaches the next session instead of being skipped.
+                inbox.MarkSeen(inboxBattery.HighestSurfacedId, state?.SessionCounter ?? 0);
+            }
         }
 
         var maxBytes = cfg?.MaxBytes ?? 2048;

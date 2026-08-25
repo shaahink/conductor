@@ -57,6 +57,10 @@ public sealed record InboundMedia(
 /// the push's own id, which is how DV3.4 will find the project without a command.</param>
 /// <param name="ReplyToText">What that message said, kept because the identity stamp inside it is
 /// what names the run.</param>
+/// <param name="UpdateId">DV3.2 — the CHANNEL's own update id, which is the inbox's dedup key: a
+/// courier restart replays every update the messenger still holds (findings §6.2), and without this
+/// the same voice note files twice. Distinct from <c>MessageId</c>, which identifies the message in
+/// its chat rather than the delivery.</param>
 public sealed record InboundNote(
     string ChatId,
     long MessageId,
@@ -64,4 +68,5 @@ public sealed record InboundNote(
     InboundMedia? Media,
     long? ReplyToMessageId,
     string? ReplyToText,
-    long? MessageThreadId);
+    long? MessageThreadId,
+    long UpdateId = 0);

@@ -150,7 +150,10 @@ public sealed partial class TelegramService
         _surface = new RemoteSurface(this, _composer, new CommandRouter(_composer, plan), _state, _store,
             WriteControlFileAsync,
             (instruction, stage) => _log.LogInformation(
-                "Telegram /inject: {Instruction} (stage={Stage})", instruction, stage));
+                "Telegram /inject: {Instruction} (stage={Stage})", instruction, stage),
+            // DV3.2: the note's durable home. Rooted on the plan's state dir, so a note filed here
+            // is read by the next session of THIS project - and by one three weeks from now.
+            inbox: new Inbox.InboxStore(plan.StateDir));
         _cfg = plan.Telegram;
         _token = ResolveToken(plan);
 
@@ -347,7 +350,8 @@ public sealed partial class TelegramService
             // carrying a file goes the inbound route instead (TelegramService.Inbound.cs), which
             // fetches the bytes — or refuses them by name — before the surface sees the note.
             if (KindOf(msg) is { } kind)
-                await HandleMediaMessageAsync(chatId!, ProfileFor(chatId!), msg, kind, ct).ConfigureAwait(false);
+                await HandleMediaMessageAsync(chatId!, ProfileFor(chatId!), msg, kind, upd.UpdateId, ct)
+                    .ConfigureAwait(false);
             else
                 await _surface.HandleMessageAsync(chatId!, ProfileFor(chatId!), msg.Text ?? "", ct)
                     .ConfigureAwait(false);

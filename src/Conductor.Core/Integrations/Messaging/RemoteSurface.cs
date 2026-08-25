@@ -27,6 +27,10 @@ public sealed partial class RemoteSurface
     private readonly Func<string, bool, string?, Task> _writeControl;
     private readonly Action<string, string?> _log;
 
+    /// <summary>DV3.2 — the project's durable inbox, or null when this surface has no project to
+    /// file against.</summary>
+    private readonly Inbox.InboxStore? _inbox;
+
     /// <summary>Chats that have been asked for injection text and whose next plain message is
     /// therefore an instruction rather than a command.</summary>
     private readonly Dictionary<string, bool> _injectionArmed = new(StringComparer.Ordinal);
@@ -46,10 +50,15 @@ public sealed partial class RemoteSurface
     /// <param name="log">(message, argument) for the one line the inject path has always written.</param>
     /// <param name="pulls">KS11.4 / CH-6 — the per-chat evidence budget. Handed in rather than
     /// constructed here so a test can drive its clock; the default is the surface's own policy.</param>
+    /// <param name="inbox">DV3.2 — where a note is RECORDED. Optional because a surface driven by a
+    /// test or a channel with no project behind it has nowhere to file; when it is null the note is
+    /// still acknowledged, and the acknowledgement says the file was kept rather than that the note
+    /// was.</param>
     public RemoteSurface(IMessageChannel channel, MessageComposer composer, CommandRouter router,
         RunState state, IRunStore? store, Func<string, bool, string?, Task> writeControl,
-        Action<string, string?> log, PullRateLimiter? pulls = null)
+        Action<string, string?> log, PullRateLimiter? pulls = null, Inbox.InboxStore? inbox = null)
     {
+        _inbox = inbox;
         _pulls = pulls ?? new PullRateLimiter(
             MessageComposer.EvidencePullsPerWindow, MessageComposer.EvidencePullWindow);
         _channel = channel;

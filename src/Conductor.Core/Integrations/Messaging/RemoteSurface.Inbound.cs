@@ -30,9 +30,49 @@ public sealed partial class RemoteSurface
             return;
         }
 
+        // Filed BEFORE it is acknowledged, so the acknowledgement is never a claim the disk did not
+        // back: if the write throws, the sender hears nothing rather than "kept" about a note that
+        // is not.
+        var filed = FileNote(note);
+
         var ack = InboundAck.For(note);
         if (ack.Length == 0) return;
+        if (!filed) return;   // a duplicate delivery (findings §6.2) - already answered once
 
         await ReplyAsync(note.ChatId, ack, null, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Writes the note to the project's inbox. False when it was ALREADY there — the
+    /// ordinary outcome of a courier replaying updates after a restart, and the reason the sender is
+    /// not acknowledged twice for one voice note.</summary>
+    private bool FileNote(InboundNote note)
+    {
+        if (_inbox is null) return true;
+
+        var media = note.Media;
+        return _inbox.Append(new Inbox.InboxNote(
+            Id: note.UpdateId != 0 ? note.UpdateId : note.MessageId,
+            ReceivedUtc: DateTime.UtcNow,
+            ChatId: note.ChatId,
+            Kind: media?.Kind.ToString().ToLowerInvariant() ?? Inbox.InboxNote.TextKind,
+            Text: note.Text,
+            MediaPath: Beside(media?.LocalPath),
+            TranscriptPath: null,
+            ReplyToMessageId: note.ReplyToMessageId,
+            ReplyToText: note.ReplyToText,
+            MessageThreadId: note.MessageThreadId));
+    }
+
+    /// <summary>The media path as the note records it: relative to the inbox when it lives there,
+    /// which is what makes "media beside transcript" true of a directory somebody has MOVED, and
+    /// absolute otherwise rather than silently wrong.</summary>
+    private string? Beside(string? localPath)
+    {
+        if (localPath is not { Length: > 0 } path || _inbox is null) return localPath;
+        var root = _inbox.Dir;
+        return path.StartsWith(root, StringComparison.OrdinalIgnoreCase)
+            ? path[root.Length..].TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                 .Replace(Path.DirectorySeparatorChar, '/')
+            : path;
     }
 }
