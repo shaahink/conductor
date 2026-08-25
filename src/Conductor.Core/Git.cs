@@ -287,9 +287,21 @@ public static partial class Git
             var aborted = false;
             if (RebaseStateDir(repo) is { } stuck)
             {
+                // DV2.4, bug #67: this abort is a destructive command aimed at state THIS process did
+                // not create. Ask what it would do before running it — see Git.Rebase.cs for the run
+                // where it silently rewound a branch by 28 commits.
+                if (StaleRebaseReason(repo, stuck) is { } stale)
+                    return Refuse($"a stale rebase state was found and left untouched: {stale}. Clear it by " +
+                                  "hand in a checkout you have inspected before this stage can squash");
                 var abort = Run("rebase", "--abort");
                 if (abort.ExitCode != 0 || RebaseStateDir(repo) != null)
                     return Fail($"a half-finished rebase ({Path.GetFileName(stuck)}) could not be aborted", abort);
+                // And what the abort DID: the stage's own start head must still be reachable, or the
+                // range this method is about no longer exists. Without this, a rewind reads downstream
+                // as the innocuous "nothing to squash" and the stage advances over lost commits.
+                if (Exec(repo, "merge-base", "--is-ancestor", sinceSha, "HEAD").ExitCode != 0)
+                    return Fail($"aborting the half-finished rebase rewound HEAD past the stage's start head " +
+                                $"({Short(sinceSha)}) — refusing to rewrite history on a branch that just lost commits", abort);
                 aborted = true;
             }
 
