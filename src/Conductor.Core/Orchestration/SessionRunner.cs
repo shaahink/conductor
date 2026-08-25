@@ -377,7 +377,18 @@ public sealed partial class SessionRunner
                 return;
             }
 
-            var limitEvidence = (agent.ResultText ?? "") + " " + (exit != 0 && agent.ResultText == null ? LastRawTail(rawLog) : "");
+            // DV2.4, bug #69: the gate on the raw tail was `agent.ResultText == null`, and a backend
+            // refusal does not arrive that way. The Claude CLI answers a 429 with a result envelope —
+            // `{"type":"result","is_error":true,"result":"","total_cost_usd":0}` — so ResultText is
+            // EMPTY, not null, and the tail carrying the actual "usage limit reached" line was never
+            // read. Measured 2026-08-15, run 9647f1b8: `session #N exited (code 1, 0m, $0.00)` every
+            // ~19 seconds, no "usage limit detected" line anywhere, attempts 2→8 spent in three
+            // minutes and the stage ended NEEDS HUMAN over an account limit. Whitespace is the same
+            // "the agent said nothing" as null, and it is the only case that reaches the tail, so the
+            // false-positive surface does not widen: a session that produced real text is still
+            // judged on its text alone.
+            var saidNothing = string.IsNullOrWhiteSpace(agent.ResultText);
+            var limitEvidence = (agent.ResultText ?? "") + " " + (exit != 0 && saidNothing ? LastRawTail(rawLog) : "");
 
             // W3.2: a dead credential is checked BEFORE the usage limit, because it looks like one
             // (both are refusals from the backend) and is nothing like one: backing off 30 minutes
@@ -385,7 +396,7 @@ public sealed partial class SessionRunner
             // judgement died with the credential. U-series #13 was recorded as a generic AgentError
             // and burned the stage's remaining attempts against a 401.
             var authEvidence = (agent.AuthFailure ?? "") + " " + limitEvidence + " " +
-                               (agent.ResultText == null ? LastRawTail(rawLog) : "");
+                               (saidNothing ? LastRawTail(rawLog) : "");
             // budgetKilled short-circuits both refusal checks below: WE ended this process, so its
             // nonzero exit and truncated tail are our own doing. Read as a dead credential it would go
             // to NeedsHuman; as a rate limit it would park 30 minutes. Both are wrong answers here.
@@ -409,9 +420,14 @@ public sealed partial class SessionRunner
                     return;
                 }
                 _queueResume(rec, "usage/rate limit backoff", false, false);
-                _ctx.BackoffUntil = DateTime.UtcNow.AddMinutes(_ctx.Plan.Limits.BackoffMinutes);
+                // DV2.4, bug #69: when the backend says when it lifts, wait that long instead of the
+                // plan's flat guess. A 5-hour window slept off 30 minutes at a time is ten more
+                // refusals; a 90-second one slept off for 30 minutes is 28 minutes of idle engine.
+                var now = DateTime.UtcNow;
+                var (wait, source) = BackoffWindow(limitEvidence, now);
+                _ctx.BackoffUntil = now.Add(wait);
                 _ctx.State.Status = RunStatus.Backoff;
-                _ctx.Log($"usage limit detected — backing off {_ctx.Plan.Limits.BackoffMinutes}m (until {_ctx.BackoffUntil:HH:mm} UTC)");
+                _ctx.Log($"usage limit detected — backing off {wait.TotalMinutes:0}m ({source}, until {_ctx.BackoffUntil:HH:mm} UTC)");
                 _saveAndReport();
                 return;
             }
@@ -474,10 +490,40 @@ public sealed partial class SessionRunner
         return SessionResult.Parse(resultText).ToCanonical();
     }
 
+    /// <summary>DV2.4, bug #69 — how long to wait out a usage limit, and on whose authority. The
+    /// backend's own reset time when it gave one (a 5-hour window slept off 30 minutes at a time is
+    /// ten more refusals; a 90-second one slept off for 30 minutes is 28 minutes of idle engine),
+    /// the plan's flat <c>backoffMinutes</c> otherwise. A method rather than three lines inline
+    /// because <see cref="RunAsync"/> sits ON the CA1502/CA1505 ratchet.</summary>
+    private (TimeSpan Wait, string Source) BackoffWindow(string evidence, DateTime utcNow)
+    {
+        var stated = Providers.ProviderText.ResetWait(evidence, utcNow);
+        return stated is null
+            ? (TimeSpan.FromMinutes(_ctx.Plan.Limits.BackoffMinutes), "plan default")
+            : (stated.Value, "reset time given by the backend");
+    }
+
+    /// <summary>The last lines the agent's process actually wrote — the only place a backend refusal
+    /// appears when the CLI's own result envelope is empty.
+    /// <para>DV2.4, bug #69: this used <c>File.ReadAllText</c>, which opens with
+    /// <c>FileShare.Read</c>. Every caller runs while the session is still alive and
+    /// <see cref="AgentSession"/> holds the same file open for WRITING, so Windows refused the read,
+    /// the <c>IOException</c> was swallowed, and the tail came back EMPTY — always. The 429
+    /// classifier was reading a blank string and filing rate limits as agent errors. Measured with a
+    /// probe log line: <c>exit=1 said=True rt=[] tail=[] evid=[ ]</c> on a session whose raw log
+    /// contained "Claude AI usage limit reached" on its last line.</para>
+    /// <para><c>FileShare.ReadWrite</c> says what is true: another handle is writing this file and
+    /// that is fine, a tail of a live log is allowed to be a snapshot.</para></summary>
     private string LastRawTail(string rawLogPath)
     {
-        try { return GateRunner.TailOf(File.ReadAllText(rawLogPath), 10); }
+        try
+        {
+            using var fs = new FileStream(rawLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(fs);
+            return GateRunner.TailOf(reader.ReadToEnd(), 10);
+        }
         catch (IOException) { return ""; }
+        catch (UnauthorizedAccessException) { return ""; }
     }
 
     private static string Trunc(string s, int max) => s.Length <= max ? s : s[..max] + "\u2026";
