@@ -1,10 +1,10 @@
 ﻿# Conductor — Divan - the chancellery: inbox, courier, and the record that gets out run report
 
-_Updated 2026-08-25 19:23 UTC · branch `feat/divan` · HEAD `83427b4`_
+_Updated 2026-08-25 20:20 UTC · branch `feat/divan` · HEAD `103e387`_
 
 **Status:** Idle
-**Stage:** DV1 — The channel that says so - health made loud, the queue that reaches you · attempts used 0
-**Checkpoints:** 2/23 done · **Sessions run:** 2 · **Cost:** $16.0424 (agent $16.0285 + gates $0.0140) · **Tokens:** 200,295 in / 93,184 out
+**Stage:** DV2 — The sweep - every known defect triaged, the clusters burned down · attempts used 0 · working ▸ DV2.3
+**Checkpoints:** 4/23 done · **Sessions run:** 3 · **Cost:** $39.5938 (agent $39.5705 + gates $0.0233) · **Tokens:** 474,596 in / 238,131 out
 **Confirmed phases:** DV1
 
 ## Stage progress
@@ -12,7 +12,7 @@ _Updated 2026-08-25 19:23 UTC · branch `feat/divan` · HEAD `83427b4`_
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | DV1 | The channel that says so - health made loud, the queue that reaches you | ██████████ 2/2 | confirmed ✓ |
-| DV2 | The sweep - every known defect triaged, the clusters burned down | ░░░░░░░░░░ 0/4 | todo |
+| DV2 | The sweep - every known defect triaged, the clusters burned down | █████░░░░░ 2/4 | **← active** |
 | DV3 | The inbox - feedback that arrives when you have it, and survives the run | ░░░░░░░░░░ 0/4 | todo |
 | DV4 | The courier - one bot, always awake, outliving the run | ░░░░░░░░░░ 0/4 | todo |
 | DV5 | The cloud, the safe shapes - an owner verb, a flagged experiment | ░░░░░░░░░░ 0/2 | todo |
@@ -28,12 +28,12 @@ _Updated 2026-08-25 19:23 UTC · branch `feat/divan` · HEAD `83427b4`_
 
 </details>
 
-<details><summary>DV2 — The sweep - every known defect triaged, the clusters burned down (0/4)</summary>
+<details><summary>DV2 — The sweep - every known defect triaged, the clusters burned down (2/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | ⬜ TODO | - |
-| DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | ⬜ TODO | - |
+| DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | ✅ DONE | - |
+| DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | ✅ DONE | - |
 | DV2.3 | Cluster B, channels: getUpdates 409 handling that names the other consumer and backs off; the false will-deliver-nothing startup line reads the resolved ChatCount; the telegram test endpoint survives a chats-only plan; report-push failures log their reason - all proven at the stub seam with scratch tokens | ⬜ TODO | - |
 | DV2.4 | Cluster C, state and verdict, and the close: budget counters persisted across engine restarts (the per-process-cap defect), the stage-boundary squash refuses to abort a STALE rebase and asserts ancestry after any abort, bug 27 first-write FK, 429-with-reset-time classified as backoff not AgentError, FU-F1-06 UpdateRunStatus lands; every fix-here row closed via the conductor bug verb, every remaining open row carries a named owner in the ledger | ⬜ TODO | - |
 
@@ -97,6 +97,7 @@ _Updated 2026-08-25 19:23 UTC · branch `feat/divan` · HEAD `83427b4`_
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | DV1 | Deliver | 1 | 08-25 18:21 | 0:03 | Interrupted |  | 0 |  |  |  |  |
 | 2 | DV1 | Resume | 1r1 | 08-25 18:25 | 0:49 | Advanced | DV1.1 DV1.2 | 6 | engine-fast:OK · face-fast:OK | $16.0285 | $0.0140 | 200,295/93,184 |
+| 3 | DV2 | Deliver | 1 | 08-25 19:23 | 0:54 | Advanced | DV2.1 DV2.2 | 5 | engine-fast:OK · face-fast:OK | $23.5420 | $0.0093 | 274,301/144,947 |
 
 ## Money
 
@@ -129,6 +130,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-25 20:23:54  ▪ gate face-full pass [phase]  (34.4s)
 08-25 20:23:54  ✓ checkpoint DV1.1 confirmed
 08-25 20:23:54  ✓ checkpoint DV1.2 confirmed
+08-25 20:23:54  ▸ stage DV1 confirmed  (1h02m04s)
+08-25 20:23:55  ▸ stage DV2 entered — The sweep - every known defect triaged, the clusters burned down
+08-25 20:23:55  • session #3 DV2 Deliver started (attempt 1/8)
+08-25 21:20:15  ▪ gate engine-fast pass [session]  (1m04s)
+08-25 21:20:15  ▪ gate face-fast pass [session]  (29.1s)
 ```
 
 ## Health
@@ -136,7 +142,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 2 · retries 0 (0 %) · overall Warn
+sessions 3 · retries 0 (0 %) · overall Warn
 ⚠ [context-saturation] session #2: 23,394,515 context tokens (≥ 20,000,000)
 ```
 
@@ -146,7 +152,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/divan
-working tree: M .conductor/REPORT.md, M plans/divan/TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
@@ -159,6 +165,12 @@ vs upstream: up to date
   - [`c3c071f`](https://github.com/shaahink/conductor/commit/c3c071f) evidence(DV1.1): the live rig, the three surfaces, and a green suite
   - [`9ed3de1`](https://github.com/shaahink/conductor/commit/9ed3de1) test(DV1.1): rebaseline the cmd-status golden for the channels line
   - [`b9ea19f`](https://github.com/shaahink/conductor/commit/b9ea19f) feat(DV1.1): a configured-but-dead channel is loud in all three surfaces
+- **s3 (DV2 Deliver)** — 5 commit(s):
+  - [`103e387`](https://github.com/shaahink/conductor/commit/103e387) fix(DV2.3, part): cluster B's four source fixes, tests still owed
+  - [`dad5030`](https://github.com/shaahink/conductor/commit/dad5030) docs(divan): the handoff for DV2.3 - cluster A closed, and the two traps in cluster B
+  - [`b8efd63`](https://github.com/shaahink/conductor/commit/b8efd63) fix(DV2.2): the battery budget is shared, and the argv wall is checked where it is hit
+  - [`d8dac20`](https://github.com/shaahink/conductor/commit/d8dac20) docs(divan): the handoff for DV2.2 - where the ids live now, and what the map got wrong
+  - [`c86dcec`](https://github.com/shaahink/conductor/commit/c86dcec) triage(DV2.1): fifty defects, one disposition each, and three corrections to the map
 
 ## Phase handovers (audit)
 
@@ -181,34 +193,34 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> **DV1 complete — channel health loud in four surfaces, owner queue pushed per item**
-> - DV1.1: the edge run's github-no-token failure now surfaces in REPORT.md, /status, the owner queue, and fails doctor; proven on a live scratch rig
-> - DV1.2: one obligation per push, admin-only, KS11.3 grammar, three goldens incl. a wire-level one; no-change-no-push and cleared-is-silent now asserted
-> - Suite 3126 passed / 0 failed; Reporter.cs and TelegramService.cs split at the 500-line ceiling rather than raising it
+> **DV2.1 and DV2.2 landed with evidence; DV2.3 part-built and honestly unclaimed**
+> - DV2.1: 50 defects triaged, 14 FIX / 36 DEFER, numbering settled against the real table, four #46-lost rows recovered into the live store as #70-#73
+> - DV2.2: battery budget now shared per battery with a rendered notice (#62, #63); argv ceiling moved to Core and refused at spawn (#15), proven live on a scratch rig at 9732 vs 8191; #55 half-fixed and stated; #21 measured as already delivere…
+> - DV2.3 source fixes for #38/#64/#65/#66 committed and green, but tests and evidence are owed, so the card went back to TODO with an amendment
 >
-> artefacts: src/Conductor.Core/Integrations/ChannelHealth.cs, src/Conductor.Core/Reporter.Channels.cs, src/Conductor.Core/OwnerQueue.cs, src/Conductor.Core/Integrations/Messaging/{MessageComposer.cs, NotifyDefaults.cs, RemoteSurface.cs, MessageComposer.Views.cs}, src/Conductor/Commands/DoctorCommand.cs
+> artefacts: c86dcec, b8efd63, 103e387, d8dac20, dad5030, src/Conductor.Core/ArgvLimits.cs, src/Conductor.Core/PromptBattery.cs, src/Conductor.Core/Integrations/TelegramService.Polling.cs
 >
-> evidence: .conductor/evidence/DV1/dv1-1-live-rig.txt, .conductor/evidence/DV1/dv1-2-owner-queue-push.txt
+> evidence: .conductor/evidence/DV2/dv2-1-triage-ledger.md, .conductor/evidence/DV2/dv2-1-measurements.txt, .conductor/evidence/DV2/dv2-2-cluster-a.txt
 >
-> gaps: courier channel health is DV4's third Probe* method (seam in place, no surface changes needed); owner-queue pushes carry no buttons by design
+> gaps: DV2.3 needs stub-seam regression tests, an evidence artifact, and `conductor bug fix` for 38/64/65/66. The last full suite (3140 passed, 0 failed) predates the DV2.3 edits; only a scoped run covers them, so the next session should run a full one. DV2.4 untouched.
 
 ## Tracker handoff
 
 ```
-last: DV1 is complete - both checkpoints claimed with evidence under .conductor/evidence/DV1/.
-  ChannelHealthProbe (src/Conductor.Core/Integrations/ChannelHealth.cs) is DERIVED from plan+env,
-  never stored, and four surfaces read it: REPORT.md header, /status, the owner queue, and doctor
-  (configured-but-dead is now a FAIL, never-configured stays a warn). The owner queue is pushed
-  one obligation per message to admin chats only, in the KS11.3 grammar, golden-pinned at the
-  wire. Suite 3126 passed / 0 failed.
-next: DV2.1 - the triage ledger. Read docs/dev/DIVAN-BUG-SWEEP-2026-08-25.md; every row of its
-  three ledgers needs a disposition and no row may be dropped. Note that four files in the
-  messaging area now sit within 55 lines of the 500-line architecture ceiling (Reporter.cs 497,
-  TelegramService.cs 497, MessageComposer.cs 451, RunContext.cs 446) - the next addition to any
-  of them must be an extraction into a partial, not an append. The knowledge ledger carries the
-  full DV1 wiring map; read it before touching any channel or push code.
+last: DV2.1 (c86dcec) and DV2.2 (b8efd63) are CLAIMED with evidence. DV2.3 is PART-BUILT and
+  deliberately NOT claimed - the source fixes are committed and green, the regression tests are not
+  written. The map for all of DV2 is .conductor/evidence/DV2/dv2-1-triage-ledger.md: 50 defects,
+  14 FIX, 36 DEFER with named owners. TAKE YOUR IDS FROM THAT FILE, not the prompt battery.
+next: finish DV2.3. Landed already, needing only tests + evidence: #66 ProcessRunner.FailureReason
+  (git writes refusals to STDERR, which is why the reason was empty); #64 the started line now
+  counts ChatCount; #65 the test endpoint uses Targets, admin first; #38 the new partial
+  TelegramService.Polling.cs detects 409, names the other consumer from Telegram's own Description
+  field, and backs off 5s per streak capped at 60s (ConflictBackoff is internal and deterministic
+  so a test can state the delay). Write the stub-seam tests - K5_4TransportTests' RecordingBotApi
+  is the harness - then evidence, `conductor bug fix 38 64 65 66`, and claim.
+red: none. Scoped suite green; the last full suite (3140/0) predates the DV2.3 edits, so run one.
 ```

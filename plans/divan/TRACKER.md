@@ -4,26 +4,25 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV2.1 (c86dcec) and DV2.2 (b8efd63) are CLAIMED with evidence. DV2.3 is PART-BUILT and
-  deliberately NOT claimed - the source fixes are committed and green, the regression tests are not
-  written. The map for all of DV2 is .conductor/evidence/DV2/dv2-1-triage-ledger.md: 50 defects,
-  14 FIX, 36 DEFER with named owners. TAKE YOUR IDS FROM THAT FILE, not the prompt battery.
-next: finish DV2.3. Landed already, needing only tests + evidence: #66 ProcessRunner.FailureReason
-  (git writes refusals to STDERR, which is why the reason was empty); #64 the started line now
-  counts ChatCount; #65 the test endpoint uses Targets, admin first; #38 the new partial
-  TelegramService.Polling.cs detects 409, names the other consumer from Telegram's own Description
-  field, and backs off 5s per streak capped at 60s (ConflictBackoff is internal and deterministic
-  so a test can state the delay). Write the stub-seam tests - K5_4TransportTests' RecordingBotApi
-  is the harness - then evidence, `conductor bug fix 38 64 65 66`, and claim.
-red: none. Scoped suite green; the last full suite (3140/0) predates the DV2.3 edits, so run one.
-
+last: DV2.3 is CLAIMED (evidence .conductor/evidence/DV2/dv2-3-cluster-b.md, commits 2b37a01 and
+  96433ec). #38/#64/#65/#66 closed with `conductor bug fix`. 22 tests, and one of them found the
+  previous session's #66 fix was wrong: FailureReason kept the LAST 3 lines, so a real `git push`
+  refusal read as three lines of advice and none of the reason. It takes the head now.
+next: DV2.4, cluster C, from the same map (.conductor/evidence/DV2/dv2-1-triage-ledger.md, the
+  cluster C table): #67 stale-rebase squash guard, #68 budget restart-at-zero, #71 first-write FK,
+  #69 429-as-backoff, FU-F1-06 UpdateRunStatus - then close the ledger, every DEFER row owned.
+harness: two things worth reusing. RecordingBotApi now does getMe, an opt-in 409 body and a poll
+  counter (all default-off). And the pre-fix INVERSION PROBE: invert each fix in the source, re-run
+  the scoped filter, keep the log, `git checkout --` to restore - a regression test that has never
+  been red proves nothing, and this is what caught #66. See the probe table in the evidence.
+red: none. Full suite 3161/0 (.conductor/evidence/DV2/dv2-3-full-suite.log).
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 23 |
-| Done | 0 |
+| Done | 2 |
 | Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
@@ -35,15 +34,15 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV1.1 | Channel health is loud: every configured outbound channel carries live state landing in the REPORT.md header, /status and the owner queue within one boundary of a failure; configured-but-dead refused at preflight or parked loudly, never logged-and-ignored; the seeded proof is the edge run's own github-block-without-token failure, pinned by test in all three surfaces | DONE | b9ea19f | .conductor/evidence/DV1/dv1-1-live-rig.txt |
-| DV1.2 | Owner queue pushed to admin chats on change: one item per push with the exact clearing command, KS11.3 grammar, golden-pinned; no-change-no-push proven so the channel is signal, not noise | DONE | b9ea19f | .conductor/evidence/DV1/dv1-2-owner-queue-push.txt |
+| DV1.1 | Channel health is loud: every configured outbound channel carries live state landing in the REPORT.md header, /status and the owner queue within one boundary of a failure; configured-but-dead refused at preflight or parked loudly, never logged-and-ignored; the seeded proof is the edge run's own github-block-without-token failure, pinned by test in all three surfaces | DONE ✓ | b9ea19f | .conductor/evidence/DV1/dv1-1-live-rig.txt |
+| DV1.2 | Owner queue pushed to admin chats on change: one item per push with the exact clearing command, KS11.3 grammar, golden-pinned; no-change-no-push proven so the channel is signal, not noise | DONE ✓ | b9ea19f | .conductor/evidence/DV1/dv1-2-owner-queue-push.txt |
 
 ### DV2 — The sweep - every known defect triaged, the clusters burned down
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | TODO | - | - |
-| DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | TODO | - | - |
+| DV2.1 | Triage ledger: every row of DIVAN-BUG-SWEEP's three ledgers dispositioned fix-this-stage or deferred-with-named-owner, committed as evidence; the number-46-lost karvan rows recovered from the imported copy and the dangling bug-44 reference settled; no row dropped | DONE | c86dcec | .conductor/evidence/DV2/dv2-1-triage-ledger.md |
+| DV2.2 | Cluster A, prompt composition: per-battery budget shares so the knowledge ledger can no longer starve the open-bugs battery, with a rendered notice when a battery is dropped and a regression test on a grown ledger; bug 15 (prompt-size silent stop) and bug 21 (argv-ceiling warning) closed with tests | DONE | c86dcec | .conductor/evidence/DV2/dv2-2-cluster-a.txt |
 | DV2.3 | Cluster B, channels: getUpdates 409 handling that names the other consumer and backs off; the false will-deliver-nothing startup line reads the resolved ChatCount; the telegram test endpoint survives a chats-only plan; report-push failures log their reason - all proven at the stub seam with scratch tokens | TODO | - | - |
 | DV2.4 | Cluster C, state and verdict, and the close: budget counters persisted across engine restarts (the per-process-cap defect), the stage-boundary squash refuses to abort a STALE rebase and asserts ancestry after any abort, bug 27 first-write FK, 429-with-reset-time classified as backoff not AgentError, FU-F1-06 UpdateRunStatus lands; every fix-here row closed via the conductor bug verb, every remaining open row carries a named owner in the ledger | TODO | - | - |
 
