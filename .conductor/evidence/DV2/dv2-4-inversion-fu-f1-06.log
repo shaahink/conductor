@@ -1,0 +1,13 @@
+Test run for C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:11.80]     Conductor.Tests.HarnessTests.ARunParkedByTheEngine_ReadsBackAsParkedFromTheStore_NotAsRunning [FAIL]
+  Failed Conductor.Tests.HarnessTests.ARunParkedByTheEngine_ReadsBackAsParkedFromTheStore_NotAsRunning [11 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: paused
+Actual:   running
+  Stack Trace:
+     at Conductor.Tests.HarnessTests.ARunParkedByTheEngine_ReadsBackAsParkedFromTheStore_NotAsRunning() in C:\Code\conductor\tests\Conductor.Tests\HarnessTests.Budget.cs:line 130
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 11 s - Conductor.Tests.dll (net10.0)

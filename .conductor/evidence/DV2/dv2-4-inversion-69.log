@@ -1,0 +1,13 @@
+Test run for C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:03.57]     Conductor.Tests.HarnessTests.ABackendRateLimitParksTheRunAsBackoff_WithoutSpendingAnAttempt [FAIL]
+  Failed Conductor.Tests.HarnessTests.ABackendRateLimitParksTheRunAsBackoff_WithoutSpendingAnAttempt [2 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: LimitBackoff
+Actual:   AgentError
+  Stack Trace:
+     at Conductor.Tests.HarnessTests.ABackendRateLimitParksTheRunAsBackoff_WithoutSpendingAnAttempt() in C:\Code\conductor\tests\Conductor.Tests\HarnessTests.RateLimit.cs:line 72
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 2 s - Conductor.Tests.dll (net10.0)

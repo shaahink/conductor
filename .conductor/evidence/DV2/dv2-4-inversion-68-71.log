@@ -1,0 +1,11 @@
+Test run for C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:03.53]     Conductor.Tests.HarnessTests.OnceExit_LeavesTheBudgetInTheStore_AndTheFirstStateWriteOnAFreshDbSurvives [FAIL]
+  Failed Conductor.Tests.HarnessTests.OnceExit_LeavesTheBudgetInTheStore_AndTheFirstStateWriteOnAFreshDbSurvives [2 s]
+  Error Message:
+   a --once exit persisted PerRunCostUsd=0 — a restart would resume from zero
+  Stack Trace:
+     at Conductor.Tests.HarnessTests.OnceExit_LeavesTheBudgetInTheStore_AndTheFirstStateWriteOnAFreshDbSurvives() in C:\Code\conductor\tests\Conductor.Tests\HarnessTests.Budget.cs:line 69
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 2 s - Conductor.Tests.dll (net10.0)

@@ -1,0 +1,24 @@
+Test run for C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:02.07]     Conductor.Tests.DV2_4StaleRebaseGuardTests.StaleRebaseState_IsRefused_AndTheBranchKeepsEveryCommit [FAIL]
+  Failed Conductor.Tests.DV2_4StaleRebaseGuardTests.StaleRebaseState_IsRefused_AndTheBranchKeepsEveryCommit [1 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Refused
+Actual:   NothingToSquash
+  Stack Trace:
+     at Conductor.Tests.DV2_4StaleRebaseGuardTests.StaleRebaseState_IsRefused_AndTheBranchKeepsEveryCommit() in C:\Code\conductor\tests\Conductor.Tests\DV2_4StaleRebaseGuardTests.cs:line 72
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:03.76]     Conductor.Tests.DV2_4StaleRebaseGuardTests.AnAbortThatRewoundPastTheStageStartHead_FailsInsteadOfReportingNothingToSquash [FAIL]
+  Failed Conductor.Tests.DV2_4StaleRebaseGuardTests.AnAbortThatRewoundPastTheStageStartHead_FailsInsteadOfReportingNothingToSquash [1 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Failed
+Actual:   NothingToSquash
+  Stack Trace:
+     at Conductor.Tests.DV2_4StaleRebaseGuardTests.AnAbortThatRewoundPastTheStageStartHead_FailsInsteadOfReportingNothingToSquash() in C:\Code\conductor\tests\Conductor.Tests\DV2_4StaleRebaseGuardTests.cs:line 105
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+
+Failed!  - Failed:     2, Passed:     1, Skipped:     0, Total:     3, Duration: 5 s - Conductor.Tests.dll (net10.0)
