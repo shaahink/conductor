@@ -1,0 +1,59 @@
+DV1.2 - the owner queue pushed on change: one item per push, admin only, no-change-no-push
+generated 2026-08-25 20:14 local, commit 230cd59, branch feat/divan
+
+--- WIRE PROOF: a live TelegramService against a recording Bot API stub -----
+KS11.1's rig: a real TelegramService started as a hosted service, a scratch
+token in a temp state dir, TelegramConfig.ApiBaseUrl pointed at a local stub
+(trap 4 - no rig may hold a real token). TWO obligations pushed; the stub
+recorded TWO sendMessage calls, not one digest. golden:
+tests/Conductor.Tests/testdata/ks11/push-owner-queue.txt
+
+sendMessage [notify]
+    <i>Karvansara edge · s12</i>
+    <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
+    <b>approve KS12 — The era closes (the run is parked on it now)</b>
+    unblocks: stage KS12 and everything after it
+    why you: green gates are not enough for this stage — it advances only when you say so
+    clears with: <code>conductor approve</code>
+    <code>waiting 3h 0m</code>
+
+sendMessage [notify] [reply to 4242]
+    <i>Karvansara edge · s12</i>
+    <i>karvansara-golden@feat/karvansara-edge · KS11 — Chapar — the remote surface · KS11.2</i>
+    <b>KS11.4 is BLOCKED — evidence on demand</b>
+    unblocks: stage KS11 — a blocked card holds it open
+    why you: unblock it to put it back in front of an agent, or retire it with task --skipped
+    clears with: <code>conductor task --todo KS11.4</code>
+    <code>waiting — age unknown</code>
+
+--- GRAMMAR GOLDENS (KS11.3 CH-5 shape, owner-overridable template) ---------
+tests/Conductor.Tests/testdata/ks11-3/push-owner-queue.txt
+<b>approve KS12 — Ship it (the run is parked on it now)</b>
+unblocks: stage KS12 and everything after it
+why you: green gates are not enough for this stage — it advances only when you say so
+clears with: <code>conductor approve</code>
+<code>waiting 3h 0m</code>
+
+tests/Conductor.Tests/testdata/ks11-3/push-owner-queue-nocommand.txt
+<b>waiting until 15:12Z — deploy window full</b>
+unblocks: nothing you can hurry — the next session spawns by itself when the window opens
+why you: no command clears this; it is here so a sleeping run does not read as a dead one
+clears with: nothing to type — it clears itself
+<code>waiting 12m</code>
+
+--- THE FOUR PROPERTIES, by test -------------------------------------------
+  Passed Conductor.Tests.DV1_2OwnerQueuePushTests.ANewObligationBesideAnAnnouncedOne_PushesOnlyTheNewOne [35 ms]
+  Passed Conductor.Tests.DV1_2OwnerQueuePushTests.AnObligationWithNoCommand_SaysSo_RatherThanInventingOne [2 ms]
+  Passed Conductor.Tests.DV1_2OwnerQueuePushTests.ADeadChannelSendsNothing [3 ms]
+  Passed Conductor.Tests.DV1_2OwnerQueuePushTests.ThreeObligations_ArriveAsThreeMessages_NotOneDigest [7 ms]
+  Passed Conductor.Tests.DV1_2OwnerQueuePushTests.AnObligationBuzzes [3 ms]
+  Passed Conductor.Tests.DV1_2OwnerQueuePushTests.AClearedObligationIsNotAnnounced [3 ms]
+  Passed Conductor.Tests.DV1_2OwnerQueuePushTests.AnUnchangedQueueSendsNothingOnEveryLaterBoundary [4 ms]
+  Passed Conductor.Tests.DV1_2OwnerQueuePushTests.AnObserverChatIsNotToldWhatOnlyTheOwnerCanDo [3 ms]
+  Passed Conductor.Tests.DV1_2OwnerQueuePushTests.AnAllObserverRoster_SendsNothingAndDoesNotThrow [1 ms]
+  Passed Conductor.Tests.DV1_2OwnerQueuePushTests.EachMessageCarriesTheExactClearingCommand [1 ms]
+
+--- SUITE ------------------------------------------------------------------
+
+Passed!  - Failed:     0, Passed:  3126, Skipped:     0, Total:  3126, Duration: 3 m 37 s - Conductor.Tests.dll (net10.0)
+full log: .conductor/evidence/DV1/dv1-2-full-suite.txt

@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 
 using Conductor.Core;
 using Conductor.Core.Evidence;
@@ -94,6 +94,9 @@ public sealed class KS11_1SeamGoldenTests : IDisposable
     [InlineData("push-run-complete-skipped")]
     [InlineData("push-evidence-batch")]
     [InlineData("push-keyboard")]
+    // DV1.2 — the owner queue on the WIRE. The fake channel proves the routing; this proves what a
+    // phone actually receives, including that TWO obligations are two HTTP sends and not one digest.
+    [InlineData("push-owner-queue")]
     public async Task Outbound_pushes_render_exactly_as_they_did_before_the_seam(string name)
     {
         using var bot = new RecordingBotApi();
@@ -188,9 +191,30 @@ public sealed class KS11_1SeamGoldenTests : IDisposable
                     [("Approve", "approve:deadbeef:confirmed"), ("Cancel", "cancel:deadbeef")]);
                 break;
 
+            case "push-owner-queue":
+                // Two obligations, dated against a FIXED clock: the message carries an age, and a
+                // golden pinned to DateTime.UtcNow would rebaseline itself once a minute.
+                await svc.PushOwnerQueueAsync(
+                [
+                    new OwnerQueueItem("gate-KS12", "ownerGate",
+                        "approve KS12 — The era closes (the run is parked on it now)",
+                        "stage KS12 and everything after it", "conductor approve",
+                        OwnerQueueNow.AddHours(-3), 2,
+                        "green gates are not enough for this stage — it advances only when you say so"),
+                    new OwnerQueueItem("checkpoint-KS11.4", "checkpoint",
+                        "KS11.4 is BLOCKED — evidence on demand",
+                        "stage KS11 — a blocked card holds it open", "conductor task --todo KS11.4",
+                        null, 5,
+                        "unblock it to put it back in front of an agent, or retire it with task --skipped"),
+                ], OwnerQueueNow);
+                break;
+
             default: throw new ArgumentOutOfRangeException(nameof(name));
         }
     }
+
+    /// <summary>DV1.2: the clock the owner-queue golden's ages are measured from.</summary>
+    private static readonly DateTime OwnerQueueNow = new(2026, 8, 25, 12, 0, 0, DateTimeKind.Utc);
 
     /// <summary>Six artifacts against a budget of four: the first four ride as uploads (one of them
     /// a photo, because the kind decides the method) and the rest are announced as text.</summary>
