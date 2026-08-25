@@ -1,3 +1,5 @@
+using Conductor.Core.Inbox;
+
 namespace Conductor.Core.Integrations.Messaging;
 
 /// <summary>DV3.1 — the surface's inbound half: what happens when the thing that arrived is not
@@ -9,11 +11,16 @@ namespace Conductor.Core.Integrations.Messaging;
 /// is the safety property this whole strand rests on. A transcript that could pause a run is a
 /// misheard word away from pausing a run.</para>
 ///
-/// <para>What DV3.1 does with a note is acknowledge it — by name, saying what arrived and whether
-/// the bytes made it. DV3.2 gives it a durable home under <c>.conductor/inbox</c> and this method
-/// is where that write goes; the acknowledgement is already written to say it.</para></summary>
+/// <para>DV3.1 acknowledged it, DV3.2 gave it a durable home, DV3.3 reads the audio out, and DV3.4
+/// decides WHICH project's home it belongs in — see <c>RemoteSurface.Routing.cs</c>. The one
+/// invariant across all four: a note that arrives is never silently dropped. It is filed, or parked,
+/// or refused by name, and the sender is told which.</para></summary>
 public sealed partial class RemoteSurface
 {
+    /// <summary>What became of one note: where it was routed, whether it landed, and — when it could
+    /// not — where it was parked instead.</summary>
+    private sealed record FiledNote(bool Filed, bool Duplicate, NoteRoute Route, string? Parked);
+
     /// <summary>One inbound note, acknowledged. The channel has already fetched (or refused) the
     /// media, so this method never touches the network and never blocks on one.</summary>
     /// <param name="profile">The sending chat's profile. Filing is admin-only — see
@@ -33,11 +40,25 @@ public sealed partial class RemoteSurface
         // Filed BEFORE it is acknowledged, so the acknowledgement is never a claim the disk did not
         // back: if the write throws, the sender hears nothing rather than "kept" about a note that
         // is not.
-        var filed = FileNote(note);
+        var outcome = FileNote(note);
 
         var ack = InboundAck.For(note);
         if (ack.Length == 0) return;
-        if (!filed) return;   // a duplicate delivery (findings §6.2) - already answered once
+        if (outcome.Duplicate) return;   // a duplicate delivery (findings §6.2) - already answered once
+
+        // DV3.4: a note that could not be filed is still a note. It is parked where nothing deletes
+        // it, and the sender is told what was wrong with the destination rather than nothing at all.
+        if (!outcome.Filed)
+        {
+            await ReplyAsync(note.ChatId,
+                ack + "\n" + InboundAck.Parked(outcome.Route.Refusal, outcome.Parked), null, ct)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        // DV3.4: which project took it, and which rung of the ladder decided. The owner's only chance
+        // to catch a wrong route is being told what it was.
+        if (_notes is not null) ack += "\n" + InboundAck.FiledAgainst(outcome.Route.Describe());
 
         // DV3.3: the transcription verdict that is known INSTANTLY - there is no command - rides the
         // receipt. Only the case that has to wait for a GPU is answered in a second message.
@@ -47,7 +68,7 @@ public sealed partial class RemoteSurface
 
         await ReplyAsync(note.ChatId, ack, null, ct).ConfigureAwait(false);
 
-        if (willTranscribe) await TranscribeAsync(note, ct).ConfigureAwait(false);
+        if (willTranscribe) await TranscribeAsync(note, outcome, ct).ConfigureAwait(false);
     }
 
     /// <summary>Audio that a transcript would be ABOUT. A photo has no words in it and a document is
@@ -65,27 +86,37 @@ public sealed partial class RemoteSurface
     /// supported, documented state — so the failure mode of every path through here is a state the
     /// system already handles.</para>
     ///
-    /// <para>Nothing here can throw: <see cref="Inbox.ITranscriber"/> promises it, and the reply is
-    /// sent for all four outcomes. A transcript failure costs the transcript.</para></summary>
-    private async Task TranscribeAsync(InboundNote note, CancellationToken ct)
+    /// <para>Nothing here can throw: <see cref="ITranscriber"/> promises it, and the reply is sent
+    /// for all four outcomes. A transcript failure costs the transcript.</para></summary>
+    private async Task TranscribeAsync(InboundNote note, FiledNote outcome, CancellationToken ct)
     {
-        if (_transcriber is null || note.Media?.LocalPath is not { Length: > 0 } audio) return;
+        if (_transcriber is null) return;
 
-        var outcome = await _transcriber.TranscribeAsync(audio, ct).ConfigureAwait(false);
+        // The audio may have MOVED: a note routed to another project takes its media with it
+        // (DV3.4), so the path to read is the one the store now holds, not the one it arrived at.
+        var store = StoreFor(outcome.Route);
+        var stored = store?.All().FirstOrDefault(n => n.Id == NoteId(note));
+        var audio = stored?.MediaPath is { Length: > 0 } rel && store is not null
+            ? Path.Combine(store.Dir, rel.Replace('/', Path.DirectorySeparatorChar))
+            : note.Media?.LocalPath;
 
-        if (!outcome.HasWords || outcome.Transcript is not { } transcript)
+        if (audio is not { Length: > 0 }) return;
+
+        var result = await _transcriber.TranscribeAsync(audio, ct).ConfigureAwait(false);
+
+        if (!result.HasWords || result.Transcript is not { } transcript)
         {
-            await ReplyAsync(note.ChatId, InboundAck.TranscriptFailed(outcome.Detail), null, ct)
+            await ReplyAsync(note.ChatId, InboundAck.TranscriptFailed(result.Detail), null, ct)
                 .ConfigureAwait(false);
             return;
         }
 
         var floor = _transcriber.ConfidenceFloor;
-        var stored = _inbox?.AttachTranscript(NoteId(note), transcript, floor);
+        var attached = store?.AttachTranscript(NoteId(note), transcript, floor);
 
         // What the sender is shown is what the STORE holds where there is a store: the same marked
         // text, so "that is not what I said" is a conversation about one string and not two.
-        var marked = stored?.Text ?? transcript.Marked(floor);
+        var marked = attached?.Text ?? transcript.Marked(floor);
         await ReplyAsync(note.ChatId,
             InboundAck.Transcribed(marked, transcript.ConfidenceLine(floor)), null, ct).ConfigureAwait(false);
     }
@@ -96,37 +127,42 @@ public sealed partial class RemoteSurface
     private static long NoteId(InboundNote note) =>
         note.UpdateId != 0 ? note.UpdateId : note.MessageId;
 
-    /// <summary>Writes the note to the project's inbox. False when it was ALREADY there — the
-    /// ordinary outcome of a courier replaying updates after a restart, and the reason the sender is
-    /// not acknowledged twice for one voice note.</summary>
-    private bool FileNote(InboundNote note)
+    /// <summary>Writes the note to the project's inbox — the project DV3.4's ladder chose, which is
+    /// this run's own inbox when nothing said otherwise.
+    ///
+    /// <para>Three outcomes and each is answered differently upstream: filed, a duplicate delivery
+    /// (silent, because it was answered the first time), or nowhere to file — which parks it rather
+    /// than dropping it.</para></summary>
+    private FiledNote FileNote(InboundNote note)
     {
-        if (_inbox is null) return true;
+        var route = RouteOf(note);
+        var store = StoreFor(route);
 
-        var media = note.Media;
-        return _inbox.Append(new Inbox.InboxNote(
-            Id: NoteId(note),
-            ReceivedUtc: DateTime.UtcNow,
-            ChatId: note.ChatId,
-            Kind: media?.Kind.ToString().ToLowerInvariant() ?? Inbox.InboxNote.TextKind,
-            Text: note.Text,
-            MediaPath: Beside(media?.LocalPath),
-            TranscriptPath: null,
-            ReplyToMessageId: note.ReplyToMessageId,
-            ReplyToText: note.ReplyToText,
-            MessageThreadId: note.MessageThreadId));
+        if (store is null)
+        {
+            var parked = _parked?.Park(Record(note, note.Media?.LocalPath),
+                route.Refusal ?? "no project could be resolved for this chat", note.Media?.LocalPath);
+            return new FiledNote(false, false, route, parked);
+        }
+
+        // The media travels with the note. A file downloaded into THIS run's inbox and then routed
+        // elsewhere would otherwise leave a transcript pointing at another project's directory.
+        var media = store.AdoptMedia(note.Media?.LocalPath);
+        var filed = store.Append(Record(note, media));
+        return new FiledNote(filed, !filed, route, null);
     }
 
-    /// <summary>The media path as the note records it: relative to the inbox when it lives there,
-    /// which is what makes "media beside transcript" true of a directory somebody has MOVED, and
-    /// absolute otherwise rather than silently wrong.</summary>
-    private string? Beside(string? localPath)
-    {
-        if (localPath is not { Length: > 0 } path || _inbox is null) return localPath;
-        var root = _inbox.Dir;
-        return path.StartsWith(root, StringComparison.OrdinalIgnoreCase)
-            ? path[root.Length..].TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                 .Replace(Path.DirectorySeparatorChar, '/')
-            : path;
-    }
+    /// <summary>The note as the store holds it. <paramref name="mediaPath"/> is already relative to
+    /// the store that will hold it, or absolute when it lives outside one.</summary>
+    private static InboxNote Record(InboundNote note, string? mediaPath) => new(
+        Id: NoteId(note),
+        ReceivedUtc: DateTime.UtcNow,
+        ChatId: note.ChatId,
+        Kind: note.Media?.Kind.ToString().ToLowerInvariant() ?? InboxNote.TextKind,
+        Text: note.Text,
+        MediaPath: mediaPath,
+        TranscriptPath: null,
+        ReplyToMessageId: note.ReplyToMessageId,
+        ReplyToText: note.ReplyToText,
+        MessageThreadId: note.MessageThreadId);
 }

@@ -52,6 +52,7 @@ public static class SurfaceCommands
         new("/evidence", SurfaceScope.Browse),                       // KS11.4
         new("/money", SurfaceScope.Browse),                          // KS11.5
         new("/tokens", SurfaceScope.Browse),                         // KS11.5
+        new("/project", SurfaceScope.Steer),                         // DV3.4
         new("/inject", SurfaceScope.Steer),
         new("/chat", SurfaceScope.Steer),
         new("/pause", SurfaceScope.Control),

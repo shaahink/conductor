@@ -208,6 +208,21 @@ boundary; these verbs are how a person reads the same inbox.
 | `inbox transcribe --id N \| --all` | Run the configured `courier.transcribe.command` over notes whose audio has no transcript yet — the verb behind "the audio is kept and can be read out later". Low-confidence stretches come back marked `[?: like this]`. |
 | `inbox prune --seen \| --older-than DAYS \| --id N [--yes]` | **The only deletion path in conductor.** Nothing else removes a note, its audio or its transcript — not reading one, not marking it seen, not a new run. It needs a filter, it prints what it would take, and it deletes nothing without `--yes`. |
 
+**Which project a note is about** (DV3.4). Notes arrive in a chat, not in a repo, so conductor works
+it out in this order and says which rung answered:
+
+1. **Reply to a push — zero typing.** Every message conductor sends opens with `<plan> · s<n>`, so
+   replying to last night's checkpoint push files the note against *that* project.
+2. **`/project <name>`** in the chat — sticky, stored under the machine's state home, and it survives
+   a restart. Sent inside a supergroup **topic** it selects for that topic only, so one topic per
+   project routes with no command at all. Bare `/project` shows what is selected and what this
+   machine has.
+3. **The run that received it**, when nothing else said otherwise.
+
+An unknown or ambiguous name is refused **by name**, listing what this machine actually has. A
+project whose checkout has moved or vanished cannot be filed against — that note is **parked** in
+`<state home>/dead-letter/` with its audio and the sender is told where it is. Nothing is dropped.
+
 ## The board, on GitHub
 
 One way out, off by default, nothing ever read back. Conductor **pushes** a run's board to GitHub

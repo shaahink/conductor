@@ -44,6 +44,11 @@ public enum SurfaceAction
     /// EFFECT behind it: it reads the disk, it charges the chat's rate-limit budget, and it can leave
     /// as an upload rather than as text — none of which a router that only decides may do.</summary>
     Evidence = 8,
+
+    /// <summary>DV3.4 / findings 1.5 (2) - set or show which project this chat's notes are about.
+    /// A separate action because the selection lives on DISK, under the machine's state home, and
+    /// the router that decides has no business writing files.</summary>
+    Project = 9,
 }
 
 /// <param name="Text">The reply body, or the instruction for <see cref="SurfaceAction.Inject"/>.</param>
@@ -145,6 +150,15 @@ public sealed class CommandRouter
                 ? CommandOutcome.Reply(_composer.EvidenceListText())
                 : new CommandOutcome(SurfaceAction.Evidence, id);
         }
+
+        // DV3.4: the sticky selection. Bare shows what is in force and what this machine has; with
+        // an argument it sets it. Both leave here as one action - what a chat is SET to is disk
+        // state, and this router only decides.
+        if (text.Equals("/project", StringComparison.OrdinalIgnoreCase))
+            return new CommandOutcome(SurfaceAction.Project, "");
+
+        if (text.StartsWith("/project ", StringComparison.OrdinalIgnoreCase))
+            return new CommandOutcome(SurfaceAction.Project, text["/project ".Length..].Trim());
 
         if (text.StartsWith("/inject ", StringComparison.OrdinalIgnoreCase))
             return new CommandOutcome(SurfaceAction.Inject, text[8..].Trim());

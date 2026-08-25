@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 
 using Conductor.Core.Inbox;
+using Conductor.Core.Store;
 using Conductor.Models;
 
 using Spectre.Console;
@@ -28,7 +29,7 @@ public sealed class InboxCommand : AsyncCommand<InboxCommand.Settings>
     public sealed class Settings : PlanSettings
     {
         [CommandArgument(0, "[VERB]")]
-        [Description("list (default), show, add, transcribe, or prune.")]
+        [Description("list (default), show, add, transcribe, parked, or prune.")]
         public string Verb { get; init; } = "list";
 
         [CommandOption("--file <PATH>")]
@@ -86,6 +87,7 @@ public sealed class InboxCommand : AsyncCommand<InboxCommand.Settings>
             "show" => Show(store, settings),
             "add" => Add(store, settings),
             "transcribe" => await Transcribe(store, settings, plan).ConfigureAwait(false),
+            "parked" => await Parked().ConfigureAwait(false),
             "prune" => Prune(store, settings),
             var other => Unknown(other),
         };
@@ -95,7 +97,7 @@ public sealed class InboxCommand : AsyncCommand<InboxCommand.Settings>
     {
         AnsiConsole.MarkupLine($"[red]error:[/] `conductor inbox {Markup.Escape(verb)}` is not a thing. "
             + "It is [yellow]list[/], [yellow]show --id N[/], [yellow]add --file[/], "
-            + "[yellow]transcribe[/] or [yellow]prune[/].");
+            + "[yellow]transcribe[/], [yellow]parked[/] or [yellow]prune[/].");
         return 1;
     }
 
@@ -206,6 +208,40 @@ public sealed class InboxCommand : AsyncCommand<InboxCommand.Settings>
 
         AnsiConsole.WriteLine();
         AnsiConsole.WriteLine(note.Text.Trim().Length > 0 ? note.Text : "(no words)");
+        return 0;
+    }
+
+    /// <summary>DV3.4 / findings 6.10 - the dead-letter box: notes that arrived for a project this
+    /// machine could not file against, kept with their audio.
+    ///
+    /// <para>It is machine-level, not per-project, because the whole reason a note is in it is that
+    /// no project directory could be found. A parked note nobody can SEE is only half of "never
+    /// dropped", which is why this verb exists at all.</para></summary>
+    private static async Task<int> Parked()
+    {
+        var box = new DeadLetterBox(StateHome.Root);
+        var files = box.All();
+        if (files.Count == 0)
+        {
+            AnsiConsole.MarkupLine($"[dim]Nothing is parked.[/] {Markup.Escape(box.Dir)}");
+            return 0;
+        }
+
+        foreach (var file in files)
+        {
+            AnsiConsole.MarkupLine("[yellow]parked[/] " + Markup.Escape(Path.GetFileName(file)));
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(
+                    await System.IO.File.ReadAllTextAsync(file, CancellationToken.None).ConfigureAwait(false));
+                if (doc.RootElement.TryGetProperty("why", out var why))
+                    AnsiConsole.MarkupLine("  [dim]" + Markup.Escape(why.GetString() ?? "") + "[/]");
+            }
+            catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException) { }
+        }
+
+        AnsiConsole.MarkupLine($"[dim]{files.Count} parked note(s) in {Markup.Escape(box.Dir)} - "
+            + "move one into a project by hand once its checkout is back.[/]");
         return 0;
     }
 

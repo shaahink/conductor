@@ -36,6 +36,13 @@ public sealed partial class RemoteSurface
     /// not transcribed.</summary>
     private readonly Inbox.ITranscriber? _transcriber;
 
+    /// <summary>DV3.4 — which project a note is about. Null keeps DV3.2's behaviour exactly: every
+    /// note files against the run that received it.</summary>
+    private readonly Inbox.NoteRouter? _notes;
+
+    /// <summary>DV3.4 / findings §6.10 — where a note goes when it cannot go where it belongs.</summary>
+    private readonly Inbox.DeadLetterBox? _parked;
+
     /// <summary>Chats that have been asked for injection text and whose next plain message is
     /// therefore an instruction rather than a command.</summary>
     private readonly Dictionary<string, bool> _injectionArmed = new(StringComparer.Ordinal);
@@ -65,10 +72,12 @@ public sealed partial class RemoteSurface
     public RemoteSurface(IMessageChannel channel, MessageComposer composer, CommandRouter router,
         RunState state, IRunStore? store, Func<string, bool, string?, Task> writeControl,
         Action<string, string?> log, PullRateLimiter? pulls = null, Inbox.InboxStore? inbox = null,
-        Inbox.ITranscriber? transcriber = null)
+        Inbox.ITranscriber? transcriber = null, Inbox.NoteRouter? notes = null)
     {
         _inbox = inbox;
         _transcriber = transcriber;
+        _notes = notes;
+        _parked = notes is null ? null : new Inbox.DeadLetterBox(notes.Projects.Root);
         _pulls = pulls ?? new PullRateLimiter(
             MessageComposer.EvidencePullsPerWindow, MessageComposer.EvidencePullWindow);
         _channel = channel;
@@ -256,7 +265,11 @@ public sealed partial class RemoteSurface
     // ────────────────────────────── inbound ──────────────────────────────
 
     /// <summary>One message from one chat, routed and acted on.</summary>
-    public Task HandleMessageAsync(string chatId, ChatProfile profile, string text, CancellationToken ct)
+    /// <param name="threadId">DV3.4 — the forum topic the message arrived in, where the chat is a
+    /// supergroup with topics. Carried because <c>/project</c> in a topic selects for THAT topic:
+    /// one topic per project is the answer for a group chat (findings §1.5 (3)).</param>
+    public Task HandleMessageAsync(string chatId, ChatProfile profile, string text, CancellationToken ct,
+        long? threadId = null)
     {
         ArgumentNullException.ThrowIfNull(text);
         if (text.Trim().Length == 0) return Task.CompletedTask;
@@ -264,7 +277,8 @@ public sealed partial class RemoteSurface
         var armed = _injectionArmed.TryGetValue(chatId, out var pending) && pending;
         if (armed && !text.Trim().StartsWith('/')) _injectionArmed.Remove(chatId);
 
-        return ApplyAsync(chatId, _router.Route(text, profile, _channel.AllowsControl, armed), ct, profile);
+        return ApplyAsync(chatId, _router.Route(text, profile, _channel.AllowsControl, armed), ct, profile,
+            threadId);
     }
 
     /// <summary>One button press, routed and acted on. <paramref name="chatId"/> is where the answer
@@ -274,10 +288,14 @@ public sealed partial class RemoteSurface
         => ApplyAsync(chatId, _router.RouteCallback(data, profile), ct, profile);
 
     private async Task ApplyAsync(string chatId, CommandOutcome outcome, CancellationToken ct,
-        ChatProfile profile = ChatProfile.Admin)
+        ChatProfile profile = ChatProfile.Admin, long? threadId = null)
     {
         switch (outcome.Action)
         {
+            case SurfaceAction.Project:
+                await SelectProjectAsync(chatId, threadId, outcome.Text ?? "", ct).ConfigureAwait(false);
+                return;
+
             case SurfaceAction.Onboard:
                 await ForceOnboardAsync(chatId, profile, ct).ConfigureAwait(false);
                 return;

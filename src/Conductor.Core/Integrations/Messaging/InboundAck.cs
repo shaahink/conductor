@@ -88,6 +88,23 @@ public static class InboundAck
         "📝 <b>Transcript</b> (" + MessageComposer.EscapeHtml(confidenceLine) + "):\n<i>"
         + MessageComposer.EscapeHtml(Clip(markedText, 900)) + "</i>";
 
+    /// <summary>DV3.4 / findings §1.5 — which project took the note, and which rung of the routing
+    /// ladder decided. Said every time, because routing that happens without the owner typing
+    /// anything is only safe if it is visible: a reply-to-the-wrong-push is a one-word correction if
+    /// they are told, and a note lost in another project's inbox if they are not.</summary>
+    public static string FiledAgainst(string where) =>
+        "📁 Filed against <b>" + MessageComposer.EscapeHtml(where) + "</b>.";
+
+    /// <summary>DV3.4 / findings §6.10 — the note could not be filed anywhere, so it was PARKED.
+    /// Never "sorry, something went wrong": the reason names the destination, and the path says where
+    /// the note is sitting so it can be moved by hand when the project comes back.</summary>
+    public static string Parked(string? why, string? path) =>
+        "📮 <b>Kept, not filed</b> — "
+        + MessageComposer.EscapeHtml(why ?? "no project could be resolved for this chat")
+        + (path is { Length: > 0 }
+            ? "\nIt is parked at <code>" + MessageComposer.EscapeHtml(path) + "</code> and nothing deletes it."
+            : "");
+
     /// <summary>KS11.2 / findings §1.8 — only an admin chat may file. An observer is read-only and
     /// hears exactly that, by name, instead of being ignored.</summary>
     public static string NotYours(ChatProfile profile) =>

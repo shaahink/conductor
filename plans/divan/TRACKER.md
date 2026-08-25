@@ -4,21 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV3.3 CLAIMED and pushed. Local transcribe command (courier.transcribe.command +
-  CONDUCTOR_TRANSCRIBE_COMMAND), per-segment confidence stored and MARKED inline as [?: ...],
-  sidecar beside the audio, untranscribed/failed/silent all filed with the audio and answered by
-  name. `conductor inbox list|show|add|transcribe|prune` now exists - bug #74 closed. Live proof:
-  a real .ogg, faster-whisper large-v3 on the GPU, 29s, via tools/dv3/dv3-3-live-proof.ps1.
-  23 new tests; DV3 67, Prompt 115, Telegram 74 green. Evidence dv3-3-transcription.md.
-find: MA0045 exempts PUBLIC members only, so a private sync file-IO helper in Core must be public
-  and a blocking GetAwaiter().GetResult() in a Spectre command forces AsyncCommand/ExecuteAsync -
-  never a pragma. `conductor bg start` cannot carry a --filter containing a pipe (cmd splits it):
-  one filter per child. A C# raw string whose content starts on the SAME line as """ cannot span
-  lines. Transcription currently blocks the poll loop for the length of one command; that moves to
-  the courier at DV4.1, and the note is already durable + acknowledged before it starts.
-next: DV3.4 routing - reply-to-a-push files against that push's project (InboxNote.ReplyToMessageId
-  and ReplyToText are already stored), sticky /project, message_thread_id topics, unknown slug
-  refused by name, unroutable notes parked in a machine-level dead-letter directory.
+last: DV3.3 AND DV3.4 both CLAIMED and pushed - stage DV3 is complete. DV3.3: local transcribe
+  command, confidence marked inline as [?: ...], sidecar beside the audio, untranscribed/failed
+  answered by name, `conductor inbox list|show|add|transcribe|parked|prune` (bug #74 closed), and a
+  real .ogg through faster-whisper on the GPU in the rig. DV3.4: the routing ladder - reply-to-a-push
+  (no command typed) > topic > sticky /project > local run - refusals by name, and a machine-level
+  dead-letter box so an unroutable note is parked, never dropped. 39 new tests; DV3 83, KS11 134 green.
+find: the DV3.3 architecture test (prune is the only deletion path) is a SOURCE SWEEP over files that
+  mention InboxStore/InboxNote - any new temp-file cleanup in such a file must be named TryDelete or
+  it fails the sweep, which is what caught ChatRoutes.Write. Do not edit src while a bg `dotnet test`
+  is building: two runs died on a locked Conductor.Core.dll. Routing now reads the MACHINE catalogue
+  (StateHome.Root) from TelegramService; every rig must pass its own temp root (bug #73).
+next: DV4.1 the courier daemon. NoteRouter, ChatRoutes and DeadLetterBox are already machine-level so
+  they move to it unchanged; the durable poll offset and update_id dedup are the new work, and moving
+  polling off the run also moves the transcription block off the run's poll loop.
 red: none known. Full battery not run by this session (conductor runs it after exit).
 
 

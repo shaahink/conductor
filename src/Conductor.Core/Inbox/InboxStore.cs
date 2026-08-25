@@ -196,6 +196,66 @@ public sealed class InboxStore
         return updated;
     }
 
+    /// <summary>DV3.4 — takes ownership of a media file, wherever it is now, and answers with the
+    /// path THIS store records for it.
+    ///
+    /// <para>The channel downloads a file before anything knows which project the note belongs to,
+    /// so a note routed to another project arrives with its audio sitting in the receiving run's
+    /// inbox. Moving it is not tidiness: "the audio is kept beside the transcript" (findings §1.6) is
+    /// false the moment the two live under different projects, and a prune of one would orphan the
+    /// other.</para>
+    ///
+    /// <para>Already inside this store: returned as a relative path, untouched. Outside it: moved,
+    /// and copied instead when the move fails (a different volume, a file someone else holds open) —
+    /// losing the audio to tidy it away would be the worst trade in this system.</para></summary>
+    /// <returns>The path to record on the note: relative to <see cref="Dir"/> when the file is
+    /// inside it, the original absolute path when there is nothing to adopt, or null for no media.</returns>
+    public string? AdoptMedia(string? path)
+    {
+        if (path is not { Length: > 0 }) return null;
+
+        var root = Path.GetFullPath(Dir);
+        var full = Path.GetFullPath(path);
+        if (full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            return Relative(full, root);
+
+        if (!File.Exists(full)) return path;   // nothing on disk to adopt; keep what we were told
+
+        var mediaDir = Path.Combine(Dir, "media");
+        Directory.CreateDirectory(mediaDir);
+        var target = Unique(Path.Combine(mediaDir, Path.GetFileName(full)));
+
+        try { File.Move(full, target); }
+        catch (IOException)
+        {
+            try { File.Copy(full, target, overwrite: false); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return path; }
+        }
+        catch (UnauthorizedAccessException) { return path; }
+
+        return Relative(Path.GetFullPath(target), root);
+    }
+
+    private static string Relative(string full, string root) =>
+        full[(root.Length + 1)..].Replace(Path.DirectorySeparatorChar, '/');
+
+    /// <summary>A name nothing is using. Two projects can hold two different notes whose files came
+    /// off the wire with the same name, and a silent overwrite here would be one owner's voice note
+    /// replacing another's.</summary>
+    private static string Unique(string path)
+    {
+        if (!File.Exists(path)) return path;
+        var dir = Path.GetDirectoryName(path)!;
+        var stem = Path.GetFileNameWithoutExtension(path);
+        var ext = Path.GetExtension(path);
+        for (var n = 2; n < 1000; n++)
+        {
+            var candidate = Path.Combine(dir, stem + "-" + n.ToString(CultureInfo.InvariantCulture) + ext);
+            if (!File.Exists(candidate)) return candidate;
+        }
+        return path;
+    }
+
     /// <summary>Where a note's transcript goes: beside its audio, under the same name. "Beside" is
     /// the requirement from findings §1.6 — the audio survives a garbled transcript only if a person
     /// moving one directory takes both.</summary>

@@ -158,13 +158,29 @@ public sealed partial class TelegramService
             // with no command configured it answers "not configured" instantly and the note files
             // untranscribed with its audio, which is a supported state and not a broken one.
             transcriber: new Inbox.LocalCommandTranscriber(
-                plan.Courier?.Transcribe, m => _log.LogInformation("{Message}", m)));
+                plan.Courier?.Transcribe, m => _log.LogInformation("{Message}", m)),
+            // DV3.4: which project a note is about. The local run is always routable - a fresh run
+            // whose catalogue entry has not been written yet must still be able to receive a note
+            // about itself - and everything else comes from the machine catalogue (findings 1.5).
+            notes: new Inbox.NoteRouter(
+                new Inbox.ProjectDirectory(local: LocalProject(plan)),
+                new Inbox.ChatRoutes(Store.StateHome.Root)));
         _cfg = plan.Telegram;
         _token = ResolveToken(plan);
 
         var root = string.IsNullOrWhiteSpace(_cfg?.ApiBaseUrl) ? DefaultApiRoot : _cfg!.ApiBaseUrl!.Trim();
         _apiBase = root.TrimEnd('/') + "/bot";
     }
+
+    /// <summary>DV3.4 — this run's own project, as the router sees it. Built from the plan rather
+    /// than looked up, so a run whose catalogue entry has not been written yet is still a project a
+    /// note can be filed against.</summary>
+    internal static Inbox.ProjectRef LocalProject(PlanConfig plan) => new(
+        Plan: plan.Name ?? "",
+        Repo: plan.Repo ?? "",
+        Slug: Store.StateHome.SlugFor(plan.Repo ?? "", plan.Name),
+        StateDir: plan.StateDir,
+        Present: Directory.Exists(plan.Repo ?? ""));
 
     /// <summary>Env var wins (unchanged, existing behavior); falls back to the M8.2 local secrets
     /// file (SecretsStore) so the token can also be typed into the Face's guided setup instead of
@@ -358,7 +374,8 @@ public sealed partial class TelegramService
                 await HandleMediaMessageAsync(chatId!, ProfileFor(chatId!), msg, kind, upd.UpdateId, ct)
                     .ConfigureAwait(false);
             else
-                await _surface.HandleMessageAsync(chatId!, ProfileFor(chatId!), msg.Text ?? "", ct)
+                await _surface.HandleMessageAsync(chatId!, ProfileFor(chatId!), msg.Text ?? "", ct,
+                        msg.MessageThreadId)
                     .ConfigureAwait(false);
         }
         if (upd.CallbackQuery is { } cb)

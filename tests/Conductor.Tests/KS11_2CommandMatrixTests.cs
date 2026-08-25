@@ -144,6 +144,9 @@ public sealed class KS11_2CommandMatrixTests : IDisposable
                     (SurfaceScope.Browse, true, _) when cmd.Verb == "/start" => SurfaceAction.Onboard,
                     (SurfaceScope.Browse, true, _) => SurfaceAction.Reply,
                     (SurfaceScope.Steer, _, _) when cmd.Verb == "/chat" => SurfaceAction.Reply,
+                    // DV3.4: bare "/project" is a QUESTION - which project do notes here go to -
+                    // so unlike bare "/inject" it has an answer of its own.
+                    (SurfaceScope.Steer, _, _) when cmd.Verb == "/project" => SurfaceAction.Project,
                     // Bare "/inject" is not the "/inject <text>" prefix, so it falls through to the
                     // control router, which does not know it: silence, two-way or not.
                     (SurfaceScope.Steer, _, _) => SurfaceAction.None,
