@@ -215,10 +215,16 @@ public static class ProcessRunner
     {
         ArgumentNullException.ThrowIfNull(result);
         var text = string.IsNullOrWhiteSpace(result.StdErr) ? result.Output : result.StdErr;
+        // The FIRST lines, not the last. GateRunner.TailOf takes the tail because a build log ends
+        // with its error; a refused command is the other shape - it announces the refusal and then
+        // explains how to fix it. Measured on the very failure this exists for, `git push` with no
+        // remote: line 1 is "fatal: No configured push destination." and the lines after it are
+        // instructions, so a tail of three read "git remote add <name> <url> | and then push using
+        // the remote name | git push <name>" - every word of the advice and none of the reason.
         var kept = (text ?? "").Split('\n')
             .Select(l => l.Trim())
             .Where(l => l.Length > 0)
-            .TakeLast(Math.Max(1, lines))
+            .Take(Math.Max(1, lines))
             .ToList();
 
         if (kept.Count > 0)

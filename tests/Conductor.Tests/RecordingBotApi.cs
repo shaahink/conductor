@@ -81,6 +81,33 @@ public sealed class RecordingBotApi : IDisposable
     private readonly Queue<(string ChatId, string Text)> _pending = new();
     private int _nextUpdateId = 1;
 
+    /// <summary>DV2.3, bug #38: make this stub behave like a Bot API that already has another
+    /// consumer on the token — every <c>getUpdates</c> answered <c>409 Conflict</c> with this body,
+    /// verbatim, until it is set back to null. Off by default, so no existing test moves.</summary>
+    public string? ConflictBody { get; set; }
+
+    /// <summary>How many <c>getUpdates</c> polls this stub has answered. A backoff test needs to
+    /// know the loop really came back, not just that it logged once.</summary>
+    public int PollCount { get { lock (_gate) return _polls; } }
+
+    private int _polls;
+
+    /// <summary>The username <c>getMe</c> reports. The generic success body this stub used to return
+    /// for every method parses as a getMe with a NULL username, which is not what the real API does
+    /// and hides whether the engine read the field at all.</summary>
+    public string BotUsername { get; set; } = "dv23_stub_bot";
+
+    public async Task<bool> WaitForPollsAsync(int count, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (PollCount >= count) return true;
+            await Task.Delay(25).ConfigureAwait(false);
+        }
+        return false;
+    }
+
     /// <summary>Hands over every queued command ONCE. A long-poll that kept re-serving the same
     /// update would have the engine answer it on every tick, which is a livelock rather than a
     /// test.</summary>
@@ -133,7 +160,24 @@ public sealed class RecordingBotApi : IDisposable
 
             if (string.Equals(method, "getUpdates", StringComparison.Ordinal))
             {
+                lock (_gate) _polls++;
+                var conflict = ConflictBody;
+                if (conflict != null)
+                {
+                    await RespondAsync(ctx, conflict, HttpStatusCode.Conflict).ConfigureAwait(false);
+                    continue;
+                }
                 await RespondAsync(ctx, DrainUpdates()).ConfigureAwait(false);
+                continue;
+            }
+
+            // A real getMe answers with the bot's identity; the generic body below answers with a
+            // message_id, which deserialises to a bot whose username is null.
+            if (string.Equals(method, "getMe", StringComparison.Ordinal))
+            {
+                await RespondAsync(ctx,
+                    "{\"ok\":true,\"result\":{\"id\":1,\"username\":"
+                    + JsonSerializer.Serialize(BotUsername) + "}}").ConfigureAwait(false);
                 continue;
             }
 
@@ -156,9 +200,11 @@ public sealed class RecordingBotApi : IDisposable
         return await reader.ReadToEndAsync().ConfigureAwait(false);
     }
 
-    private static async Task RespondAsync(HttpListenerContext ctx, string body)
+    private static async Task RespondAsync(HttpListenerContext ctx, string body,
+        HttpStatusCode status = HttpStatusCode.OK)
     {
         var bytes = Encoding.UTF8.GetBytes(body);
+        ctx.Response.StatusCode = (int)status;
         ctx.Response.ContentType = "application/json";
         ctx.Response.ContentLength64 = bytes.Length;
         await ctx.Response.OutputStream.WriteAsync(bytes).ConfigureAwait(false);
