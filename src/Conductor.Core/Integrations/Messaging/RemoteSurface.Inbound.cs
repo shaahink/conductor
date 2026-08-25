@@ -39,8 +39,62 @@ public sealed partial class RemoteSurface
         if (ack.Length == 0) return;
         if (!filed) return;   // a duplicate delivery (findings §6.2) - already answered once
 
+        // DV3.3: the transcription verdict that is known INSTANTLY - there is no command - rides the
+        // receipt. Only the case that has to wait for a GPU is answered in a second message.
+        var willTranscribe = Transcribable(note) && (_transcriber?.Configured ?? false);
+        if (Transcribable(note))
+            ack += "\n" + (willTranscribe ? InboundAck.Transcribing() : InboundAck.NotTranscribed());
+
         await ReplyAsync(note.ChatId, ack, null, ct).ConfigureAwait(false);
+
+        if (willTranscribe) await TranscribeAsync(note, ct).ConfigureAwait(false);
     }
+
+    /// <summary>Audio that a transcript would be ABOUT. A photo has no words in it and a document is
+    /// whatever the sender had lying around; voice and audio are the two kinds this era exists for,
+    /// and running a speech model over a PDF would be a slow way to produce nothing.</summary>
+    private static bool Transcribable(InboundNote note) =>
+        note.Media is { Downloaded: true, Kind: InboundMediaKind.Voice or InboundMediaKind.Audio };
+
+    /// <summary>DV3.3 / findings §1.6 — the words, after the note is already safe on disk.
+    ///
+    /// <para>Order matters and it is the opposite of the obvious one. The note is FILED FIRST,
+    /// untranscribed, and the transcript is attached to it afterwards: transcription takes minutes,
+    /// it runs an external process, and a machine that dies in the middle of it must lose the
+    /// transcript rather than the message. The untranscribed note with its audio beside it is a
+    /// supported, documented state — so the failure mode of every path through here is a state the
+    /// system already handles.</para>
+    ///
+    /// <para>Nothing here can throw: <see cref="Inbox.ITranscriber"/> promises it, and the reply is
+    /// sent for all four outcomes. A transcript failure costs the transcript.</para></summary>
+    private async Task TranscribeAsync(InboundNote note, CancellationToken ct)
+    {
+        if (_transcriber is null || note.Media?.LocalPath is not { Length: > 0 } audio) return;
+
+        var outcome = await _transcriber.TranscribeAsync(audio, ct).ConfigureAwait(false);
+
+        if (!outcome.HasWords || outcome.Transcript is not { } transcript)
+        {
+            await ReplyAsync(note.ChatId, InboundAck.TranscriptFailed(outcome.Detail), null, ct)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        var floor = _transcriber.ConfidenceFloor;
+        var stored = _inbox?.AttachTranscript(NoteId(note), transcript, floor);
+
+        // What the sender is shown is what the STORE holds where there is a store: the same marked
+        // text, so "that is not what I said" is a conversation about one string and not two.
+        var marked = stored?.Text ?? transcript.Marked(floor);
+        await ReplyAsync(note.ChatId,
+            InboundAck.Transcribed(marked, transcript.ConfidenceLine(floor)), null, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>The id a note is filed under: the delivery's own id where the channel gave us one,
+    /// the message id otherwise. One place, because filing it under one id and transcribing it under
+    /// another would attach a transcript to nothing.</summary>
+    private static long NoteId(InboundNote note) =>
+        note.UpdateId != 0 ? note.UpdateId : note.MessageId;
 
     /// <summary>Writes the note to the project's inbox. False when it was ALREADY there — the
     /// ordinary outcome of a courier replaying updates after a restart, and the reason the sender is
@@ -51,7 +105,7 @@ public sealed partial class RemoteSurface
 
         var media = note.Media;
         return _inbox.Append(new Inbox.InboxNote(
-            Id: note.UpdateId != 0 ? note.UpdateId : note.MessageId,
+            Id: NoteId(note),
             ReceivedUtc: DateTime.UtcNow,
             ChatId: note.ChatId,
             Kind: media?.Kind.ToString().ToLowerInvariant() ?? Inbox.InboxNote.TextKind,

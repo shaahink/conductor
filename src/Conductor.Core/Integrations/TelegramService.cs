@@ -153,7 +153,12 @@ public sealed partial class TelegramService
                 "Telegram /inject: {Instruction} (stage={Stage})", instruction, stage),
             // DV3.2: the note's durable home. Rooted on the plan's state dir, so a note filed here
             // is read by the next session of THIS project - and by one three weeks from now.
-            inbox: new Inbox.InboxStore(plan.StateDir));
+            inbox: new Inbox.InboxStore(plan.StateDir),
+            // DV3.3: speech to text, from the plan's courier block. Constructed unconditionally -
+            // with no command configured it answers "not configured" instantly and the note files
+            // untranscribed with its audio, which is a supported state and not a broken one.
+            transcriber: new Inbox.LocalCommandTranscriber(
+                plan.Courier?.Transcribe, m => _log.LogInformation("{Message}", m)));
         _cfg = plan.Telegram;
         _token = ResolveToken(plan);
 

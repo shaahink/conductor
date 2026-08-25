@@ -665,6 +665,49 @@ genuinely needs a restart is an engine process that holds no Telegram service at
 build — and there `GET /telegram/status` answers `restartRequired: true` and the token endpoint says
 so instead of reporting a silent success.
 
+## `courier` — Voice notes into words, locally (DV3.3)
+
+Absent by default. Absent means a voice note still arrives, still files in the project's inbox and
+still keeps its audio — it is just not transcribed, and the bot's reply says so by name rather than
+leaving the sender with a receipt and silence.
+
+```jsonc
+"courier": {
+  "transcribe": {
+    "command": "python tools/transcribe/whisper-json.py {audio}",
+    "timeoutSeconds": 900,      // the command is killed after this; default 900
+    "confidenceFloor": 0.45     // segments below this are MARKED in the stored note
+  }
+}
+```
+
+A **command**, not a service: the model, the language and the hardware stay the owner's, and nothing
+about a run leaves the machine. `{audio}` is replaced with the path to the file; with no placeholder
+the path is appended as the last argument. `CONDUCTOR_TRANSCRIBE_COMMAND` overrides the plan, the
+same precedence `CONDUCTOR_TELEGRAM_TOKEN` has — which is how a machine-level courier with no plan in
+front of it will point at one.
+
+**The contract is stdout.** JSON in this shape carries per-segment confidence:
+
+```json
+{"text": "...", "language": "en",
+ "segments": [{"start": 0.0, "end": 2.5, "text": "...", "confidence": 0.93}]}
+```
+
+`confidence` may be given directly or as faster-whisper's own `avg_logprob`, which conductor reads as
+`exp(avg_logprob)`. Anything that is not that JSON is taken as a plain transcript with **no** marks —
+`whisper.cpp -otxt` and a shell one-liner both work, they just cannot report doubt, and a confidence
+conductor cannot read is never invented.
+
+Segments below `confidenceFloor` are stored wrapped: `we should [?: refactor the courier] tomorrow`.
+The marks reach the session prompt, the bot's reply and `conductor inbox show` identically, because a
+reader who cannot hear the audio has no other way to know which words were guessed. The full segment
+table, with its numbers, is written to a sidecar **beside the audio** — and the audio is never
+deleted by transcribing it, so a garbled transcript is always recoverable.
+
+This repo ships `tools/transcribe/whisper-json.py`: faster-whisper `large-v3` on the GPU, offline, no
+API key.
+
 ## `github` — Push the board to GitHub issues (KS9.1)
 
 Absent by default, and absent means the mirror does not exist: a plan without this block behaves

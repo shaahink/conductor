@@ -23,7 +23,13 @@ namespace Conductor.Core.Inbox;
 /// transcript yet.</param>
 /// <param name="MediaPath">The media file beside this note, relative to the inbox directory, or
 /// null. Kept even when a transcript exists, so a garbled transcription is always recoverable.</param>
-/// <param name="TranscriptPath">DV3.3's home for the transcript file; null until then.</param>
+/// <param name="TranscriptPath">DV3.3 — the transcript sidecar beside the audio, relative to the
+/// inbox directory, or null when this note was never transcribed. Null with a
+/// <paramref name="MediaPath"/> set is the UNTRANSCRIBED state findings §1.6 asks for: the audio is
+/// kept, the words are not there, and the sender was told so.</param>
+/// <param name="TranscriptConfidence">DV3.3 — the transcriber's mean confidence, 0..1, or null when
+/// the command reported none. Stored so a reader can weigh a whole note at a glance; the doubtful
+/// stretches inside <paramref name="Text"/> are marked individually.</param>
 /// <param name="ReplyToMessageId">The push this note answers — DV3.4 routes on it.</param>
 /// <param name="ReplyToText">What that push said, because its identity stamp is what names the
 /// run.</param>
@@ -37,10 +43,22 @@ public sealed record InboxNote(
     string? TranscriptPath = null,
     long? ReplyToMessageId = null,
     string? ReplyToText = null,
-    long? MessageThreadId = null)
+    long? MessageThreadId = null,
+    double? TranscriptConfidence = null)
 {
     /// <summary>The kind string for a note that is words only.</summary>
     public const string TextKind = "text";
+
+    /// <summary>Audio that has words attached to it. What DV3.3 produced, as opposed to what it
+    /// filed when no command was configured.</summary>
+    [JsonIgnore]
+    public bool Transcribed => TranscriptPath is { Length: > 0 };
+
+    /// <summary>Audio with no transcript: the file is on disk and nobody has read it out.</summary>
+    [JsonIgnore]
+    public bool Untranscribed => MediaPath is { Length: > 0 } && !Transcribed
+        && (string.Equals(Kind, "voice", StringComparison.Ordinal)
+            || string.Equals(Kind, "audio", StringComparison.Ordinal));
 
     /// <summary>A one-line summary for the index and for <c>conductor inbox list</c>. Newlines are
     /// flattened: the index is one JSON object per LINE, and a note with a paragraph in it must not

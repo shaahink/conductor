@@ -194,6 +194,20 @@ numbers behind it: [`docs/dev/TOKEN-BUDGET-TUNING.md`](dev/TOKEN-BUDGET-TUNING.m
 | `run close <id>` | Close the record of a run whose engine never got to close it — killed, rebooted, or reaped with the shell that started it. Writes a terminal status (`--status closed`, the default, or `completed`/`aborted`) and stamps the instant the run *actually* stopped, taken from its last recorded activity unless you pass `--ended`. `--reason` goes into the run's event spine, so the change says who made it and why. `--dry-run` shows what would change. |
 | `run adopt <id>` | Annotate a run record without touching its lifecycle: `--reason` is journalled against the run, the status is left exactly where it was. For a record you mean to keep rather than close. |
 
+## The inbox — what the owner said about this project
+
+Notes arrive from the bot (a voice note, a document, a caption) and live under `.conductor/inbox`,
+outside git, surviving the run that received them. A session reads the unread ones at its next
+boundary; these verbs are how a person reads the same inbox.
+
+| Verb | What it does |
+|---|---|
+| `inbox list` | Every note: id, when it arrived, kind, whether a session has read it, whether audio is sitting there untranscribed. `--unseen` for only the unread, `--full` for whole texts rather than summaries, `--json` for machines. |
+| `inbox show --id N` | One note, whole — what the prompt's `CLIPPED` marker points at. Names the audio file and the transcript sidecar on disk. |
+| `inbox add --file <PATH> [--text ...]` | File a note from this machine: an exported voice message, a meeting recording, a document. The file is copied into the inbox and the note goes through the same store the bot writes to. |
+| `inbox transcribe --id N \| --all` | Run the configured `courier.transcribe.command` over notes whose audio has no transcript yet — the verb behind "the audio is kept and can be read out later". Low-confidence stretches come back marked `[?: like this]`. |
+| `inbox prune --seen \| --older-than DAYS \| --id N [--yes]` | **The only deletion path in conductor.** Nothing else removes a note, its audio or its transcript — not reading one, not marking it seen, not a new run. It needs a filter, it prints what it would take, and it deletes nothing without `--yes`. |
+
 ## The board, on GitHub
 
 One way out, off by default, nothing ever read back. Conductor **pushes** a run's board to GitHub

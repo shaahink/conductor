@@ -31,6 +31,11 @@ public sealed partial class RemoteSurface
     /// file against.</summary>
     private readonly Inbox.InboxStore? _inbox;
 
+    /// <summary>DV3.3 — speech to text, when the owner configured a command for it. Null and
+    /// not-configured behave identically: the note files with its audio and the reply says it was
+    /// not transcribed.</summary>
+    private readonly Inbox.ITranscriber? _transcriber;
+
     /// <summary>Chats that have been asked for injection text and whose next plain message is
     /// therefore an instruction rather than a command.</summary>
     private readonly Dictionary<string, bool> _injectionArmed = new(StringComparer.Ordinal);
@@ -54,11 +59,16 @@ public sealed partial class RemoteSurface
     /// test or a channel with no project behind it has nowhere to file; when it is null the note is
     /// still acknowledged, and the acknowledgement says the file was kept rather than that the note
     /// was.</param>
+    /// <param name="transcriber">DV3.3 — the configured local transcribe command, or null for none.
+    /// A seam rather than a config value so a test can drive the failed, silent and slow paths
+    /// without a 3 GB model on the machine running it.</param>
     public RemoteSurface(IMessageChannel channel, MessageComposer composer, CommandRouter router,
         RunState state, IRunStore? store, Func<string, bool, string?, Task> writeControl,
-        Action<string, string?> log, PullRateLimiter? pulls = null, Inbox.InboxStore? inbox = null)
+        Action<string, string?> log, PullRateLimiter? pulls = null, Inbox.InboxStore? inbox = null,
+        Inbox.ITranscriber? transcriber = null)
     {
         _inbox = inbox;
+        _transcriber = transcriber;
         _pulls = pulls ?? new PullRateLimiter(
             MessageComposer.EvidencePullsPerWindow, MessageComposer.EvidencePullWindow);
         _channel = channel;

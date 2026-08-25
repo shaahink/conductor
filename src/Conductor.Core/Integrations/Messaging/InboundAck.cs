@@ -55,6 +55,39 @@ public static class InboundAck
             : head;
     }
 
+    /// <summary>DV3.3 — what the sender hears the moment the audio lands and BEFORE the words come
+    /// back. Transcription is minutes of GPU time for a long note; silence for those minutes is
+    /// indistinguishable from a bot that dropped it.</summary>
+    public static string Transcribing() =>
+        "🎧 Transcribing it locally — the words follow in a moment.";
+
+    /// <summary>DV3.3 / findings §1.6 — audio kept, words not taken. Names the key to set, because
+    /// "not transcribed" without the fix is a dead end, and the whole reason this sentence exists is
+    /// that a silently-untranscribed voice note is the §1.2 gap-2 failure with a shrug attached.
+    ///
+    /// <para>The config key is spelled out. A sentence that says "transcription is not configured"
+    /// and leaves the reader to find the key has told them nothing they did not know.</para></summary>
+    public static string NotTranscribed() =>
+        "📝 <b>Not transcribed</b> — no transcribe command is configured "
+        + "(<code>courier.transcribe.command</code>, or the "
+        + "<code>" + Models.TranscribeConfig.CommandEnvVar + "</code> environment variable). "
+        + "The audio is kept in the project's inbox: "
+        + "<code>conductor inbox transcribe --all</code> reads it out once one is set.";
+
+    /// <summary>DV3.3 — a command ran and did not deliver. Same promise as the unset case: the audio
+    /// survives, and the sentence names what went wrong rather than apologising in general.</summary>
+    public static string TranscriptFailed(string? detail) =>
+        "📝 <b>Not transcribed</b> — "
+        + (detail is { Length: > 0 } d ? MessageComposer.EscapeHtml(d) : "the transcribe command failed")
+        + ". The audio is kept in the project's inbox.";
+
+    /// <summary>DV3.3 — the words, with how sure the transcriber was and the doubtful stretches
+    /// marked exactly as they are marked in the stored note. The sender is the ONE person who can
+    /// correct a misheard word, so they are shown the marks rather than a clean-looking lie.</summary>
+    public static string Transcribed(string markedText, string confidenceLine) =>
+        "📝 <b>Transcript</b> (" + MessageComposer.EscapeHtml(confidenceLine) + "):\n<i>"
+        + MessageComposer.EscapeHtml(Clip(markedText, 900)) + "</i>";
+
     /// <summary>KS11.2 / findings §1.8 — only an admin chat may file. An observer is read-only and
     /// hears exactly that, by name, instead of being ignored.</summary>
     public static string NotYours(ChatProfile profile) =>

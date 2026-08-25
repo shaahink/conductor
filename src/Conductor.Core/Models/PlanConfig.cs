@@ -64,6 +64,11 @@ public sealed partial class PlanConfig
     public ReportConfig Report { get; set; } = new();
     public NotifyConfig? Notify { get; set; }
     public TelegramConfig? Telegram { get; set; }
+    /// <summary>DV3.3 — the courier block: how this machine turns a voice note into text, and (from
+    /// DV4) the daemon that receives one. null → transcription is not configured, which is a
+    /// supported state: a voice note still files, with its audio, and the reply says it was not
+    /// transcribed.</summary>
+    public CourierConfig? Courier { get; set; }
     /// <summary>KS9.1: push-only GitHub mirror of the board and the diary. null (the default, and what
     /// every existing plan carries) → the mirror does not exist. Nothing inbound, ever — see
     /// <see cref="GithubConfig"/>.</summary>
@@ -369,6 +374,9 @@ public sealed partial class PlanConfig
         // plan load, and never quietly read as admin. Getting this wrong means an outsider holding
         // the steering wheel, so it fails the same way an unknown github.board does.
         if (Telegram?.ProfileRefusal() is { } chatRefusal) errors.Add(chatRefusal);
+        // DV3.3: a nonsense transcribe dial is refused at load rather than discovered when the first
+        // voice note arrives - which, for a machine nobody is watching, is the worst possible moment.
+        if (Courier?.Refusal() is { } courierRefusal) errors.Add(courierRefusal);
 
         return errors;
     }

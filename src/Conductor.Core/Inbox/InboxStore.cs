@@ -153,6 +153,135 @@ public sealed class InboxStore
         }
     }
 
+    /// <summary>DV3.3 — attaches a transcript to a note that is ALREADY filed, and returns the note
+    /// as it now stands (null when it has been pruned out from under us).
+    ///
+    /// <para>Filed first, transcribed second, on purpose. Transcription takes minutes for a long
+    /// note and it can fail; doing it before the note existed would mean a machine that crashed
+    /// mid-transcription lost the message entirely. Doing it after means the worst case is a note
+    /// with its audio and no words — which is exactly the untranscribed state that is already a
+    /// supported outcome.</para>
+    ///
+    /// <para>This is the ONE write here that overwrites: the dedup rename in <see cref="Append"/>
+    /// refuses to, because a second DELIVERY of a note must not clobber the first. A transcript is
+    /// not a second delivery, it is more of the same note, so it rewrites in place — atomically, so
+    /// a reader mid-write still sees the untranscribed version rather than half a file.</para></summary>
+    /// <param name="floor">The confidence below which a segment is marked — the plan's dial, passed
+    /// in rather than read here, so the store has no opinion about anybody's model.</param>
+    public InboxNote? AttachTranscript(long id, Transcript transcript, double floor)
+    {
+        ArgumentNullException.ThrowIfNull(transcript);
+        var path = NotePath(id);
+        if (ReadNote(path) is not { } note) return null;
+
+        var relative = TranscriptRelPath(note);
+        var sidecar = Path.Combine(Dir, relative.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(sidecar)!);
+        WriteAtomic(sidecar, transcript.ToSidecarJson(floor));
+
+        // A caption is the owner's TYPED words and the transcript is their spoken ones. Both are
+        // theirs; neither replaces the other, so a captioned voice note keeps both, caption first.
+        var marked = transcript.Marked(floor);
+        var text = note.Text.Trim().Length > 0 ? note.Text.TrimEnd() + Environment.NewLine + marked : marked;
+
+        var updated = note with
+        {
+            Text = text,
+            TranscriptPath = relative,
+            TranscriptConfidence = transcript.MeanConfidence,
+        };
+
+        WriteAtomic(path, JsonSerializer.Serialize(updated, Json));
+        AppendIndexLine(updated);   // append-only: the LAST line for an id is the current one
+        return updated;
+    }
+
+    /// <summary>Where a note's transcript goes: beside its audio, under the same name. "Beside" is
+    /// the requirement from findings §1.6 — the audio survives a garbled transcript only if a person
+    /// moving one directory takes both.</summary>
+    public static string TranscriptRelPath(InboxNote note)
+    {
+        ArgumentNullException.ThrowIfNull(note);
+        return note.MediaPath is { Length: > 0 } media
+            ? media + ".transcript.json"
+            : "notes/" + note.Id.ToString(CultureInfo.InvariantCulture) + ".transcript.json";
+    }
+
+    /// <summary>Every file this note owns that is actually on disk: the note, its media, its
+    /// transcript. What a prune deletes, and what a prune PREVIEW prints — the same list from the
+    /// same method, so the preview cannot promise a different set than the deletion takes.</summary>
+    public IReadOnlyList<string> FilesOf(InboxNote note)
+    {
+        ArgumentNullException.ThrowIfNull(note);
+        var files = new List<string> { NotePath(note.Id) };
+        foreach (var rel in new[] { note.MediaPath, note.TranscriptPath })
+        {
+            if (rel is not { Length: > 0 }) continue;
+            var full = Path.IsPathRooted(rel)
+                ? rel
+                : Path.Combine(Dir, rel.Replace('/', Path.DirectorySeparatorChar));
+            files.Add(full);
+        }
+        return [.. files.Where(File.Exists)];
+    }
+
+    /// <summary>DV3.3 / findings §6.1 — THE ONLY DELETION PATH IN THIS SYSTEM. Nothing else removes a
+    /// note, its audio or its transcript: not reading it, not marking it seen, not a full disk, not a
+    /// new run. Retention is a decision the owner makes by typing <c>conductor inbox prune</c>, which
+    /// is the answer to open question 5 and the reason a note can be trusted to still be there.
+    ///
+    /// <para>A pruned id is recorded in the index rather than erased from it, so "where did note 47
+    /// go" has an answer.</para></summary>
+    /// <returns>How many files were actually removed.</returns>
+    public int Prune(InboxNote note)
+    {
+        ArgumentNullException.ThrowIfNull(note);
+        var removed = 0;
+        foreach (var file in FilesOf(note))
+        {
+            try { File.Delete(file); removed++; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+
+        if (removed > 0) AppendPrunedLine(note);
+        return removed;
+    }
+
+    /// <summary>The audit line a prune leaves behind. Public for the same reason
+    /// <see cref="AppendIndexLine"/> is: MA0045 exempts public members, and the honest answer to
+    /// "this method does synchronous file IO" here is that the whole store is synchronous by design
+    /// (the prompt-battery seam above it is a property), not that it should be hidden.</summary>
+    public void AppendPrunedLine(InboxNote note)
+    {
+        var line = JsonSerializer.Serialize(new
+        {
+            id = note.Id,
+            utc = DateTime.UtcNow,
+            pruned = true,
+            kind = note.Kind,
+        }, Compact);
+
+        try
+        {
+            using var fs = new FileStream(IndexPath, FileMode.Append, FileAccess.Write,
+                FileShare.ReadWrite, 4096);
+            var bytes = Encoding.UTF8.GetBytes(line + "\n");
+            fs.Write(bytes, 0, bytes.Length);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
+
+    /// <summary>Temp file, then rename over the target. The same trick <see cref="Append"/> uses,
+    /// with overwrite allowed — see <see cref="AttachTranscript"/> for why that is safe here and not
+    /// there. Public for MA0045's public-member exemption; see <see cref="AppendPrunedLine"/>.</summary>
+    public static void WriteAtomic(string path, string content)
+    {
+        var temp = path + ".tmp-" + Guid.NewGuid().ToString("N")[..8];
+        File.WriteAllText(temp, content, new UTF8Encoding(false));
+        try { File.Move(temp, path, overwrite: true); }
+        catch (IOException) { TryDelete(temp); }
+    }
+
     private string NotePath(long id) =>
         Path.Combine(NotesDir, id.ToString(CultureInfo.InvariantCulture) + ".json");
 
