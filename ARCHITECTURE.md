@@ -14,7 +14,8 @@ tools/plan-lint          consumes Conductor.Planning ALONE - the standalone proo
         |
 src/Conductor            CLI (Program.cs, Commands/**) + hosting (Hosting/, Http/ControlPlaneServer*)
         |  ProjectReference
-src/Conductor.Core       domain, orchestration, store, events, providers, integrations  <- the engine
+src/Conductor.Core       domain, orchestration, store, events, providers, integrations,  <- the engine
+                         and since Divan: Courier/ (the daemon), Inbox/, Publishing/
         |  ProjectReference
 src/Conductor.Planning   pure decision logic: data in, decisions out. No IO, no clocks, no processes.
 ```
@@ -30,6 +31,11 @@ There is **no `IHostedService` running the loop.** Hosted services exist (`Teleg
 one today), but the run is a plain awaited call: `RunCommand` builds the composition root, starts the
 hosted services, then awaits the orchestrator at `src/Conductor/Commands/RunCommand.cs:153`. If you go
 looking for a `BackgroundService` that owns the run, you will not find it.
+
+*Still true after Divan, and worth stating because Divan added a daemon.* The **courier** is a separate
+**process** (`conductor courier run`), not a hosted service inside this one — the run process registers
+exactly one `IHostedService`, still `TelegramService` (`Hosting/ConductorHost.cs:121`). See
+[The courier](#the-courier--the-one-process-that-outlives-the-run) below.
 
 ### 1. Dispatch — which stage, which checkpoint, which session kind
 
@@ -298,9 +304,13 @@ events itself, to find an interrupted session.
 
 ## The seams
 
-`src/Conductor.Core` declares exactly **ten** `public interface I*`. That is the whole list — the
-abstraction count is small on purpose. *(Counted again at KS12.1, 2026-08-19: it was nine until
-KS11.1 extracted `IMessageChannel`, and the count in this sentence was stale for the whole edge era.)*
+`src/Conductor.Core` declares exactly **thirteen** `public interface I*`. That is the whole list — the
+abstraction count is small on purpose. *(Counted again at DV7.1, 2026-08-26: ten until Divan, which
+added three at once — `ICourierSource`, `ITranscriber`, `ICloudCli`. Each one is a **process or a wire
+we do not own**, which is the only justification this repo accepts for a new seam; see the rule under
+the table. Before that it was nine until KS11.1 extracted `IMessageChannel`, and the count in this
+sentence was stale for the whole edge era. `grep -rn "public interface I" src/Conductor.Core` settles
+it in one command — do that rather than trusting this number.)*
 
 | Seam | Job | Implementations |
 |---|---|---|
@@ -314,6 +324,18 @@ KS11.1 extracted `IMessageChannel`, and the count in this sentence was stale for
 | `IMessageChannel` `Integrations/Messaging/IMessageChannel.cs:15` | **KS11.1 — the tenth.** One messenger *transport*: send a message, upload a document, poll for inbound commands | `TelegramService` (the only real one); `FakeChannel` in the tests drives the whole surface with no wire |
 | `IPlanner` `IPlanner.cs:7` | Decide the next checkpoint | `CheckpointPlanner` |
 | `IReportsStartOutcome` `IReportsStartOutcome.cs:17` | Let a hosted service say it declined to start on purpose | `TelegramService` |
+| `ICourierSource` `Courier/ICourierSource.cs:66` | **DV4.1.** One messenger seen from the *courier's* side: poll a batch of deliveries, reply, acknowledge. Deliberately not `IMessageChannel` — that seam is a run pushing outward with a queue to flush at shutdown, and the courier has no run to flush | `TelegramCourierSource`; the tests drive the whole daemon with no wire, incl. `KilledOnReply` for the kill-between-receive-and-ack case |
+| `ITranscriber` `Inbox/Transcriber.cs:12` | **DV3.3.** Speech to text | `LocalCommandTranscriber` shells out to a configured command; tests substitute their own rather than requiring a 3 GB model on the machine, which is also what makes the untranscribed and failed paths deterministic |
+| `ICloudCli` `Integrations/Cloud/CloudCli.cs:17` | **DV5.1.** The `claude` CLI's cloud subsurface | `ClaudeCloudCli`. There is deliberately **no `CreateAsync`** on it: the create direction is refused before this interface is reached, so the seam cannot be the place someone adds it |
+
+**Divan's three are the exception that states the rule.** `ICourierSource`, `ITranscriber` and
+`ICloudCli` each invert *a process or a wire this repo does not own* — Telegram's poll side, a local
+speech model, another vendor's CLI — and in each case the alternative was not a fake but a 3 GB
+download, a network round trip, or an Anthropic account in CI. Contrast the GitHub work below, which
+added a whole subsystem and no seam at all, because there the transport already took an
+`HttpMessageHandler`. **If the only other implementation would be a fake, the seam belongs at the
+transport, not at the type — and if the only other implementation is "the real thing, absent", it
+belongs at the type.**
 
 **KS9's GitHub sync did not add a tenth.** Counted again at KS10.1 (2026-08-15) after the era that
 added `Integrations/Github/` — thirteen files, a client, a mirror, a board sync and a v14 migration —
@@ -333,13 +355,24 @@ other implementation would be a fake, the seam belongs at the transport, not at 
 - **Gate execution** — `public static partial class GateRunner` (`GateRunner.cs:6`). Its seams are *parameters*
   (`onProgress`, `onGates`, an optional `IRunStore` for the per-SHA cache), not types.
 - **GitHub sync** — `GithubClient` + `GithubMirror` (`Integrations/Github/`). Push-only by design
-  (ADR-0005): nothing is ever read back from GitHub into the run, so there is nothing for a seam to
-  invert. The mirror is attached to the run rather than registered on the event path, and
+  (ADR-0005): nothing read from GitHub ever reaches run state, so there is nothing for a seam to
+  invert. *Read back at DV7.1 after Divan pushed the mirror onto three more surfaces — ledger issues
+  (DV6.1), Projects v2 columns over GraphQL (DV6.2), code-scanning alerts (DV6.4). Two things **are**
+  fetched, and both answer "what would this write do", never "what should the run do": issue identity
+  against a marker in the body, and `GithubRepoInfo` — the repository read for one fact, private or
+  not, so a refused SARIF upload can say why. ADR-0005's second addendum states this.* The mirror is
+  attached to the run rather than registered on the event path, and
   `ArchitectureBoundaryTests.TheGithubMirrorIsNeverRegisteredOnTheEventPath` holds that line by
   **file name** — only `RunContext.cs`, `RunContext.Mirror.cs` and `RunLoop.Plumbing.cs` may name it
   under `Orchestration/`. Splitting a file that names it will go red; that is the point.
 
-## The two surfaces
+## The surfaces
+
+*Titled "the two surfaces" until DV7.1, when counting them gave four. The heading was already stale
+at KS8.1 and nobody renamed it; the count is now in the subheadings instead of the title, where it
+cannot rot silently.* Three of the four are **loopback HTTP** — the control plane, the MCP surface and
+the courier's handover port — which is not an accident: ADR-0005 fixes the posture and each new one
+inherits it rather than arguing it again.
 
 ### The control plane — HTTP, loopback, one file to find it
 
@@ -410,7 +443,12 @@ speak conductor's schema.
 
 ### The messenger, and why it is no longer "the telegram service" (KS11)
 
-`Integrations/Messaging/` is the channel-agnostic half of the courier: composition
+*Read the word "courier" below as the ordinary English one. Divan gave the name to a real namespace
+and a real process (`Core/Courier/`, `conductor courier`), so this paragraph's metaphor now collides
+with it: `Integrations/Messaging/` is the **messenger**, in-process, owned by a run. The courier is a
+daemon that outlives every run. They meet at `CourierChannel`, and nowhere else.*
+
+`Integrations/Messaging/` is the channel-agnostic half of the messenger: composition
 (`MessageComposer`, `:24`), the command router (`CommandRouter.cs:76`), chat profiles
 (`ChatProfile.cs:11`), evidence browsing, rate limiting and the push grammar. `TelegramService` is now
 one `IMessageChannel` implementation — the transport — and the tests drive the whole surface through a
@@ -421,6 +459,81 @@ one `IMessageChannel` implementation — the transport — and the tests drive t
 An observer chat may ask for status, tasks, progress, evidence and the daily digest; a control verb
 from an observer chat is refused. Plans written against the old `allowedChatIds` shape behave
 byte-identically, which is pinned by golden replay rather than asserted in prose.
+
+## The courier — the one process that outlives the run
+
+*Added at DV7.1, 2026-08-26, because Divan put a daemon on the machine and this document had no
+section a long-lived process could live in. The decision and its four conditions are
+[ADR-0008](docs/dev/adr/0008-the-courier-outlives-the-run.md); this is where it sits in the map.*
+
+Every other process here is born and dies with a run. The courier is not. It owns the bot token, it
+polls when no run is live, and it files what the owner said into whichever project the note was about.
+`Core/Courier/` is its namespace (15 files, no partial fiction — one type per file); `Commands/Courier
+Command.cs` is the CLI; `Http/CourierListener.cs` is its listener and is constructed **only** by
+`conductor courier run` (`CourierCommand.cs:276`), never by the run process.
+
+**The lifecycle is a verb, not a flag.**
+
+| | |
+|---|---|
+| `conductor courier install` | Registers a per-user Scheduled Task from XML — logon trigger, restart-on-failure, no admin rights. XML rather than `schtasks /SC ONLOGON` because the command-line form cannot express restart-on-failure (`CourierTask.cs:37-47`). `CourierTask` takes its shell runner as a constructor argument, so the suite never registers anything on a developer's machine |
+| `run` / `status` / `restart` / `stop` / `uninstall` | `status` is the default verb. `restart` is the fix named by every staleness refusal |
+| `allow --repo` / `deny --repo` | The project allowlist — a note is only ever filed into a repo the owner allowed |
+| `chat --id` / `unchat --id` | Which chats the courier answers at all |
+
+**The state it owns** lives in the state home under `courier/` (`CourierHome.cs:21`), not in any repo:
+`courier.json` (settings + allowlist), `offset.json`, `courier.run.json` (presence), `courier.secret`,
+and `media/`. A note whose project has moved or vanished is parked in `dead-letter/` rather than
+dropped.
+
+**Three invariants a change here must not break:**
+
+1. **The offset is durable.** `TelegramService`'s `_offset` is an `int` field, correct for a poll loop
+   that dies with its run. A restarting courier with an in-memory offset replays every update Telegram
+   still holds and files each note twice. `CourierOffset` persists it; delivery dedups by id.
+2. **The handover port is loopback with a secret.** Fixed at 47137 (`CourierEndpoint.cs:27`, override
+   `CONDUCTOR_COURIER_PORT` — a *named* port, never a scan, because two conductor runs may share a
+   machine), `127.0.0.1` only, `X-Conductor-Courier` matched by `CourierSecret` or `401`
+   (`CourierListener.cs:112`). `/hello` and `/push`; nothing that arrives there writes run state.
+3. **One consumer per token.** Where a courier is configured, in-run polling refuses to start and
+   names it (`CourierPrecedence.cs:34,43`). A machine with no courier keeps the old behaviour
+   byte-identically. The protocol states its version (`CourierProtocol.Version = 2`) and a run
+   speaking a newer one refuses a stale courier by name, naming `conductor courier restart`.
+
+**And the limit, stated rather than hidden:** the courier narrows the gap from "no run live" to
+"machine on". Telegram holds an undelivered update for 24 hours. A note sent to a sleeping laptop on
+Friday is gone by Monday — dropped by Telegram, never handed over.
+
+**The installer owns the restart.** A running courier holds the published exe open, so
+`tools/install.ps1` stops it at step 0 and puts it back on the *new* engine afterwards
+(`install.ps1:77-99`, `tools/lib/courier-guard.ps1`). Publishing the engine around a live courier by
+hand is how you get a file lock, or worse, a daemon quietly running last month's build forever.
+
+### The inbox — what the courier files, and what a session reads
+
+`Core/Inbox/` (11 files). A note lands in the target repo at `.conductor/inbox/` — `notes/<id>.json`,
+an append-only `index.jsonl`, `cursor.json`, `media/`. Written with temp-file-plus-rename
+(`AtomicFile`) because the courier writes while a session reads.
+
+It reaches a session as a prompt battery and nothing else. `InboxBattery` is assembled **last** in
+`PromptBuilder` (`PromptBuilder.cs:366`) on purpose — a reader meets the engine's own knowledge first
+and the untrusted text last, framed. Immediately after assembly the battery marks seen only what it
+actually **carried** (`:373`): the counted remainder stays unread and reaches the next session rather
+than being skipped, and the battery cannot grow without bound on a long-lived project.
+
+Promotion into a followup or a task is an explicit act — `conductor inbox` (`list`, `show`, `add`,
+`transcribe`, `parked`, `prune`) plus a human, or DV4.4's single promote button. That is what keeps
+ADR-0005's invariant true: **a note is context, never a command.**
+
+### The rest of what Divan added, and where it lives
+
+| Surface | Where | Note |
+|---|---|---|
+| Transcription | `Core/Inbox/Transcriber.cs` | `ITranscriber`; `LocalCommandTranscriber` shells to `courier.transcribe.command` (env `CONDUCTOR_TRANSCRIBE_COMMAND`). Local, no network |
+| The cloud lane and `/cloud` | `Core/Integrations/Cloud/` | Owner-only chat verb + an opt-in per-session review lane. `plan.cloud.enabled` defaults **false** with deliberately no env override. `CloudPreflight` refuses a dirty tree or an unpushed branch **in the chat**, quoting the git state that blocked it — the referee stays local |
+| The board snapshot | `Core/Publishing/` | `board.html`, rendered from `Http/Contracts` at each boundary and **pushed** as a Telegram document. It states its own staleness. Nothing inbound |
+| Ledger issues, Projects v2 columns, SARIF | `Core/Integrations/Github/` | Three more push surfaces; see the seams table and ADR-0005's second addendum |
+| Plan config | `Models/CourierConfig.cs`, `Models/CloudLaneConfig.cs` | `plan.courier` and `plan.cloud`. Both carry a `Refusal()` so a wrong key is named at load, not at first use |
 
 ## The file-organisation convention
 
@@ -508,7 +621,10 @@ The second column is where the thing lives. The third is what silently lies if y
 | **a control verb** | `ControlAction` in `Core/Progress.Control.cs` and the `/control` handler | the Face's verb table at `cmdbar.go:66` — the strings do not map by name |
 | **a GitHub-synced surface** | `Core/Integrations/Github/` — a request shape in `GithubRequests.cs`, its wire record in `GithubDtos.cs`, and the call on `GithubClient` | register the DTO in `GithubJsonContext` or it will not serialise; if a run-loop file has to *name* `GithubMirror`, `TheGithubMirrorIsNeverRegisteredOnTheEventPath` fails — go through `RunContext.MirrorBoard` / `MirrorFinalPass` instead |
 | **a store column or table** | a new `Core/Store/Migrations/vNN_<what>.sql`, embedded as a resource | **`MigrationRunner.CurrentVersion`** (`MigrationRunner.cs:11`) — and the tests that pin it by literal (`RunDbTests`, `K3_3ProvenanceTests`, `K4_1ContextWindowTests`). Those literals exist so the bump is *decided*; KS9.2 shipped v14 and left all three behind. Note the store migrates on **every** open (`MigrationRunner.cs:21`), so a newer build run against a live store locks an older engine out of it (bug #45) |
-| **an architecture rule** | `tests/Conductor.Tests/ArchitectureBoundaryTests.cs` (**12** `[Fact]` rules today, counted at KS10.1) | make the failure message name the offending type; a rule that says only "boundary violated" costs the next session an hour |
+| **an inbox note kind, or anything the courier files** | `Core/Inbox/` for the note, `Core/Courier/` for the daemon side — one type per file, no partials | the note reaches a session **only** through `InboxBattery` (`PromptBuilder.cs:366`); if you add a path that promotes without a human, you have changed ADR-0005 and ADR-0008, so amend them |
+| **a courier subverb** | the `switch` in `CourierCommand.cs:97`ff | `docs/cli.md`, and `courier status` — a verb the status line never mentions is a verb the owner never finds |
+| **a published artefact** (a page, a report, a document pushed out) | `Core/Publishing/`, rendered from `Http/Contracts` | it must state its own staleness and go out as a **push**; a fetchable surface is a different ADR |
+| **an architecture rule** | `tests/Conductor.Tests/ArchitectureBoundaryTests.cs` (**13** `[Fact]` rules today, counted at DV7.1) | make the failure message name the offending type; a rule that says only "boundary violated" costs the next session an hour |
 | **anything in Core needing Spectre, `HttpListener` or `Console`** | it does not go in Core | `CoreDoesNotLinkTheCliOrAnyUiAssembly`, `CoreDoesNotHostHttp`, `CoreSourceNeverNamesTheShell` and `TheStoreDoesNotWriteToTheConsole` will each say so by name |
 
 ## What K2.3 split, and what it left
