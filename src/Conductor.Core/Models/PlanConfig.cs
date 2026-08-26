@@ -69,6 +69,12 @@ public sealed partial class PlanConfig
     /// supported state: a voice note still files, with its audio, and the reply says it was not
     /// transcribed.</summary>
     public CourierConfig? Courier { get; set; }
+    /// <summary>DV5.2 / findings §2.3 CL-1 — the cloud lane. null (the default, and what every
+    /// existing plan carries) → the engine never spawns cloud work at all. Even non-null it is off
+    /// until <see cref="CloudLaneConfig.Enabled"/> says otherwise: out there there is no meter, no
+    /// stall watchdog and no control plane, so the lane is asked for, never assumed.</summary>
+    public CloudLaneConfig? Cloud { get; set; }
+
     /// <summary>KS9.1: push-only GitHub mirror of the board and the diary. null (the default, and what
     /// every existing plan carries) → the mirror does not exist. Nothing inbound, ever — see
     /// <see cref="GithubConfig"/>.</summary>
@@ -377,6 +383,9 @@ public sealed partial class PlanConfig
         // DV3.3: a nonsense transcribe dial is refused at load rather than discovered when the first
         // voice note arrives - which, for a machine nobody is watching, is the worst possible moment.
         if (Courier?.Refusal() is { } courierRefusal) errors.Add(courierRefusal);
+        // DV5.2: same posture for the cloud lane - a nonsense timeout is refused at load, not
+        // discovered by a lane that hangs somewhere nothing is watching it.
+        if (Cloud?.Refusal() is { } cloudRefusal) errors.Add(cloudRefusal);
 
         return errors;
     }

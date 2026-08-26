@@ -1,5 +1,6 @@
-using Conductor.Core.Accounting;
+﻿using Conductor.Core.Accounting;
 using Conductor.Core.Events;
+using Conductor.Core.Integrations.Cloud;
 using Conductor.Models;
 
 namespace Conductor.Core.Lanes;
@@ -331,6 +332,59 @@ public sealed class LaneCoordinator
         }
     }
 
+    // ---------------------------------------------------------------- DV5.2: the cloud lane
+
+    /// <summary>The kind that marks a lane as having run somewhere this engine cannot watch. It is
+    /// what makes the ledger line say "cloud lane" rather than "analysis lane", which matters because
+    /// the two are priced by completely different rules — one has a receipt, the other never can.</summary>
+    public const string CloudLaneKind = "cloud";
+
+    /// <summary>DV5.2 / findings §2.3 CL-1 — enqueue the cloud second-opinion lane, if this plan has
+    /// asked for one.
+    ///
+    /// <para>Default off: <c>plan.cloud</c> is null in every plan that has not thought about it, and
+    /// null returns here before a pool, a preflight or a process exists. Enabled, it runs through the
+    /// same read-only pool as an analysis lane, so it gets the same <see cref="LaneStarted"/> /
+    /// <see cref="LaneFinished"/> lifecycle and the same concurrency ceiling.</para>
+    ///
+    /// <para>It fires ONCE PER SESSION, from the same place the analysis lanes start, and reviews the
+    /// branch as it stands then. Worth knowing before turning the flag on for a long run: with no
+    /// meter on the other side, "a cloud review per session" is a number nothing here can price.</para>
+    ///
+    /// <para>It settles nothing. The lane hands back an artifact and no verdict, its
+    /// <see cref="LaneResult.Spend"/> is always null so the ledger says "unknown, not zero" rather
+    /// than writing a $0.00 row, and every gate still runs on this machine afterwards.</para></summary>
+    public void StartCloudReviewLane(StageConfig stage, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(stage);
+        if (_plan.Cloud is not { Enabled: true } cfg) return;
+
+        _lanePool ??= new LaneWorkerPool(_plan.Limits.MaxConcurrentLanes, _events, _log);
+
+        var lane = new CloudLane(cfg);
+        var repo = _plan.Repo;
+        var artifacts = Path.Combine(_plan.StateDir, "cloud");
+        var label = $"{stage.Id}-s{_state.SessionCounter}";
+
+        _lanePool.Enqueue(new LaneWorkItem(CloudLaneKind + "-review", CloudLaneKind, stage.Id,
+            async ct2 =>
+            {
+                var r = await lane.RunAsync(repo, artifacts, label, ct2).ConfigureAwait(false);
+                _log($"cloud lane: {r.Summary}");
+                return new LaneResult
+                {
+                    LaneId = CloudLaneKind + "-review",
+                    Kind = CloudLaneKind,
+                    ArtifactPath = r.ArtifactPath,
+                    CompletedUtc = DateTime.UtcNow,
+                    Error = r.Outcome is CloudLaneOutcome.Failed or CloudLaneOutcome.TimedOut
+                        ? r.Summary : null,
+                    // Never a receipt. RunSpendLedger turns null into "unknown, not zero".
+                    Spend = r.Spend,
+                };
+            }), ct);
+    }
+
     /// <summary>B12.2: Drain any lanes that completed since the last poll so the session prompt
     /// can optionally be updated with fresh analysis results.</summary>
     public void PollLaneCompletion()
@@ -368,5 +422,8 @@ public sealed class LaneCoordinator
     /// (the poll during a session and the collect after it) and a lane arrives in exactly one of them,
     /// because <c>DrainCompleted</c> removes what it returns.</summary>
     private void RecordLaneSpend(LaneResult result)
-        => _ledger?.Record(result.Spend, _state.SessionCounter, $"analysis lane '{result.LaneId}'");
+        => _ledger?.Record(result.Spend, _state.SessionCounter,
+            string.Equals(result.Kind, CloudLaneKind, StringComparison.Ordinal)
+                ? $"cloud lane '{result.LaneId}'"
+                : $"analysis lane '{result.LaneId}'");
 }

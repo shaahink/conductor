@@ -485,4 +485,57 @@ public class ArchitectureBoundaryTests
         Assert.True(violations.Count == 0,
             "KS9.2 — the mirror left its lane:\n" + string.Join("\n", violations));
     }
+
+    /// <summary>DV5.2 / findings §2.3 CL-1 — <b>the referee never moves.</b>
+    ///
+    /// <para>CL-1 lets the engine send work to a machine it cannot watch, on one condition: the cloud
+    /// settles nothing. Out there there is no per-turn telemetry, no stall watchdog, no rollover, no
+    /// circuit breaker and no control-plane reach (§2.4 items 1–3), so a cloud lane that could confirm
+    /// a checkpoint or stand in for a gate would be the run believing an unverifiable claim about
+    /// itself — the failure the whole KS4 era was built to make impossible.</para>
+    ///
+    /// <para>Stated as a source rule rather than as a comment, and over the WHOLE cloud namespace
+    /// rather than one file, so a later checkpoint cannot hand the cloud a verdict by adding a
+    /// file.</para></summary>
+    [Fact]
+    public void TheCloudLaneNeverReachesTheReferee()
+    {
+        // The referee, by name: what decides a session, what runs the battery, and what writes the
+        // run's own record of either.
+        var forbidden = new[]
+        {
+            "VerdictEngine", "SessionVerdict", "VerdictDisposition",
+            "GateOrchestrator", "GateRunner", "GateResult",
+            "IRunStore", "SqliteRunStore", "IEventSink", "TaskWrites",
+        };
+
+        var files = SourcesUnder("src", "Conductor.Core", "Integrations", "Cloud");
+        Assert.NotEmpty(files);
+
+        var violations = new List<string>();
+        foreach (var file in files)
+        {
+            var code = CodeOnly(file);
+            foreach (var name in forbidden)
+            {
+                if (Regex.IsMatch(code, $@"\b{name}\b", RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(2)))
+                    violations.Add($"  {file.Name} names {name} — a cloud lane produces an OPINION. " +
+                        "Every gate re-runs on this machine and nothing the cloud says confirms anything.");
+            }
+        }
+
+        Assert.True(violations.Count == 0,
+            "DV5.2 — the referee moved to a machine conductor cannot watch:\n" + string.Join("\n", violations));
+
+        // And the list cannot rot into a rule that forbids nothing: every name must still exist in the
+        // engine, the way the spend rule's exemptions must still describe reality.
+        var engineSource = string.Join("\n", SourcesUnder("src", "Conductor.Core").Select(CodeOnly));
+        var missing = forbidden
+            .Where(n => !Regex.IsMatch(engineSource, $@"\b{n}\b", RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(5)))
+            .Select(n => $"  {n} is forbidden to the cloud lane but no longer exists in the engine — rename or drop it.")
+            .ToList();
+
+        Assert.True(missing.Count == 0,
+            "DV5.2 — the referee rule has gone stale:\n" + string.Join("\n", missing));
+    }
 }

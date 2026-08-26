@@ -20,6 +20,12 @@ public interface ICloudCli
     /// <paramref name="sessionId"/>, from <paramref name="repoDir"/>.</summary>
     Task<CloudCliResult> FollowUpAsync(string repoDir, string sessionId, string message,
         TimeSpan timeout, CancellationToken ct);
+
+    /// <summary>DV5.2 — runs a cloud-hosted review of <paramref name="repoDir"/>'s current branch
+    /// against <paramref name="target"/> (null lets the CLI pick the base) and hands back what it
+    /// printed, UNPARSED.</summary>
+    Task<CloudCliResult> ReviewAsync(string repoDir, string? target, TimeSpan timeout,
+        CancellationToken ct);
 }
 
 /// <summary>The real one: <c>claude -p "message" --cloud &lt;session-id&gt;</c>, which is the exact
@@ -35,6 +41,17 @@ public sealed class ClaudeCloudCli : ICloudCli
     {
         var r = await ProcessRunner.RunAsync(_executable, CloudCliFacts.FollowUpArgs(sessionId, message),
             repoDir, timeout, ct).ConfigureAwait(false);
+        return new CloudCliResult(r.ExitCode, r.Output, r.StdErr, r.TimedOut);
+    }
+
+    public async Task<CloudCliResult> ReviewAsync(string repoDir, string? target, TimeSpan timeout,
+        CancellationToken ct)
+    {
+        // The CLI's own --timeout is how long IT waits; the process timeout is a minute past that, so
+        // a review that runs long is reported by the tool that knows why rather than killed by us.
+        var r = await ProcessRunner.RunAsync(_executable,
+            CloudCliFacts.ReviewArgs(target, (int)Math.Ceiling(timeout.TotalMinutes)),
+            repoDir, timeout + TimeSpan.FromMinutes(1), ct).ConfigureAwait(false);
         return new CloudCliResult(r.ExitCode, r.Output, r.StdErr, r.TimedOut);
     }
 }

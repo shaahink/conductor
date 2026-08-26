@@ -69,4 +69,19 @@ public static class CloudCliFacts
     /// own refusal message spells it.</summary>
     public static string[] FollowUpArgs(string sessionId, string message) =>
         ["-p", message, "--cloud", sessionId];
+
+    /// <summary>DV5.2 — the cloud verb that IS headless. Measured 2026-08-26: run with stdout piped in
+    /// a repo with no diff, <c>ultrareview</c> did not ask for a terminal — it validated and refused
+    /// by name ("No changes to review: the diff against origin/main … is empty"). It is therefore the
+    /// only cloud surface on this CLI an engine can drive, and it is exactly the CL-1 shape: it needs
+    /// no conductor tools and it produces no verdict.</summary>
+    public const string ReviewVerb = "ultrareview";
+
+    /// <summary><c>--no-post</c> is the CLI's own default and is passed ANYWAY. A lane the engine
+    /// spawns must never write a comment on somebody's pull request as the owner; relying on a
+    /// research preview's default for that is one release note away from being wrong.</summary>
+    public static string[] ReviewArgs(string? target, int timeoutMinutes) =>
+        string.IsNullOrWhiteSpace(target)
+            ? [ReviewVerb, "--no-post", "--timeout", timeoutMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture)]
+            : [ReviewVerb, target.Trim(), "--no-post", "--timeout", timeoutMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture)];
 }

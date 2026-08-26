@@ -712,6 +712,53 @@ deleted by transcribing it, so a garbled transcript is always recoverable.
 This repo ships `tools/transcribe/whisper-json.py`: faster-whisper `large-v3` on the GPU, offline, no
 API key.
 
+## `cloud` — A second opinion from a machine conductor cannot watch (DV5.2)
+
+**Absent by default, and off even when present.** Absent means the engine never spawns cloud work at
+all — no process, no git probe, nothing. This is an experiment behind a flag, and the flag is the
+point: out there there is no per-turn telemetry, no stall watchdog, no rollover, no circuit breaker
+and no reach back to the control plane, so a lane with none of those has to be asked for rather than
+assumed. There is deliberately **no environment override** to turn it on.
+
+```jsonc
+"cloud": {
+  "enabled": false,           // DEFAULT. Nothing is spawned until this is true
+  "timeoutMinutes": 30,       // how long to wait for the cloud to answer; default 30, range 1-240
+  "base": "master"            // optional: what the review is taken against. Omit and the CLI picks
+}
+```
+
+| key | what it does |
+|---|---|
+| `enabled` | Default **false**. False (and an absent block) means the cloud lane never runs and never measures anything. |
+| `timeoutMinutes` | How long to wait for an answer. Default 30 — the CLI's own default. Outside 1–240 the plan is refused at load, rather than discovered by a lane that hangs where nothing is watching it. |
+| `base` | The branch or PR the review is taken against, passed through as the review verb's target. Omit it and the CLI chooses the base. |
+
+**It fires once per session**, alongside the read-only analysis lanes at the top of the session
+loop, and it reviews the branch as it stands then. That is a cloud review per session for as long as
+the flag is on — which, with no meter on the other side, is the number to think about before turning
+it on for a long run.
+
+**The referee never moves.** The lane runs `claude ultrareview`, which is cloud-hosted, needs no
+conductor tools and settles nothing. What comes back is stored **whole and unparsed** as an artifact
+under the state directory and handed to a person; every gate still runs on this machine, and nothing
+the cloud says confirms a checkpoint. That is enforced as a source rule over the whole cloud
+namespace, not as a promise — see `ArchitectureBoundaryTests.TheCloudLaneNeverReachesTheReferee`.
+
+**Its cost is `unknown`, never `0`.** There is no meter for work on a machine conductor does not
+control, so the lane hands the spend ledger nothing and the ledger says so out loud — "the provider
+reported no billed figure — not recorded (unknown, not zero)". No `$0.00` row is ever written for a
+cloud lane. It also spends the *same* Max quota the local run needs; it buys no extra capacity.
+
+`--no-post` is passed explicitly on every invocation even though it is the CLI's default: a lane the
+engine spawns must never write a comment on a pull request as the owner.
+
+A note on what this is **not**. `claude --cloud`, which would start a full cloud *session*, refuses
+every non-interactive invocation on the CLI this engine drives — it cannot be combined with
+`--print`, it is a different backend from `--bg`, and without a TTY it refuses outright rather than
+silently running locally. The engine therefore cannot start a cloud session at all; the owner starts
+those from a terminal and talks to them from the chat with `/cloud`.
+
 ## `github` — Push the board to GitHub issues (KS9.1)
 
 Absent by default, and absent means the mirror does not exist: a plan without this block behaves

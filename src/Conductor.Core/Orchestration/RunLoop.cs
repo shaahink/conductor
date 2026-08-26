@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -390,6 +390,11 @@ public sealed partial class RunLoop
                 _ctx.PreflightConsecutiveFailures = 0;
 
                 _lanes.StartAnalysisLanes(stage, track.HandoffBlock, ct);
+
+                // DV5.2 / CL-1: the cloud second opinion, if the plan asked for one. Off by default,
+                // and a no-op the moment plan.cloud is null - which is every plan that has not
+                // thought about it. It cannot move the run: the referee stays here.
+                _lanes.StartCloudReviewLane(stage, ct);
 
                 // Round 6: both parallel-audit branches are the DECISION's now — the lane spawn and
                 // the HIGH-outcome fix were re-decided here, after StageSelection had answered, so

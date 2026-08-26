@@ -153,13 +153,21 @@ public sealed class DV5_1CloudVerbTests : IDisposable
 
     /// <summary>There is no create seam to be tempted by, and this is what stops one appearing by
     /// accident when the platform changes and somebody remembers the findings doc rather than
-    /// re-measuring.</summary>
+    /// re-measuring. Stated as the invariant rather than as a method count, so the seam can grow the
+    /// calls that ARE headless — DV5.2 added the review one — without the rule going quiet.</summary>
     [Fact]
-    public void The_cloud_seam_offers_exactly_one_call_and_it_is_not_create()
+    public void No_call_on_the_cloud_seam_starts_a_cloud_session()
     {
-        var methods = typeof(ICloudCli).GetMethods().Select(m => m.Name).ToList();
+        var starters = typeof(ICloudCli).GetMethods()
+            .Select(m => m.Name)
+            .Where(n => n.Contains("Create", StringComparison.Ordinal)
+                     || n.Contains("Start", StringComparison.Ordinal)
+                     || n.Contains("New", StringComparison.Ordinal)
+                     || n.Contains("Spawn", StringComparison.Ordinal))
+            .ToList();
 
-        Assert.Equal(["FollowUpAsync"], methods);
+        Assert.Empty(starters);
+        Assert.NotEmpty(typeof(ICloudCli).GetMethods());
     }
 
     // ────────────────────────────── the follow-up direction ──────────────────────────────
@@ -374,6 +382,11 @@ public sealed class DV5_1CloudVerbTests : IDisposable
             Calls.Add((repoDir, sessionId, message));
             return Task.FromResult(Answer);
         }
+
+        /// <summary>DV5.1 never reaches the review verb; a call here is a bug, not a fixture gap.</summary>
+        public Task<CloudCliResult> ReviewAsync(string repoDir, string? target, TimeSpan timeout,
+            CancellationToken ct)
+            => throw new InvalidOperationException("the /cloud verb must never start a review lane");
     }
 
     private sealed class FakeChannel : IMessageChannel
