@@ -4,18 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV5.1 DONE. Trap 16 paid for itself twice. CREATING a cloud session is interactive-only on
-  claude 2.1.246 - `--cloud` refuses `-p`, refuses `--bg`, and refuses a non-TTY stdout, all with
-  named errors - so CL-2's headless-create half cannot exist. Card AMENDED, not argued with. What
-  ships: admin-only `/cloud`, the 6.8 git preflight (six verdicts, remote tip read by `ls-remote`
-  because status ahead/behind answers against the last fetch), the headless follow-up
-  `claude -p "msg" --cloud <id>`, an OwnerCloudAction row on every path incl. refusals, cost always
-  the word unknown. The live run then caught me guessing the id shape (`session_`/`cse_`, never a
-  UUID) - drive the real binary, synthetic tests cannot see platform shapes.
-next: DV5.2, the flagged lane. LEAD, already measured: `claude ultrareview [target]` is the ONLY
-  headless cloud surface this CLI has - `--json`, `--timeout <min>`, `--post/--no-post` (default
-  no-post) - and it is exactly CL-1's shape: no conductor tools, no verdict, a second opinion.
-  Reuse ICloudCli (one method, no create) and CloudVerbResult.Cost. DV5.2 is droppable before DV6.
+last: DV5 DONE - both cards. Trap 16 decided the whole stage: `claude --cloud` CREATE is
+  interactive-only on claude 2.1.246 (refuses `-p`, refuses `--bg`, refuses a non-TTY), so no
+  engine can start a cloud session and neither card's headless-create half can exist. Both
+  AMENDED, then delivered against what the CLI really offers. DV5.1: admin-only `/cloud` with the
+  6.8 preflight (six verdicts; remote tip read by `ls-remote`, because status ahead/behind answers
+  against the last fetch) and the headless follow-up `claude -p "msg" --cloud <id>`. DV5.2: the
+  lane is `claude ultrareview` behind plan.cloud.enabled, DEFAULT OFF, payload stored whole and
+  never parsed, cost always the word unknown via KS5.2's own "unknown, not zero" branch.
+find: the live runs caught two guesses that synthetic tests could not - the session-id shape
+  (`session_`/`cse_`, never a UUID) and that ultrareview BUNDLES the branch, so its gate must be
+  NARROWER than /cloud's. Drive the real binary; do not trust the findings doc's shapes.
+next: DV6.1 - bugs and followups as a long-lived GitHub issue class. Trap 5 still binds: the board
+  mirror is the engine's job, and DV6 proofs use a PRIVATE scratch repo.
 red: bug #76 (courier delivers an evidence artifact as text naming the path) still open, untouched.
 
 ## Baseline numbers (from run.db)
