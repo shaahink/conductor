@@ -43,6 +43,18 @@
   //    re-derives before launch.
   //  * Cap $420 = est $318 (23 cp x $13.81, the edge era's honest measured figure) + ~32% headroom,
   //    the same policy the edge cap used.
+  //  * CORRECTED IN PLACE AT DV7.1 (2026-08-26), measured, not re-estimated - see TOKEN-BUDGET-TUNING
+  //    section 13. The two claims above were both optimistic and the LIMITS ARE DELIBERATELY LEFT
+  //    UNCHANGED: this run is mid-flight and trap 14 forbids moving its ceiling. What is corrected is
+  //    what the next plan copies from here.
+  //    - the $13.81/cp basis: outturn is $14.45/cp over 20 checkpoints ($289.04). Projected 23 cp =
+  //      ~$332, still inside 420, so the cap policy held. The BASIS did not - it was 4.6% low, and
+  //      edge's was 4.3% low on karvan's. Two eras short in the same direction: next plan uses
+  //      19M / $14.50 per checkpoint and treats it as a floor.
+  //    - the 35M/0.90 pair: the edge prescription justified it as "headroom 3.5M is 2.0x the 1.74M
+  //      measured wrap-up". Divan's own wrap-up measured 2.42M, so the real headroom was 1.4x - under
+  //      the >=1.5x rule the whole era, and the largest closer came in at 35.29M against a 35M cap.
+  //      `budget` now prescribes 42M / 0.9 (nudge 37.8M) for the NEXT era. Still claude-opus-5 only.
   //  * batteries is bounded ON PURPOSE (ledgerMaxEntries 3 / maxBytes 6144): the unbounded ledger
   //    silently starves the open-bugs battery (DIVAN-BUG-SWEEP ledger 3, item 1) and this run
   //    depends on sessions SEEING the bug list. DV2.2 lands the engine fix; the bound stays anyway.

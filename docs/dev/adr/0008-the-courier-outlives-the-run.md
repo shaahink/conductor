@@ -107,8 +107,11 @@ courier keeps today's behaviour byte-identically — the KS11.1 golden-replay st
   courier's operating docs and is the honest long-term argument for an always-on host.
 - **Reinstall is no longer a two-step ritual the owner has to remember.** It is also no longer safe to
   publish the engine by hand around a live courier; the installer is the supported path.
-- **A second listener exists in the process.** `ARCHITECTURE.md`'s "two surfaces" section was already
-  wrong at KS8.1 (three) and is now wrong by two. It is now titled and counted correctly.
+- **A fourth listener exists on the machine — but not in the run's process.** `CourierListener` is
+  constructed only by `conductor courier run` (`Commands/CourierCommand.cs:276`); the run process
+  still registers exactly one `IHostedService` (`Hosting/ConductorHost.cs:121`, `TelegramService`),
+  so `ARCHITECTURE.md`'s "there is no `IHostedService` running the loop" stayed true and gained a
+  pointer instead of a correction.
 - **If a note ever needs to *steer* a run**, that is a new decision and this ADR does not grant it.
   Promotion stays an explicit act — `conductor inbox` plus a human, or DV4.4's single promote button
   — precisely so that ADR-0005's invariant keeps a name.

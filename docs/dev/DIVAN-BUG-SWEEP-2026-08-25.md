@@ -57,10 +57,22 @@ no open row carries it — triage confirms it fixed, superseded by #60, or refil
 
 262 rows, 11 OPEN as of today. The ones a session can own:
 
-- **FU-F1-06** — `UpdateRunStatus` exists nowhere in `src/`, so a run that ends `NeedsHuman`,
+> **Corrected at DV7.1, 2026-08-26.** Two things in this section did not survive re-measurement, and
+> both are recorded in `.conductor/followups.md`'s DV7.1 closure ledger. **262 is exact** — it is
+> every table row in that file, of which 91 are followup rows for 55 distinct ids. **11 is not
+> reproducible** by any counting method (the file yields 7 / 10 / 4 / 23 depending on the pattern) and
+> no commit has touched the file since, so the discrepancy is in the count, not the ledger. And the
+> **FU-F1-06** bullet below is wrong, struck through rather than deleted so the correction is legible.
+
+- ~~**FU-F1-06** — `UpdateRunStatus` exists nowhere in `src/`, so a run that ends `NeedsHuman`,
   `Paused` or `AwaitingOwner` still reads `status='running'` in the store. Re-verified with the scan
   widened to all of `src/`. The "immortal running" record, and the oldest standing row a session can
-  actually clear.
+  actually clear.~~ **CLOSED at KS0.2 (`15627b9`) six days before this document was written**, and
+  `.conductor/followups.md:527` says so. Measured at DV7.1: `UpdateRunStatus` is declared at
+  `Store/IRunStore.cs:38`, implemented at `Store/SqliteRunStore.Sessions.cs:74`, called from
+  `Orchestration/RunContext.cs:391`, and pinned by `KS0_2RunRecordTests` and
+  `KS0_2NoRunsUpdateOutsideTheStoreTests`. No session acted on the re-opening, so nothing was lost —
+  but a triage document that contradicts a closure ledger is how a closed row gets worked twice.
 - The face `tokens cap` row quotes the plan **file**, not the run's effective ceiling
   (`face-go/internal/tui/tab_home.go:662-664`; the cost row at `:609` has the same defect).
 - `approve` lost `CtlCommand`'s `--yes` and `--force` (`ApproveCommand.Settings` declares only

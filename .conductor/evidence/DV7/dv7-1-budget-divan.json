@@ -1,0 +1,52 @@
+{
+  "runs": [
+    {
+      "runId": "aa91682821c14666915c16317a4fc72c",
+      "plan": "Divan - the chancellery: inbox, courier, and the record that gets out",
+      "windows": [
+        {
+          "label": "35M / nudge 31.7M",
+          "firstSession": 2,
+          "lastSession": 20,
+          "sessions": 19,
+          "costedSessions": 18,
+          "capTokens": 35000000,
+          "capMeasured": true,
+          "nudgeTokens": 31728841,
+          "nudgeRatio": 0.9065,
+          "headroomTokens": 3271159,
+          "tokens": 376894713,
+          "checkpoints": 20,
+          "tokensPerCheckpoint": 18844736,
+          "rollovers": 1,
+          "rolloverRate": 0.0556,
+          "nudged": 7,
+          "nudgedAndEndedClean": 6,
+          "closers": 15,
+          "floorTokens": 237814,
+          "medianCloserTokens": 27692133,
+          "maxCloserTokens": 35285722,
+          "wrapUp": {
+            "min": 1434618,
+            "median": 2420942,
+            "max": 3409843,
+            "samples": 5
+          }
+        }
+      ],
+      "prescription": {
+        "maxSessionTokens": 42000000,
+        "softBreakRatio": 0.9,
+        "nudgeTokens": 37800000,
+        "headroomTokens": 4200000,
+        "wrapUpBasis": 2420942,
+        "wrapUpMeasured": true,
+        "verdict": "set maxSessionTokens to 42M at softBreakRatio 0.9 - nudge 37.8M clears the 35.3M largest closer, headroom 4.2M is 1.7x the measured 2.42M wrap-up.",
+        "findings": [
+          "HEADROOM THIN: 3.27M after the nudge is 1.4x the measured 2.42M wrap-up; the rule is \u003E= 1.5x.",
+          "THE RAIL IS DELIVERED AND IGNORED: all 1 killed sessions had already been nudged and not one of them stopped. The cooperative break is the only path that ends a capped session on its own terms, and here it converted zero."
+        ]
+      }
+    }
+  ]
+}

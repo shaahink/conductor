@@ -525,3 +525,99 @@ plan doc's `32M / 0.85` line is corrected in place at `KARVANSARA-PLAN-2026-08-1
   of this architecture, not a lever. What KS7.5 moves is the *size of the carried prefix* within a
   session (§11), which lands in tokens-per-checkpoint, and there the era came in +4% on an estimate
   built from a *less* engine-deep era. Read that as the saving paying for the extra depth.
+
+## 13. The Divan era's own numbers — 35M held, **42M / 0.9** prescribed (DV7.1, 2026-08-26)
+
+Measured today with `conductor budget` run through the **fresh build** against a `sqlite3 .backup`
+copy of the live store. Raw output: `.conductor/evidence/DV7/dv7-1-budget-raw.txt` and
+`dv7-1-budget-divan.json`. Every figure below is from that run or from a query against the same copy;
+none is typed forward from a plan.
+
+**The seam that makes this safe, and it is not the one §12 prescribed.** KS12.1's closure ledger says
+the positional-db argument is "the only seam that works" and warns that `CONDUCTOR_RUN_DB` does not
+redirect the verb (bug #61). There is a better one: **`budget --home <dir> --repo <repo>`** reads an
+entire alternate state home. Copy the store with `sqlite3 .backup`, copy `catalogue.json` beside it
+with the one `runDb` path rewritten, and the live file is never opened at all — not for read, not for
+write, and trap 18 cannot arm. `MigrationRunner.CurrentVersion` was **15** on both sides today (this
+tree, and the installed `0.4.2-alpha.0.79+870786f5` engine driving the run), so nothing would have
+broken either way; the point is that the measurement no longer depends on that being true.
+
+### The window
+
+| | |
+|---|---|
+| window | sessions 2–20, cap **35M**, nudge **31.73M** (ratio 0.9065) |
+| costed sessions | **18** |
+| tokens | **376.89M** |
+| checkpoints | **20** (DV1×2, DV2×4, DV3×4, DV4×4, DV5×2, DV6×4) |
+| tokens / checkpoint | **18.84M** |
+| cost | **$289.04** against a `maxRunCostUsd` of 420 — **$14.45 / checkpoint** |
+| wall clock | 10.1 h of agent time |
+| session floor | **0.24M** |
+| median closer | **27.69M** · largest closer **35.29M** |
+| rollover | **1 of 18 (6%)** |
+| nudged | **7**, of which **6 ended clean** |
+| wrap-up | min 1.43M · **median 2.42M** · max 3.41M (n=5) |
+| headroom after the nudge | **3.27M** = **1.4×** the measured wrap-up |
+| cache-read share | **98.57%** |
+
+### What the verb prescribes for the next era
+
+```json
+"limits": {
+  "maxSessionTokens": 42000000,
+  "softBreakRatio":   0.9
+}
+```
+
+Nudge 37.8M, headroom 4.2M = 1.7× the measured 2.42M wrap-up. **This is the number the next era
+compiles against**, and where it disagrees with this plan's own 35M/0.9 the measurement wins: the
+plan's pair was derived from the *edge* run and this one is derived from Divan's own 18 sessions.
+Still bound to `claude-opus-5` — §9, §10, §11 and §12 all say a model change re-derives the pair, and
+nothing here changes that.
+
+Two findings came with it, and the first is the one that moves the number:
+
+- **HEADROOM THIN.** 3.27M after the nudge is 1.4× the measured 2.42M wrap-up; §4's rule is ≥ 1.5×.
+  The era ran the whole way with less closing room than the rule allows and got away with it — the
+  largest closer was **35.29M against a 35M cap**, which is a session that finished with nothing
+  left. That is the argument for 42M, not the rollover rate.
+- **"THE RAIL IS DELIVERED AND IGNORED."** The verb prints this whenever every killed session had
+  already been nudged. Here that is **one session out of 18** — and in the same window **6 of the 7
+  nudged sessions did end clean**. The finding's wording ("not one of them stopped … it converted
+  zero") is true of the killed set and badly misleading about the rail, which converted 86%. Read the
+  `nudged` / `nudgedAndEndedClean` pair in the JSON before acting on that sentence; §5's advice about
+  rollover churn does not apply to this era.
+
+### Per-checkpoint, per stage — and the estimate this era planned against
+
+| stage | ckpts | sess | Mtok | $ | Mtok/ckpt | $/ckpt | cache % | $/Mtok |
+|---|---|---|---|---|---|---|---|---|
+| DV1 channel health | 2 | 1 | 23.7 | 16.04 | 11.9 | **8.02** | 98.76 | 0.677 |
+| DV2 the bug sweep | 4 | 3 | 77.3 | 52.81 | 19.3 | 13.20 | 98.74 | 0.683 |
+| DV3 the inbox | 4 | 3 | 78.8 | 55.23 | 19.7 | 13.81 | 98.61 | 0.701 |
+| DV4 the courier | 4 | 5 | 95.9 | 72.62 | **24.0** | **18.16** | 98.42 | 0.758 |
+| DV5 cloud | 2 | 1 | 30.8 | 23.90 | 15.4 | 11.95 | 98.59 | 0.776 |
+| DV6 the record out | 4 | 5 | 70.4 | 68.44 | 17.6 | 17.11 | 98.45 | **0.972** |
+| **era** | **20** | **18** | **376.9** | **289.04** | **18.84** | **14.45** | **98.57** | 0.767 |
+
+**The per-checkpoint basis was low again, and by more than last time.** §12 prescribed **17.5M /
+$13.80** and told the next plan to stop rounding it down. Divan came in at **18.84M / $14.45** —
+**+7.7% tokens, +4.7% cost**. Edge was +4.0%/+4.3% on karvan's basis. Two eras running, the estimate
+is short and short in the same direction. **Use 19M / $14.50 for the next plan**, and treat a basis
+that has never once come in high as a floor rather than a mean.
+
+**§12's "budget the work's *kind*, not the mean" holds, and names a second kind.** Edge found it in
+*adversarial* stages (a gate that must go red on purpose). Divan finds it in stages whose deliverable
+is a **new always-on process** (DV4, +27% on the era's tokens/checkpoint) and in stages proving
+themselves against a **live third-party API** (DV6, +18% on $/checkpoint). Both pay for a rig as well
+as a feature, and DV4 additionally paid five sessions for four checkpoints — the only stage that did.
+
+**The unit-cost spread is real and this schema cannot explain it.** $/Mtok runs 0.677 → 0.972 across
+the stages, a 44% band, while the cache-read share barely moves (98.42–98.76%). Neither output share
+nor uncached-input share tracks it: DV4 has the *highest* uncached input (1.25%) and a mid-band unit
+cost, while DV5 and DV6 have identical output shares (0.50%) and unit costs 25% apart. The residual
+is most likely cache **write** churn priced above a read, which the `costs` table does not separate
+from reads — that is **bug #53** (the `cache_creation` TTL split is dropped), and until it is fixed
+this table can report the spread and not attribute it. Do not build a lever on the cache share: at
+98.3–98.6% across four eras it is a constant of this architecture, exactly as §12 said.

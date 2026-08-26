@@ -738,3 +738,118 @@ migrated to v15 and thrown away, and `conductor task`/`note`/`bug` keep working 
 session. One trap for whoever repeats it: **`CONDUCTOR_RUN_DB` does not redirect `budget`** — that
 verb resolves the run by repo path first and answers *"no runs to measure for C:\Code\conductor"*.
 The positional path is the only seam that works.
+
+## DV7.1 closure ledger — 2026-08-26 (the Divan era's final reconciliation)
+
+Same contract as SF7.1's, K7.1's, KS10.1's and KS12.1's: **no row whose state is unstated, and nothing
+silently dropped.** Every number below was measured today against a `sqlite3 .backup` copy of the live
+store or against the tree, and the check is named beside the claim. Mechanical proof:
+`.conductor/evidence/DV7/dv7-1-closure-ledger.md`.
+
+**This section deliberately contains no `| FU-…` table rows.** Bug **#81** measured the cost of the
+convention every prior closure ledger followed: 91 rows for 55 distinct ids, so the ledger mirror
+reports phantom updates and, unguarded, oscillates a project card between two columns forever.
+Restating 55 rows here would have added a seventh copy of the worst offenders. The state of every id
+is below in prose, which the mirror's row regex does not index.
+
+### The store, and the split KS10.1 found — closed by this era
+
+KS12.1 recorded two stores and karvan's four rows (#24, #27, #31, #35) stranded in one no session
+opens. **DV2.1 recovered all four into the live store**: karvan #24 → **#70**, #27 → **#71** (fixed
+during this era), #31 → **#72**, #35 → **#73**, each carrying a `RECOVERED … where it is karvan bug
+#NN` back-reference in its detail. The live store now holds ids 1–23 and 36–82 (70 rows; ids 24–35 are
+permanently absent by design — they were re-minted, not moved). Bug **#46** stays open as the *class*
+of defect; its four instances no longer carry forward in a table.
+
+Schema is **v15** on both sides today — `MigrationRunner.CurrentVersion` in this tree and in the
+installed `0.4.2-alpha.0.79+870786f5` engine driving this run — so the trap-18 hazard did not arm.
+
+### Bugs — 70 rows, 37 fixed, 33 open
+
+**Closed by the Divan era: sixteen.** Twelve filed and fixed here — #62, #63 (DV2.2, batteries), #64,
+#65, #66 (DV2.3, telegram), #67, #68, #69 (DV2.4, the three high-severity engine defects), #71 (the
+recovered karvan #27), #74 (DV3), #77, #78 (DV4) — plus **four carried in from earlier eras and closed
+here**: #15 and #21 (Sarban face, prompt length), #38 (Karvansara core, the getUpdates 409 conflict
+loop — closed by the courier owning the token, which is the whole point of DV4), and #55 (Karvansara
+edge, doctor's argv lint).
+
+**Open at the close: 33, and every one has a name against it.**
+
+- **Filed by this era and still open — nine, all with the next era or the owner:** **#75** (high —
+  `conductor note` stores only the first line; three DV3 acceptance records survive as their header
+  alone, and it cost this session three separate notes to work around), **#76** (the courier does not
+  upload files), **#79** (high — `github sync --backfill` duplicates the whole board inside the API's
+  replica lag), **#80** (Projects v2 built but unproven live; the owner's one-command unblock is
+  `gh auth refresh -s project`), **#81** (this file's duplicate rows), **#82** (the SARIF upload has
+  never had a 202 — every repo a proof may touch is private and this account has no Advanced Security;
+  the public leg is one command at DV7.3), and the three DV2.1 recovered from karvan: **#70**, **#72**,
+  **#73**.
+- **Carried in and still open — 24**, unchanged in disposition from KS12.1's ledger: #18, #19, #23
+  (Sarban face); #37, #39–#43, #45–#49, #51–#54, #56, #57–#61 (Karvansara core and edge). Of these,
+  **#45** (a newer build silently migrates the live store and locks the running engine out) and **#61**
+  (`CONDUCTOR_RUN_DB` does not redirect the measuring verbs) are the two every future session pays
+  for, and both were routed around rather than fixed today — see the last section.
+### Reconciled against the DV2 triage, row by row — Ledger 1 is exact
+
+`docs/dev/DIVAN-BUG-SWEEP-2026-08-25.md:23` enumerates the open set as
+**15, 18, 19, 21, 23, 37–43, 45–49, 51–61** — 28 ids. Recomputed from the store today, the set that
+was open on 2026-08-25 is the 24 still open (#18, #19, #23, #37, #39–#43, #45–#49, #51–#54, #56,
+#57–#61) plus the four this era closed (#15, #21, #38, #55): **28, and the same 28.** No id appears in
+one ledger and not the other, in either direction. The four ids that look missing — #24, #27, #31,
+#35 — are the karvan rows the sweep itself flagged as living only in the imported copy, and DV2.1
+re-minted them as #70–#73.
+
+One caution for whoever greps this next: the sweep writes its ranges without a `#` on each member, so
+a naive `#\d+` scan of that document returns 27 ids and reports **#56** (`ControlPlaneServer` coupling
+240, KS6) as unnamed. It is named. The ranges are the enumeration.
+
+### The finding this ledger exists to catch — and it caught one
+
+**The DV2 sweep's Ledger 2 re-opened a row KS0.2 had closed.** It lists **FU-F1-06** as "the oldest
+standing row a session can actually clear", re-verified with the scan widened to all of `src/` — but
+`.conductor/followups.md:527` records it **CLOSED at KS0.2 (`15627b9`)** six days earlier, and the
+tree agrees: `UpdateRunStatus` is declared at `Store/IRunStore.cs:38`, implemented at
+`Store/SqliteRunStore.Sessions.cs:74`, called from `Orchestration/RunContext.cs:391`, and pinned by
+`KS0_2RunRecordTests` and `KS0_2NoRunsUpdateOutsideTheStoreTests`. **The followup ledger was right and
+the sweep was wrong.** Corrected in place. Nothing was lost — no session acted on it.
+
+### Followup rows — the state of all 55 ids, in prose
+
+**Fifty-one are closed or retired.** Taking each id's *last* row as its verdict: 48 read CLOSED, and
+three resolve on reading — `FU-B3-2` CLOSED at W3.3 twice over, `FU-OWNER-11` CLOSED with a stated
+remainder, `FU-B10-2` RETIRED as unanswerable by observation.
+
+**Four carry forward, and all four are the owner's:**
+
+- **FU-B11-3** — the real-credential cTrader path. Owner-gated since SF0.4, states so in its own row,
+  and that row says no future triage should re-home it. This ledger does not.
+- **FU-B2-3** — PARTIAL: the decision is implemented, the live gate still wants a recovery lane.
+- **FU-B11-2** — PARTIAL is the final answer: running the engine on Linux needs a Linux host.
+- **FU-OWNER-14** — the reinstall clause, re-homed KS10.3 → KS12.3 and still unperformed. **DV7.3
+  inherits it**: this branch stacks on `feat/karvansara-edge`, so one reinstall closes both — and DV4.2
+  added a clause to it, because a running courier holds the published exe open, so `tools/install.ps1`
+  now stops it at step 0 and restarts it on the new engine.
+
+**The Divan era wrote to this file exactly zero times before this ledger** —
+`git log feat/karvansara-edge..HEAD -- .conductor/followups.md` is empty. Every defect went to the bug
+ledger instead. That is the fourth era running that the same conclusion holds, and Divan is the first
+to act on it: `FollowupWriter` exists in Core now, but the promotion path it serves has never been
+used in this repo.
+
+**One number in the sweep is not reproducible, and the file is byte-unchanged since it was written.**
+Ledger 2 opens "262 rows, 11 OPEN as of today". 262 is exact — that is every table row in this file,
+of which 91 are followup rows for 55 distinct ids. **11 is not**: today the file yields 7 rows with a
+standalone `OPEN`, 10 lines with an uppercase `OPEN` anywhere, 4 rows with `**OPEN`, and 23 rows
+case-insensitively. Since no commit touched this file in the whole era, the discrepancy is in the
+counting method, not in the file — which is exactly bug #81's point about counting rows in a ledger
+that restates them.
+
+### What this session did to the run, stated plainly
+
+`conductor budget` was re-measured through the fresh build. KS12.1's ledger prescribes the
+positional-db workaround for trap 18 and warns that `CONDUCTOR_RUN_DB` does not redirect the verb
+(bug #61). **A cleaner seam exists and was used today:** `budget --home <dir> --repo <repo>` reads an
+entire alternate state home, so a `sqlite3 .backup` copy plus a `catalogue.json` with one `runDb` path
+rewritten measures the live run without opening the live file at all. Bug #61 stays open — the
+environment variable still does not work — but no future session needs to fight it. The figures are in
+`docs/dev/TOKEN-BUDGET-TUNING.md` §13 and the raw output in `.conductor/evidence/DV7/`.
