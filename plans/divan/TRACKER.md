@@ -4,29 +4,28 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV6.1 DONE. Bugs and followups are their own GitHub issue class - conductor:bug /
-  conductor:followup, their own markers, created ONLY while open, closed by the LEDGER (with a
-  comment saying so) and never by the run ending. The retire sweep cannot reach one because it
-  indexes the task marker. The mirror gained a second "is there news" answer: the event cursor is
-  blind to the bugs table, so a filed bug used to wait for whatever happened next. Digest gained
-  one golden-pinned line. 8 new tests + KS11 136 + SF7_1 35 green.
-find: the live rig (tools/dv6/dv6-1-live-proof.ps1, private scratch repo) caught what the fake
-  could not - `github sync --backfill` run twice inside GitHub's replica lag DUPLICATES the board,
-  because the read-only path uses GithubMap.Transient(). Pre-existing since KS9.1, filed as bug #79
-  (high), and DV7.3's owner backfill is the command that hits it. Also: a PowerShell function named
-  Gh swallows every gh call - case-insensitive name resolution, one minute of fake network hang.
-next: DV6.2 - the columns. Token scopes measured today: repo, workflow, gist, read:org, user,
-  delete_repo. Still NO project, so the KS9.3 refusal moves behind a stubbed proof.
-red: bug #79 (new), bug #76 (courier uploads) untouched. KS1_2StagesFromFoldTests flaked once under
-  a parallel filter and passes alone - process-wide ClearAllPools; noted, not filed.
+last: DV6.2 DONE. The Projects v2 mutation path exists (GithubProjectSync + a GraphQL door on
+  GithubClient) and the KS9.3 refusal MOVED: the "not implemented" sentence is deleted from src,
+  tests and docs, and with the scope granted the gate returns EMPTY. Columns come from a preference
+  table (blocked falls back to In Progress, skipped to Done) and every fallback is said out loud.
+  21 new tests + KS9 all green.
+find: the token still has no project scope (measured twice, 2026-08-26) - so the WIRE was proven
+  read-only instead: all four documents came back INSUFFICIENT_SCOPES from api.github.com (schema
+  validated, token refused) and both mutation inputs by introspection. The whole CLI path ran
+  against a loopback rig, tools/dv6/dv6-2-live-proof.ps1: 60 issues, 60 items, third pass zero
+  mutations. The rig caught bug #81 - followups.md has 91 rows for 55 ids, so cards oscillated.
+next: DV6.3 - the board snapshot as ONE self-contained HTML file, rendered from Http/Contracts at
+  each boundary and pushed as a Telegram document. CUT-FIRST; DV6.4 goes before it if room runs out.
+red: bug #80 (owner runs gh auth refresh -s project, then a real board), #81 (the ISSUE half still
+  re-patches duplicate ledger rows every pass), #79, #76 untouched.
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 23 |
-| Done | 14 |
-| Claimed (unconfirmed) | 2 |
+| Done | 16 |
+| Claimed (unconfirmed) | 1 |
 
 ## Checkpoints
 
@@ -71,14 +70,14 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV5.1 | The /cloud admin verb: flags verified against the installed CLI first; preflight requires clean tree and pushed, current branch, refusing by name in the chat with the exact git state; session id and URL returned to the chat and recorded in the event log as an owner action; follow-ups ride claude -p --cloud | DONE | 32a4868 | .conductor/evidence/DV5/dv5.1-live-proof.md |
-| DV5.2 | The cloud lane behind a flag, default off: only work needing no conductor tools and no verdict; branch consumed, every gate re-run locally, the referee never moves; cost recorded and reported as unknown, pinned by a test that no code path prints zero for a cloud lane; droppable without losing DV5.1 | DONE | 32a4868 | .conductor/evidence/DV5/dv5.2-cloud-lane.md |
+| DV5.1 | The /cloud admin verb: flags verified against the installed CLI first; preflight requires clean tree and pushed, current branch, refusing by name in the chat with the exact git state; session id and URL returned to the chat and recorded in the event log as an owner action; follow-ups ride claude -p --cloud | DONE ✓ | 32a4868 | .conductor/evidence/DV5/dv5.1-live-proof.md |
+| DV5.2 | The cloud lane behind a flag, default off: only work needing no conductor tools and no verdict; branch consumed, every gate re-run locally, the referee never moves; cost recorded and reported as unknown, pinned by a test that no code path prints zero for a cloud lane; droppable without losing DV5.1 | DONE ✓ | 32a4868 | .conductor/evidence/DV5/dv5.2-cloud-lane.md |
 
 ### DV6 — The record that gets out - bugs that outlive the board, columns, the page
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | TODO | - | - |
+| DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | DONE | 8d14fe5 | .conductor/evidence/DV6/dv6-1-ledger-issue-class.md |
 | DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | TODO | - | - |
 | DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | TODO | - | - |
 | DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | TODO | - | - |

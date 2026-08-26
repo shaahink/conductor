@@ -1,10 +1,10 @@
 ﻿# Conductor — Divan - the chancellery: inbox, courier, and the record that gets out run report
 
-_Updated 2026-08-26 11:37 UTC · branch `feat/divan` · HEAD `4e9a4f0`_
+_Updated 2026-08-26 12:15 UTC · branch `feat/divan` · HEAD `32ee261`_
 
 **Status:** Idle
-**Stage:** DV5 — The cloud, the safe shapes - an owner verb, a flagged experiment · attempts used 0
-**Checkpoints:** 16/23 done · **Sessions run:** 15 · **Cost:** $220.6023 (agent $220.4975 + gates $0.1048) · **Tokens:** 3,138,262 in / 1,245,691 out
+**Stage:** DV6 — The record that gets out - bugs that outlive the board, columns, the page · attempts used 0 · working ▸ DV6.2
+**Checkpoints:** 17/23 done · **Sessions run:** 16 · **Cost:** $243.3088 (agent $243.1944 + gates $0.1145) · **Tokens:** 3,413,033 in / 1,368,330 out
 **Confirmed phases:** DV1, DV2, DV3, DV4, DV5
 
 ## Stage progress
@@ -16,7 +16,7 @@ _Updated 2026-08-26 11:37 UTC · branch `feat/divan` · HEAD `4e9a4f0`_
 | DV3 | The inbox - feedback that arrives when you have it, and survives the run | ██████████ 4/4 | confirmed ✓ |
 | DV4 | The courier - one bot, always awake, outliving the run | ██████████ 4/4 | confirmed ✓ |
 | DV5 | The cloud, the safe shapes - an owner verb, a flagged experiment | ██████████ 2/2 | confirmed ✓ |
-| DV6 | The record that gets out - bugs that outlive the board, columns, the page | ░░░░░░░░░░ 0/4 | todo |
+| DV6 | The record that gets out - bugs that outlive the board, columns, the page | ██░░░░░░░░ 1/4 | **← active** |
 | DV7 | Ship Divan - close the era | ░░░░░░░░░░ 0/3 | todo |
 
 <details> ✅<summary>DV1 — The channel that says so - health made loud, the queue that reaches you (2/2)</summary>
@@ -70,11 +70,11 @@ _Updated 2026-08-26 11:37 UTC · branch `feat/divan` · HEAD `4e9a4f0`_
 
 </details>
 
-<details><summary>DV6 — The record that gets out - bugs that outlive the board, columns, the page (0/4)</summary>
+<details><summary>DV6 — The record that gets out - bugs that outlive the board, columns, the page (1/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | ⬜ TODO | - |
+| DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | ✅ DONE | - |
 | DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | ⬜ TODO | - |
 | DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | ⬜ TODO | - |
 | DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | ⬜ TODO | - |
@@ -110,6 +110,7 @@ _Updated 2026-08-26 11:37 UTC · branch `feat/divan` · HEAD `4e9a4f0`_
 | 13 | DV4 | Deliver | 1 | 08-26 09:42 | 0:34 | Advanced | DV4.4 | 1 | engine-fast:OK · face-fast:OK | $16.5702 | $0.0079 | 205,156/84,103 |
 | 14 | DV4 | Fix | 2 | 08-26 10:28 | 0:11 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $4.4730 | $0.0076 | 92,592/34,571 |
 | 15 | DV5 | Deliver | 1 | 08-26 10:46 | 0:43 | Advanced | DV5.1 DV5.2 | 6 | engine-fast:OK · face-fast:OK | $23.8924 | $0.0085 | 281,975/152,940 |
+| 16 | DV6 | Deliver | 1 | 08-26 11:37 | 0:37 | Advanced | DV6.1 | 3 | engine-fast:OK · face-fast:OK | $22.6969 | $0.0097 | 274,771/122,639 |
 
 ## Money
 
@@ -132,11 +133,6 @@ _Where the money goes: agent $220.50 (100%) · gate $0.10 (0%) · blended $0.72/
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-26 09:44:39  • session #11 DV4 Resume started (attempt 2/8)
-08-26 10:03:24  ▪ gate engine-fast pass [session]  (1m03s)
-08-26 10:03:24  ▪ gate face-fast pass [session]  (31.9s)
-08-26 10:03:24  • session #11 DV4 → Advanced · done DV4.2 · 3 commit(s)  (18m44s)
-08-26 10:03:25  • session #12 DV4 Deliver started (attempt 1/8)
 08-26 10:42:01  ▪ gate engine-fast pass [session]  (1m17s)
 08-26 10:42:01  ▪ gate face-fast pass [session]  (5.3s)
 08-26 10:42:02  • session #12 DV4 → Advanced · done DV4.3 · 4 commit(s)  (38m37s)
@@ -172,6 +168,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-26 12:37:10  ▪ gate face-full pass [phase]  (2.1s)
 08-26 12:37:10  ✓ checkpoint DV5.1 confirmed
 08-26 12:37:10  ✓ checkpoint DV5.2 confirmed
+08-26 12:37:10  ▸ stage DV5 confirmed  (50m15s)
+08-26 12:37:11  ▸ stage DV6 entered — The record that gets out - bugs that outlive the board, columns, the page
+08-26 12:37:11  • session #16 DV6 Deliver started (attempt 1/8)
+08-26 13:15:56  ▪ gate engine-fast pass [session]  (1m07s)
+08-26 13:15:56  ▪ gate face-fast pass [session]  (29.6s)
 ```
 
 ## Health
@@ -179,7 +180,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 15 · retries 3 (20 %) · overall Warn
+sessions 16 · retries 3 (19 %) · overall Warn
 ⚠ [context-saturation] session #12: 27,281,149 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 30,383,029 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #2: 23,394,515 context tokens (≥ 20,000,000)
@@ -197,16 +198,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/divan
-working tree: M .conductor/REPORT.md, M plans/divan/TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s7 (DV3 Deliver)** — 3 commit(s):
-  - [`5dd2df3`](https://github.com/shaahink/conductor/commit/5dd2df3) feat(DV3.4): routing - a reply to a push files against that push's project
-  - [`bf0cbf0`](https://github.com/shaahink/conductor/commit/bf0cbf0) feat(DV3.3): the live proof, the marks in the prompt, and the handoff
-  - [`4b1f04a`](https://github.com/shaahink/conductor/commit/4b1f04a) feat(DV3.3): transcription - the words, with the doubt kept
 - **s8 (DV3 Fix)** — 2 commit(s):
   - [`516c26c`](https://github.com/shaahink/conductor/commit/516c26c) fix(DV3): declare the new adapter partial, and the evidence for a green battery
   - [`78663f7`](https://github.com/shaahink/conductor/commit/78663f7) fix(DV3): the index that wrote over itself, and four registries the inbox never reached
@@ -234,6 +231,10 @@ vs upstream: up to date
   - [`afca35d`](https://github.com/shaahink/conductor/commit/afca35d) docs(divan): the handoff for DV5.1 - the create half cannot exist, and the lane DV5.2 should use
   - [`85c868b`](https://github.com/shaahink/conductor/commit/85c868b) proof(DV5.1): the live run, and the id shape it caught me guessing
   - [`32a4868`](https://github.com/shaahink/conductor/commit/32a4868) feat(DV5.1): the /cloud verb - and the measurement that says half of it cannot exist
+- **s16 (DV6 Deliver)** — 3 commit(s):
+  - [`32ee261`](https://github.com/shaahink/conductor/commit/32ee261) proof(DV6.1): the rig, all green, with the settle the replica needs
+  - [`d4e51c1`](https://github.com/shaahink/conductor/commit/d4e51c1) proof(DV6.1): the ledger class on a real board, and the duplicate the rig caught
+  - [`8d14fe5`](https://github.com/shaahink/conductor/commit/8d14fe5) feat(DV6.1): bugs and followups as an issue class that outlives the run
 
 ## Phase handovers (audit)
 
@@ -256,36 +257,37 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> **DV5.1 and DV5.2 both landed; the CLI refuses headless cloud creation, measured**
-> - DV5.1: admin-only /cloud with the §6.8 git preflight (six verdicts, remote tip via ls-remote) and the headless follow-up `claude -p "msg" --cloud <id>`; OwnerCloudAction on every path, cost always the word unknown.
-> - DV5.2: the cloud lane is `claude ultrareview` behind plan.cloud.enabled DEFAULT OFF; payload stored whole and never parsed; the referee-never-moves rule is a source scan over the whole cloud namespace.
-> - Both cards amended, not argued with: `--cloud` create refuses -p, refuses --bg and refuses a non-TTY, so no engine can start a cloud session — and the live runs caught two guesses (session-id shape, and that ultrareview bundles the branch).
+> **DV6.1 done — bugs and followups are a GitHub issue class that outlives the run**
+> - Own labels, own markers, created only while open, closed by the ledger with a comment — never by the run ending; the retire sweep indexes the task marker so it structurally cannot reach one
+> - The mirror gained a second "is there news" answer because the event cursor is blind to the bugs table; the daily digest gained one golden-pinned ledger line
+> - Live rig against the real API in a private scratch repo passed every check, and caught bug #79: `github sync --backfill` run twice inside GitHub's replica lag duplicates the board (pre-existing, hits DV7.3)
 >
-> artefacts: 32a4868, 85c868b, 98aad09, 39b22fa, 4e9a4f0, src/Conductor.Core/Integrations/Cloud/, src/Conductor.Core/Models/CloudLaneConfig.cs, src/Conductor.Core/Lanes/LaneCoordinator.cs
+> artefacts: 8d14fe5, d4e51c1, 32ee261, src/Conductor.Core/Integrations/Github/GithubLedgerPlan.cs, src/Conductor.Core/Integrations/Github/GithubBoardSync.Ledger.cs, src/Conductor.Core/Integrations/Github/GithubMirror.cs, src/Conductor.Core/Integrations/Messaging/MessageComposer.Views.cs, src/Conductor.Core/History/RunArchive.Bugs.cs
 >
-> evidence: .conductor/evidence/DV5/dv5.1-live-proof.md, .conductor/evidence/DV5/dv5.2-cloud-lane.md
+> evidence: .conductor/evidence/DV6/dv6-1-ledger-issue-class.md
 >
-> gaps: bug #76 open and untouched (courier delivers an evidence artifact as text, uploads no file). No real cloud session or cloud review was ever launched — both would drain the same Max pool the local run needs; the create direction is refused by the engine so no conductor code path is left unexercised. One unexplored avenue named in the evidence for the owner to decide: a child process given a real co…
+> gaps: bug #79 (backfill duplicates under replica lag) filed, not fixed; bug #76 untouched; the closing comment names the ledger, not a commit sha, because no bug row carries one; KS1_2StagesFromFoldTests flaked once under a parallel filter and passes alone (process-wide ClearAllPools) — noted, not filed; private scratch repo shaahink/dv61-ledger-scratch left in place for a human to read
 
 ## Tracker handoff
 
 ```
-last: DV5 DONE - both cards. Trap 16 decided the whole stage: `claude --cloud` CREATE is
-  interactive-only on claude 2.1.246 (refuses `-p`, refuses `--bg`, refuses a non-TTY), so no
-  engine can start a cloud session and neither card's headless-create half can exist. Both
-  AMENDED, then delivered against what the CLI really offers. DV5.1: admin-only `/cloud` with the
-  6.8 preflight (six verdicts; remote tip read by `ls-remote`, because status ahead/behind answers
-  against the last fetch) and the headless follow-up `claude -p "msg" --cloud <id>`. DV5.2: the
-  lane is `claude ultrareview` behind plan.cloud.enabled, DEFAULT OFF, payload stored whole and
-  never parsed, cost always the word unknown via KS5.2's own "unknown, not zero" branch.
-find: the live runs caught two guesses that synthetic tests could not - the session-id shape
-  (`session_`/`cse_`, never a UUID) and that ultrareview BUNDLES the branch, so its gate must be
-  NARROWER than /cloud's. Drive the real binary; do not trust the findings doc's shapes.
-next: DV6.1 - bugs and followups as a long-lived GitHub issue class. Trap 5 still binds: the board
-  mirror is the engine's job, and DV6 proofs use a PRIVATE scratch repo.
-red: bug #76 (courier delivers an evidence artifact as text naming the path) still open, untouched.
+last: DV6.1 DONE. Bugs and followups are their own GitHub issue class - conductor:bug /
+  conductor:followup, their own markers, created ONLY while open, closed by the LEDGER (with a
+  comment saying so) and never by the run ending. The retire sweep cannot reach one because it
+  indexes the task marker. The mirror gained a second "is there news" answer: the event cursor is
+  blind to the bugs table, so a filed bug used to wait for whatever happened next. Digest gained
+  one golden-pinned line. 8 new tests + KS11 136 + SF7_1 35 green.
+find: the live rig (tools/dv6/dv6-1-live-proof.ps1, private scratch repo) caught what the fake
+  could not - `github sync --backfill` run twice inside GitHub's replica lag DUPLICATES the board,
+  because the read-only path uses GithubMap.Transient(). Pre-existing since KS9.1, filed as bug #79
+  (high), and DV7.3's owner backfill is the command that hits it. Also: a PowerShell function named
+  Gh swallows every gh call - case-insensitive name resolution, one minute of fake network hang.
+next: DV6.2 - the columns. Token scopes measured today: repo, workflow, gist, read:org, user,
+  delete_repo. Still NO project, so the KS9.3 refusal moves behind a stubbed proof.
+red: bug #79 (new), bug #76 (courier uploads) untouched. KS1_2StagesFromFoldTests flaked once under
+  a parallel filter and passes alone - process-wide ClearAllPools; noted, not filed.
 ```
