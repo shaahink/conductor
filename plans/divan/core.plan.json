@@ -68,8 +68,8 @@
   "satelliteRepos": [
     "C:/code/conductor-site"
   ],
-  "tracker": "plans/divan/TRACKER.md",
-  "planDoc": "docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md",
+  "tracker": "docs/history/archive/trackers/DIVAN-TRACKER.md",
+  "planDoc": "docs/history/NEXT-ERA-FINDINGS-2026-08-23.md",
   "branchPattern": "^feat/divan$",
   "pauseOnBlocked": true,
   "agent": {
@@ -275,7 +275,7 @@
   "packs": [],
   "batteryCollapse": false,
   "readOrder": [
-    "docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md"
+    "docs/history/NEXT-ERA-FINDINGS-2026-08-23.md"
   ],
   "analysisLanes": [],
   "workflows": {

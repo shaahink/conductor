@@ -33,8 +33,8 @@
   "satelliteRepos": [
     "C:/code/conductor-site"
   ],
-  "tracker": "plans/karvansara/CORE-TRACKER.md",
-  "planDoc": "docs/dev/KARVANSARA-PLAN-2026-08-13.md",
+  "tracker": "docs/history/archive/trackers/KARVANSARA-CORE-TRACKER.md",
+  "planDoc": "docs/history/KARVANSARA-PLAN-2026-08-13.md",
   "branchPattern": "^feat/karvansara$",
   "pauseOnBlocked": true,
   "agent": {
@@ -223,7 +223,7 @@
   "packs": [],
   "batteryCollapse": false,
   "readOrder": [
-    "docs/dev/KARVANSARA-PLAN-2026-08-13.md"
+    "docs/history/KARVANSARA-PLAN-2026-08-13.md"
   ],
   "analysisLanes": [],
   "workflows": {

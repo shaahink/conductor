@@ -16,7 +16,7 @@ and only then turned into `plans/<era>/…`. It supersedes nothing — it sits b
 
 ## Part 0 — Where the plan actually stands
 
-**Measured**, from `plans/karvansara/EDGE-TRACKER.md` and `run.db`: the edge plan is **24 checkpoints,
+**Measured**, from `docs/history/archive/trackers/KARVANSARA-EDGE-TRACKER.md` and `run.db`: the edge plan is **24 checkpoints,
 21 DONE ✓ (engine-confirmed), 2 DONE (claimed), 1 BLOCKED**. The blocked one is KS12.3, and it is
 blocked *on the owner* by design — `edge.plan.json:142` sets `ownerGate: true`, and every sub-action
 inside it (merge, tag, reinstall, backfill, the payesh merge, the tracker move) is owner-only. The

@@ -1,6 +1,6 @@
 ﻿# Karvansara edge - gates that can't be gamed, and the courier Phase Tracker
 
-**Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
+**Plan:** Karvansara edge - gates that can't be gamed, and the courier | **Branch:** `feat/karvansara-edge` | **Design doc:** docs/history/KARVANSARA-PLAN-2026-08-13.md
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 

@@ -6,7 +6,7 @@
 - **Supersedes**: nothing. Sits beside [0005 — push-only remote observability](0005-push-only-remote-observability.md),
   which decided that no inbound port is part of the supported design. This ADR opens one and states
   the four conditions under which that is not a reversal.
-- **Sourced from**: `docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md` §6.2, §6.4, §6.5, §6.6, §6.9
+- **Sourced from**: `docs/history/NEXT-ERA-FINDINGS-2026-08-23.md` §6.2, §6.4, §6.5, §6.6, §6.9
 
 ## Context
 

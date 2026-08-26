@@ -261,7 +261,7 @@ phantom "running" rows and a quadruplicated Karvan. Truth (KS0/KS1) therefore pr
 
 ### Plan I — `karvansara-core` (31 checkpoints, 7 stages)
 
-Compiled: `plans/karvansara/core.plan.json` + `plans/karvansara/CORE-TRACKER.md` +
+Compiled: `plans/karvansara/core.plan.json` + `docs/history/archive/trackers/KARVANSARA-CORE-TRACKER.md` +
 `plans/karvansara/templates/`. Branch: `feat/karvansara`.
 
 **KS0 — Leftovers: the catalogue stops corrupting itself** *(3 checkpoints)*

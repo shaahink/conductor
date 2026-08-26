@@ -70,7 +70,7 @@ public sealed partial class SF7_1DocsMatchRealityTests
         // scoped to the prescription bullet, and struck-through values are excluded on purpose - a
         // superseded number is meant to stay visible.
         var pair = $"{capM} / {ratio.ToString("0.00", CultureInfo.InvariantCulture)}";
-        var plan = Doc("docs", "dev", "KARVANSARA-PLAN-2026-08-13.md");
+        var plan = Doc("docs", "history", "KARVANSARA-PLAN-2026-08-13.md");
         var bulletStart = plan.IndexOf("- **Keep ", StringComparison.Ordinal);
         Assert.True(bulletStart > 0,
             "KARVANSARA-PLAN's budget prescription bullet ('- **Keep …') is gone. It is the line " +
@@ -96,34 +96,61 @@ public sealed partial class SF7_1DocsMatchRealityTests
         }
     }
 
-    /// <summary>The contributor index must point at the LIVE plan doc and tracker. A closed era left
-    /// sitting in the "design authority for current work" row is the drift nothing looks wrong about:
-    /// the link resolves, the file exists, and every word of it is about work that already shipped.</summary>
+    /// <summary>The contributor index must not leave a closed era sitting in the "design authority
+    /// for current work" row — the drift nothing looks wrong about: the link resolves, the file
+    /// exists, and every word of it is about work that already shipped.
+    /// <para>DV7.3 moved BOTH eras to <c>history/</c> and left no era open, so the contract inverts.
+    /// The section may no longer name a design authority at all; it has to SAY there is none. That
+    /// sentence is what replaces the row, so it is asserted rather than left to prose drift — and
+    /// the old paths are asserted GONE, because a copy left behind at the old location is exactly
+    /// the stale-but-resolving link this test exists to catch.</para></summary>
     [Fact]
-    public void TheContributorIndexNamesTheLivePlanNotAClosedEra()
+    public void TheContributorIndexNamesNoDesignAuthorityWhileNoEraIsOpen()
     {
         var readme = Doc("docs", "dev", "README.md");
         var current = readme[readme.IndexOf("## Current work", StringComparison.Ordinal)..];
         current = current[..current.IndexOf("## Findings", StringComparison.Ordinal)];
 
-        var authority = current.Split('\n')
-            .FirstOrDefault(l => l.Contains("design authority for current work", StringComparison.Ordinal));
-        Assert.NotNull(authority);
+        // Markdown wraps, so the claim is checked against the section flattened to one line.
+        var flat = string.Join(' ', current.Split('\n', StringSplitOptions.TrimEntries));
 
-        Assert.Contains("KARVANSARA-PLAN-2026-08-13.md", authority!, StringComparison.Ordinal);
-        Assert.DoesNotContain("CONDUCTOR-KARVAN.md", authority!, StringComparison.Ordinal);
+        Assert.Contains("No era is open", flat, StringComparison.Ordinal);
+        Assert.Contains("nothing in this repo is the design authority for current work", flat,
+            StringComparison.Ordinal);
 
-        Assert.Contains("plans/karvansara/CORE-TRACKER.md", current, StringComparison.Ordinal);
+        // The affirmative row is the thing that must not come back while no era is in flight.
+        Assert.DoesNotContain("**The design authority for current work.**", flat, StringComparison.Ordinal);
 
-        // Both files the row promises have to exist - a table row is a navigation contract.
+        Assert.Contains("../history/archive/trackers/KARVANSARA-CORE-TRACKER.md", current, StringComparison.Ordinal);
+
+        // Every file the rows promise has to exist - a table row is a navigation contract.
         foreach (var relative in new[]
                  {
-                     Path.Combine("docs", "dev", "KARVANSARA-PLAN-2026-08-13.md"),
-                     Path.Combine("plans", "karvansara", "CORE-TRACKER.md"),
+                     Path.Combine("docs", "history", "KARVANSARA-PLAN-2026-08-13.md"),
+                     Path.Combine("docs", "history", "NEXT-ERA-FINDINGS-2026-08-23.md"),
+                     Path.Combine("docs", "history", "archive", "trackers", "KARVANSARA-CORE-TRACKER.md"),
+                     Path.Combine("docs", "history", "archive", "trackers", "KARVANSARA-EDGE-TRACKER.md"),
+                     Path.Combine("docs", "history", "archive", "trackers", "DIVAN-TRACKER.md"),
                  })
         {
             Assert.True(File.Exists(Path.Combine(RepoRoot(), relative)),
                 $"docs/dev/README.md points at {relative} and it is not there.");
+        }
+
+        // And the old locations are gone. A file that moved but left a copy keeps every stale
+        // reference resolving, which is the failure mode this whole file is about.
+        foreach (var moved in new[]
+                 {
+                     Path.Combine("docs", "dev", "KARVANSARA-PLAN-2026-08-13.md"),
+                     Path.Combine("docs", "dev", "NEXT-ERA-FINDINGS-2026-08-23.md"),
+                     Path.Combine("plans", "karvansara", "CORE-TRACKER.md"),
+                     Path.Combine("plans", "karvansara", "EDGE-TRACKER.md"),
+                     Path.Combine("plans", "divan", "TRACKER.md"),
+                 })
+        {
+            Assert.False(File.Exists(Path.Combine(RepoRoot(), moved)),
+                $"{moved} moved to docs/history/ at DV7.3 — a copy left at the old path keeps every " +
+                "stale reference resolving.");
         }
     }
 

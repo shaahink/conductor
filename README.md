@@ -335,13 +335,14 @@ board, pushed as a Telegram document and stating its own staleness at the top.
 Contributors: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/). Closed eras and their
 gate transcripts: [`docs/history/`](docs/history/).
 
-> Conductor drives itself. [`plans/divan/TRACKER.md`](plans/divan/TRACKER.md) is the **live tracker**
-> for the era in flight — the inbox, the courier and the record that gets out — and
-> [`plans/karvansara/EDGE-TRACKER.md`](plans/karvansara/EDGE-TRACKER.md) and
-> [`plans/karvansara/CORE-TRACKER.md`](plans/karvansara/CORE-TRACKER.md) the two eras before it —
-> the same checkpoint-table format described in
-> [`docs/tracker.md`](docs/tracker.md), being used on this repo by the tool in this repo. Each closed
-> era's tracker is kept beside its gate transcripts in
+> Conductor drives itself. No era is in flight right now: the last to close was **Divan** — the
+> inbox, the courier and the record that gets out — shipped as `v0.5.0` on 2026-08-26 together with
+> **karvansara-edge**, which had been merged to `master` untagged since 2026-08-19. Their trackers
+> are [`DIVAN-TRACKER.md`](docs/history/archive/trackers/DIVAN-TRACKER.md),
+> [`KARVANSARA-EDGE-TRACKER.md`](docs/history/archive/trackers/KARVANSARA-EDGE-TRACKER.md) and
+> [`KARVANSARA-CORE-TRACKER.md`](docs/history/archive/trackers/KARVANSARA-CORE-TRACKER.md) — the
+> same checkpoint-table format described in [`docs/tracker.md`](docs/tracker.md), being used on this
+> repo by the tool in this repo. Each closed era's tracker is kept beside its gate transcripts in
 > [`docs/history/archive/trackers/`](docs/history/archive/trackers/); every one of them is the
 > `tracker` path some [`plans/`](plans/) plan file pointed at while its era was in flight.
 

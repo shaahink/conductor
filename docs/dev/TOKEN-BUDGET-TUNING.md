@@ -343,7 +343,7 @@ is being told to wrap up at almost exactly the point it would have closed on its
 rule is that the nudge must *clear* the median closer; here it lands on it. Karvan prescribed 0.85
 from headroom alone (§9, "the ratio could rise"); karvansara prescribes it from the closers, which is
 the stronger evidence. **Both runs now agree, so the plan doc's `32M / 0.70` is corrected in place** —
-see `KARVANSARA-PLAN-2026-08-13.md` §"Budget prescription", which now reads 32M / 0.85 with this
+see `../history/KARVANSARA-PLAN-2026-08-13.md` §"Budget prescription", which now reads 32M / 0.85 with this
 measurement beside it.
 
 Not applied to a live plan file here, for the same reason §9 gave: changing the ratio mid-run
@@ -505,7 +505,7 @@ Three things this window proves, and they are the reason the prescription moved:
    ≥1.5× rule.
 
 **Where this doc's earlier estimate and the prescription disagree, the prescription wins.** The
-plan doc's `32M / 0.85` line is corrected in place at `KARVANSARA-PLAN-2026-08-13.md`
+plan doc's `32M / 0.85` line is corrected in place at `../history/KARVANSARA-PLAN-2026-08-13.md`
 §"Budget prescription".
 
 ### What the next era compiles against

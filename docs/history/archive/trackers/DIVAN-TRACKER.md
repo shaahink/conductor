@@ -1,6 +1,6 @@
 ﻿# Divan - the chancellery: inbox, courier, and the record that gets out Phase Tracker
 
-**Plan:** Divan - the chancellery: inbox, courier, and the record that gets out | **Branch:** `feat/divan` | **Design doc:** docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md
+**Plan:** Divan - the chancellery: inbox, courier, and the record that gets out | **Branch:** `feat/divan` | **Design doc:** docs/history/NEXT-ERA-FINDINGS-2026-08-23.md
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
