@@ -220,8 +220,12 @@ surface is split by what a verb *does*, not by how dangerous it looks:
 - **Browse** — `/status`, `/tasks`, `/daily`, `/progress`, `/evidence`, `/money`, `/tokens`. Reads the
   run and answers: where it is, what it cost, how many tokens went where, and the evidence file a
   checkpoint was claimed with, served as-is.
-- **Steer** — `/inject`, `/chat`. Points the run somewhere without moving it.
+- **Steer** — `/inject`, `/chat`, `/project`. Points the run somewhere without moving it.
 - **Control** — `/pause`, `/resume`, `/approve`, `/skip`, `/abort`, `/kill`, via inline keyboard.
+- **Owner-only** — `/cloud`, which hands a review to a cloud session. It preflights first and
+  refuses **in the chat**, quoting the git state that blocked it, if the tree is dirty or the branch
+  is not pushed — a cloud agent clones from the remote, so an unpushed branch would silently review
+  yesterday's code.
 
 A chat can be given a **profile**. `admin` gets the whole surface; `observer` gets the browse verbs
 and *nothing else* — a closed list, so a stakeholder can be added to a group chat and watch a run
@@ -237,6 +241,34 @@ without being able to move it. Anything outside the list is refused by name rath
 ```
 
 **Webhooks** (generic HTTP POST, Discord, Slack) fire on NeedsHuman and completion.
+
+### Feedback that arrives when you have it, not when the run is looking
+
+Everything above is the run talking to you. The **courier** is the other direction, and it is a
+separate process on purpose:
+
+```
+conductor courier install          # a per-user scheduled task: logon trigger, restarts on failure
+conductor courier allow --repo .   # which projects it may file into
+conductor inbox                    # what the owner said, oldest unseen first
+```
+
+Until now the bot only listened while a run was live, so a voice note sent at 23:00 reached nobody.
+The courier owns the token, polls whether or not anything is running, and files each note into the
+project it is about. A session picks it up as the **last** block of its next prompt — the engine's own
+knowledge first, the human's words last, framed — and only what actually fit is marked seen, so the
+rest reaches the session after that instead of being skipped.
+
+A note is **context, never a command**. Promoting one into a followup or a task is an explicit act:
+`conductor inbox`, or one button. Voice notes are transcribed by a command you configure
+(`courier.transcribe.command`) — this repo ships a local faster-whisper wrapper, so nothing is sent
+anywhere; with no command configured the audio is still kept and the reply says it was not
+transcribed. Transcripts live on disk and are **never committed**: `.conductor/inbox/` has no
+allowlist entry in `.conductor/.gitignore`, which is deny-by-default.
+
+The honest limit, because it is not conductor's to fix: Telegram holds an undelivered update for
+**24 hours**. The courier narrows the gap from "no run is live" to "the machine is on" and cannot do
+better from one laptop. See [ADR-0008](docs/dev/adr/0008-the-courier-outlives-the-run.md).
 
 ### Getting the run's data out
 
@@ -255,8 +287,16 @@ per-turn context curve as span events.
 
 `conductor github sync --backfill <run>` mirrors a run's board into GitHub issues — one issue per
 checkpoint with status labels and the stage as a milestone, plus a run issue with a comment per
-session. It is **one way out and off by default**: conductor pushes, and never reads GitHub state
-back into the run. Drag a card there and the run does not notice; the tracker stays the contract.
+session. Tracked bugs and followups get durable issues of their own, closed by the ledger with a
+comment rather than by the run ending; `--project <n>` also drives a Projects v2 board's columns, and
+`conductor github sarif` turns every open bug that names a file and a line into code-scanning alerts
+(free on public repos; a private repo needs GitHub Advanced Security, and the upload says so by name
+rather than failing blind). It is **one way out and off by default**: conductor pushes, and nothing
+read from GitHub ever reaches run state. Drag a card there and the run does not notice; the tracker
+stays the contract.
+
+For the phone rather than the browser, `board.html` is a single self-contained page of the whole
+board, pushed as a Telegram document and stating its own staleness at the top.
 
 ## Design decisions
 
@@ -293,10 +333,11 @@ back into the run. Drag a card there and the run does not notice; the tracker st
 Contributors: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/). Closed eras and their
 gate transcripts: [`docs/history/`](docs/history/).
 
-> Conductor drives itself. [`plans/karvansara/EDGE-TRACKER.md`](plans/karvansara/EDGE-TRACKER.md) is
-> the **live tracker** for the era in flight, and
-> [`plans/karvansara/CORE-TRACKER.md`](plans/karvansara/CORE-TRACKER.md) the half of it that already
-> shipped — the same checkpoint-table format described in
+> Conductor drives itself. [`plans/divan/TRACKER.md`](plans/divan/TRACKER.md) is the **live tracker**
+> for the era in flight — the inbox, the courier and the record that gets out — and
+> [`plans/karvansara/EDGE-TRACKER.md`](plans/karvansara/EDGE-TRACKER.md) and
+> [`plans/karvansara/CORE-TRACKER.md`](plans/karvansara/CORE-TRACKER.md) the two eras before it —
+> the same checkpoint-table format described in
 > [`docs/tracker.md`](docs/tracker.md), being used on this repo by the tool in this repo. Each closed
 > era's tracker is kept beside its gate transcripts in
 > [`docs/history/archive/trackers/`](docs/history/archive/trackers/); every one of them is the
