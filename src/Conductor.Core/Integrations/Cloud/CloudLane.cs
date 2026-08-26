@@ -126,7 +126,9 @@ public sealed class CloudLane
 
     private static string Head(string text)
     {
-        var t = (text ?? "").Trim().ReplaceLineEndings(" ");
+        // Trailing punctuation trimmed because the caller adds its own sentence after this one, and
+        // a CLI message that already ends in a full stop otherwise reads as "…empty.. Cost: unknown."
+        var t = (text ?? "").Trim().ReplaceLineEndings(" ").TrimEnd('.', ' ');
         return t.Length <= 300 ? t : t[..300] + "…";
     }
 

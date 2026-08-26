@@ -1,0 +1,12 @@
+=== the flag is off: nothing is spawned, nothing is measured ===
+outcome=Disabled spawned=False cost=unknown spend=null
+  the cloud lane is off (plan.cloud.enabled is not set); nothing was sent anywhere.
+
+=== enabled: the REAL claude binary, real argv ===
+argv: claude ultrareview --no-post --timeout 1
+outcome=Failed spawned=True cost=unknown spend=null
+  cloud lane failed (exit 1): Ultrareview could not launch: No changes to review: the diff against origin/main (merge-base bff6d5d) is empty. If you have local edits, stage or commit them first. If your branch was already merged or you meant a different base, pass one explicitly, e.g. `claude ultrareview <branch>`.. Cost: unknown.
+
+=== the ledger's own sentence for a lane with no receipt ===
+Record(null) returned False
+  cloud lane 'cloud-review': the provider reported no billed figure — not recorded (unknown, not zero)
