@@ -32,6 +32,8 @@ calls and commits happening, that's DeepSeek, driven by whatever prompt `templat
 | `.conductor/REPORT.md` | Human-readable stage/checkpoint progress snapshot, regenerated each session. |
 | `.conductor/followups.md` | Tracked bug ledger, git-tracked, `owning stage` column — the mechanism for "log this so the right stage's session reads it." |
 | the run store (`run.db`) | SQLite: sessions, gates, ledger, pid tracking. `conductor task --list` / `conductor log --query ...` read it. **It is not in the working tree.** K3.1 moved it to a machine-level home — `%LOCALAPPDATA%\conductor\runs\<repo>-<plan>-<hash>\` on Windows, `$XDG_DATA_HOME/conductor` elsewhere — indexed by `catalogue.json`, because `.conductor/.gitignore` is a bare `*` and every session, cost and bug used to die with the machine. `conductor catalogue` lists the stores; `CONDUCTOR_STATE_HOME` moves the root; a `.conductor/run.db` you still find on disk is a pre-K3.1 leftover that nothing writes. |
+| `.conductor/inbox/` | What the owner said about **this** project: `notes/<id>.json`, an append-only `index.jsonl`, `cursor.json` (how far a session has read), `media/`. **Never committed** — `.conductor/.gitignore` is deny-by-default and there is no allowlist entry for it, on purpose. |
+| the courier's home (`<state-home>/courier/`) | The machine-level daemon's own state, shared by every project: `courier.json` (settings + the repo allowlist), `offset.json` (the poll offset — durable, because an in-memory one would replay every held update on restart), `courier.run.json` (presence: pid, port, version), `courier.secret`, `media/`. Beside it, `dead-letter/` holds notes that could not be routed. `conductor courier status` reads all of it. |
 | `MAESTRO-TRACKER.md` | Checkpoint status table, re-seeded into `run.db` on every startup — don't trust hand-edits to it. |
 | `git log` / `git status` | The only durable record of real progress. State files can be stale; commits can't. |
 
@@ -74,6 +76,23 @@ send you looking for an assertion that does not exist.
 
 An empty pass set is called out rather than treated as green, for the same reason: a battery that
 found nothing to compare has not proved anything.
+
+## The bot went quiet, or a note never arrived (the courier)
+
+Start with `conductor courier status` — it answers most of this in one line (registered? running? what
+pid, what port, what engine version, what offset).
+
+| Symptom | What it usually is | What to do |
+|---|---|---|
+| A note was sent and nothing came back | The machine was asleep or off. Telegram holds an undelivered update for **24 hours** and then discards it — the courier never saw it. | Nothing to recover; this is the limit, not a bug. `conductor courier status` will show it is up now. |
+| The bot answered yesterday and not today | The daemon is not installed, only `run` by hand — closing that terminal ended it. | `conductor courier install` registers the scheduled task (logon trigger, restart-on-failure). `status` tells you which of the two you have. |
+| A run refuses to start its Telegram polling and names the courier | Working as designed. Telegram allows exactly **one** `getUpdates` consumer per token, so where a courier is configured the run pushes through it instead of fighting it for updates. | Nothing. If you genuinely want in-run polling, `conductor courier uninstall` on this machine. |
+| A run refuses the courier **by name**, mentioning a version | Version skew: the courier is built to outlive every run, so left alone it keeps running the engine it started with. | `conductor courier restart`. The refusal names that command. |
+| Two engines fighting for the bot — 409s in the log | Two `getUpdates` consumers on one token. Usually a rig or a second checkout polling a real token. | Give rigs a scratch bot token. One token, one consumer. |
+| `tools/install.ps1` fails on a file lock | A running courier holds the published exe open. | The installer stops it at step 0 and restarts it afterwards — run the installer rather than publishing over the engine by hand. If it refused, it tells you the pid and the exe. |
+| A note was accepted but is in no project's inbox | It could not be routed — the project moved, was deleted, or is not on the courier's allowlist. Nothing is dropped on a routing miss. | `conductor inbox parked` shows the dead-letter box. `conductor courier allow --repo PATH` to add the project. |
+| Notes arrive as audio with no words | No transcribe command is configured. This is a **supported state**, not a failure: the audio is kept and the reply says it was not transcribed. | Set `courier.transcribe.command` in the plan, or `CONDUCTOR_TRANSCRIBE_COMMAND` for a machine with no plan in front of it. Then `conductor inbox transcribe --all`. |
+| The inbox block in prompts keeps growing | It should not — only notes that actually fit are marked seen, and the rest are counted in one line for the next session. | If it really is unbounded, that is a defect worth filing. `conductor inbox --unseen` shows what is pending. |
 
 ## Known gaps (real, not yet fixed)
 

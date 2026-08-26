@@ -206,6 +206,7 @@ boundary; these verbs are how a person reads the same inbox.
 | `inbox show --id N` | One note, whole — what the prompt's `CLIPPED` marker points at. Names the audio file and the transcript sidecar on disk. |
 | `inbox add --file <PATH> [--text ...]` | File a note from this machine: an exported voice message, a meeting recording, a document. The file is copied into the inbox and the note goes through the same store the bot writes to. |
 | `inbox transcribe --id N \| --all` | Run the configured `courier.transcribe.command` over notes whose audio has no transcript yet — the verb behind "the audio is kept and can be read out later". Low-confidence stretches come back marked `[?: like this]`. |
+| `inbox parked` | The machine-level **dead-letter box** — notes the courier accepted but could not file, because the project they were about had moved or gone. They are not in any repo's inbox and they were not dropped; they wait under the state home until you move them or the project comes back. A bot that loses a message is the failure this whole surface exists to prevent, so nothing is discarded on a routing miss. |
 | `inbox prune --seen \| --older-than DAYS \| --id N [--yes]` | **The only deletion path in conductor.** Nothing else removes a note, its audio or its transcript — not reading one, not marking it seen, not a new run. It needs a filter, it prints what it would take, and it deletes nothing without `--yes`. |
 
 **Which project a note is about** (DV3.4). Notes arrive in a chat, not in a repo, so conductor works
@@ -296,6 +297,33 @@ far it has acknowledged, written *after* each delivery is handled so a crash rep
 loses), `courier.run.json` (what the running daemon says about itself: pid, protocol, engine, the exe
 it holds open, the task that started it — written at startup, cleared on the way out), and `media/`
 (where bytes land before they are adopted into a project's inbox).
+
+## The cloud — `/cloud`, and why there is no `conductor cloud`
+
+**There is deliberately no CLI verb here.** `/cloud` is an **owner-only chat verb** (admin profile,
+refused for an observer like any other control verb), and the cloud *lane* is a plan-config block —
+[`cloud`](plan-config.md), **off unless you turn it on**, with no environment override to switch it
+on by accident.
+
+The verb has two directions and the installed `claude` gives conductor only one of them:
+
+- **Follow up on a session that already exists** — headless, so conductor drives it: `/cloud <id>
+  <message>` sends the message and brings the answer back to the chat, truncated to a phone screen
+  with the truncation announced.
+- **Create a session** — interactive-only on the measured CLI version. It is **refused with the
+  platform's own words plus the exact command to run on a terminal**. Conductor does not fake a TTY
+  to get around a refusal a research-preview surface makes on purpose.
+
+**The create direction preflights git first**, because that is the direction that clones from the
+remote — an agent out there reads what the remote has, not what your working tree has. Six verdicts,
+each quoting the state that produced it rather than saying "not ready": nothing to clone, detached
+head, a dirty tree (with the count and the files), no upstream, the branch missing on the remote, and
+the remote tip differing from local `HEAD`. A follow-up is **not** gated this way — it messages a
+workspace cloned when the session was made, so refusing it for a dirty tree would be a false gate —
+but the reply states the local git state anyway, so you know what that session cannot see.
+
+Cost always reads as **a word, never a number**: conductor has no per-turn telemetry out there, and a
+made-up figure is worse than an honest "unknown".
 
 ## The board, on GitHub
 

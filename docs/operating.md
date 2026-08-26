@@ -114,7 +114,8 @@ going. Destructive ones need `--yes`.
 |---|---|
 | `note "<text>" [-k kind] [-s stage]` | Write to the knowledge ledger (`run.db`); injected into later prompts. |
 | `bug new "<title>" [-d detail] [-s severity] [--stage S]` · `bug list [--all]` · `bug fix <id> [--wontfix]` | Tracked bugs that outlive the session that found them; open ones feed later prompts. |
-| `inbox list [--all]` · `inbox show --id N` · `inbox add --file PATH [--text T]` · `inbox transcribe --id N` · `inbox prune (--id N\|--seen\|--older-than D)` | This project's inbox of arrived notes (`.conductor/inbox`, never committed). `list` is the whole inbox, `show` one note in full with its media and transcript paths, `add` files an audio file or a line of text by hand, `transcribe` runs the `courier` command over a note that arrived without words. `prune` is the ONLY thing in conductor that deletes a note — and it will not run without being told which ones. |
+| `courier install [--task-name N] [--exe PATH] [--no-start]` · `courier restart` · `courier stop` · `courier uninstall` | **The lifecycle — set it up once.** `install` registers a per-user Windows Scheduled Task: logon trigger, restart-on-failure, no admin rights. Nothing else starts the daemon at boot, so a courier you only ever `run` by hand is a courier that stops answering when you close the terminal. `restart` is the fix named by every staleness refusal: the courier is built to outlive every run, so left alone it will happily keep running the engine it started with. `tools/install.ps1` stops it at step 0 (a running courier holds the published exe open) and puts it back on the new engine afterwards — reinstall through the installer, never by publishing over it. |
+| `inbox list [--all\|--unseen] [--full] [--json]` · `inbox show --id N` · `inbox add --file PATH [--text T]` · `inbox transcribe (--id N\|--all)` · `inbox parked` · `inbox prune (--id N\|--seen\|--older-than D) [--yes]` | This project's inbox of arrived notes (`.conductor/inbox`, never committed). `list` is the whole inbox, `show` one note in full with its media and transcript paths, `add` files an audio file or a line of text by hand, `transcribe` runs the `courier` command over a note that arrived without words. `parked` lists the machine-level dead-letter box — notes the courier could not route because the project had moved or vanished; nothing is dropped, it waits there. `prune` is the ONLY thing in conductor that deletes a note — and it will not run without being told which ones. |
 | `courier status [--json]` · `courier run [--once]` · `courier allow --repo PATH [--plan NAME]` · `courier deny --repo PATH` · `courier chat --id ID [--profile admin\|observer]` · `courier unchat --id ID` | The machine-level daemon: one bot, always awake, outliving the run. It owns `CONDUCTOR_TELEGRAM_TOKEN` and is the ONE `getUpdates` consumer this machine has, so notes arrive with nothing running. It files only into projects on its **explicit allowlist** — never the whole state catalogue — and parks anything it cannot route. Telegram keeps an undelivered message for **24 hours**: the courier answers "no run live", not "machine off". Each acknowledgement carries a **Promote to followup** button: one tap turns that note into a `followups.md` row and a Tier-B fix lane. A note is never auto-injected into a running session - that tier stays a deliberate verb. See [cli.md](cli.md#the-courier--one-bot-always-awake). |
 | `plan new [--from-idea "<prose\|path>"] [--advisor M] [-o <dir>]` | Author from nothing: one command from an empty repo to a plan, a tracker and the editable templates, **doctor-clean by construction** — the agent block names a CLI this machine actually has, and no scaffolded template spells the escalation token. `--from-idea` takes free prose, a PRD path or an existing tracker; a structured document is parsed with no model call, prose needs the advisor you name. The JSON never has to be opened. |
 | `plan set <key> <value> [--create]` · `plan reload` · `plan add-stage <json>` · `plan import <file> [--model M] [-y]` | Edit the plan from the CLI. `set` refuses a key the plan schema does not declare (suggesting the dotted path it thinks you meant — `--create` overrides), and queues the reload itself when a live engine holds the plan. Every edit is spliced into the raw file (KS3.2): `//` comments, key order and formatting survive, and nothing changes but the edited values and `planVersion`. `import` parses a markdown mega-plan into stages and DIFFS against the current plan (never clobbers). `reload` validates the file and queues a live `reload-plan` — a running loop swaps the plan at its next session boundary. |
@@ -139,7 +140,8 @@ They answer after a run has ended, and from any directory.
 | `money [--run R] [--project P] [--plan P] [--since D] [--json]` | Price a run or a project from its own ledger: sessions, tokens, cache-read share, cost, and tokens and dollars per checkpoint, with the windows either side of a cap change. |
 | `spend [--since D] [--runs] [--home H] [--json]` | What this **whole machine** spent — today, this week, this month — across every catalogued store, with no repo and no plan argument. Billed rows only, each real run counted once even when the catalogue holds it twice, and rows whose session has no start time reported as `undated` rather than silently dropped. |
 | `otel [--run R] [--endpoint URL] [--service N] [--dry-run] [--out PATH]` | Export a finished or live run's event log to an **OTLP/HTTP collector** as one trace: run → stage → session → gate and tool spans, `gen_ai.*` usage attributes carrying the cache split, and the per-turn context curve as span events. Read-only — it reads the event log and posts; it never writes the run. `--dry-run` (or `--out`) renders the exact payload without a collector, which is how the span shape is pinned in tests. |
-| `github sync --backfill <selector> [--repo owner/name] [--dry-run] [--no-diary] [--project N]` | Push a finished run's board to GitHub issues: one issue per checkpoint (`status:*` / `source:*` labels, `confirmed` only when the engine confirmed the claim, the stage as a milestone) plus a run issue with a comment per finished session. **One way out, off by default** — nothing is ever read back from GitHub into the run. Identity is a marker in the issue body, so re-running mints zero duplicates. The token comes from `$CONDUCTOR_GITHUB_TOKEN` or `githubToken` in `<stateDir>/secrets.local.json`; with neither it refuses before dialling anything. `--project` refuses by design — see [cli.md](cli.md). |
+| `github sync --backfill <selector> [--repo owner/name] [--dry-run] [--no-diary] [--project N]` | Push a finished run's board to GitHub issues: one issue per checkpoint (`status:*` / `source:*` labels, `confirmed` only when the engine confirmed the claim, the stage as a milestone) plus a run issue with a comment per finished session. **One way out, off by default** — nothing is ever read back from GitHub into the run. Identity is a marker in the issue body, so re-running normally mints zero duplicates — but do not run two backfills of the same run seconds apart: GitHub's issue list is replicated with a lag, the second pass can fail to see what the first just created, and it will mint the difference again (**bug #79**, open). The token comes from `$CONDUCTOR_GITHUB_TOKEN` or `githubToken` in `<stateDir>/secrets.local.json`; with neither it refuses before dialling anything. `--project <n>` also drives that Projects v2 board's columns from the same fold (DV6.2) — it needs a token carrying the `project` scope, and `gh auth refresh -s project` is the one-command fix when it refuses. |
+| `github sarif [--backfill <selector>] [--repo owner/name] [--out FILE] [--sha SHA] [--gitref REF] [--dry-run]` | Every open tracked bug that names a file and a line, uploaded to GitHub **code scanning** as one SARIF run — so a defect the run already knows about shows up where a reviewer is looking. Free on a public repo; a **private** repo needs GitHub Advanced Security, and without it the upload is refused **by name**, quoting the repository it read, rather than failing blind. `--out` writes the SARIF and uploads nothing. |
 
 ### Infra
 `bg start\|status\|logs\|stop` (long-running commands, so they don't look like a stall) ·
@@ -187,6 +189,64 @@ process alive? → log tail → `crash-*.log`? → `git status` (uncommitted wor
 → `conductor run -p <plan>` to resume (it reads `run.db` alone and the next prompt tells the worker to
 re-orient).
 
+### Setting up the courier — once, and then never again (DV4)
+
+The bot only listened while a run was live. A voice note sent at 23:00 to a machine with nothing
+running reached nobody: no error, no queue, no record. The courier is a **separate process** that
+owns the token and polls whether or not anything is running.
+
+```
+conductor courier chat --id 99205495 --profile admin   # who it answers at all
+conductor courier allow --repo C:/code/myproject       # which projects it may file into
+conductor courier install                              # the scheduled task: logon, restart-on-failure
+conductor courier status                               # is it up, what version, what offset
+```
+
+Four things worth knowing before you rely on it:
+
+- **The allowlist is explicit and it is not the catalogue.** The courier files only into repos you
+  named with `allow`. A note for anything else — including a project that has moved or been deleted —
+  is parked in the machine-level dead-letter box (`conductor inbox parked`), never dropped, and the
+  sender is told by name.
+- **The token moves.** `CONDUCTOR_TELEGRAM_TOKEN` belongs to the courier now, because Telegram allows
+  exactly **one** `getUpdates` consumer per token. Where a courier is configured, a plan's in-run
+  polling refuses to start and says so, naming the courier; the run pushes through it instead. A
+  machine with no courier keeps the old behaviour exactly.
+- **Reinstalling the engine goes through `tools/install.ps1`.** A running courier holds the published
+  exe open. The installer stops it at step 0 and restarts it on the new engine; publish over it by
+  hand and you get a file lock, or worse, a daemon quietly running last month's build for weeks.
+  If a run ever refuses a stale courier by name, `conductor courier restart` is the whole fix.
+- **The honest limit.** Telegram holds an undelivered update for **24 hours**. The courier turns "no
+  run is live" into "the machine is on" and cannot do better than that from one laptop — a note sent
+  to a sleeping machine on Friday is gone by Monday, dropped by Telegram before conductor ever sees
+  it. If that matters to you, the answer is an always-on host, not a setting.
+
+### What the owner said — reading the inbox
+
+A filed note lands in that project's `.conductor/inbox/` and reaches the next session on its own, as
+the **last** block of the prompt: the engine's own knowledge first, the human's words last and
+clearly framed as untrusted. Only the notes that actually fit are marked seen — the rest are counted
+in one line and reach the session after that, so nothing is skipped and the block cannot grow without
+bound.
+
+```
+conductor inbox                  # unseen first; --full for the whole text, --json to pipe it
+conductor inbox show --id 7      # one note, with its media and transcript paths
+conductor inbox transcribe --all # anything that arrived as audio and has no words yet
+```
+
+Voice notes are transcribed by a command **you** configure (`courier.transcribe.command`, or
+`CONDUCTOR_TRANSCRIBE_COMMAND` for a machine that has no plan in front of it) — this repo ships
+`tools/transcribe/whisper-json.py`, a local faster-whisper wrapper, so audio never leaves the
+machine. With no command configured, the note still files and the audio is still kept; the reply says
+it was not transcribed rather than silently dropping it.
+
+**A note is context, never a command.** Nothing in the inbox moves a run. Turning one into work is a
+deliberate act — the **Promote to followup** button on the acknowledgement, or `conductor inbox` and
+your own judgement. And `.conductor/inbox/` is **never committed**: `.conductor/.gitignore` is
+deny-by-default with no entry for it, which on a public repo is the difference between a transcript
+and a publication.
+
 ### Letting someone else watch — a group chat with an observer profile (KS11.2)
 
 A stakeholder who wants to follow a run does not need the steering wheel, and until KS11.2 there was
@@ -204,9 +264,20 @@ any chat the bot served could `/inject` and, with `enableTwoWay`, `/abort`.
 ```
 
 Both chats get every push. The observer chat may ask `/status`, `/tasks`, `/daily`, `/progress`,
-`/evidence`, `/money`, `/tokens` and `/start`; a control verb, `/inject`, `/chat` or a tap on a
-confirmation button gets one named line saying so and nothing happens. An unknown command is met
+`/evidence`, `/money`, `/tokens` and `/start`; a control verb, `/inject`, `/chat`, `/cloud` or a tap
+on a confirmation button gets one named line saying so and nothing happens. An unknown command is met
 with silence, as it always has been.
+
+`/cloud` is **admin-only** and is the one verb that reaches off this machine (DV5.1). Following up on
+an existing cloud session is headless, so conductor drives it and brings the answer back to the chat;
+*creating* one is interactive-only on today's `claude`, and is refused with the platform's own words
+plus the exact command to type on a terminal. The create direction **preflights git first** — a cloud
+agent clones from the **remote**, so a dirty tree, a detached head, a missing upstream or a remote tip
+that differs from local `HEAD` each get their own refusal quoting the state that produced it, in the
+chat. Cost is always reported as a word, never a number: there is no per-turn telemetry out there and
+an invented figure would be worse than an honest "unknown". The opt-in per-session review lane is the
+[`cloud`](plan-config.md) plan block, **off by default with no environment override** — and whatever
+the cloud says, every gate still runs here and nothing out there confirms a checkpoint.
 
 Each chat is introduced before the run's first word: what this run is (plan, stage map, budget
 ceiling), what will arrive here and when, and exactly what this chat may ask. A chat added by a

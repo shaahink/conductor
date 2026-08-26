@@ -222,10 +222,12 @@ surface is split by what a verb *does*, not by how dangerous it looks:
   checkpoint was claimed with, served as-is.
 - **Steer** — `/inject`, `/chat`, `/project`. Points the run somewhere without moving it.
 - **Control** — `/pause`, `/resume`, `/approve`, `/skip`, `/abort`, `/kill`, via inline keyboard.
-- **Owner-only** — `/cloud`, which hands a review to a cloud session. It preflights first and
-  refuses **in the chat**, quoting the git state that blocked it, if the tree is dirty or the branch
-  is not pushed — a cloud agent clones from the remote, so an unpushed branch would silently review
-  yesterday's code.
+- **Owner-only** — `/cloud`, for a session running on Anthropic's infrastructure rather than yours.
+  Following up on one is headless, so conductor drives it and brings the answer back; *creating* one
+  is interactive-only on today's CLI and is refused with the platform's own words and the exact
+  command to type. Creating preflights git first and refuses **in the chat**, quoting the state that
+  blocked it — a cloud agent clones from the **remote**, so a dirty tree or an unpushed branch would
+  silently review yesterday's code.
 
 A chat can be given a **profile**. `admin` gets the whole surface; `observer` gets the browse verbs
 and *nothing else* — a closed list, so a stakeholder can be added to a group chat and watch a run
