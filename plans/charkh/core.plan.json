@@ -1,0 +1,216 @@
+{
+  "version": "1.0",
+  "planVersion": 1,
+  "name": "Charkh - the wheel: what the owner still does by hand becomes machinery",
+  "repo": "C:/code/conductor",
+  "satelliteRepos": [],
+  "tracker": "plans/charkh/TRACKER.md",
+  "planDoc": "docs/dev/CHARKH-PLAN-2026-08-26.md",
+  "branchPattern": "^feat/charkh$",
+  "pauseOnBlocked": true,
+  "agent": {
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--session-id",
+      "{sessionId}"
+    ],
+    "resumeArgs": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--resume",
+      "{claudeSessionId}"
+    ],
+    "output": "stream-json",
+    "model": "claude-opus-5"
+  },
+  "advisor": {
+    "enabled": true,
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "json",
+      "--model",
+      "claude-haiku-4-5-20251001"
+    ],
+    "output": "json",
+    "timeoutMinutes": 6
+  },
+  "setup": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "teardown": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "progress": {
+    "kind": "markdown-table"
+  },
+  "stages": [
+    {
+      "id": "CH1",
+      "title": "CI green, and the reason it was not",
+      "sessions": 3,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/CHARKH-PLAN-2026-08-26.md section CH1. Both causes are already diagnosed and reproduced locally - do not re-diagnose them, fix them and close the CLASS. CH1.1: the inline CSS in BoardSnapshotHtml.cs is a C# raw string literal, and a raw string literal inherits the line endings of ITS SOURCE FILE; every other line of that renderer appends an explicit LF, so a CRLF checkout makes Render emit a mixed document while Publish writes an LF-normalised file, and DV6_3BoardPageTests.Publishing_writes_one_file_atomically compares the two. Normalise the constant at load and assert the PROPERTY - Render output contains no carriage return at all - so the next raw string in that file cannot reintroduce it. CH1.2: plans in this repo carry an absolute repo path, and three KS1_4DoctorPlanLintsTests load this repo's own plan and Validate it, so they fail on every machine but this one. Either the tests resolve repo to the repository root they run in, or plans learn a repo-relative form; the choice is yours to make and to RECORD, and a plan file in this repo must become loadable on a fresh clone, pinned by a test. CH1.3 is what pays for the stage: the local battery and GitHub CI ran different verdicts for a whole era and nothing compared them. Deliver a check that surfaces the divergence where a run can see it - the report header, the owner queue, the DV1.1 channel-health shape - and prove it on a seeded divergence. Exit: CI green on Windows and Linux for master."
+    },
+    {
+      "id": "CH2",
+      "title": "The tour that matches the engine - and knows when it does not",
+      "sessions": 2,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/CHARKH-PLAN-2026-08-26.md section CH2. docs/assets/demo.gif is the first thing under the README's H1 and it predates the courier, the inbox, the board page and the hub's current surfaces. tools/demo/make-demo-gif.ps1 records the LIVE Face under --demo through the VHS container and cross-compiles the Face for linux to run inside it; docs/assets/demo.tape describes the tour. DOCKER IS A PREREQUISITE AND WAS NOT ANSWERING when the brief was compiled - verify it FIRST with the exact command output, and if it cannot be made to work, file that with the output and say so rather than hand-assembling a GIF from stills: that path was already tried and produced a monochrome, silently-clipped result, which is why the script exists. Geometry is fixed at 1176x736, the one size face-go/internal/tui/golden_test.go covers. CH2.2 is the half that lasts: payesh refuses a merge when its social cards no longer render what they were taken from, and conductor shipped a stale GIF without noticing - port that pattern, a manifest of what the GIF was recorded from and a check that fails when the product has moved past it. Pixels do not need diffing."
+    },
+    {
+      "id": "CH3",
+      "title": "The docs say what shipped",
+      "sessions": 3,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/CHARKH-PLAN-2026-08-26.md section CH3. CH3.1 the published surface against the INSTALLED v0.5.0 engine, not against intent: README first, then cli.md, operating.md, plan-config.md, quickstart.md, troubleshooting.md, tracker.md and the docs/README.md index. The courier is now a real always-on process on this machine and the docs still describe it as something you might install. CH3.2 the references that no longer resolve: DV7.3 repointed nine structural paths and deliberately left the plans' notes prose citing the two briefs at their old docs/dev locations. Decide that once, apply it consistently, record the rule in docs/dev/README.md, then sweep every relative link in docs/, every path named in a test message, and every contracts file a future reader would follow. THE FROZEN RUN ARTIFACTS UNDER .conductor ARE A RECORD AND ARE NEVER REWRITTEN - the sweep REPORTS them, it does not edit them. CH3.3 extend SF7_1DocsMatchRealityTests for every verb and config key this era adds and prove each new assertion RED on a seeded stale doc; that negative control is the whole point of the battery."
+    },
+    {
+      "id": "CH4",
+      "title": "The machinery - the era-close stops being prose",
+      "sessions": 5,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/CHARKH-PLAN-2026-08-26.md section CH4, and read .conductor/evidence/DV7/dv7-3-owner-runbook.md as the worked example of the artifact being replaced - it is the best hand-written version this project has produced and it still let six of its seven acts go unperformed one era earlier without anyone noticing. CH4.1 release preflight as a VERB: every precondition DV7.3 measured by hand becomes something the engine measures - the merge is a fast-forward, the CHANGELOG has a section for the intended version and changelog-section.sh exits 0 on it, no conductor process is live, the installed engine's migration version matches the tree's, the courier's token scope and task state, the run whose backfill is owed. A verdict per line and a NON-ZERO EXIT when any line is red. CH4.2 perform what is mechanical (the CHANGELOG rename, the tag, the ff-only merge, the doc move with its tracker and planDoc and readOrder repoint) and REFUSE what is judgement (the version number, single-vs-split release, whether a run joins the published corpus) - an act that needs the owner is NAMED and STOPPED AT, never silently skipped, because that exact failure is what KS12.3 was. CH4.3 the backfill: GithubBoardSync.SyncAsync lists issues repo-wide and RetireAsync closes any task-marked issue not in the CURRENT run's card set; measured 2026-08-26, a dry run of the edge run's backfill reported 23 retired against exactly Divan's 23 checkpoints. Scope the sweep to the run or refuse a backfill that would retire another run's board, then write the edge run's record. Distinct from bug 79. CH4.4 the runbook becomes the verb's output, generated from the preflight's own measurements."
+    },
+    {
+      "id": "CH5",
+      "title": "Ship Charkh with the machinery it built",
+      "sessions": 2,
+      "ownerGate": true,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/CHARKH-PLAN-2026-08-26.md section CH5. The proof of CH4: close this era USING the machinery rather than by hand. Run the preflight, let it produce the runbook, perform what it can perform and stop at what it refuses. Anything it gets wrong is a finding worth more than the checkpoint - record it either way, in the closure ledger and in TOKEN-BUDGET-TUNING as the number the next era compiles against. The acts the preflight refuses stay the OWNER's exactly as before; a session pre-flights and parks, it does not perform them. Re-measure this run's budget through a fresh build against a sqlite3 BACKUP COPY of the store, never the live file."
+    }
+  ],
+  "gates": [
+    {
+      "name": "engine-fast",
+      "command": "dotnet build Conductor.slnx -clp:ErrorsOnly",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 15
+    },
+    {
+      "name": "face-fast",
+      "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go build ./... && go vet ./...\"",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 10
+    },
+    {
+      "name": "engine-full",
+      "command": "dotnet test Conductor.slnx",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 40
+    },
+    {
+      "name": "face-full",
+      "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go test ./...\"",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 15
+    }
+  ],
+  "gatePolicy": "perPhase",
+  "verifyEachDelivery": true,
+  "limits": {
+    "stallMinutes": 15,
+    "stallGraceMinutes": 3,
+    "sessionTimeoutMinutes": 120,
+    "batterySettleSeconds": 120,
+    "authPreflight": true,
+    "maxResumesPerSession": 2,
+    "stageSlackFactor": 2,
+    "backoffMinutes": 30,
+    "maxBackoffs": 10,
+    "maxRunCostUsd": 300,
+    "approvalMode": false,
+    "maxSessionTokens": 42000000,
+    "softBreakRatio": 0.9,
+    "maxConcurrentLanes": 2,
+    "stallPatternTermination": true,
+    "sameFailureCircuitBreaker": true,
+    "stallBackoffMinutes": 12,
+    "overheadCostPerSecond": 0.0001,
+    "verifierThreshold": 80
+  },
+  "batteries": {
+    "ledgerMaxEntries": 3,
+    "maxBytes": 6144
+  },
+  "report": {
+    "commit": false,
+    "push": false,
+    "heartbeatMinutes": 0
+  },
+  "telegram": {
+    "allowedChatIds": [
+      "99205495"
+    ],
+    "pollIntervalSeconds": 4,
+    "enableTwoWay": true
+  },
+  "github": {
+    "enabled": true,
+    "repo": "shaahink/conductor",
+    "board": "issues",
+    "liveMirror": true,
+    "runHistoryIssue": true
+  },
+  "promptExtra": "TRAPS THIS REPO HAS ALREADY PAID FOR, in order of cost:\n0. THIS REPO'S .conductor/ IS THE LIVE STATE OF THE RUN DRIVING YOU. The claim and note verbs (conductor task, note, bug, bg) and the read-only verbs (status, task --list) are yours; NEVER aim a run-control verb (run, pause, resume, abort, approve, plan set, plan reload, goto, skip, retry-stage, rollback, kill) at this repo. Any live-run proof spawns YOUR build against a scratch repo with its own tiny plan and its own state dir - under the temp directory - never against C:/code/conductor.\n1. NEVER run tools/install.ps1 or overwrite the published engine. The conductor driving you runs from that published copy. The owner reinstalls at DV7.3, never a session.\n2. The conductor on PATH is the published engine driving you - NOT your working tree. Exercise YOUR changes through the fresh build: dotnet run --project src/Conductor -- VERB (or go run ./cmd/... in face-go). Testing a new verb through the PATH shim only proves the published engine lacks it. Exception by design: task claims go through the PATH copy, because they target the driving run.\n3. A SECOND CONDUCTOR RUN MAY SHARE THIS MACHINE during this era - the BookToCourse run in C:/Code/BookToCourse, on a different Claude account. You can break it without touching its repo: never kill a conductor.exe, conductor-face.exe or stray dotnet process by pid without checking its command line with Get-CimInstance Win32_Process first; leave anything whose path is not this repo alone. Give every scratch rig its own port and its own state dir, pass -p explicitly to every verb, and clear CONDUCTOR_PLAN in any shell you spawn.\n4. TELEGRAM PROOFS USE A SCRATCH BOT AND SCRATCH CHATS ONLY. Never push to the owner's real chat id or any group containing a stakeholder from a rig; TelegramConfig.ApiBaseUrl is the stub seam for wire-level tests, and the token binds at engine startup only. The TelegramService and courier code you are changing is LIVE in the engine driving you - your changes reach it only after the owner reinstalls at DV7.3. Telegram allows ONE getUpdates consumer per token: a rig that polls a real token starves the real bot; scratch tokens sidestep it entirely.\n5. THE GITHUB BOARD MIRROR IS THE ENGINE'S JOB. This plan's github block mirrors the run to shaahink/conductor via the engine's own reconciler - never create, edit or close issues there by hand or by gh from a session; DV6 proofs that need a repo use a PRIVATE scratch repo (gh repo create) with the CONDUCTOR_GITHUB_TOKEN override.\n6. .conductor/evidence/ IS GITIGNORED BY STAR AND FORCE-ADDED. A plain git add -A silently drops a new evidence artifact; every evidence file needs git add -f, and the claim's evidence path must exist in the COMMIT, not just on disk. The same deny-by-default gitignore is a DESIGN DECISION for the new inbox: .conductor/inbox/ gets NO allowlist entry - this repo is public and transcripts must never ship.\n7. NO GATE MAY REBUILD THE RUNNING ENGINE. This plan's gates build the solution, which is safe; never add a gate or proof step that runs tools/install.ps1, publishes to the engine's install path, or rebuilds conductor.exe in place.\n8. A literal brace token in a file under this plan's templates directory KILLS THE ENGINE - the template text is validated for unresolved placeholders, the refusal goes to stderr only, and it fires when a stage first renders that template. After any template edit, sweep it: only real placeholder names may appear, and a doubled brace emits a literal one.\n9. Keep the escalation token out of the tracker's handoff block unless you are escalating right now. The match is a plain substring, so prose describing the convention parks the run as hard as raising one. Write escalation in prose; the literal form is the word HUMAN followed by a colon, and the tracker legend below the checkpoints is the only place it is spelled out.\n10. face-go: pad plain text then style, never width-format an ANSI string; clamp with MaxWidth and MaxHeight; goldens pin UTC and live in face-go/internal/tui/testdata/golden - regenerate them only in a separate rebaseline commit; read face-go/STYLE.md and adr 0006 before any face change; the pane viewport is the ONLY scroll idiom.\n11. Orphaned dotnet test hosts flake the full suite. Stopping one is sanctioned ONLY after trap 3's command-line check proves it belongs to this repo; never kill a conductor process, yours or anyone's.\n12. PowerShell tooling targets Windows PowerShell 5.1 and must stay ASCII-only - em-dashes have torn string literals here before. Never call gh --jq from PowerShell when the filter contains double quotes; fetch raw JSON and ConvertFrom-Json.\n13. Commit per checkpoint with the repo's trailer convention and push feat/divan. Go sources are checked out LF; keep them that way. If you move a file this run depends on - the plan's readOrder target, the tracker, a template - update the plan and reload it in the same checkpoint, or the next session reads nothing.\n14. This era's token ceiling was measured, not guessed: 35M with the nudge at 31.5M (softBreakRatio 0.90), the prescription KS12.1 derived from the edge run and wrote into TOKEN-BUDGET-TUNING section 12. If you believe the ceiling is wrong, say so with a measurement in the handoff - do not work around it by splitting a checkpoint you were not asked to split. A model change invalidates the pair; that re-derivation belongs to the owner.\n15. THE FIELD GUIDE IS A LIVE PUBLIC SITE. C:/code/conductor-site is shaahink/payesh, and a push to its main auto-deploys payesh.vercel.app to the world. It is a satellite for ONE reason: DV7.2 re-runs its harvest as an end-to-end proof. Work there on a branch, open a PR, and stop; the owner merges at DV7.3. No stage before DV7 touches that repo at all. Its figures are recomputed from the run store, never typed in, and anonymisation fails closed.\n16. EVERY DV5 CHECKPOINT OPENS by verifying its cloud flags against the installed claude - the platform surface is a research preview and the findings doc predates you. A flag that does not exist is a finding to file with the exact help output, never a reason to guess a synonym.\n17. ANY BATCH THAT RUNS LONGER THAN TEN MINUTES MUST BE A TRACKED BACKGROUND CHILD, or the stall watchdog kills your session while it is working. The watchdog samples agent output, tool output and live bg children only - a subprocess you wait on inside a foreground tool call is invisible to all three, and this run's stall window is fifteen minutes plus three of grace. Start it with conductor bg start --purpose LABEL -- COMMAND, then follow it with conductor bg status and conductor bg logs -t 40. This binds hardest on DV4's courier daemon under test (a running daemon is a bg child, never a foreground wait), on any by-hand full battery, and on DV2's repeated suite runs; a stall kill costs the whole session's uncommitted work, not just the attempt.\n18. NEVER open the live run.db for WRITE with a fresh build whose MigrationRunner.CurrentVersion exceeds the installed engine's - it migrates the store forward and the driving engine then refuses it, killing task, note and bug for the rest of the era (this happened at KS10.1). Measurement verbs (budget, money, history) run against a sqlite3 backup COPY of the store; check both versions before any fresh-build verb touches live state.\n19. THE BUG LEDGER IS ALREADY LOADED. Twenty-eight open bugs ride in from earlier runs in this repo's run.db and are surfaced in your prompt's open-bugs battery; docs/dev/DIVAN-BUG-SWEEP-2026-08-25.md carries the full triage picture including defects that are in NO ledger yet. Never re-file a bug that is already there; close one with the conductor bug verb in the same commit as its fix and regression test. Rows followups.md marks owner-gated (FU-B11-3) stay with the owner - re-homing one is a triage decision recorded in the ledger, never a silent edit.",
+  "templatesDir": "templates",
+  "packs": [],
+  "batteryCollapse": false,
+  "readOrder": [
+    "docs/dev/CHARKH-PLAN-2026-08-26.md"
+  ],
+  "analysisLanes": [],
+  "workflows": {
+    "deliver": {
+      "name": "deliver",
+      "description": "Deliver until the stage's checkpoints are confirmed; fix only when gates are red.",
+      "steps": [
+        {
+          "id": "deliver",
+          "kind": "deliver",
+          "deliver": true
+        },
+        {
+          "id": "fix-if-red",
+          "kind": "fix",
+          "runIf": "!gatesGreen",
+          "deliver": true
+        }
+      ],
+      "repeat": true
+    }
+  },
+  "defaultWorkflow": "deliver"
+}
