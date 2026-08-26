@@ -4,27 +4,27 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV7.1 DONE (claimed). ADR-0008 for the courier + a 2nd addendum on 0005; ARCHITECTURE
-  reconciled - seams 10->13, surfaces 2->4, "nothing is ever read back" corrected, and a new
-  top-level section for the daemon. Closure ledger in .conductor/followups.md adds ZERO `| FU-`
-  rows (bug #81) - 91 before, 91 after. Budget re-measured: TOKEN-BUDGET-TUNING §13.
-find: use `budget --home <dir> --repo <repo>` over a sqlite3 .backup copy - KS12.1 called the
-  positional-db arg "the only seam"; --home is better and never opens the live file. The NEXT era
-  compiles against 42M / 0.9 and 19M / $14.50 per checkpoint (two eras running the basis came in low).
-next: DV7.2 is delivered EXCEPT one item - the payesh harvest re-run in C:/code/conductor-site, on a
-  BRANCH with a PR, never main. That is the single next action; everything else in the card is landed
-  (see the amendment on the card, and .conductor/evidence/DV7/dv7-2-published-surface.md).
-  New bar: Subverbs.cs pins 29 (verb,subverb) pairs AddCommand<T> cannot see, proven red on a seeded
-  stale doc. CHANGELOG Unreleased now carries BOTH eras - the split-or-single release call is yours.
-red: #82, #81, #80, #79, #76, #75 (note stores only the first line - cost this session 3 notes).
+last: DV7.2 DONE (claimed, evidence .conductor/evidence/DV7/dv7-2-payesh-harvest.md). The payesh
+  harvest re-run: PR https://github.com/shaahink/payesh/pull/3, base ks12/harvest-era-close, main
+  never pushed. The plain re-harvest moved nothing - which exposed that the corpus stopped in early
+  August, so the two closed eras joined it (18->20 runs, 340->387 sessions, $3,016->$3,488,
+  648/677 -> 781/813 gates, all recomputed). `needs_human` was a status the pages paint in no role:
+  fixed, plus a harvest-side refusal for ANY unpaintable status, both proven red. 128/128 tests.
+find: the live run is deliberately NOT published (21/23 would freeze wrong) - it earns its
+  anonymise.json entry from the harvest AFTER its last checkpoint closes. Bug #83 filed: a second
+  anonymity false positive, from a source #47/#41 do not cover.
+next: DV7.3 - pre-flight each precondition and PARK with the runbook, the KS12.3 pattern at
+  .conductor/evidence/KS12/ks12-3-owner-runbook.md. Two things it must say: "merge the payesh PR"
+  is now TWO merges, #2 then #3; and feat/divan stacks on feat/karvansara-edge.
+red: #83, #82, #81, #80, #79, #76, #75 (a note keeps only its first line - write one long line).
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 23 |
-| Done | 16 |
-| Claimed (unconfirmed) | 4 |
+| Done | 20 |
+| Claimed (unconfirmed) | 1 |
 
 ## Checkpoints
 
@@ -76,17 +76,17 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | DONE | 8d14fe5 | .conductor/evidence/DV6/dv6-1-ledger-issue-class.md |
-| DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | DONE | d1e5b0e | .conductor/evidence/DV6/dv6-2-the-columns.md |
-| DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | DONE | e17f09b | .conductor/evidence/DV6/dv6-3-the-page.md |
-| DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | DONE | 7a336e3 | .conductor/evidence/DV6/dv6-4-ratchet-fix.md |
+| DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | DONE ✓ | 8d14fe5 | .conductor/evidence/DV6/dv6-1-ledger-issue-class.md |
+| DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | DONE ✓ | d1e5b0e | .conductor/evidence/DV6/dv6-2-the-columns.md |
+| DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | DONE ✓ | e17f09b | .conductor/evidence/DV6/dv6-3-the-page.md |
+| DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | DONE ✓ | 7a336e3 | .conductor/evidence/DV6/dv6-4-ratchet-fix.md |
 
 ### DV7 — Ship Divan - close the era
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV7.1 | The internal record: ARCHITECTURE.md and docs/dev reconciled for everything Divan changed, the courier's lifecycle section and ADR included; closure ledger reconciled against DV2's triage; conductor budget re-measured through the fresh build against a backup copy and written into TOKEN-BUDGET-TUNING for the next era | TODO | - | - |
-| DV7.2 | The published surface: README, cli.md, operating.md, plan-config.md, quickstart/troubleshooting where touched, docs index; CHANGELOG Unreleased written as the release body (it may still carry edge's entries - the split call is the owner's); docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushing main | TODO | - | - |
+| DV7.1 | The internal record: ARCHITECTURE.md and docs/dev reconciled for everything Divan changed, the courier's lifecycle section and ADR included; closure ledger reconciled against DV2's triage; conductor budget re-measured through the fresh build against a backup copy and written into TOKEN-BUDGET-TUNING for the next era | DONE | fc33699 | .conductor/evidence/DV7/dv7-1-closure-ledger.md |
+| DV7.2 | The published surface: README, cli.md, operating.md, plan-config.md, quickstart/troubleshooting where touched, docs index; CHANGELOG Unreleased written as the release body (it may still carry edge's entries - the split call is the owner's); docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushing main | IN PROGRESS | - | - |
 | DV7.3 | OWNER-ONLY ship: merge (stacked on feat/karvansara-edge - KS12.3 lands first or together), tag, reinstall, real courier install, github sync backfill of this run, payesh PR merge, tracker and findings doc move to docs/history; a session pre-flights and parks with the runbook, it does not perform them | TODO | - | - |
 
 ## Dependencies
