@@ -185,6 +185,13 @@ public sealed class DV4_1CourierTests : IDisposable
             .Where(l => l.Trim().Length > 0).ToList();
         Assert.Single(indexLines);
 
+        // The media directory too. The first version of this passed every assertion above and still
+        // left an ORPHAN copy of the audio here: the replay adopted the file into the inbox before
+        // Append could refuse the note, and prune deletes the files a note NAMES, so nothing would
+        // ever have removed it. Found by the live proof, not by this test — hence this line.
+        var media = Directory.GetFiles(Path.Combine(Inbox(_repo).Dir, "media"));
+        Assert.Single(media);
+
         // The offset moved this time, so a THIRD courier is served nothing at all.
         Assert.True(new CourierOffset(_stateHome).Read() > 0, "the offset should have advanced");
         var third = await Daemon(restarted, settings).PollOnceAsync(CancellationToken.None);
@@ -215,6 +222,14 @@ public sealed class DV4_1CourierTests : IDisposable
 
         // A brand new CourierOffset object reads the same number off the disk — the point of the file.
         Assert.Equal(2, new CourierOffset(_stateHome).Read());
+
+        // And it is written in the same camelCase courier.json beside it uses, readable either way.
+        // This was PascalCase until DV4.1's live proof: a hand-edited `{"offset": 400}` deserialised
+        // to 0 with no error, because System.Text.Json matches property names case-sensitively.
+        var raw = await File.ReadAllTextAsync(offset.Path_);
+        Assert.Contains("\"offset\"", raw, StringComparison.Ordinal);
+        await File.WriteAllTextAsync(offset.Path_, """{"offset": 400, "updatedUtc": "2026-01-01T00:00:00Z"}""");
+        Assert.Equal(400, new CourierOffset(_stateHome).Read());
     }
 
     // ── the explicit allowlist ──────────────────────────────────────────────────────────────

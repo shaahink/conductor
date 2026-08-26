@@ -1,0 +1,101 @@
+
+=== 1. courier status - nothing configured yet ===
+courier C:\Users\shahi\AppData\Local\Temp\dv41-rig\state-home\courier
+token: set (CONDUCTOR_TELEGRAM_TOKEN)
+poll: offset 0 (nothing acknowledged yet — the next poll takes everything still 
+undelivered) · every 4s
+projects: none — `conductor courier allow --repo <path>`
+chats: none — `conductor courier chat --id <chat-id>`
+not ready: no chats are listed, so there is nobody to answer. Add one with 
+`conductor courier chat --id <chat-id>`.
+Telegram keeps an undelivered message for 24 hours. The courier answers "no run 
+live", not "machine off": a note sent to a sleeping machine is gone before it 
+wakes, and nothing on this machine can change that.
+(exit 0)
+
+=== 2. the EXPLICIT allowlist ===
+allowed dv41-project C:\Users\shahi\AppData\Local\Temp\dv41-rig\dv41-project
+slug dv41-project-dv41-project-4022f4c6 · 
+C:\Users\shahi\AppData\Local\Temp\dv41-rig\state-home\courier\courier.json
+listening to 770000001 (admin)
+(exit 0)
+
+=== 3. courier status - ready ===
+courier C:\Users\shahi\AppData\Local\Temp\dv41-rig\state-home\courier
+token: set (CONDUCTOR_TELEGRAM_TOKEN)
+poll: offset 0 (nothing acknowledged yet — the next poll takes everything still 
+undelivered) · every 4s
+projects: dv41-project
+chats: 770000001 (admin)
+ready — `conductor courier run` starts polling.
+Telegram keeps an undelivered message for 24 hours. The courier answers "no run 
+live", not "machine off": a note sent to a sleeping machine is gone before it 
+wakes, and nothing on this machine can change that.
+(exit 0)
+
+=== 4. PROCESS A: courier run --once ===
+01:33:22 info: courier[0] Courier inbound text from chat 770000001, update 1, reply to none, topic none, text 21 chars
+01:33:22 info: courier[0] Telegram inbound Voice saved: C:\Users\shahi\AppData\Local\Temp\dv41-rig\state-home\courier\media\2-voice.oga (64 B)
+01:33:22 info: courier[0] Courier inbound voice from chat 770000001, update 2, reply to none, topic none, text 39 chars
+one poll: 2 received, 1 filed, 0 already filed, 0 parked
+(exit 0)
+
+===    what landed ===
+index.jsonl  154 bytes
+media\2-voice.oga  64 bytes
+notes\2.json  202 bytes
+(exit 0)
+
+===    the offset, on disk ===
+{
+  "offset": 3,
+  "updatedUtc": "2026-08-26T00:33:23.0669575Z"
+}
+(exit 0)
+
+=== 5. PROCESS B: courier run --once - the offset survived the process ===
+one poll: 0 received, 0 filed, 0 already filed, 0 parked
+(exit 0)
+
+=== 6. PROCESS C: the offset a kill leaves - re-served, filed zero times ===
+01:33:23 info: courier[0] Courier inbound text from chat 770000001, update 1, reply to none, topic none, text 21 chars
+01:33:23 info: courier[0] Telegram inbound Voice saved: C:\Users\shahi\AppData\Local\Temp\dv41-rig\state-home\courier\media\2-voice.oga (64 B)
+01:33:23 info: courier[0] Courier inbound voice from chat 770000001, update 2, reply to none, topic none, text 39 chars
+01:33:23 info: courier[0] courier: update 2 was already filed against dv41-project — nothing written, nothing said
+one poll: 2 received, 0 filed, 1 already filed, 0 parked
+(exit 0)
+
+===    ONE note, ONE index line - after three processes ===
+notes:       1
+index lines: 1
+media:       1
+{
+  "Id": 2,
+  "ReceivedUtc": "2026-08-26T00:33:23.0543047Z",
+  "ChatId": "770000001",
+  "Kind": "voice",
+  "Text": "the courier heard this with no run live",
+  "MediaPath": "media/2-voice.oga"
+}
+(exit 0)
+
+===    what the owner was told (once, not twice) ===
+{"chat_id":"770000001","text":"Notes in this chat now file against \u003Cb\u003Edv41-project\u003C/b\u003E \u003Ci\u003E(dv41-project)\u003C/i\u003E. It stays until you change it.","parse_mode":"HTML","disable_web_page_preview":true}
+{"chat_id":"770000001","text":"\uD83D\uDCE5 Voice note received \u2014 \u003Cb\u003Evoice note\u003C/b\u003E (64 B, 7s).\n\u003Ci\u003Ethe courier heard this with no run live\u003C/i\u003E\n\uD83D\uDCC1 Filed against \u003Cb\u003Edv41-project (this chat\u0027s project \u2014 /project to change it)\u003C/b\u003E.","parse_mode":"HTML","disable_web_page_preview":true}
+{"chat_id":"770000001","text":"Notes in this chat now file against \u003Cb\u003Edv41-project\u003C/b\u003E \u003Ci\u003E(dv41-project)\u003C/i\u003E. It stays until you change it.","parse_mode":"HTML","disable_web_page_preview":true}
+(exit 0)
+
+=== 7. courier deny - off the list again ===
+denied C:\Users\shahi\AppData\Local\Temp\dv41-rig\dv41-project — notes for it 
+are parked from now on.
+courier C:\Users\shahi\AppData\Local\Temp\dv41-rig\state-home\courier
+token: set (CONDUCTOR_TELEGRAM_TOKEN)
+poll: offset 3 · every 4s
+projects: none — `conductor courier allow --repo <path>`
+chats: 770000001 (admin)
+not ready: no projects are allowed, so there is nowhere to file. Add one with 
+`conductor courier allow --repo <path>`.
+Telegram keeps an undelivered message for 24 hours. The courier answers "no run 
+live", not "machine off": a note sent to a sleeping machine is gone before it 
+wakes, and nothing on this machine can change that.
+(exit 0)

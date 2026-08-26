@@ -28,9 +28,16 @@ namespace Conductor.Core.Courier;
 /// safe direction: it replays rather than skips.</para></summary>
 public sealed class CourierOffset
 {
+    /// <summary>camelCase, and case-insensitive on the way back in. Measured at DV4.1's live proof:
+    /// this file was written PascalCase while <c>courier.json</c> beside it was camelCase, and
+    /// System.Text.Json is case-SENSITIVE by default — so a hand-edited <c>{"offset": 400}</c> read
+    /// back as 0 with no error at all. Reading 0 replays rather than skips, so it was the safe
+    /// direction of a silent failure, which is still a silent failure.</summary>
     private static readonly JsonSerializerOptions Json = new()
     {
         WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 

@@ -97,6 +97,15 @@ public sealed class InboxStore
     /// the index does not mention — the crash window between the rename and the index append is
     /// real, and a note that exists on disk but is missing from the index would otherwise be
     /// invisible forever.</summary>
+    /// <summary>Whether a note with this id is already filed. Cheap — one file-exists, no index read.
+    ///
+    /// <para>DV4.1: <see cref="Append"/>'s refusal to overwrite is still the DEDUP, and this is not a
+    /// substitute for it — a check and a write are two operations and two writers fit between them.
+    /// What this is for is everything a caller does BEFORE the write. The courier adopts a note's
+    /// media into the inbox first, and on a replayed delivery that adoption ran, Append then refused,
+    /// and the inbox kept an orphan audio file no note referenced and no prune could ever remove.</para></summary>
+    public bool Has(long id) => File.Exists(NotePath(id));
+
     public IReadOnlyList<InboxNote> All()
     {
         if (!Directory.Exists(NotesDir)) return [];

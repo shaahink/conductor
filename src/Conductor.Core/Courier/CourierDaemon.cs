@@ -188,6 +188,19 @@ public sealed class CourierDaemon
         }
 
         var store = project.Inbox();
+        var id = NoteId(note);
+
+        // §6.2's replay, caught BEFORE anything is moved. Measured, not theorised: the first version
+        // of this adopted the media first and let Append refuse, which files the note exactly once —
+        // and leaves an orphan copy of the audio in the inbox that no note references and no prune
+        // can remove, because prune deletes the files a note NAMES. Append's rename is still the
+        // dedup; this is what stops the work in front of it running twice.
+        if (store.Has(id))
+        {
+            _log($"courier: update {delivery.UpdateId.ToString(CultureInfo.InvariantCulture)} was "
+               + $"already filed against {project.Name} — nothing written, nothing said");
+            return DeliveryOutcome.Duplicate;
+        }
 
         // The media travels with the note: it was downloaded into the courier's own staging directory
         // before anything knew which project this was about, and AdoptMedia moves it into the inbox
@@ -196,10 +209,11 @@ public sealed class CourierDaemon
         var media = store.AdoptMedia(note.Media?.LocalPath);
         if (!store.Append(Record(note, media)))
         {
-            // §6.2's replay. It was answered the first time; answering again would tell the owner
-            // their note arrived twice, which is exactly the thing that did not happen.
+            // The narrow race the check above cannot close: another writer filed this id between the
+            // two. Rare, and it still must not leave an orphan behind.
+            Discard(store, media);
             _log($"courier: update {delivery.UpdateId.ToString(CultureInfo.InvariantCulture)} was "
-               + $"already filed against {project.Name} — nothing written, nothing said");
+               + $"filed by somebody else while this one was working — nothing written, nothing said");
             return DeliveryOutcome.Duplicate;
         }
 
@@ -267,14 +281,38 @@ public sealed class CourierDaemon
             ct).ConfigureAwait(false);
     }
 
+    /// <summary>Removes a file this delivery adopted into an inbox that then refused the note. Only
+    /// ever a path INSIDE the store — <see cref="InboxStore.AdoptMedia"/> returns a relative one when
+    /// it moved the file and the original absolute one when it did not, and deleting somebody's
+    /// original because we could not file a note would be the worst possible tidy-up.</summary>
+    private static void Discard(InboxStore store, string? adopted)
+    {
+        if (adopted is not { Length: > 0 } || Path.IsPathRooted(adopted)) return;
+        try
+        {
+            var full = Path.Combine(store.Dir, adopted.Replace('/', Path.DirectorySeparatorChar));
+            if (File.Exists(full)) File.Delete(full);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // an orphan is better than a crash in a daemon that must not stop answering the phone
+        }
+    }
+
     private Task ReplyAsync(InboundNote note, string text, CancellationToken ct) =>
         _source.ReplyAsync(note.ChatId, text, note.MessageThreadId, ct);
 
     /// <summary>The note as the store holds it, filed under the DELIVERY's id. <c>RemoteSurface</c>
     /// makes the same record for the same reason: the id is the dedup key, so the two producers must
     /// agree on it or a replay through the other one would file a second copy.</summary>
+    /// <summary>The id a note is filed under: the delivery's own id where there is one, the message
+    /// id otherwise. <c>RemoteSurface</c> computes it the same way, and they must not diverge — the
+    /// two producers agreeing on this key is what makes a note filed by one a duplicate to the
+    /// other.</summary>
+    private static long NoteId(InboundNote note) => note.UpdateId != 0 ? note.UpdateId : note.MessageId;
+
     private static InboxNote Record(InboundNote note, string? mediaPath) => new(
-        Id: note.UpdateId != 0 ? note.UpdateId : note.MessageId,
+        Id: NoteId(note),
         ReceivedUtc: DateTime.UtcNow,
         ChatId: note.ChatId,
         Kind: note.Media?.Kind.ToString().ToLowerInvariant() ?? InboxNote.TextKind,
