@@ -86,7 +86,7 @@ public sealed class CourierSettings
     {
         var path = CourierHome.SettingsPathFor(stateHomeRoot);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        InboxStore.WriteAtomic(path, JsonSerializer.Serialize(this, Json));
+        AtomicFile.Write(path, JsonSerializer.Serialize(this, Json));
     }
 
     /// <summary>What stops this courier from doing its job, in one sentence, or null. The same

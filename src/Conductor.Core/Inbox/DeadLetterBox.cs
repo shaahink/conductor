@@ -62,7 +62,7 @@ public sealed class DeadLetterBox
                 File.Copy(source, Path.Combine(Dir, mediaName), overwrite: true);
             }
 
-            InboxStore.WriteAtomic(target, JsonSerializer.Serialize(new
+            AtomicFile.Write(target, JsonSerializer.Serialize(new
             {
                 note,
                 why,

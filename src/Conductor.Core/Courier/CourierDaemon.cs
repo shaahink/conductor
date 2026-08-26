@@ -226,10 +226,17 @@ public sealed class CourierDaemon
         if (!store.Append(Record(note, media)))
         {
             // The narrow race the check above cannot close: another writer filed this id between the
-            // two. Rare, and it still must not leave an orphan behind.
-            Discard(store, media);
+            // two. The media this delivery adopted is now an orphan — and it STAYS one. Nothing in
+            // this engine removes a file from an inbox except prune (DV3.3), and a duplicate copy of
+            // an owner's voice note costs a few kilobytes where a second deleter costs the property
+            // that makes the inbox safe to hold the only copy of something they said. The Has()
+            // check above is what keeps this rare; prune cannot reap what no note names, so the log
+            // names the file instead.
+            // RemoteSurface.Inbound leaves the same orphan in the same race, for the same reason.
             _log($"courier: update {delivery.UpdateId.ToString(CultureInfo.InvariantCulture)} was "
-               + $"filed by somebody else while this one was working — nothing written, nothing said");
+               + $"filed by somebody else while this one was working — nothing written, nothing said"
+               + (media is { Length: > 0 } && !Path.IsPathRooted(media)
+                   ? $"; {media} stays in the inbox as an orphan no note names" : ""));
             return DeliveryOutcome.Duplicate;
         }
 
@@ -338,24 +345,6 @@ public sealed class CourierDaemon
             + (picked.Present ? ""
                 : "\n⚠️ That checkout is not on this disk right now; notes will be parked until it is back."),
             ct).ConfigureAwait(false);
-    }
-
-    /// <summary>Removes a file this delivery adopted into an inbox that then refused the note. Only
-    /// ever a path INSIDE the store — <see cref="InboxStore.AdoptMedia"/> returns a relative one when
-    /// it moved the file and the original absolute one when it did not, and deleting somebody's
-    /// original because we could not file a note would be the worst possible tidy-up.</summary>
-    private static void Discard(InboxStore store, string? adopted)
-    {
-        if (adopted is not { Length: > 0 } || Path.IsPathRooted(adopted)) return;
-        try
-        {
-            var full = Path.Combine(store.Dir, adopted.Replace('/', Path.DirectorySeparatorChar));
-            if (File.Exists(full)) File.Delete(full);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // an orphan is better than a crash in a daemon that must not stop answering the phone
-        }
     }
 
     private Task ReplyAsync(InboundNote note, string text, CancellationToken ct,

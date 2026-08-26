@@ -201,7 +201,7 @@ public sealed class InboxStore
         var relative = TranscriptRelPath(note);
         var sidecar = Path.Combine(Dir, relative.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(sidecar)!);
-        WriteAtomic(sidecar, transcript.ToSidecarJson(floor));
+        AtomicFile.Write(sidecar, transcript.ToSidecarJson(floor));
 
         // A caption is the owner's TYPED words and the transcript is their spoken ones. Both are
         // theirs; neither replaces the other, so a captioned voice note keeps both, caption first.
@@ -215,7 +215,7 @@ public sealed class InboxStore
             TranscriptConfidence = transcript.MeanConfidence,
         };
 
-        WriteAtomic(path, JsonSerializer.Serialize(updated, Json));
+        AtomicFile.Write(path, JsonSerializer.Serialize(updated, Json));
         AppendIndexLine(updated);   // append-only: the LAST line for an id is the current one
         return updated;
     }
@@ -346,17 +346,6 @@ public sealed class InboxStore
         }, Compact);
 
         AppendJsonLine(IndexPath, line);
-    }
-
-    /// <summary>Temp file, then rename over the target. The same trick <see cref="Append"/> uses,
-    /// with overwrite allowed — see <see cref="AttachTranscript"/> for why that is safe here and not
-    /// there. Public for MA0045's public-member exemption; see <see cref="AppendPrunedLine"/>.</summary>
-    public static void WriteAtomic(string path, string content)
-    {
-        var temp = path + ".tmp-" + Guid.NewGuid().ToString("N")[..8];
-        File.WriteAllText(temp, content, new UTF8Encoding(false));
-        try { File.Move(temp, path, overwrite: true); }
-        catch (IOException) { TryDelete(temp); }
     }
 
     private string NotePath(long id) =>

@@ -22,7 +22,7 @@ namespace Conductor.Core.Courier;
 /// the second half of §6.2: <see cref="InboxStore.Append"/> refuses to overwrite a note file that
 /// already exists, so the note files exactly once. Slow twice beats lost once.</para>
 ///
-/// <para>Written through <see cref="InboxStore.WriteAtomic"/> — temp file plus rename — so a machine
+/// <para>Written through <see cref="AtomicFile.Write"/> — temp file plus rename — so a machine
 /// that loses power mid-write has either the old offset or the new one, never half a number. An
 /// unreadable or absent file reads as 0, which means "everything Telegram still has", which is the
 /// safe direction: it replays rather than skips.</para></summary>
@@ -71,7 +71,7 @@ public sealed class CourierOffset
     public void Write(long offset)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        InboxStore.WriteAtomic(_path, JsonSerializer.Serialize(
+        AtomicFile.Write(_path, JsonSerializer.Serialize(
             new OffsetRecord(offset, DateTime.UtcNow), Json));
     }
 

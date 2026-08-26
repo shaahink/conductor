@@ -70,7 +70,7 @@ public sealed record CourierPresence(
     {
         var path = CourierHome.PresencePathFor(stateHomeRoot);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        InboxStore.WriteAtomic(path, JsonSerializer.Serialize(this, Json));
+        AtomicFile.Write(path, JsonSerializer.Serialize(this, Json));
     }
 
     /// <summary>The record as written, alive or not. Null when there is no file or it is unreadable —
