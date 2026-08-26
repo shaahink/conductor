@@ -4,23 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: REPAIR session. The s013 engine-full red was two architecture ratchets, both real, both
-  from DV4's own work, both fixed by MOVING code - no baseline entry, no skip, no relaxed bar.
-  (1) Type ceiling: CourierWire.cs and ICourierSource.cs declared 4 types against 3; split out
-  CourierJson.cs and CourierConflictException.cs. (2) bug #77, CLOSED: the prune-is-the-only-
-  deleter sweep is FILE-level - a .cs is judged for MENTIONING InboxStore/InboxNote, then any
-  File.Delete outside a method named Prune or TryDelete is an offender.
-find: CourierPresence was swept only because it borrowed InboxStore.WriteAtomic as the engine's
-  atomic writer - so did CourierOffset, CourierSettings and DeadLetterBox. Extracted
-  Conductor.Core/AtomicFile.cs and REMOVED InboxStore.WriteAtomic; the note store is no longer a
-  file-utility library. CourierDaemon.Discard was a real second deleter (the Append-race orphan):
-  deleted it, the orphan now stays and is named in the log, which is what RemoteSurface.Inbound
-  has always done in the same race. Do not re-add an inbox clean-up: kilobytes vs the invariant.
-next: DV5.1 - the /cloud admin verb. Verify its flags against the installed claude FIRST (trap 16).
-red: bug #76 (courier delivers an evidence artifact as text naming the path, uploads no file)
-  still open and untouched.
-
-
+last: DV5.1 DONE. Trap 16 paid for itself twice. CREATING a cloud session is interactive-only on
+  claude 2.1.246 - `--cloud` refuses `-p`, refuses `--bg`, and refuses a non-TTY stdout, all with
+  named errors - so CL-2's headless-create half cannot exist. Card AMENDED, not argued with. What
+  ships: admin-only `/cloud`, the 6.8 git preflight (six verdicts, remote tip read by `ls-remote`
+  because status ahead/behind answers against the last fetch), the headless follow-up
+  `claude -p "msg" --cloud <id>`, an OwnerCloudAction row on every path incl. refusals, cost always
+  the word unknown. The live run then caught me guessing the id shape (`session_`/`cse_`, never a
+  UUID) - drive the real binary, synthetic tests cannot see platform shapes.
+next: DV5.2, the flagged lane. LEAD, already measured: `claude ultrareview [target]` is the ONLY
+  headless cloud surface this CLI has - `--json`, `--timeout <min>`, `--post/--no-post` (default
+  no-post) - and it is exactly CL-1's shape: no conductor tools, no verdict, a second opinion.
+  Reuse ICloudCli (one method, no create) and CloudVerbResult.Cost. DV5.2 is droppable before DV6.
+red: bug #76 (courier delivers an evidence artifact as text naming the path) still open, untouched.
 
 ## Baseline numbers (from run.db)
 

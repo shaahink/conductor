@@ -1,11 +1,11 @@
 ﻿# Conductor — Divan - the chancellery: inbox, courier, and the record that gets out run report
 
-_Updated 2026-08-26 10:28 UTC · branch `feat/divan` · HEAD `273674c`_
+_Updated 2026-08-26 10:46 UTC · branch `feat/divan` · HEAD `115020b`_
 
 **Status:** Idle
-**Stage:** DV4 — The courier - one bot, always awake, outliving the run · attempts used 1
-**Checkpoints:** 14/23 done · **Sessions run:** 13 · **Cost:** $192.2208 (agent $192.1320 + gates $0.0888) · **Tokens:** 2,763,695 in / 1,058,180 out
-**Confirmed phases:** DV1, DV2, DV3
+**Stage:** DV4 — The courier - one bot, always awake, outliving the run · attempts used 0
+**Checkpoints:** 14/23 done · **Sessions run:** 14 · **Cost:** $196.7014 (agent $196.6050 + gates $0.0963) · **Tokens:** 2,856,287 in / 1,092,751 out
+**Confirmed phases:** DV1, DV2, DV3, DV4
 
 ## Stage progress
 
@@ -14,7 +14,7 @@ _Updated 2026-08-26 10:28 UTC · branch `feat/divan` · HEAD `273674c`_
 | DV1 | The channel that says so - health made loud, the queue that reaches you | ██████████ 2/2 | confirmed ✓ |
 | DV2 | The sweep - every known defect triaged, the clusters burned down | ██████████ 4/4 | confirmed ✓ |
 | DV3 | The inbox - feedback that arrives when you have it, and survives the run | ██████████ 4/4 | confirmed ✓ |
-| DV4 | The courier - one bot, always awake, outliving the run | ██████████ 4/4 | gating… |
+| DV4 | The courier - one bot, always awake, outliving the run | ██████████ 4/4 | confirmed ✓ |
 | DV5 | The cloud, the safe shapes - an owner verb, a flagged experiment | ░░░░░░░░░░ 0/2 | todo |
 | DV6 | The record that gets out - bugs that outlive the board, columns, the page | ░░░░░░░░░░ 0/4 | todo |
 | DV7 | Ship Divan - close the era | ░░░░░░░░░░ 0/3 | todo |
@@ -108,6 +108,7 @@ _Updated 2026-08-26 10:28 UTC · branch `feat/divan` · HEAD `273674c`_
 | 11 | DV4 | Resume | 2r1 | 08-26 08:44 | 0:17 | Advanced | DV4.2 | 3 | engine-fast:OK · face-fast:OK | $7.3609 | $0.0096 | 176,234/56,432 |
 | 12 | DV4 | Deliver | 1 | 08-26 09:03 | 0:37 | Advanced | DV4.3 | 4 | engine-fast:OK · face-fast:OK | $19.8516 | $0.0083 | 271,404/139,580 |
 | 13 | DV4 | Deliver | 1 | 08-26 09:42 | 0:34 | Advanced | DV4.4 | 1 | engine-fast:OK · face-fast:OK | $16.5702 | $0.0079 | 205,156/84,103 |
+| 14 | DV4 | Fix | 2 | 08-26 10:28 | 0:11 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $4.4730 | $0.0076 | 92,592/34,571 |
 
 ## Money
 
@@ -115,32 +116,20 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 12 | 270.2M | 98.6% | $192.22 | 14 | 19.3M | $13.73 |
+| **run total** | 13 | 275.7M | 98.6% | $196.70 | 14 | 19.7M | $14.05 |
 | stage DV1 | 1 | 23.7M | 98.8% | $16.04 | 2 | 11.8M | $8.02 |
 | stage DV2 | 3 | 77.3M | 98.7% | $52.81 | 4 | 19.3M | $13.20 |
 | stage DV3 | 3 | 78.8M | 98.6% | $55.23 | 4 | 19.7M | $13.81 |
-| stage DV4 | 5 | 90.4M | 98.5% | $68.14 | 4 | 22.6M | $17.04 |
-| 2026-08 | 12 | 270.2M | 98.6% | $192.22 | 14 | 19.3M | $13.73 |
+| stage DV4 | 6 | 95.9M | 98.4% | $72.62 | 4 | 24M | $18.16 |
+| 2026-08 | 13 | 275.7M | 98.6% | $196.70 | 14 | 19.7M | $14.05 |
 
-_Where the money goes: agent $192.13 (100%) · gate $0.09 (0%) · blended $0.71/M tokens._
+_Where the money goes: agent $196.61 (100%) · gate $0.10 (0%) · blended $0.71/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-26 00:23:03  ▪ gate face-fast pass [session]  (32.8s)
-08-26 00:23:04  • session #7 DV3 → Advanced · done DV3.3,DV3.4 · 3 commit(s)  (50m13s)
-08-26 00:33:02  ▪ gate engine-fast pass [phase]  (0.0s)
-08-26 00:33:02  ▪ gate face-fast pass [phase]  (0.0s)
-08-26 00:33:02  ▪ gate engine-full FAIL [phase]  (5m00s)
-08-26 00:33:02  ▪ gate face-full pass [phase]  (2.9s)
-08-26 00:33:03  • session #8 DV3 Fix started (attempt 2/8)
-08-26 00:53:21  ▪ gate engine-fast pass [session]  (1m04s)
-08-26 00:53:21  ▪ gate face-fast pass [session]  (3.5s)
-08-26 00:53:22  • session #8 DV3 → Progress · 2 commit(s)  (20m18s)
-08-26 00:58:18  ▪ gate engine-fast pass [phase]  (0.0s)
-08-26 00:58:18  ▪ gate face-fast pass [phase]  (0.0s)
 08-26 00:58:18  ▪ gate engine-full pass [phase]  (4m53s)
 08-26 00:58:18  ▪ gate face-full pass [phase]  (1.4s)
 08-26 00:58:18  ✓ checkpoint DV3.1 confirmed
@@ -169,6 +158,18 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-26 11:28:45  ▪ gate face-fast pass [phase]  (0.0s)
 08-26 11:28:45  ▪ gate engine-full FAIL [phase]  (5m34s)
 08-26 11:28:46  ▪ gate face-full pass [phase]  (3.0s)
+08-26 11:28:46  • session #14 DV4 Fix started (attempt 2/8)
+08-26 11:41:34  ▪ gate engine-fast pass [session]  (1m12s)
+08-26 11:41:34  ▪ gate face-fast pass [session]  (3.3s)
+08-26 11:41:34  • session #14 DV4 → Progress · 1 commit(s)  (12m48s)
+08-26 11:46:54  ▪ gate engine-fast pass [phase]  (0.0s)
+08-26 11:46:54  ▪ gate face-fast pass [phase]  (0.0s)
+08-26 11:46:54  ▪ gate engine-full pass [phase]  (5m15s)
+08-26 11:46:54  ▪ gate face-full pass [phase]  (1.7s)
+08-26 11:46:54  ✓ checkpoint DV4.1 confirmed
+08-26 11:46:54  ✓ checkpoint DV4.2 confirmed
+08-26 11:46:54  ✓ checkpoint DV4.3 confirmed
+08-26 11:46:54  ✓ checkpoint DV4.4 confirmed
 ```
 
 ## Health
@@ -176,7 +177,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 13 · retries 2 (15 %) · overall Warn
+sessions 14 · retries 3 (21 %) · overall Warn
 ⚠ [context-saturation] session #12: 27,281,149 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #2: 23,394,515 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #3: 34,336,668 context tokens (≥ 20,000,000)
@@ -184,7 +185,7 @@ sessions 13 · retries 2 (15 %) · overall Warn
 ⚠ [context-saturation] session #6: 32,762,695 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 34,491,022 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #9: 34,833,588 context tokens (≥ 20,000,000)
-⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 3x
+⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 4x
 ```
 
 ## Repo
@@ -199,14 +200,6 @@ vs upstream: up to date
 
 ### Commits by session
 
-- **s5 (DV2 Deliver)** — 7 commit(s):
-  - [`292426a`](https://github.com/shaahink/conductor/commit/292426a) docs(divan): say plainly that the full suite was still running at session end
-  - [`b3378e6`](https://github.com/shaahink/conductor/commit/b3378e6) docs(divan): the handoff for DV3.1 - the sweep is closed, and the tail that was never read
-  - [`658cfc8`](https://github.com/shaahink/conductor/commit/658cfc8) refactor(DV2.4): split RunLoop's teardown and SessionRunner's refusal helpers; DV2.4 evidence
-  - [`73f05d0`](https://github.com/shaahink/conductor/commit/73f05d0) fix(DV2.4): bug #69 - a rate limit parks the run instead of spending its attempts
-  - [`6aa028b`](https://github.com/shaahink/conductor/commit/6aa028b) test(DV2.4): FU-F1-06 - a parked run reads back as parked, proven end to end
-  - [`4866902`](https://github.com/shaahink/conductor/commit/4866902) fix(DV2.4): bug #68 - the budget reaches the store on every exit path; bug #71 pinned
-  - [`8c23aaf`](https://github.com/shaahink/conductor/commit/8c23aaf) fix(DV2.4): bug #67 - the squash refuses a stale rebase instead of rewinding the branch
 - **s6 (DV3 Deliver)** — 5 commit(s):
   - [`22cb53c`](https://github.com/shaahink/conductor/commit/22cb53c) docs(divan): handoff - DV3.3 opened and returned to TODO at the wrap-up nudge
   - [`60716a5`](https://github.com/shaahink/conductor/commit/60716a5) docs(divan): handoff after DV3.1 and DV3.2 - the line-boundary trim that un-quotes a note
@@ -235,6 +228,8 @@ vs upstream: up to date
   - [`5544cff`](https://github.com/shaahink/conductor/commit/5544cff) feat(DV4.3): the loopback seam - a named port, a per-install secret, and the hello served
 - **s13 (DV4 Deliver)** — 1 commit(s):
   - [`273674c`](https://github.com/shaahink/conductor/commit/273674c) feat(DV4.4): promotion - one tap turns a note into a followups row and a Tier-B lane
+- **s14 (DV4 Fix)** — 1 commit(s):
+  - [`115020b`](https://github.com/shaahink/conductor/commit/115020b) fix(DV4): the two architecture ratchets go green by moving code, not by moving a bar
 
 ## Phase handovers (audit)
 
@@ -257,83 +252,37 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:FAIL-retry · face-full:OK
-
-<details><summary>engine-full — exit 1</summary>
-
-```
-[conductor] retried once (SC4.1): the first attempt exited 1 after 288s. Below is the SECOND run.
-Determining projects to restore...
-  All projects are up-to-date for restore.
-  Conductor.Planning -> C:\code\conductor\src\Conductor.Planning\bin\Debug\net10.0\Conductor.Planning.dll
-  Conductor.Core -> C:\code\conductor\src\Conductor.Core\bin\Debug\net10.0\Conductor.Core.dll
-  Conductor -> C:\code\conductor\src\Conductor\bin\Debug\net10.0\conductor.dll
-  Conductor.Tests -> C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
-Test run for C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
-A total of 1 test files matched the specified pattern.
-  Failed Conductor.Tests.ArchitectureTests.NoFileGrowsPastItsTypeCeilingOrItsRecordedDebt [240 ms]
-  Error Message:
-   Architecture ratchet — type count went the wrong way:
-  CourierWire.cs                 declares 4 types (allowed 3). Give each type its own file.
-  ICourierSource.cs              declares 4 types (allowed 3). Give each type its own file.
-  Stack Trace:
-     at Conductor.Tests.ArchitectureTests.NoFileGrowsPastItsTypeCeilingOrItsRecordedDebt() in C:\code\conductor\tests\Conductor.Tests\ArchitectureTests.cs:line 108
-   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
-   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
-  Failed Conductor.Tests.DV3_3TranscriptionTests.Prune_is_the_only_code_in_the_engine_that_deletes_an_inbox_file [243 ms]
-  Error Message:
-   something other than prune deletes inbox files:
-  CourierDaemon.cs:353 in private static void Discard(InboxStore store, string? adopted)
-  CourierPresence.cs:114 in public static void Clear(string? stateHomeRoot = null)
-  Stack Trace:
-     at Conductor.Tests.DV3_3TranscriptionTests.Prune_is_the_only_code_in_the_engine_that_deletes_an_inbox_file() in C:\code\conductor\tests\Conductor.Tests\DV3_3TranscriptionTests.cs:line 408
-   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
-   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
-  Standard Output Messages:
- CourierDaemon.cs:353 in private static void Discard(InboxStore store, string? adopted)
- CourierPresence.cs:114 in public static void Clear(string? stateHomeRoot = null)
- ChatRoutes.cs:106 in private static void TryDelete(string path)
- InboxStore.cs:326 in public int Prune(InboxNote note)
- InboxStore.cs:474 in private static void TryDelete(string path)
- TelegramMediaFetcher.cs:169 in private static void TryDelete(string path)
-
-
-
-Failed!  - Failed:     2, Passed:  3337, Skipped:     0, Total:  3339, Duration: 4 m 22 s - Conductor.Tests.dll (net10.0)
-```
-</details>
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> **DV4.4 promotion landed - one tap makes a note a followups row and a Tier-B…**
-> - Button on both acks; press writes the row; real lane opened, merged and CLOSED in a git rig
-> - Courier could not see a callback_query at all - every press was discarded and the offset advanced
-> - Bug #78 fixed: case-sensitive MapHeader meant audit followups never opened a lane, ever
+> **both engine-full architecture ratchets fixed by moving code, suite 3339/3339 green**
+> - Type ceiling: CourierJson and CourierConflictException split into their own files, no baseline entry added
+> - Bug #77 closed: AtomicFile extracted from InboxStore, CourierDaemon.Discard deleted so prune is the only inbox deleter again
+> - Nothing weakened: tests/ untouched, architecture-baseline.json byte-identical, same 3339 total as the red run
 >
-> artefacts: 273674c, src/Conductor.Core/FollowupWriter.cs, src/Conductor.Core/Inbox/NotePromotion.cs, src/Conductor.Core/Courier/CourierDaemon.cs, src/Conductor.Core/Integrations/TelegramCourierSource.cs, src/Conductor.Core/FollowupParser.cs, src/Conductor.Core/Lanes/LaneCoordinator.cs, tests/Conductor.Tests/DV4_4PromotionTests.cs
+> artefacts: 115020b, src/Conductor.Core/AtomicFile.cs, src/Conductor.Core/Courier/CourierJson.cs, src/Conductor.Core/Courier/CourierConflictException.cs, src/Conductor.Core/Courier/CourierDaemon.cs, src/Conductor.Core/Inbox/InboxStore.cs, plans/divan/TRACKER.md
 >
-> evidence: .conductor/evidence/DV4/dv4-4-promotion.md
+> evidence: .conductor/evidence/DV4/dv4-repair-s014-architecture-ratchets.md
 >
-> gaps: bug #77 - DV3_3 prune-only-deleter sweep RED, pre-existing on a179857 (offenders CourierDaemon.Discard, CourierPresence.Clear), left for a DV4 allowlist fix. Bug #76 (courier uploads no files) still open.
+> gaps: bug #76 still open — the courier delivers an evidence artifact as text naming the path, it uploads no file
 
 ## Tracker handoff
 
 ```
-last: DV4.4 landed and is claimed. Every acknowledgement of a filed note - in-run AND courier -
-  carries one Promote button; the press writes a parser-round-tripping followups.md row that
-  LaneCoordinator turns into a real Tier-B lane (proven with a real git repo, agent, merge gate
-  and CLOSED row). The courier writes `next` for the owning stage because it has no run; the first
-  stage to reach the row CLAIMS it, so it fires once. Auto-inject refused by design, asserted as
-  an absence in source and in behaviour. 17/17 DV4_4 tests green.
-find: two defects the tests found, both real. (1) The courier could not see a button press AT ALL:
-  a callback_query update has no `message`, DeliveryOfAsync returned Ignored and the offset
-  advanced past it - on a courier-owned token nothing else could pick it up. (2) bug #78, fixed:
-  FollowupParser.MapHeader matched columns case-sensitively while header detection did not, so
-  every row under the audit writer's `| Id | Item | Stage | Status |` was dropped - audit
-  followups have never opened a lane. Trap: followups.md's LAST section owns any EOF append.
+last: REPAIR session. The s013 engine-full red was two architecture ratchets, both real, both
+  from DV4's own work, both fixed by MOVING code - no baseline entry, no skip, no relaxed bar.
+  (1) Type ceiling: CourierWire.cs and ICourierSource.cs declared 4 types against 3; split out
+  CourierJson.cs and CourierConflictException.cs. (2) bug #77, CLOSED: the prune-is-the-only-
+  deleter sweep is FILE-level - a .cs is judged for MENTIONING InboxStore/InboxNote, then any
+  File.Delete outside a method named Prune or TryDelete is an offender.
+find: CourierPresence was swept only because it borrowed InboxStore.WriteAtomic as the engine's
+  atomic writer - so did CourierOffset, CourierSettings and DeadLetterBox. Extracted
+  Conductor.Core/AtomicFile.cs and REMOVED InboxStore.WriteAtomic; the note store is no longer a
+  file-utility library. CourierDaemon.Discard was a real second deleter (the Append-race orphan):
+  deleted it, the orphan now stays and is named in the log, which is what RemoteSurface.Inbound
+  has always done in the same race. Do not re-add an inbox clean-up: kilobytes vs the invariant.
 next: DV5.1 - the /cloud admin verb. Verify its flags against the installed claude FIRST (trap 16).
-red: bug #77 - DV3_3 Prune_is_the_only_code_that_deletes_an_inbox_file is RED and was RED on
-  a179857 with this work stashed (offenders: CourierDaemon.Discard, CourierPresence.Clear; the
-  sweep's allowlist predates both). Not fixed here on purpose. Bug #76 (courier uploads no files)
-  still open.
+red: bug #76 (courier delivers an evidence artifact as text naming the path, uploads no file)
+  still open and untouched.
 ```
