@@ -32,7 +32,8 @@ public sealed class KS11_1SeamBoundaryTests
         "TelegramService.Channel.cs",
         "TelegramService.Lifecycle.cs",
         "TelegramService.Polling.cs",   // DV2.3: the inbound long-poll and its 409 handling (#38)
-        "TelegramService.Inbound.cs",    // DV3.1: getFile, the download, and the 20 MB cap
+        "TelegramService.Inbound.cs",    // DV3.1: which kind arrived, and the note the seam is handed
+        "TelegramMediaFetcher.cs",       // DV4.1: getFile, the download and the 20 MB cap, shared with the courier
         "TelegramService.Transport.cs",
         "TelegramService.TestConnection.cs",   // DV3 fix: the Test button's leg, split off the 500-line ceiling
         "TelegramReadiness.cs",

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
@@ -80,8 +81,37 @@ public sealed partial class TelegramService
 
     private async Task PollOnceAsync(CancellationToken ct)
     {
-        var url = $"{_apiBase}{_token}/getUpdates?offset={_offset}&timeout=30";
-        var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
+        var updates = await GetUpdatesAsync(_http, _apiBase, _token ?? "", _offset, LongPollSeconds, ct)
+            .ConfigureAwait(false);
+
+        foreach (var upd in updates)
+        {
+            _offset = upd.UpdateId + 1;
+            await HandleUpdateAsync(upd, ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>How long the API is asked to hold a poll open with nothing to say. Telegram's own
+    /// recommended long-poll window, and the reason an idle bot costs one request every thirty
+    /// seconds rather than one every four.</summary>
+    internal const int LongPollSeconds = 30;
+
+    /// <summary>One <c>getUpdates</c>, with the 409 read out of the body rather than thrown away.
+    ///
+    /// <para>Static and parameterised because DV4.1's courier is a SECOND caller: it owns the token
+    /// on a machine where no run need be live, keeps its offset on disk rather than in a field, and
+    /// must meet exactly this 409 — the conflict is precisely what happens when the courier and a
+    /// still-polling run hold the same token (findings §6.9). One implementation, so the two cannot
+    /// disagree about what a conflict means.</para></summary>
+    /// <param name="offset">The first update id not yet acknowledged. Telegram treats it as a
+    /// confirmation of everything below it, which is what makes a durable offset possible at all.</param>
+    internal static async Task<IReadOnlyList<TgUpdate>> GetUpdatesAsync(HttpClient http, string apiBase,
+        string token, long offset, int timeoutSeconds, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(http);
+        var url = $"{apiBase}{token}/getUpdates?offset={offset.ToString(CultureInfo.InvariantCulture)}"
+                + $"&timeout={timeoutSeconds.ToString(CultureInfo.InvariantCulture)}";
+        using var resp = await http.GetAsync(url, ct).ConfigureAwait(false);
 
         // #38: checked BEFORE EnsureSuccessStatusCode, because the body is where Telegram explains
         // itself and EnsureSuccessStatusCode throws that body away.
@@ -90,13 +120,7 @@ public sealed partial class TelegramService
 
         resp.EnsureSuccessStatusCode();
         var body = await resp.Content.ReadFromJsonAsync<TgResponse>(JsonOpts, ct).ConfigureAwait(false);
-        if (body is not { Ok: true, Result: { Count: > 0 } updates }) return;
-
-        foreach (var upd in updates)
-        {
-            _offset = upd.UpdateId + 1;
-            await HandleUpdateAsync(upd, ct).ConfigureAwait(false);
-        }
+        return body is { Ok: true, Result: { } updates } ? updates : [];
     }
 
     /// <summary>Telegram's own words about the conflict, plus what they mean for a conductor: the
