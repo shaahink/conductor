@@ -67,3 +67,24 @@ by choosing the *working directory it spawns in*, and nothing else.
 1. Create:   `claude --cloud "<task>" -p --output-format json` in the project's repo directory.
 2. Follow up: `claude --cloud <session-id> -p "<text>" --output-format json`.
 3. No cost flag is available on either, so the reply and the event log say **unknown**, never a number.
+
+---
+
+## Amended after the live run (same day)
+
+Two of the three things above were confirmed by driving the real binary; one was corrected. See
+[`dv5.1-live-proof.md`](dv5.1-live-proof.md).
+
+* **Corrected — the session id shape.** This document's first draft did not state one and the
+  implementation guessed a UUID or a `sess_` prefix. The CLI says otherwise, verbatim:
+  `pass its ID (session_... or cse_...) or its claude.ai/code URL`. A bare UUID is a **local**
+  session id and the cloud surface refuses it.
+* **Confirmed — the follow-up argv.** `claude -p "<message>" --cloud <session-id>` is the CLI's own
+  wording and it reaches the cloud surface; the failure it returns is about the id, not the shape of
+  the call.
+* **Confirmed — the create refusal.** `--cloud` without a TTY refuses rather than silently running
+  locally, which is the one thing that would have been dangerous.
+
+A tagged id has internal structure this engine has never observed (`invalid session ID: must be a
+cse_… or session_… tagged ID`), and deliberately does not re-implement: the parser routes, the CLI
+validates.

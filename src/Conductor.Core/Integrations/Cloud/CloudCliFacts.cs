@@ -51,6 +51,16 @@ public static class CloudCliFacts
     /// a URL shape it has never observed.</summary>
     public const string SessionHome = "claude.ai/code";
 
+    /// <summary>Verbatim, from <c>claude -p "say ok" --cloud 00000000-0000-4000-8000-000000000000</c>
+    /// — the live probe that corrected this engine's guess at the id shape. It also CONFIRMS the
+    /// follow-up direction: the CLI says what <c>--cloud</c> does with <c>--print</c>, which is the
+    /// one thing conductor drives.</summary>
+    public const string RefusalNotASession =
+        "Error: --cloud \"<id>\" is not a cloud session ID or URL.\n"
+        + "With --print, --cloud sends the prompt to an existing cloud session: pass its ID "
+        + "(session_... or cse_...) or its claude.ai/code URL. To start a new cloud session from a "
+        + "description instead, drop --print.";
+
     /// <summary>The exact command an owner must run, on a terminal, to start the session conductor
     /// cannot start for them.</summary>
     public static string CreateCommand(string task) => $"claude --cloud \"{task.Replace("\"", "'", StringComparison.Ordinal)}\"";

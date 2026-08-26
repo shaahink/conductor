@@ -6,7 +6,9 @@ public enum CloudPreflightVerdict
 {
     /// <summary>The remote has exactly what this checkout has, and nothing is uncommitted.</summary>
     Ok = 0,
-    NotARepo = 1,
+    /// <summary>No commit for a cloud session to clone: not a checkout at all, or a checkout with
+    /// no commits yet. One verdict because the instruction to the owner is the same.</summary>
+    NothingToClone = 1,
     DetachedHead = 2,
     DirtyTree = 3,
     NoUpstream = 4,
@@ -44,8 +46,8 @@ public static class CloudPreflight
         ArgumentNullException.ThrowIfNull(snapshot);
 
         if (snapshot.HeadSha.Length == 0 || (snapshot.Branch.Length == 0 && !snapshot.Detached))
-            return new CloudPreflightResult(CloudPreflightVerdict.NotARepo, "", "", null,
-                "that path is not a git checkout, so there is nothing for a cloud session to clone.");
+            return new CloudPreflightResult(CloudPreflightVerdict.NothingToClone, "", "", null,
+                "there is no commit there for a cloud session to clone — the path is not a git checkout, or it has no commits yet.");
 
         if (snapshot.Detached)
             return new CloudPreflightResult(CloudPreflightVerdict.DetachedHead, "", snapshot.HeadSha, null,

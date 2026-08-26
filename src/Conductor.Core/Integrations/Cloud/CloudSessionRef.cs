@@ -17,7 +17,19 @@ public sealed partial record CloudSessionRef(string Id, string? Url)
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, 500)]
     private static partial Regex UrlShape();
 
-    [GeneratedRegex(@"^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|sess_[A-Za-z0-9_-]{6,})$",
+    /// <summary>The two prefixes the CLI itself names. Measured, not guessed: driving the real
+    /// binary with a UUID answered <c>"…" is not a cloud session ID or URL … pass its ID (session_…
+    /// or cse_…) or its claude.ai/code URL</c>. A bare UUID is a LOCAL session id and is deliberately
+    /// not matched here — sending one would be refused by the CLI a minute later, and reading it as a
+    /// task description at least does something.
+    ///
+    /// <para>This is a ROUTER, not a validator: it answers "session or task", and the CLI is what
+    /// judges whether a session-shaped id is real. Driving the real binary with
+    /// <c>session_notarealsession</c> answered <c>invalid session ID: must be a cse_… or session_…
+    /// tagged ID</c> — a tag format this engine has never observed and therefore does not
+    /// re-implement, because a validator that is stricter than the thing it guards refuses work that
+    /// would have succeeded.</para></summary>
+    [GeneratedRegex(@"^(?:session_|cse_)[A-Za-z0-9_-]{4,}$",
         RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, 500)]
     private static partial Regex IdShape();
 

@@ -26,7 +26,7 @@ public sealed class DV5_1CloudVerbTests : IDisposable
 {
     private const string Sha = "1111111111111111111111111111111111111111";
     private const string Other = "2222222222222222222222222222222222222222";
-    private const string SessionId = "0f9c2a41-77b5-4e2d-9a3c-1d2e3f4a5b6c";
+    private const string SessionId = "session_01k3q7wz9c";
 
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "dv5-cloud-" + Guid.NewGuid().ToString("N")[..8]);
     private readonly FakeChannel _channel = new();
@@ -97,11 +97,11 @@ public sealed class DV5_1CloudVerbTests : IDisposable
     }
 
     [Fact]
-    public void A_path_that_is_not_a_repo_is_refused_rather_than_read_as_clean()
+    public void A_path_with_no_commit_is_refused_rather_than_read_as_clean()
     {
         var v = CloudPreflight.Judge(GitSnapshot.None, null);
 
-        Assert.Equal(CloudPreflightVerdict.NotARepo, v.Verdict);
+        Assert.Equal(CloudPreflightVerdict.NothingToClone, v.Verdict);
         Assert.False(v.Ok);
     }
 
@@ -248,12 +248,16 @@ public sealed class DV5_1CloudVerbTests : IDisposable
         Assert.Contains("no such session", r.Reply, StringComparison.Ordinal);
     }
 
-    /// <summary>Strict on purpose. A loose match would swallow the first word of a task description
-    /// and send it to a session that does not exist.</summary>
+    /// <summary>The id shape is the CLI's, not this engine's guess at it. The live probe that
+    /// corrected it is quoted in <see cref="CloudCliFacts.RefusalNotASession"/>: cloud session ids
+    /// are <c>session_…</c> or <c>cse_…</c>, and a bare UUID — which an earlier draft of this file
+    /// accepted — is a LOCAL session id that the cloud surface refuses.</summary>
     [Theory]
-    [InlineData("0f9c2a41-77b5-4e2d-9a3c-1d2e3f4a5b6c", true)]
-    [InlineData("sess_abc123def", true)]
-    [InlineData("https://claude.ai/code/0f9c2a41-77b5-4e2d-9a3c-1d2e3f4a5b6c", true)]
+    [InlineData("session_01k3q7wz9c", true)]
+    [InlineData("cse_9f21aa77", true)]
+    [InlineData("https://claude.ai/code/session_01k3q7wz9c", true)]
+    [InlineData("0f9c2a41-77b5-4e2d-9a3c-1d2e3f4a5b6c", false)]
+    [InlineData("sess_abc123def", false)]
     [InlineData("refactor", false)]
     [InlineData("sweep", false)]
     [InlineData("", false)]

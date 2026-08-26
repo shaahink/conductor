@@ -1,0 +1,60 @@
+=== CloudPreflight.Probe against real git ===
+[A no commits yet] verdict=NothingToClone ok=False
+        detail: there is no commit there for a cloud session to clone — the path is not a git checkout, or it has no commits yet.
+[B committed, no upstream] verdict=NoUpstream ok=False
+        detail: main has no upstream — it has never been pushed, so the remote has no copy of it at all.
+[C pushed and level] verdict=Ok ok=True
+        detail: main at aa3b4d50, clean, and origin/main has the same commit.
+[D dirty tree] verdict=DirtyTree ok=False
+        detail: main has 1 uncommitted change:
+                A  note.txt
+[E local commit the remote does not have] verdict=RemoteDiffersFromHead ok=False
+        detail: main is at bff6d5d1 but origin/main is at aa3b4d50 (locally 1 ahead at last fetch) — a cloud session would clone the remote's commit, not yours.
+
+=== CloudPreflight.RemoteTip against a real GitHub remote ===
+repo=C:\code\conductor
+  branch=feat/divan upstream=origin/feat/divan
+  local HEAD  = 32a48687c563eca112a0f8cecaf75a9445b6f324
+  ls-remote   = 115020b094a9c0130f245dfad62d28edf926c45c
+  same commit = False
+
+=== CloudVerb create path, real repo, no CLI reached ===
+/cloud refused for dv5 rig: main is at bff6d5d1 but origin/main is at aa3b4d50 (locally 1 ahead at last fetch) — a cloud session would clone the remote's commit, not yours.
+
+A cloud session clones from the remote, so it would run on the remote's commit and not on what you are looking at. Commit and push, then ask again.
+
+=== CloudVerb create path, clean and level ===
+/cloud cannot start a new cloud session for dv5 rig. This engine drives claude 2.1.246, and starting one is interactive-only there:
+
+Error: --cloud requires an interactive terminal.
+Non-interactive invocations (piped stdout, --init-only, --sdk-url) run locally and would silently ignore --cloud. Drop --cloud, or run from a TTY.
+
+Run this on a terminal, then send follow-ups from here with /cloud <session-id> <message>:
+
+claude --cloud "sweep the docs"
+
+dv5 rig is ready for it: main at bff6d5d1, clean, and origin/main has the same commit.
+
+=== ClaudeCloudCli against the REAL claude binary (bogus session id) ===
+argv: claude -p "say ok" --cloud 00000000-0000-4000-8000-000000000000
+exit=1 timedOut=False
+stdout: 
+stderr: Error: --cloud "00000000-0000-4000-8000-000000000000" is not a cloud session ID or URL.
+With --print, --cloud sends the prompt to an existing cloud session: pass its ID (session_... or cse_...) or its claude.ai/code URL. To start a new cloud session from a description instead, drop --print.
+
+=== CloudVerb follow-up through the REAL CLI, well-shaped but unreal session id ===
+Cloud session session_notarealsession (find it at claude.ai/code) failed (exit 1):
+
+Error: failed to send message to cloud session session_notarealsession: invalid session ID: must be a cse_… or session_… tagged ID
+
+Cost: unknown — a cloud session reports no per-turn spend to this engine.
+Local dv5 rig: main at bff6d5d1, clean, and origin/main has the same commit.
+
+=== CloudVerb, bare /cloud ===
+/cloud talks to a cloud session about dv5 rig.
+
+  /cloud <session-id|url> <message>   send it a message (this works from here)
+  /cloud <task>                       tells you the command to start one, which needs a terminal
+
+Git right now: main at bff6d5d1, clean, and origin/main has the same commit.
+Cloud spend is always reported as unknown; there is no meter for it.
