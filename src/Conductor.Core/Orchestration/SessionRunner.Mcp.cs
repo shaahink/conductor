@@ -7,7 +7,6 @@ using Conductor.Models;
 
 namespace Conductor.Core.Orchestration;
 
-#pragma warning disable MA0045 // sync file I/O by design — fast local writes, not hot-path
 public sealed partial class SessionRunner
 {
     // ── soft-break + MCP wiring ──
@@ -147,7 +146,7 @@ public sealed partial class SessionRunner
     /// budget while it also decides blast radius is the kind of half-true label this project has
     /// been burned by before.
     /// </remarks>
-    private string? WriteSessionSettings(StageConfig stage, int sessionNumber)
+    private async Task<string?> WriteSessionSettingsAsync(StageConfig stage, int sessionNumber, CancellationToken ct)
     {
         var permissions = PermissionPosture.SettingsFragment(_ctx.Plan.ResolveAgent(stage).Permissions);
         var conductorExe = Environment.ProcessPath;
@@ -191,7 +190,7 @@ public sealed partial class SessionRunner
             }
             if (permissions is not null) settings["permissions"] = permissions;
             var path = Path.Combine(_ctx.Plan.StateDir, "settings.session.json");
-            File.WriteAllText(path, JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true }));
+            await File.WriteAllTextAsync(path, JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true }), ct).ConfigureAwait(false);
             return path;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -271,7 +270,7 @@ public sealed partial class SessionRunner
             var claudePath = Path.Combine(_ctx.Plan.StateDir, "mcp-config.claude.json");
             await File.WriteAllTextAsync(opencodePath, JsonSerializer.Serialize(opencodeConfig, opts), ct).ConfigureAwait(false);
             await File.WriteAllTextAsync(claudePath, JsonSerializer.Serialize(claudeConfig, opts), ct).ConfigureAwait(false);
-            return new McpWiring(opencodePath, claudePath, WriteSessionSettings(stage, rec.Number));
+            return new McpWiring(opencodePath, claudePath, await WriteSessionSettingsAsync(stage, rec.Number, ct).ConfigureAwait(false));
         }
         catch (Exception ex)
         {

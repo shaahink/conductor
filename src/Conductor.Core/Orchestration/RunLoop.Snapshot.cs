@@ -2,7 +2,6 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Conductor.Core.Commands;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
 using Conductor.Core.Lanes;
@@ -14,7 +13,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Conductor.Core.Orchestration;
 
-#pragma warning disable MA0045 // sync file I/O by design — fast local writes, not hot-path
 public sealed partial class RunLoop
 {
     // ---------------------------------------------------------------- prompt construction
@@ -93,14 +91,11 @@ public sealed partial class RunLoop
 
     // K5.1: the second copy of ExtractSessionResult lived here, uncalled — a private duplicate of
     // SessionRunner's, with the same 700-char blind cut. One parse, one place: SessionResult.
+    // CH1.3: LastRawTail was the same story and went the same way — a private duplicate of
+    // SessionRunner.Refusals' copy that nothing on RunLoop called, kept alive only by the
+    // file-wide MA0045 suppression it was the sole justification for. Both are gone.
 
     private static string Trunc(string s, int max) => s.Length <= max ? s : s[..max] + "\u2026";
 
     private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
-
-    private string LastRawTail(string rawLogPath)
-    {
-        try { return GateRunner.TailOf(File.ReadAllText(rawLogPath), 10); }
-        catch (IOException) { return ""; }
-    }
 }

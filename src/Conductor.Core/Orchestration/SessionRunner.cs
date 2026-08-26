@@ -9,7 +9,6 @@ using Conductor.Models;
 
 namespace Conductor.Core.Orchestration;
 
-#pragma warning disable MA0045 // sync file I/O by design — fast local writes, not hot-path
 public sealed partial class SessionRunner
 {
     private readonly RunContext _ctx;

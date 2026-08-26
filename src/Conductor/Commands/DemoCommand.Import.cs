@@ -35,8 +35,7 @@ public sealed partial class DemoCommand
 
     /// <summary>Read and convert the document, or explain why it is not drivable and return null.
     /// Every failure here is a message a stranger can act on: this command is the front door.</summary>
-#pragma warning disable MA0045 // one small file read before any run starts — async buys nothing here
-    internal static DemoImport? LoadImport(string path)
+    internal static async Task<DemoImport?> LoadImportAsync(string path)
     {
         if (!File.Exists(path))
         {
@@ -45,7 +44,7 @@ public sealed partial class DemoCommand
         }
 
         string text;
-        try { text = File.ReadAllText(path, Encoding.UTF8); }
+        try { text = await File.ReadAllTextAsync(path, Encoding.UTF8).ConfigureAwait(false); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             AnsiConsole.MarkupLine($"[red]Could not read {Markup.Escape(path)}[/] — {Markup.Escape(ex.Message)}");
@@ -118,5 +117,4 @@ public sealed partial class DemoCommand
 
     private static string Escape(string s) => s.Replace("\\", "\\\\", StringComparison.Ordinal)
         .Replace("\"", "\\\"", StringComparison.Ordinal);
-#pragma warning restore MA0045
 }

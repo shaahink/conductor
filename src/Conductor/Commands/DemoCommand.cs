@@ -75,7 +75,7 @@ public sealed partial class DemoCommand : AsyncCommand<DemoCommand.Settings>
         DemoImport? imported = null;
         if (settings.From is { Length: > 0 } from)
         {
-            imported = LoadImport(from);
+            imported = await LoadImportAsync(from).ConfigureAwait(false);
             if (imported is null) return 1;
             AnsiConsole.MarkupLine($"[grey]read {Markup.Escape(imported.SourceName)} as " +
                 $"{Markup.Escape(ImportBridge.Describe(imported.Format))} — {imported.Stages} stage(s), " +

@@ -1,0 +1,37 @@
+ratchet: tests    floor=1932  now=2999
+ratchet: pragmas  ceil=31   now=31
+ratchet: comparing against origin/feat/charkh
+ratchet: archdebt base=0  now=0
+ratchet: catalogue now=30 - no baseline captured, comparison skipped (run with -CatalogueBaseline first).
+
+analyzer-debt: anchor is origin/feat/charkh (named explicitly)
+analyzer-debt: pragma-src           bar=35   now=31   unjustified=0
+analyzer-debt: pragma-tests-tools   bar=1    now=1    unjustified=0
+analyzer-debt: suppressmessage      bar=0    now=0    unjustified=0
+analyzer-debt: nowarn               bar=0    now=0    unjustified=0
+analyzer-debt: severity-downgrade   bar=17   now=17   unjustified=0   (count not ratcheted - see the per-rule check)
+analyzer-debt: severity-blanket     bar=0    now=0    unjustified=0
+analyzer-debt: TOTAL                bar=53   now=49   unjustified=0
+analyzer-debt: rules-enforced       bar=50   now=50   un-enforced=0
+analyzer-debt: OK - nothing silenced that was not silenced before, and every suppression says why.
+
+
+complexity-budget: bar is the STRICTEST value over the last 25 commits that touched a budget (8 found) - no single commit moves it
+complexity-budget: src/Conductor.Core/CodeMetricsConfig.txt       CA1502         bar=91    now=91
+complexity-budget: src/Conductor.Core/CodeMetricsConfig.txt       CA1505         bar=8     now=8
+complexity-budget: src/Conductor.Core/CodeMetricsConfig.txt       CA1506         bar=182   now=182
+complexity-budget: src/Conductor.Planning/CodeMetricsConfig.txt   CA1502         bar=10    now=10
+complexity-budget: src/Conductor.Planning/CodeMetricsConfig.txt   CA1505         bar=40    now=40
+complexity-budget: src/Conductor.Planning/CodeMetricsConfig.txt   CA1506         bar=25    now=25
+complexity-budget: src/Conductor/CodeMetricsConfig.txt            CA1502         bar=39    now=39
+complexity-budget: src/Conductor/CodeMetricsConfig.txt            CA1505         bar=21    now=21
+complexity-budget: src/Conductor/CodeMetricsConfig.txt            CA1506         bar=240   now=240
+complexity-budget: tests/Conductor.Tests/CodeMetricsConfig.txt    CA1502         bar=39    now=39
+complexity-budget: tests/Conductor.Tests/CodeMetricsConfig.txt    CA1505         bar=35    now=35
+complexity-budget: tests/Conductor.Tests/CodeMetricsConfig.txt    CA1506         bar=135   now=135
+complexity-budget: tools/plan-lint/CodeMetricsConfig.txt          CA1502         bar=39    now=39
+complexity-budget: tools/plan-lint/CodeMetricsConfig.txt          CA1505         bar=18    now=18
+complexity-budget: tools/plan-lint/CodeMetricsConfig.txt          CA1506         bar=42    now=42
+complexity-budget: OK - all three rules enforced, every project budgeted, nothing loosened.
+
+ratchet: OK - nothing was weakened.

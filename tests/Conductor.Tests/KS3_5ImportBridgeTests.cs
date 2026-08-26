@@ -207,17 +207,17 @@ public sealed class KS3_5ImportBridgeTests : IDisposable
     [InlineData("speckit", "tasks.md", 5)]
     [InlineData("taskmaster", "tasks.json", 4)]
     [InlineData("checklist", "checklist.md", 5)]
-    public void ConvertedRowsSurviveTheProviderThatActuallyFeedsTheGraph(string kind, string name, int expected)
+    public async Task ConvertedRowsSurviveTheProviderThatActuallyFeedsTheGraph(string kind, string name, int expected)
     {
-        var imported = DemoCommand.LoadImport(Fixture(kind, name));
+        var imported = await DemoCommand.LoadImportAsync(Fixture(kind, name));
         Assert.NotNull(imported);
         Assert.Equal(expected, imported.Checkpoints);
 
         var dir = Path.Combine(_dir, kind);
         Directory.CreateDirectory(dir);
-        File.WriteAllText(Path.Combine(dir, "TRACKER.md"), imported.Tracker);
+        await File.WriteAllTextAsync(Path.Combine(dir, "TRACKER.md"), imported.Tracker);
         var planPath = Path.Combine(dir, "conductor.plan.json");
-        File.WriteAllText(planPath, DemoCommand.PlanJson(dir, "/usr/local/bin/conductor", imported.StagesJson));
+        await File.WriteAllTextAsync(planPath, DemoCommand.PlanJson(dir, "/usr/local/bin/conductor", imported.StagesJson));
         var plan = PlanConfig.Load(planPath);
 
         var declared = ProgressProviderFactory.Create(plan).Read(plan);
@@ -259,14 +259,14 @@ public sealed class KS3_5ImportBridgeTests : IDisposable
     /// (so the demo is not Windows-only) and state that stays inside the throwaway directory (so a
     /// stranger's machine catalogue does not grow a row pointing at a deleted temp dir).</summary>
     [Fact]
-    public void ImportedDemoPlanLoadsWithPortableGatesAndPinnedState()
+    public async Task ImportedDemoPlanLoadsWithPortableGatesAndPinnedState()
     {
-        var imported = DemoCommand.LoadImport(Fixture("taskmaster", "tasks.json"));
+        var imported = await DemoCommand.LoadImportAsync(Fixture("taskmaster", "tasks.json"));
         Assert.NotNull(imported);
 
         var planPath = Path.Combine(_dir, "conductor.plan.json");
-        File.WriteAllText(planPath, DemoCommand.PlanJson(_dir, "/usr/local/bin/conductor", imported.StagesJson));
-        File.WriteAllText(Path.Combine(_dir, "TRACKER.md"), imported.Tracker);
+        await File.WriteAllTextAsync(planPath, DemoCommand.PlanJson(_dir, "/usr/local/bin/conductor", imported.StagesJson));
+        await File.WriteAllTextAsync(Path.Combine(_dir, "TRACKER.md"), imported.Tracker);
 
         var plan = PlanConfig.Load(planPath);
         Assert.Equal(DemoCommand.DemoPlanName, plan.Name);
@@ -292,13 +292,13 @@ public sealed class KS3_5ImportBridgeTests : IDisposable
     /// <summary>A document nothing recognises must cost the caller a message, not a directory —
     /// and the default <c>conductor demo</c> must be unreachable from this path by accident.</summary>
     [Fact]
-    public void AnUnrecognisedDocumentIsRefusedBeforeAnythingIsBuilt()
+    public async Task AnUnrecognisedDocumentIsRefusedBeforeAnythingIsBuilt()
     {
         var path = Path.Combine(_dir, "prose.md");
-        File.WriteAllText(path, "# Ideas\n\nWe should probably build a greeting service at some point.\n");
+        await File.WriteAllTextAsync(path, "# Ideas\n\nWe should probably build a greeting service at some point.\n");
 
-        Assert.Null(DemoCommand.LoadImport(path));
-        Assert.Null(DemoCommand.LoadImport(Path.Combine(_dir, "no-such-file.md")));
+        Assert.Null(await DemoCommand.LoadImportAsync(path));
+        Assert.Null(await DemoCommand.LoadImportAsync(Path.Combine(_dir, "no-such-file.md")));
     }
 
     /// <summary>The default scaffold is not a variant of the imported one: with no document, the

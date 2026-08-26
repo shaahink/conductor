@@ -1,0 +1,326 @@
+﻿2026-08-26T23:07:33.0988150Z Current runner version: '2.336.0'
+2026-08-26T23:07:33.1024929Z ##[group]Runner Image Provisioner
+2026-08-26T23:07:33.1026303Z Hosted Compute Agent
+2026-08-26T23:07:33.1027283Z Version: 20260729.566
+2026-08-26T23:07:33.1028356Z Commit: cf7153fe6e25b664e8693c24944bf2b00355d109
+2026-08-26T23:07:33.1029649Z Build Date: 2026-07-29T19:17:02Z
+2026-08-26T23:07:33.1030784Z Worker ID: {c27426d6-31bd-4506-b253-29658c381a0d}
+2026-08-26T23:07:33.1031997Z Azure Region: northcentralus
+2026-08-26T23:07:33.1033042Z ##[endgroup]
+2026-08-26T23:07:33.1035286Z ##[group]Operating System
+2026-08-26T23:07:33.1036978Z Microsoft Windows Server 2025
+2026-08-26T23:07:33.1038078Z 10.0.26100
+2026-08-26T23:07:33.1038931Z Datacenter
+2026-08-26T23:07:33.1039891Z ##[endgroup]
+2026-08-26T23:07:33.1040786Z ##[group]Runner Image
+2026-08-26T23:07:33.1041771Z Image: windows-2025-vs2026
+2026-08-26T23:07:33.1043179Z Version: 20260818.207.1
+2026-08-26T23:07:33.1045794Z Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20260818.207/images/windows/Windows2025-VS2026-Readme.md
+2026-08-26T23:07:33.1048856Z Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20260818.207
+2026-08-26T23:07:33.1050686Z ##[endgroup]
+2026-08-26T23:07:33.1052650Z ##[group]GITHUB_TOKEN Permissions
+2026-08-26T23:07:33.1055603Z Contents: read
+2026-08-26T23:07:33.1056520Z Metadata: read
+2026-08-26T23:07:33.1057402Z ##[endgroup]
+2026-08-26T23:07:33.1060222Z Secret source: Actions
+2026-08-26T23:07:33.1062862Z Prepare workflow directory
+2026-08-26T23:07:33.1508414Z Prepare all required actions
+2026-08-26T23:07:33.1556899Z Getting action download info
+2026-08-26T23:07:33.3557693Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+2026-08-26T23:07:33.4895882Z Download action repository 'actions/setup-dotnet@v6' (SHA:a98b56852c35b8e3190ac28c8c2271da59106c68)
+2026-08-26T23:07:33.8257267Z Download action repository 'actions/setup-go@v7' (SHA:b7ad1dad31e06c5925ef5d2fc7ad053ef454303e)
+2026-08-26T23:07:34.1492176Z Download action repository 'actions/cache@v6' (SHA:55cc8345863c7cc4c66a329aec7e433d2d1c52a9)
+2026-08-26T23:07:34.4510388Z Complete job name: windows - full gate battery
+2026-08-26T23:07:34.6150651Z ##[group]Run actions/checkout@v7
+2026-08-26T23:07:34.6151708Z with:
+2026-08-26T23:07:34.6152145Z   fetch-depth: 0
+2026-08-26T23:07:34.6152628Z   repository: shaahink/conductor
+2026-08-26T23:07:34.6157849Z   token: ***
+2026-08-26T23:07:34.6158306Z   ssh-strict: true
+2026-08-26T23:07:34.6158758Z   ssh-user: git
+2026-08-26T23:07:34.6159221Z   persist-credentials: true
+2026-08-26T23:07:34.6159734Z   clean: true
+2026-08-26T23:07:34.6160229Z   sparse-checkout-cone-mode: true
+2026-08-26T23:07:34.6160833Z   fetch-tags: false
+2026-08-26T23:07:34.6161327Z   show-progress: true
+2026-08-26T23:07:34.6161842Z   lfs: false
+2026-08-26T23:07:34.6162313Z   submodules: false
+2026-08-26T23:07:34.6162815Z   set-safe-directory: true
+2026-08-26T23:07:34.6163818Z   allow-unsafe-pr-checkout: false
+2026-08-26T23:07:34.6164753Z env:
+2026-08-26T23:07:34.6165198Z   DOTNET_NOLOGO: true
+2026-08-26T23:07:34.6165736Z   DOTNET_CLI_TELEMETRY_OPTOUT: true
+2026-08-26T23:07:34.6166429Z   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+2026-08-26T23:07:34.6167069Z ##[endgroup]
+2026-08-26T23:07:34.7654450Z Syncing repository: shaahink/conductor
+2026-08-26T23:07:34.7656276Z ##[group]Getting Git version info
+2026-08-26T23:07:34.7656944Z Working directory is 'D:\a\conductor\conductor'
+2026-08-26T23:07:34.8406328Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-08-26T23:07:35.0454444Z git version 2.55.0.windows.4
+2026-08-26T23:07:35.0505144Z ##[endgroup]
+2026-08-26T23:07:35.0522329Z Temporarily overriding HOME='D:\a\_temp\193733f6-266a-44b4-9b2f-30fe29cd1c1c' before making global git config changes
+2026-08-26T23:07:35.0524859Z Adding repository directory to the temporary git global config as a safe directory
+2026-08-26T23:07:35.0533188Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\conductor\conductor
+2026-08-26T23:07:35.0886671Z Deleting the contents of 'D:\a\conductor\conductor'
+2026-08-26T23:07:35.0891608Z ##[group]Determining repository object format
+2026-08-26T23:07:35.0893347Z ##[endgroup]
+2026-08-26T23:07:35.0894465Z ##[group]Initializing the repository
+2026-08-26T23:07:35.0901551Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\conductor\conductor
+2026-08-26T23:07:35.1407350Z Initialized empty Git repository in D:/a/conductor/conductor/.git/
+2026-08-26T23:07:35.1455377Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/shaahink/conductor
+2026-08-26T23:07:35.1806776Z ##[endgroup]
+2026-08-26T23:07:35.1807938Z ##[group]Disabling automatic garbage collection
+2026-08-26T23:07:35.1816410Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+2026-08-26T23:07:35.2111840Z ##[endgroup]
+2026-08-26T23:07:35.2113592Z ##[group]Setting up auth
+2026-08-26T23:07:35.2115115Z Removing SSH command configuration
+2026-08-26T23:07:35.2124770Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-08-26T23:07:35.2423323Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-08-26T23:07:36.5143540Z Removing HTTP extra header
+2026-08-26T23:07:36.5161803Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-08-26T23:07:36.5487884Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-08-26T23:07:37.0793321Z Removing includeIf entries pointing to credentials config files
+2026-08-26T23:07:37.0807002Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-08-26T23:07:37.1117563Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-08-26T23:07:37.6641760Z [command]"C:\Program Files\Git\bin\git.exe" config --file D:\a\_temp\git-credentials-98336b84-704b-4ff4-8cf4-1b29983b76ef.config http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+2026-08-26T23:07:37.6955976Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:D:/a/conductor/conductor/.git.path D:\a\_temp\git-credentials-98336b84-704b-4ff4-8cf4-1b29983b76ef.config
+2026-08-26T23:07:37.7249073Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:D:/a/conductor/conductor/.git/worktrees/*.path D:\a\_temp\git-credentials-98336b84-704b-4ff4-8cf4-1b29983b76ef.config
+2026-08-26T23:07:37.7548162Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-98336b84-704b-4ff4-8cf4-1b29983b76ef.config
+2026-08-26T23:07:37.7842036Z [command]"C:\Program Files\Git\bin\git.exe" config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-98336b84-704b-4ff4-8cf4-1b29983b76ef.config
+2026-08-26T23:07:37.8133636Z ##[endgroup]
+2026-08-26T23:07:37.8134929Z ##[group]Fetching the repository
+2026-08-26T23:07:37.8146013Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-08-26T23:07:40.6016364Z From https://github.com/shaahink/conductor
+2026-08-26T23:07:40.6018365Z  * [new branch]        feat/charkh                -> origin/feat/charkh
+2026-08-26T23:07:40.6019318Z  * [new branch]        master                     -> origin/master
+2026-08-26T23:07:40.6020282Z  * [new tag]           archive/pre-foreman-master -> archive/pre-foreman-master
+2026-08-26T23:07:40.6022417Z  * [new tag]           v0.1.0                     -> v0.1.0
+2026-08-26T23:07:40.6023237Z  * [new tag]           v0.2.0                     -> v0.2.0
+2026-08-26T23:07:40.6025004Z  * [new tag]           v0.2.1                     -> v0.2.1
+2026-08-26T23:07:40.6025881Z  * [new tag]           v0.2.2                     -> v0.2.2
+2026-08-26T23:07:40.6026695Z  * [new tag]           v0.3.0                     -> v0.3.0
+2026-08-26T23:07:40.6027416Z  * [new tag]           v0.4.0                     -> v0.4.0
+2026-08-26T23:07:40.6028226Z  * [new tag]           v0.4.1                     -> v0.4.1
+2026-08-26T23:07:40.6028940Z  * [new tag]           v0.5.0                     -> v0.5.0
+2026-08-26T23:07:40.6069848Z [command]"C:\Program Files\Git\bin\git.exe" branch --list --remote origin/feat/charkh
+2026-08-26T23:07:40.6368862Z   origin/feat/charkh
+2026-08-26T23:07:40.6412092Z [command]"C:\Program Files\Git\bin\git.exe" rev-parse refs/remotes/origin/feat/charkh
+2026-08-26T23:07:40.6674707Z 151b4293f3175ac86749a2818a8b40eb9703223d
+2026-08-26T23:07:40.6706093Z ##[endgroup]
+2026-08-26T23:07:40.6707223Z ##[group]Determining the checkout info
+2026-08-26T23:07:40.6708383Z ##[endgroup]
+2026-08-26T23:07:40.6720505Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+2026-08-26T23:07:40.7074695Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+2026-08-26T23:07:40.7372150Z ##[group]Checking out the ref
+2026-08-26T23:07:40.7380914Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force -B feat/charkh refs/remotes/origin/feat/charkh
+2026-08-26T23:07:41.2951395Z Switched to a new branch 'feat/charkh'
+2026-08-26T23:07:41.2973536Z branch 'feat/charkh' set up to track 'origin/feat/charkh'.
+2026-08-26T23:07:41.3038082Z ##[endgroup]
+2026-08-26T23:07:41.3407304Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+2026-08-26T23:07:41.3683217Z 151b4293f3175ac86749a2818a8b40eb9703223d
+2026-08-26T23:07:41.4207640Z ##[group]Run actions/setup-dotnet@v6
+2026-08-26T23:07:41.4207996Z with:
+2026-08-26T23:07:41.4208205Z   dotnet-version: 10.x
+2026-08-26T23:07:41.4208424Z   cache: false
+2026-08-26T23:07:41.4208612Z env:
+2026-08-26T23:07:41.4208786Z   DOTNET_NOLOGO: true
+2026-08-26T23:07:41.4209015Z   DOTNET_CLI_TELEMETRY_OPTOUT: true
+2026-08-26T23:07:41.4209314Z   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+2026-08-26T23:07:41.4209597Z ##[endgroup]
+2026-08-26T23:07:41.7032453Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -Sta -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command & 'D:\a\_actions\actions\setup-dotnet\v6\externals\install-dotnet.ps1' -SkipNonVersionedFiles -Runtime dotnet -Channel LTS
+2026-08-26T23:07:43.1672704Z dotnet-install: .NET Core Runtime with version '10.0.11' is already installed.
+2026-08-26T23:07:43.3225710Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -Sta -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command & 'D:\a\_actions\actions\setup-dotnet\v6\externals\install-dotnet.ps1' -SkipNonVersionedFiles -Channel 10.0
+2026-08-26T23:07:44.0303647Z dotnet-install: .NET Core SDK with version '10.0.400' is already installed.
+2026-08-26T23:07:44.1420849Z ##[group]Run actions/setup-go@v7
+2026-08-26T23:07:44.1421189Z with:
+2026-08-26T23:07:44.1421379Z   go-version: 1.26
+2026-08-26T23:07:44.1421617Z   cache-dependency-path: face-go/go.sum
+2026-08-26T23:07:44.1421903Z   check-latest: false
+2026-08-26T23:07:44.1425034Z   token: ***
+2026-08-26T23:07:44.1425231Z   cache: true
+2026-08-26T23:07:44.1425411Z env:
+2026-08-26T23:07:44.1425586Z   DOTNET_NOLOGO: true
+2026-08-26T23:07:44.1425815Z   DOTNET_CLI_TELEMETRY_OPTOUT: true
+2026-08-26T23:07:44.1426113Z   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+2026-08-26T23:07:44.1426417Z   DOTNET_ROOT: C:\Program Files\dotnet
+2026-08-26T23:07:44.1426684Z ##[endgroup]
+2026-08-26T23:07:44.2918408Z Setup go version spec 1.26
+2026-08-26T23:07:44.2976393Z Found in cache @ C:\hostedtoolcache\windows\go\1.26.6\x64
+2026-08-26T23:07:44.2980318Z Added go to the path
+2026-08-26T23:07:44.2983279Z Successfully set up Go version 1.26
+2026-08-26T23:07:45.8305049Z [command]C:\hostedtoolcache\windows\go\1.26.6\x64\bin\go.exe env GOMODCACHE
+2026-08-26T23:07:45.8377438Z [command]C:\hostedtoolcache\windows\go\1.26.6\x64\bin\go.exe env GOCACHE
+2026-08-26T23:07:45.8686314Z C:\Users\runneradmin\go\pkg\mod
+2026-08-26T23:07:45.8710303Z C:\Users\runneradmin\AppData\Local\go-build
+2026-08-26T23:07:46.1478434Z Cache is not found
+2026-08-26T23:07:46.1491573Z go version go1.26.6 windows/amd64
+2026-08-26T23:07:46.1492123Z 
+2026-08-26T23:07:46.1492824Z ##[group]go env
+2026-08-26T23:07:49.3018881Z set AR=ar
+2026-08-26T23:07:49.3019259Z set CC=gcc
+2026-08-26T23:07:49.3019735Z set CGO_CFLAGS=-O2 -g
+2026-08-26T23:07:49.3020146Z set CGO_CPPFLAGS=
+2026-08-26T23:07:49.3020430Z set CGO_CXXFLAGS=-O2 -g
+2026-08-26T23:07:49.3020712Z set CGO_ENABLED=1
+2026-08-26T23:07:49.3020973Z set CGO_FFLAGS=-O2 -g
+2026-08-26T23:07:49.3021273Z set CGO_LDFLAGS=-O2 -g
+2026-08-26T23:07:49.3021523Z set CXX=g++
+2026-08-26T23:07:49.3021735Z set GCCGO=gccgo
+2026-08-26T23:07:49.3021962Z set GO111MODULE=
+2026-08-26T23:07:49.3022199Z set GOAMD64=v1
+2026-08-26T23:07:49.3022422Z set GOARCH=amd64
+2026-08-26T23:07:49.3022659Z set GOAUTH=netrc
+2026-08-26T23:07:49.3022881Z set GOBIN=
+2026-08-26T23:07:49.3023220Z set GOCACHE=C:\Users\runneradmin\AppData\Local\go-build
+2026-08-26T23:07:49.3023629Z set GOCACHEPROG=
+2026-08-26T23:07:49.3023856Z set GODEBUG=
+2026-08-26T23:07:49.3024187Z set GOENV=C:\Users\runneradmin\AppData\Roaming\go\env
+2026-08-26T23:07:49.3024562Z set GOEXE=.exe
+2026-08-26T23:07:49.3024799Z set GOEXPERIMENT=
+2026-08-26T23:07:49.3025048Z set GOFIPS140=off
+2026-08-26T23:07:49.3025281Z set GOFLAGS=
+2026-08-26T23:07:49.3026372Z set GOGCCFLAGS=-m64 -mthreads -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=C:\Users\RUNNER~1\AppData\Local\Temp\go-build927878905=/tmp/go-build -gno-record-gcc-switches
+2026-08-26T23:07:49.3027449Z set GOHOSTARCH=amd64
+2026-08-26T23:07:49.3027718Z set GOHOSTOS=windows
+2026-08-26T23:07:49.3027965Z set GOINSECURE=
+2026-08-26T23:07:49.3028191Z set GOMOD=NUL
+2026-08-26T23:07:49.3028569Z set GOMODCACHE=C:\Users\runneradmin\go\pkg\mod
+2026-08-26T23:07:49.3029005Z set GONOPROXY=
+2026-08-26T23:07:49.3029232Z set GONOSUMDB=
+2026-08-26T23:07:49.3029455Z set GOOS=windows
+2026-08-26T23:07:49.3029742Z set GOPATH=C:\Users\runneradmin\go
+2026-08-26T23:07:49.3030090Z set GOPRIVATE=
+2026-08-26T23:07:49.3030473Z set GOPROXY=https://proxy.golang.org,direct
+2026-08-26T23:07:49.3030944Z set GOROOT=C:\hostedtoolcache\windows\go\1.26.6\x64
+2026-08-26T23:07:49.3031531Z set GOSUMDB=sum.golang.org
+2026-08-26T23:07:49.3031841Z set GOTELEMETRY=local
+2026-08-26T23:07:49.3032308Z set GOTELEMETRYDIR=C:\Users\runneradmin\AppData\Roaming\go\telemetry
+2026-08-26T23:07:49.3032773Z set GOTMPDIR=
+2026-08-26T23:07:49.3033015Z set GOTOOLCHAIN=local
+2026-08-26T23:07:49.3033510Z set GOTOOLDIR=C:\hostedtoolcache\windows\go\1.26.6\x64\pkg\tool\windows_amd64
+2026-08-26T23:07:49.3034016Z set GOVCS=
+2026-08-26T23:07:49.3034252Z set GOVERSION=go1.26.6
+2026-08-26T23:07:49.3034496Z set GOWORK=
+2026-08-26T23:07:49.3037009Z set PKG_CONFIG=pkg-config
+2026-08-26T23:07:49.3037256Z 
+2026-08-26T23:07:49.3037608Z ##[endgroup]
+2026-08-26T23:07:49.8225238Z ##[group]Run actions/cache@v6
+2026-08-26T23:07:49.8225592Z with:
+2026-08-26T23:07:49.8225816Z   path: ~/.nuget/packages
+2026-08-26T23:07:49.8226697Z   key: nuget-Windows-7249b30be9e4e27b26ec60cc17bab80c0f2da39b49e68fb75a9410eb8b6f952d
+2026-08-26T23:07:49.8227311Z   restore-keys: nuget-Windows-
+2026-08-26T23:07:49.8227626Z   enableCrossOsArchive: false
+2026-08-26T23:07:49.8227926Z   fail-on-cache-miss: false
+2026-08-26T23:07:49.8228203Z   lookup-only: false
+2026-08-26T23:07:49.8228454Z   save-always: false
+2026-08-26T23:07:49.8228680Z env:
+2026-08-26T23:07:49.8228878Z   DOTNET_NOLOGO: true
+2026-08-26T23:07:49.8229140Z   DOTNET_CLI_TELEMETRY_OPTOUT: true
+2026-08-26T23:07:49.8229689Z   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+2026-08-26T23:07:49.8230031Z   DOTNET_ROOT: C:\Program Files\dotnet
+2026-08-26T23:07:49.8230339Z   GOTOOLCHAIN: local
+2026-08-26T23:07:49.8230569Z ##[endgroup]
+2026-08-26T23:07:50.2020636Z Cache hit for restore-key: nuget-Windows-7de6187e18e884ba3daac531702c0207e46903d2f6b02c466f119028fdb02a30
+2026-08-26T23:07:51.2996023Z Received 130162714 of 130162714 (100.0%), 129.8 MBs/sec
+2026-08-26T23:07:51.3000617Z Cache Size: ~124 MB (130162714 B)
+2026-08-26T23:07:51.3099302Z [command]"C:\Program Files\Git\usr\bin\tar.exe" -xf D:/a/_temp/86170062-60b8-46a9-8139-506d245d6082/cache.tzst -P -C D:/a/conductor/conductor --force-local --use-compress-program "zstd -d"
+2026-08-26T23:07:55.2505083Z Cache restored successfully
+2026-08-26T23:07:55.2725624Z Cache restored from key: nuget-Windows-7de6187e18e884ba3daac531702c0207e46903d2f6b02c466f119028fdb02a30
+2026-08-26T23:07:55.3057727Z ##[group]Run dotnet build Conductor.slnx --configuration Debug
+2026-08-26T23:07:55.3058367Z [36;1mdotnet build Conductor.slnx --configuration Debug[0m
+2026-08-26T23:07:56.4074865Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-08-26T23:07:56.4075553Z env:
+2026-08-26T23:07:56.4075886Z   DOTNET_NOLOGO: true
+2026-08-26T23:07:56.4076340Z   DOTNET_CLI_TELEMETRY_OPTOUT: true
+2026-08-26T23:07:56.4077241Z   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+2026-08-26T23:07:56.4077889Z   DOTNET_ROOT: C:\Program Files\dotnet
+2026-08-26T23:07:56.4078428Z   GOTOOLCHAIN: local
+2026-08-26T23:07:56.4078855Z ##[endgroup]
+2026-08-26T23:08:04.0782541Z   Determining projects to restore...
+2026-08-26T23:08:09.0099566Z   Restored D:\a\conductor\conductor\tools\plan-lint\plan-lint.csproj (in 4.03 sec).
+2026-08-26T23:08:09.0102714Z   Restored D:\a\conductor\conductor\src\Conductor.Core\Conductor.Core.csproj (in 4.03 sec).
+2026-08-26T23:08:09.0185139Z   Restored D:\a\conductor\conductor\src\Conductor.Planning\Conductor.Planning.csproj (in 2 ms).
+2026-08-26T23:08:09.0323692Z   Restored D:\a\conductor\conductor\src\Conductor\Conductor.csproj (in 4.13 sec).
+2026-08-26T23:08:13.5270641Z   Restored D:\a\conductor\conductor\tests\Conductor.Tests\Conductor.Tests.csproj (in 8.62 sec).
+2026-08-26T23:08:21.4433828Z   Conductor.Planning -> D:\a\conductor\conductor\src\Conductor.Planning\bin\Debug\net10.0\Conductor.Planning.dll
+2026-08-26T23:08:58.2344664Z   plan-lint -> D:\a\conductor\conductor\tools\plan-lint\bin\Debug\net10.0\plan-lint.dll
+2026-08-26T23:08:58.2962946Z   Conductor.Core -> D:\a\conductor\conductor\src\Conductor.Core\bin\Debug\net10.0\Conductor.Core.dll
+2026-08-26T23:09:07.8680749Z   Conductor -> D:\a\conductor\conductor\src\Conductor\bin\Debug\net10.0\conductor.dll
+2026-08-26T23:09:42.5366542Z   Conductor.Tests -> D:\a\conductor\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+2026-08-26T23:09:42.5608774Z 
+2026-08-26T23:09:42.5618738Z Build succeeded.
+2026-08-26T23:09:42.5625731Z     0 Warning(s)
+2026-08-26T23:09:42.5626941Z     0 Error(s)
+2026-08-26T23:09:42.5627220Z 
+2026-08-26T23:09:42.5627485Z Time Elapsed 00:01:41.77
+2026-08-26T23:09:42.7136689Z ##[group]Run dotnet test Conductor.slnx --configuration Debug --no-build
+2026-08-26T23:09:42.7137347Z [36;1mdotnet test Conductor.slnx --configuration Debug --no-build[0m
+2026-08-26T23:09:42.7236231Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-08-26T23:09:42.7236595Z env:
+2026-08-26T23:09:42.7236778Z   DOTNET_NOLOGO: true
+2026-08-26T23:09:42.7237001Z   DOTNET_CLI_TELEMETRY_OPTOUT: true
+2026-08-26T23:09:42.7237298Z   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+2026-08-26T23:09:42.7237592Z   DOTNET_ROOT: C:\Program Files\dotnet
+2026-08-26T23:09:42.7237860Z   GOTOOLCHAIN: local
+2026-08-26T23:09:42.7238064Z ##[endgroup]
+2026-08-26T23:09:44.7985371Z Test run for D:\a\conductor\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+2026-08-26T23:09:45.7186820Z A total of 1 test files matched the specified pattern.
+2026-08-26T23:13:06.3670861Z [xUnit.net 00:03:20.15]     Conductor.Tests.KS1_2StagesFromFoldTests.DerivedStatusMatchesTheStatusSurface_ForEverySeededRun [FAIL]
+2026-08-26T23:13:06.7268242Z   Failed Conductor.Tests.KS1_2StagesFromFoldTests.DerivedStatusMatchesTheStatusSurface_ForEverySeededRun [260 ms]
+2026-08-26T23:13:06.7270177Z   Error Message:
+2026-08-26T23:13:06.7270821Z    Assert.Equal() Failure: Values differ
+2026-08-26T23:13:06.7271430Z Expected: 0
+2026-08-26T23:13:06.7271852Z Actual:   1
+2026-08-26T23:13:06.7272372Z   Stack Trace:
+2026-08-26T23:13:06.7274379Z      at Conductor.Tests.KS1_2StagesFromFoldTests.DerivedStatusMatchesTheStatusSurface_ForEverySeededRun() in /_/tests/Conductor.Tests/KS1_2StagesFromFoldTests.cs:line 175
+2026-08-26T23:13:06.7277646Z    at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+2026-08-26T23:13:06.7279933Z    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+2026-08-26T23:14:28.1906554Z 
+2026-08-26T23:14:28.1973930Z Failed!  - Failed:     1, Passed:  3505, Skipped:     0, Total:  3506, Duration: 4 m 41 s - Conductor.Tests.dll (net10.0)
+2026-08-26T23:14:33.6781992Z ##[error]Process completed with exit code 1.
+2026-08-26T23:14:33.7080108Z Post job cleanup.
+2026-08-26T23:14:33.9103997Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-08-26T23:14:33.9427840Z git version 2.55.0.windows.4
+2026-08-26T23:14:33.9465248Z Temporarily overriding HOME='D:\a\_temp\e4f4fb0a-b10f-4197-b363-8c1c7f2fe86c' before making global git config changes
+2026-08-26T23:14:33.9467353Z Adding repository directory to the temporary git global config as a safe directory
+2026-08-26T23:14:33.9477000Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\conductor\conductor
+2026-08-26T23:14:33.9849252Z Removing SSH command configuration
+2026-08-26T23:14:33.9850598Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-08-26T23:14:34.6612385Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-08-26T23:14:35.6635034Z Removing HTTP extra header
+2026-08-26T23:14:35.6636775Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-08-26T23:14:35.6638945Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-08-26T23:14:35.6640857Z Removing includeIf entries pointing to credentials config files
+2026-08-26T23:14:35.6641681Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-08-26T23:14:35.6642485Z includeif.gitdir:D:/a/conductor/conductor/.git.path
+2026-08-26T23:14:35.6643097Z includeif.gitdir:D:/a/conductor/conductor/.git/worktrees/*.path
+2026-08-26T23:14:35.6643977Z includeif.gitdir:/github/workspace/.git.path
+2026-08-26T23:14:35.6645528Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-08-26T23:14:35.6648209Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/conductor/conductor/.git.path
+2026-08-26T23:14:35.6649823Z D:\a\_temp\git-credentials-98336b84-704b-4ff4-8cf4-1b29983b76ef.config
+2026-08-26T23:14:35.6652578Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/conductor/conductor/.git.path D\:\\a\\_temp\\git\-credentials\-98336b84\-704b\-4ff4\-8cf4\-1b29983b76ef\.config
+2026-08-26T23:14:35.6655233Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:D:/a/conductor/conductor/.git/worktrees/*.path
+2026-08-26T23:14:35.6656372Z D:\a\_temp\git-credentials-98336b84-704b-4ff4-8cf4-1b29983b76ef.config
+2026-08-26T23:14:35.6678444Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:D:/a/conductor/conductor/.git/worktrees/*.path D\:\\a\\_temp\\git\-credentials\-98336b84\-704b\-4ff4\-8cf4\-1b29983b76ef\.config
+2026-08-26T23:14:35.6681336Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-08-26T23:14:35.6682885Z /github/runner_temp/git-credentials-98336b84-704b-4ff4-8cf4-1b29983b76ef.config
+2026-08-26T23:14:35.6684410Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-98336b84\-704b\-4ff4\-8cf4\-1b29983b76ef\.config
+2026-08-26T23:14:35.6686181Z [command]"C:\Program Files\Git\bin\git.exe" config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-08-26T23:14:35.6687221Z /github/runner_temp/git-credentials-98336b84-704b-4ff4-8cf4-1b29983b76ef.config
+2026-08-26T23:14:35.6688736Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-98336b84\-704b\-4ff4\-8cf4\-1b29983b76ef\.config
+2026-08-26T23:14:35.6692786Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-08-26T23:14:35.9220053Z Removing credentials config 'D:\a\_temp\git-credentials-98336b84-704b-4ff4-8cf4-1b29983b76ef.config'
+2026-08-26T23:14:35.9429447Z Cleaning up orphan processes
+2026-08-26T23:14:35.9546734Z Terminate orphan process: pid (5108) (dotnet)
+2026-08-26T23:14:35.9620572Z Terminate orphan process: pid (1648) (dotnet)
+2026-08-26T23:14:35.9838218Z Terminate orphan process: pid (1312) (dotnet)
+2026-08-26T23:14:36.0086001Z Terminate orphan process: pid (5240) (VBCSCompiler)
+2026-08-26T23:14:36.0173375Z Terminate orphan process: pid (580) (conhost)
+2026-08-26T23:14:36.0253547Z Terminate orphan process: pid (6312) (conhost)
+2026-08-26T23:14:36.0314926Z Terminate orphan process: pid (2668) (PING)
+2026-08-26T23:14:36.0369841Z Terminate orphan process: pid (4120) (conhost)
+2026-08-26T23:14:36.0473320Z Terminate orphan process: pid (8584) (PING)
+2026-08-26T23:14:36.0528482Z Terminate orphan process: pid (1976) (conhost)
+2026-08-26T23:14:36.0590081Z Terminate orphan process: pid (8264) (PING)
+2026-08-26T23:14:36.0639666Z Terminate orphan process: pid (8324) (conhost)
+2026-08-26T23:14:36.0700706Z Terminate orphan process: pid (5040) (PING)
