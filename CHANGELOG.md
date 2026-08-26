@@ -20,6 +20,36 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ## [Unreleased]
 
+_Nothing yet — entries for the next era go here, and this heading is renamed to the version when it
+is tagged._
+
+## [0.5.0] - 2026-08-26
+
+**Two eras — gates that cannot be gamed, and the chancellery.** 0.4.1 opened the door; this release
+is about what happens once someone walks through it and finds they need to *trust* what the run tells
+them, and to be *reachable* while it works. It carries two eras built back to back and tagged together
+because they are one story. **Karvansara edge** went after the sentence "the gates are green", which
+until now meant only *this command exited 0*: a `holdout` gate runs at the phase gate with its name
+redacted everywhere a session can see, a `regression` gate fails when a check that used to pass has
+quietly stopped existing, a `mutation` gate fails a suite that runs and asserts nothing — and a second
+model may now review the work, but no code path lets its score flip a gate verdict. **Divan** — the
+chancellery — gave the run a mouth and an ear. One bot that outlives the run owns the Telegram token
+and files what you say into the project it is about, from an explicit allowlist; a filed note arrives
+as context a session actually reads rather than as a message it missed; and what the run learned
+finally leaves the machine as durable GitHub issues, a Projects v2 board, code-scanning alerts and a
+single page you can open on a phone. Built the way the last four were: conductor driving itself
+against this repository, unattended, every checkpoint confirmed by an independent gate battery rather
+than by the agent that claimed it.
+
+Their own score, produced by the tools this project ships (`conductor money` and `conductor budget`,
+measured at the tag): **karvansara-edge — 23 checkpoints, 414.3M tokens, $324.01; 18.0M and $14.09
+each**; **Divan — 23 checkpoints, 417.0M tokens, $320.38; 18.1M and $13.93 each**; both at 98.4–98.5%
+cache reads. Divan's measured window took one rollover in eighteen costed sessions, and its
+cooperative wrap-up rail converted six of the seven sessions it nudged. The per-checkpoint estimate
+has now come in **low two eras running** — edge +4.0% on tokens, Divan +7.7% — which is why
+`docs/dev/TOKEN-BUDGET-TUNING.md` §13 tells the next plan to compile against **19M / $14.50 per
+checkpoint** and **42M / 0.9**, rather than round the last measurement down.
+
 ### Added
 
 - **The courier — one bot, always awake.** Until now the Telegram poll loop lived exactly as long as
