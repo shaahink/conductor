@@ -1,0 +1,54 @@
+RIG: C:\Users\shahi\AppData\Local\Temp\ch13-rig-25160c1a  (this repo's real ci.yml + this repo's real charkh gates)
+conductor doctor ? Charkh - the wheel: what the owner still does by hand becomes
+machinery
+repo: C:\Users\shahi\AppData\Local\Temp\ch13-rig-25160c1a
+
+? agent    claude ? C:\Users\shahi\.local\bin\claude.EXE
+? model    pinned model reaches the CLI ? every args/resumeArgs template carries
+{model}
+? git      C:\Users\shahi\AppData\Local\Temp\ch13-rig-25160c1a does not look 
+like a git repository
+? satellites none declared ? the verdict counts commits in this repo only
+? face     C:\Code\conductor\face-go\bin\conductor-face.exe
+? gates    4 configured (fast/full), every stage covered
+? work     14 work item(s) cover all 5 stage(s)
+? prompt   every session kind renders for all 5 stage(s) with no unresolved 
+placeholder
+? advisor  claude -p {prompt} --output-format json --model 
+claude-haiku-4-5-20251001 ? json, 6m timeout
+? gate-paths 4 gate(s): shell, leading program and every declared path resolve 
+(nothing was executed)
+? hooks    2 hook(s) resolve: shell, leading program and cwd (nothing was 
+executed)
+? checkpoint-ids 14 checkpoint id(s) parse under conventions.stageIdPattern 
+'(?<stage>[A-Za-z]+\d+)(?:\.\d+)?[a-z]?', none declared twice
+? plan-drift no history yet ? nothing has loaded this plan (file is v1)
+? argv     longest composed argv is 20917 chars (stage 'CH4' session.md through 
+agent.args) against the 32767-char ceiling (CreateProcess), but 20917 is over 
+the 8191-char cmd.exe ceiling ? this plan is fatal on any machine whose 
+agent.command resolves to a .cmd/.bat shim (an npm-installed CLI is exactly 
+that)
+? templates no templatesDir files ? every session renders from the built-in 
+templates
+? escalation the escalation token appears in no stage note, promptExtra or 
+template ? only a real escalation can park this run
+? plan-keys every key in the plan file is one the engine reads
+? dns:github.com resolved
+? dns:api.nuget.org resolved
+? disk     50170 MB free (min 100 MB)
+? budget   cap $300.00, no run yet
+? tokens   cap 42M / nudge 37.8M ? no history yet to measure it against
+? state    
+C:\Users\shahi\AppData\Local\Temp\ch13-rig-25160c1a\.state\runs\ch13-rig-25160c1
+a-charkh---the-wheel--what-the-owner-still-does-by-hand-becomes-machinery-a884ef
+eb\run.db (via state home) ? no history yet, the first run creates it
+? telegram token present, 1 chat(s)
+? github   mirroring to shaahink/conductor
+? ci-battery CI runs 'powershell tools/gates/ratchet.ps1' that this run's gates 
+do not - a checkpoint can pass one battery and fail the other
+? auth     inconclusive ? 'claude' exited 1 with no auth error
+? update   0.5.1-alpha.0.5+bd307ee241d1.dirty ? running 0.5.1-alpha.0.5 ? newer 
+than the latest release v0.5.0 (a local or prerelease build) v0.5.0 (checked 
+just now)
+
+25 ok ? 2 warn ? 1 fail ? 1333ms

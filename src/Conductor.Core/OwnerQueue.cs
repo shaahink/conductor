@@ -84,6 +84,7 @@ public static class OwnerQueue
         CollectBlockedCheckpoints(track, items);
         CollectSkippedStages(plan, state, items);
         CollectDeadChannels(plan, items);
+        CollectCiDivergence(plan, items);
         return [.. items.OrderBy(i => i.Rank).ThenBy(i => i.Id, StringComparer.Ordinal)];
     }
 
@@ -276,6 +277,36 @@ public static class OwnerQueue
                 Command: c.FixCommand,
                 // Derived state carries no first-seen stamp on purpose (see the type doc); the render
                 // says "unknown" rather than inventing "just now" for a fault that may be hours old.
+                SinceUtc: null,
+                Rank: RankChannel,
+                Detail: c.Fix.Length > 0 ? c.Fix : null));
+        }
+    }
+
+    /// <summary>CH1.3 - the run's gate battery and CI are not the same battery.
+    ///
+    /// <para>The eighth source, and the second that is not about the run's own progress. For the
+    /// whole Divan era the phase gate passed 23 checkpoints while CI's windows leg was red on every
+    /// commit of the era, and nothing compared them. Only the owner can edit a workflow file or a
+    /// plan's gates, so a divergence between the two batteries is an owner obligation by the same
+    /// definition a dead channel is - and it costs the same thing: not the run, but the meaning of
+    /// the verdict the run just recorded.</para>
+    ///
+    /// <para>It shares <see cref="RankChannel"/> rather than taking a rank of its own: it is the same
+    /// class of obligation - a surface the plan relies on is not doing what the plan says - and a new
+    /// rank would renumber four others for no ordering anyone asked for.</para></summary>
+    private static void CollectCiDivergence(PlanConfig plan, List<OwnerQueueItem> items)
+    {
+        foreach (var c in ChannelHealthProbe.Loud(CiAgreementProbe.Collect(plan)))
+        {
+            items.Add(new OwnerQueueItem(
+                Id: c.Channel,
+                Kind: "ci",
+                Title: $"{c.Channel} is {c.Word} - {Clip(c.Detail, 200)}",
+                Unblocks: "nothing in the run - the run carries on. what it costs is the meaning of "
+                        + "every gate verdict it records, because the battery it passed is not the "
+                        + "battery the branch is judged by",
+                Command: c.FixCommand,
                 SinceUtc: null,
                 Rank: RankChannel,
                 Detail: c.Fix.Length > 0 ? c.Fix : null));

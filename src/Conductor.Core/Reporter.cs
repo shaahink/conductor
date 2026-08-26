@@ -48,6 +48,7 @@ public static partial class Reporter
         if (state.SkippedStages.Count > 0)
             sb.AppendLine($"**⚠ Skipped stages (need human review):** {string.Join(", ", state.SkippedStages)}");
         AppendChannels(sb, plan);
+        AppendCi(sb, plan);
         sb.AppendLine();
 
         if (!string.IsNullOrWhiteSpace(liveActivity))

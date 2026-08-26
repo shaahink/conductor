@@ -148,6 +148,7 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
         checks.Add(CheckTokenBudget(plan));
         checks.Add(CheckState(plan));
         checks.AddRange(CheckChannels(plan));
+        checks.AddRange(CheckCiBattery(plan));
 
         // W3.2: the one check that talks to the model backend. A dead token is invisible to every
         // other check here and kills a run thirteen sessions in, so it is on by default — and it is
@@ -453,6 +454,29 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
             // an equality against `GET /telegram/status`, and every word appended here would be a
             // word that endpoint does not say. The remedy is not lost: both sentences already name
             // what to set, and the owner queue carries the literal command.
+            c.Detail))];
+
+    /// <summary>CH1.3 - is the battery a checkpoint is judged by the battery CI runs?
+    ///
+    /// <para>Doctor is where a rig is asked whether it is honest, and for a whole era it could
+    /// answer yes while the branch was red: the local gates passed 23 Divan checkpoints while
+    /// CI's windows leg failed on every commit of the era, and nothing compared the two. This is
+    /// the comparison, in <see cref="ChannelHealthProbe"/>'s own vocabulary so doctor, the REPORT.md
+    /// header and the owner queue cannot drift apart on what "the same battery" means.</para>
+    ///
+    /// <para>The severity follows the state and not the other way round: no workflows at all is a
+    /// warn (a project without CI is not a project with a fault), workflows that do not cover this
+    /// platform is a FAIL (the gates are proven nowhere else), and drift is a warn that names the
+    /// step and which side has it.</para></summary>
+    internal static IReadOnlyList<Check> CheckCiBattery(PlanConfig plan)
+        => [.. CiAgreementProbe.Collect(plan).Select(c => new Check(
+            c.Channel,
+            c.State switch
+            {
+                ChannelState.Dead => "fail",
+                ChannelState.Ready => "ok",
+                _ => "warn",
+            },
             c.Detail))];
 
     /// <summary>The telegram row of <see cref="CheckChannels"/>, by name — SC1.2's anti-drift test
