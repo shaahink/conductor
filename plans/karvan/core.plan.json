@@ -27,7 +27,7 @@
   "version": "1.0",
   "planVersion": 3,
   "name": "Karvan core - the engine knows what it did and what it cost",
-  "repo": "C:/code/conductor",
+  "repo": "../..",
   "satelliteRepos": [],
   "tracker": "plans/karvan/CORE-TRACKER.md",
   "planDoc": "docs/history/CONDUCTOR-KARVAN.md",

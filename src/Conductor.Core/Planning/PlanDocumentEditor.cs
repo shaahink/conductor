@@ -33,6 +33,11 @@ public static partial class PlanDocumentEditor
         var path = plan.PlanFilePath;
         var after = JsonSerializer.SerializeToNode(plan, PlanConfig.JsonOpts)
             ?? throw new InvalidOperationException("plan serialised to null");
+        // CH1.2: `repo` may be written relative to the plan file and is absolutised at load, so the
+        // model and the file disagree about it by construction. Put the file's own text back before
+        // diffing, or the first edit of any kind silently re-absolutises the plan and the portability
+        // is gone with nothing in the diff to say a path was rewritten.
+        if (plan.RepoAsWritten is { } repoAsWritten) after["repo"] = repoAsWritten;
 
         byte[] raw;
         try

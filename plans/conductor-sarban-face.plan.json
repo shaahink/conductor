@@ -11,7 +11,7 @@
   "version": "1.0",
   "planVersion": 2,
   "name": "Sarban face - the watcher and the surfaces",
-  "repo": "C:/code/conductor",
+  "repo": "..",
   "satelliteRepos": [],
   "tracker": "docs/history/archive/trackers/SARBAN-FACE-TRACKER.md",
   "planDoc": "docs/history/CONDUCTOR-SARBAN.md",

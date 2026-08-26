@@ -11,7 +11,7 @@
   // The design authority is docs/history/CONDUCTOR-VNEXT-PLAN.md; the tracker is
   // CONDUCTOR-VNEXT-PLAN.md (this plan's companion tracker — 34 checkpoints across 10 stages).
   "name": "Foreman",
-  "repo": "C:/Code/conductor-baton",
+  "repo": "..",
   "tracker": "docs/history/archive/trackers/CONDUCTOR-VNEXT-PLAN.md",
   "planDoc": "docs/history/CONDUCTOR-VNEXT-PLAN.md",
   "branchPattern": "^feat/foreman",

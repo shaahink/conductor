@@ -26,7 +26,7 @@
   "version": "1.0",
   "planVersion": 1,
   "name": "Karvansara core - the open door",
-  "repo": "C:/code/conductor",
+  "repo": "../..",
   // The field guide (payesh, shaahink/payesh) is a satellite ONLY so KS10.2's harvest-refresh
   // commits register as progress - the verdict diffs it, nothing more. No stage before KS10 has
   // any business there. Never push its main: that repo auto-deploys a public site.

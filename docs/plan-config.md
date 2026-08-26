@@ -32,7 +32,7 @@ prints the exact `conductor plan reload` command when it does not.
 | `version` | string | Schema version (`"1.0"`). Rejects unsupported versions with a clear diagnostic. |
 | `planVersion` | int | Monotonic edit counter, bumped on every `plan set/reload/add-stage`. |
 | `name` | string | Plan name — appears in dashboard header + report. |
-| `repo` | string | Absolute path to the repository directory. |
+| `repo` | string | Path to the repository directory: absolute, or **relative to the plan file itself** (CH1.2). |
 | `satelliteRepos` | string[] | Sibling repos this plan's work may also land in — absolute, or relative to `repo`. The session verdict diffs each of them for commits. See below. |
 | `tracker` | string | Path (relative to repo) to the TRACKER.md file. |
 | `planDoc` | string | Path (relative to repo) to the plan/design doc. |
@@ -41,6 +41,27 @@ prints the exact `conductor plan reload` command when it does not.
 | `batteryCollapse` | bool | Skip agent's pre-session ritual, defer to conductor's battery. Saves tokens by not paying an agent to run gates the engine runs anyway; **the size of the saving has never been measured** (FU-B10-2 — it needs an A/B on the same checkpoints with only this flag flipped). |
 | `verifyEachDelivery` | bool | Default true. Queue a Verify session after every delivery. Set false to rely on the audit and the gate battery instead. It is the **lowest-precedence** QA input there is: a `pipeline.qa` dial and a stage's `overrides.skipVerification` both outrank it, in either direction. |
 | `promptExtra` | string | Prepended to every session prompt (high-level context). |
+
+### `repo` — absolute, or relative to the plan file (CH1.2)
+
+A plan that ships **inside the repository it drives** should name it relative to its own file, so the
+plan loads on a fresh clone at any path, on any machine:
+
+```jsonc
+// plans/<era>/core.plan.json, two levels below the repo root
+"repo": "../.."
+```
+
+The value is resolved against the directory holding the plan file, once, at load — everything
+downstream (`stateDir`, `tracker`, gates, satellites) sees the absolute path exactly as before, and
+`plan set` will not rewrite the file back to that absolute path.
+
+An absolute value is still honoured untouched, and is the right answer for a plan that is **driving a
+run**: it names the checkout it drives, on the machine it drives it on.
+
+This repo shipped sixteen plans carrying `C:/code/conductor`. They were loadable on exactly one
+machine on earth, and three `doctor` lint tests that load them failed everywhere else — CI included —
+for a whole era, because `PlanConfig.Load` validates before it returns and `repo` must exist.
 
 ### `satelliteRepos` — when the work lands next door (SC4.3)
 

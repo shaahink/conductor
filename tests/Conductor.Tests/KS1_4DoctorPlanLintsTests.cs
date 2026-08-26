@@ -358,8 +358,9 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
 
     /// <summary>The plans this repo ships are the worked examples, and this era's own plan is the one
     /// driving the run that writes these lints. A rule it trips is a rule that would have to be
-    /// explained away rather than fixed. The repo path is re-pointed at this checkout so the check
-    /// reads the tree it belongs to rather than whatever absolute path the plan file names.
+    /// explained away rather than fixed. CH1.2: the plan file names its repo RELATIVE to itself, so
+    /// what is loaded here is this checkout wherever it sits — these three tests used to re-point
+    /// <c>plan.Repo</c> by hand after a Load that could not have succeeded off this one machine.
     /// <para>The argv ceiling is STATED here, not resolved. Doctor resolves it, correctly: whether
     /// this machine's <c>agent.command</c> lands on a native binary or an npm <c>.cmd</c> shim decides
     /// which of the two Windows ceilings the engine will hit. But that is a fact about the box, not
@@ -375,7 +376,6 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
         if (!File.Exists(planPath)) return;
 
         var plan = PlanConfig.Load(planPath);
-        plan.Repo = root;
 
         var checks = new List<DoctorCommand.Check>
         {
@@ -407,7 +407,6 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
         if (!File.Exists(planPath)) return;
 
         var plan = PlanConfig.Load(planPath);
-        plan.Repo = root;
 
         var check = DoctorCommand.CheckArgvLength(plan, (DoctorCommand.CreateProcessCommandLineCeiling, "CreateProcess"));
         Assert.Equal("warn", check.State);
@@ -427,7 +426,6 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
         if (!File.Exists(planPath)) return;
 
         var plan = PlanConfig.Load(planPath);
-        plan.Repo = root;
 
         var check = DoctorCommand.CheckArgvLength(
             plan, (DoctorCommand.CmdExeCommandLineCeiling, "claude.CMD is a command-interpreter shim"));

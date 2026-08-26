@@ -2,7 +2,7 @@
   "version": "1.0",
   "planVersion": 1,
   "name": "Conductor Work Graph (W-series)",
-  "repo": "C:/code/conductor-baton",
+  "repo": "..",
   "tracker": "docs/history/archive/trackers/WORKGRAPH-TRACKER.md",
   "planDoc": "docs/history/CONDUCTOR-WORKGRAPH.md",
   "pauseOnBlocked": true,

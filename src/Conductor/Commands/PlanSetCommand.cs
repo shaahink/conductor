@@ -145,6 +145,7 @@ public static class PlanSetCommand
                 if (test != null)
                 {
                     test.PlanFilePath = planPath;
+                    test.ResolveRepoAgainstPlanFile(); // CH1.2: same resolution Load does
                     test.Validate();
                 }
             }

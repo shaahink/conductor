@@ -61,7 +61,7 @@
   "version": "1.0",
   "planVersion": 1,
   "name": "Divan - the chancellery: inbox, courier, and the record that gets out",
-  "repo": "C:/code/conductor",
+  "repo": "../..",
   // payesh is a satellite ONLY so DV7.2's harvest-refresh commits register as progress - the
   // verdict diffs it, nothing more. No stage before DV7 has any business there. Never push its
   // main: that repo auto-deploys a public site.

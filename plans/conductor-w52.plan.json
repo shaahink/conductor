@@ -2,7 +2,7 @@
   "version": "1.0",
   "planVersion": 1,
   "name": "Conductor W5.2 proof run",
-  "repo": "C:/code/conductor-baton",
+  "repo": "..",
   "tracker": "docs/dev/workgraph/W5.2-TRACKER.md",
   "planDoc": "docs/history/CONDUCTOR-WORKGRAPH.md",
   "pauseOnBlocked": true,

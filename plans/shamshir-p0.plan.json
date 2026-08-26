@@ -1,6 +1,6 @@
 {
   "name": "Shamshir (P-0 + P0.1 acceptance)",
-  "repo": "C:/Code/conductor-baton",
+  "repo": "..",
   "tracker": "examples/shamshir/parity-pipeline.TRACKER.md",
   "planDoc": "docs/history/baton/stages/B6.md",
   "pauseOnBlocked": true,

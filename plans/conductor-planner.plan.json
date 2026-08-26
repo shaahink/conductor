@@ -2,7 +2,7 @@
   "version": "1.0",
   "planVersion": 1,
   "name": "Conductor Dynamic Planner (P-series)",
-  "repo": "C:/code/conductor-baton",
+  "repo": "..",
   "tracker": "docs/history/archive/trackers/CONDUCTOR-PLANNER.md",
   "planDoc": "docs/history/CONDUCTOR-PLANNER.md",
   "pauseOnBlocked": true,

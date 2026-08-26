@@ -2,7 +2,7 @@
   "version": "1.0",
   "planVersion": 1,
   "name": "Conductor UX (U-series)",
-  "repo": "C:/code/conductor-baton",
+  "repo": "..",
   "tracker": "docs/history/archive/trackers/CONDUCTOR-UX-START.md",
   "planDoc": "docs/history/CONDUCTOR-UX.md",
   "pauseOnBlocked": true,

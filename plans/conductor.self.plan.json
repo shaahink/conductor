@@ -12,7 +12,7 @@
   // The design authority is docs/history/baton/BATON-BRIEF.md; per-stage specs live in
   // docs/history/baton/stages/B<n>.md; CONDUCTOR-START.md is the tracker conductor parses.
   "name": "Baton",
-  "repo": "C:/Code/conductor-baton",
+  "repo": "..",
   "tracker": "docs/history/archive/trackers/CONDUCTOR-START.md",
   "planDoc": "docs/history/baton/BATON-BRIEF.md",
   "branchPattern": "^feat/baton",
