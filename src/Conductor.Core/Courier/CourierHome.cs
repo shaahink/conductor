@@ -26,6 +26,11 @@ public static class CourierHome
     /// <summary>What the poll loop advances. Its own file — see the type remarks.</summary>
     public const string OffsetFileName = "offset.json";
 
+    /// <summary>DV4.2 — what the RUNNING courier says about itself: pid, protocol, engine, task.
+    /// Written at startup, cleared on the way out; see <see cref="CourierPresence"/> for why a file
+    /// rather than a socket answers this question before DV4.3's listener exists.</summary>
+    public const string PresenceFileName = "courier.run.json";
+
     /// <summary>Where inbound media lands before it is adopted into a project's inbox. Under the
     /// state home rather than any repo: at download time the courier does not yet know which project
     /// the note is for, and a file written into the wrong repo is a file in a public checkout.</summary>
@@ -40,6 +45,9 @@ public static class CourierHome
 
     public static string OffsetPathFor(string? stateHomeRoot = null) =>
         Path.Combine(DirFor(stateHomeRoot), OffsetFileName);
+
+    public static string PresencePathFor(string? stateHomeRoot = null) =>
+        Path.Combine(DirFor(stateHomeRoot), PresenceFileName);
 
     public static string MediaDirFor(string? stateHomeRoot = null) =>
         Path.Combine(DirFor(stateHomeRoot), MediaDirName);

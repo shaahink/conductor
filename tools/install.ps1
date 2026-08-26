@@ -32,10 +32,16 @@
 param(
     [string]$InstallDir = (Join-Path $env:LOCALAPPDATA "Programs\conductor"),
     [ValidateSet("Release", "Debug")][string]$Config = "Release",
-    [switch]$SkipShim
+    [switch]$SkipShim,
+    [string]$CourierTaskName = "Conductor Courier"
 )
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot   # tools/ -> repo root
+
+# DV4.2 / findings 6.4: a running courier holds the published exe open, so the publish below fails
+# on a file lock - and a courier that is not restarted keeps running yesterday's engine for as long
+# as the machine stays up, precisely because it is built to outlive everything else.
+. (Join-Path $PSScriptRoot "lib\courier-guard.ps1")
 
 # Ask a conductor binary what it is. Three layers, because the answer has to survive the case that
 # matters most: upgrading a binary that predates the `version` verb entirely.
@@ -68,12 +74,31 @@ Write-Host ("  config:  {0}" -f $Config)
 Write-Host ("  current: {0}" -f $before)
 Write-Host ""
 
+# 0. the courier ------------------------------------------------------------------------------------
+$courier = Stop-ConductorCourier -TaskName $CourierTaskName
+if ($courier.WasRunning) {
+    if (-not $courier.Stopped) {
+        throw ("the courier (pid {0}) is still running and holds {1} open; stop it with 'conductor courier stop' and re-run" -f $courier.Pid, $courier.Exe)
+    }
+    Write-Host ("[0/3] stopped the courier ({0}, pid {1}) - it holds the engine open" -f $courier.TaskName, $courier.Pid) -ForegroundColor Cyan
+}
+
 # 1. engine ---------------------------------------------------------------------------------------
 Write-Host "[1/3] publishing engine..." -ForegroundColor Cyan
 & dotnet publish (Join-Path $repo "src\Conductor\Conductor.csproj") -c $Config -o $InstallDir --nologo -v q
 if ($LASTEXITCODE -ne 0) { throw "engine publish failed (exit $LASTEXITCODE)" }
 if (-not (Test-Path $exe)) { throw "expected $exe after publish, not found" }
 $after = Get-ConductorVersion $exe
+
+# The courier goes back up on the NEW engine. A courier left down is a bot that stops answering,
+# and it is the one thing here nothing else will restart.
+if ($courier.WasRunning) {
+    if (Start-ConductorCourier -TaskName $CourierTaskName) {
+        Write-Host ("  courier restarted ({0}) - now running {1}" -f $courier.TaskName, $after) -ForegroundColor Green
+    } else {
+        Write-Host ("  WARNING: the courier did not restart. Start it with: conductor courier restart") -ForegroundColor Yellow
+    }
+}
 
 # 2. face (next to the engine, so ResolveEntrypoint's first candidate hits) -----------------------
 Write-Host "[2/3] building Go face..." -ForegroundColor Cyan

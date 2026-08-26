@@ -33,7 +33,7 @@ namespace Conductor.Commands;
 /// over by Telegram. The courier narrows the gap from "no run live" to "machine on"; it cannot do
 /// better from this machine, and <c>courier status</c> says so out loud.</para>
 /// </summary>
-public sealed class CourierCommand : AsyncCommand<CourierCommand.Settings>
+public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Settings>
 {
     /// <summary>The line <c>conductor --help</c> shows. It lives here rather than inline in
     /// <c>Program.cs</c> for a measured reason: that file sits AT CA1505's maintainability floor
@@ -42,13 +42,13 @@ public sealed class CourierCommand : AsyncCommand<CourierCommand.Settings>
     public const string VerbDescription =
         "DV4.1: the courier - one bot, always awake, outliving the run. Owns "
       + "CONDUCTOR_TELEGRAM_TOKEN, polls whether or not a run is live, and files each note into a "
-      + "project on its EXPLICIT allowlist. `courier status|run|allow --repo PATH|deny --repo "
-      + "PATH|chat --id ID|unchat --id ID`.";
+      + "project on its EXPLICIT allowlist. `courier status|run|install|uninstall|restart|stop|allow "
+      + "--repo PATH|deny --repo PATH|chat --id ID|unchat --id ID`.";
 
     public sealed class Settings : CommandSettings
     {
         [CommandArgument(0, "[VERB]")]
-        [Description("status (default), run, allow, deny, chat, unchat.")]
+        [Description("status (default), run, install, uninstall, restart, stop, allow, deny, chat, unchat.")]
         public string Verb { get; init; } = "status";
 
         [CommandOption("--repo <PATH>")]
@@ -67,6 +67,18 @@ public sealed class CourierCommand : AsyncCommand<CourierCommand.Settings>
         [Description("chat: admin (may file) or observer (read-only). Defaults to admin.")]
         public string? Profile { get; init; }
 
+        [CommandOption("--task-name <NAME>")]
+        [Description("install/uninstall/restart/stop/status: the scheduled task. Defaults to \"Conductor Courier\".")]
+        public string? TaskName { get; init; }
+
+        [CommandOption("--exe <PATH>")]
+        [Description("install: the engine binary the task runs. Defaults to this one.")]
+        public string? Exe { get; init; }
+
+        [CommandOption("--no-start")]
+        [Description("install: register the task without starting it now.")]
+        public bool NoStart { get; init; }
+
         [CommandOption("--once")]
         [Description("run: poll once and exit, instead of polling until stopped.")]
         public bool Once { get; init; }
@@ -81,8 +93,12 @@ public sealed class CourierCommand : AsyncCommand<CourierCommand.Settings>
         ArgumentNullException.ThrowIfNull(settings);
         return settings.Verb.Trim().ToLowerInvariant() switch
         {
-            "" or "status" => Status(settings),
+            "" or "status" => await StatusAsync(settings).ConfigureAwait(false),
             "run" => await RunAsync(settings).ConfigureAwait(false),
+            "install" => await InstallAsync(settings).ConfigureAwait(false),
+            "uninstall" => await UninstallAsync(settings).ConfigureAwait(false),
+            "restart" => await RestartAsync(settings).ConfigureAwait(false),
+            "stop" => await StopAsync(settings).ConfigureAwait(false),
             "allow" => Allow(settings),
             "deny" => Deny(settings),
             "chat" => Chat(settings),
@@ -94,18 +110,22 @@ public sealed class CourierCommand : AsyncCommand<CourierCommand.Settings>
     private static int Unknown(string verb)
     {
         AnsiConsole.MarkupLine($"[red]error:[/] `conductor courier {Markup.Escape(verb)}` is not a thing. "
-            + "Try [yellow]status[/], [yellow]run[/], [yellow]allow[/], [yellow]deny[/], "
+            + "Try [yellow]status[/], [yellow]run[/], [yellow]install[/], [yellow]uninstall[/], "
+            + "[yellow]restart[/], [yellow]stop[/], [yellow]allow[/], [yellow]deny[/], "
             + "[yellow]chat[/] or [yellow]unchat[/].");
         return 1;
     }
 
     // ── status ──────────────────────────────────────────────────────────────────────────────
 
-    private static int Status(Settings settings)
+    private static async Task<int> StatusAsync(Settings settings)
     {
         var courier = CourierSettings.Load();
         var offset = new CourierOffset();
         var token = Token();
+        var task = new CourierTask(settings.TaskName);
+        var state = await task.StateAsync().ConfigureAwait(false);
+        var stale = CourierProtocol.RefuseStale(state.Running);
 
         if (settings.Json)
         {
@@ -118,6 +138,10 @@ public sealed class CourierCommand : AsyncCommand<CourierCommand.Settings>
                 chats = courier.Chats,
                 refusal = Blocker(courier, token),
                 retentionHours = 24,
+                protocol = CourierProtocol.Version,
+                task = new { state.Name, state.Registered, state.SchedulerState },
+                running = state.Running,
+                stale,
             }, PlanConfig.JsonOpts));
             return 0;
         }
@@ -138,6 +162,21 @@ public sealed class CourierCommand : AsyncCommand<CourierCommand.Settings>
             ? "[yellow]none[/] [dim]— `conductor courier chat --id <chat-id>`[/]"
             : string.Join(", ", courier.Chats.Select(c =>
                 Markup.Escape(c.ChatId) + " [dim](" + Markup.Escape(c.Profile ?? ChatProfiles.AdminName) + ")[/]"))));
+
+        AnsiConsole.MarkupLine("[dim]task:[/] " + (state.Registered
+            ? "[green]" + Markup.Escape(state.Name) + "[/]"
+              + (state.SchedulerState is { Length: > 0 } sched ? " [dim](" + Markup.Escape(sched) + ")[/]" : "")
+            : "[yellow]not installed[/] [dim]— `conductor courier install` registers it at your logon[/]"));
+        AnsiConsole.MarkupLine("[dim]running:[/] " + (state.Running is { } live
+            ? "[green]yes[/] [dim]" + Markup.Escape(live.Describe()) + "[/]"
+            : "[yellow]no[/] [dim]— nothing is polling for this machine[/]")
+            + " [dim]· this build speaks protocol "
+            + CourierProtocol.Version.ToString(CultureInfo.InvariantCulture) + "[/]");
+
+        // §6.4: the one process designed to outlive a reinstall is the one that keeps running the
+        // engine it started with. Say so by name, with the command, before anything talks to it.
+        if (stale is { Length: > 0 } skew)
+            AnsiConsole.MarkupLine("[red]stale courier:[/] " + Markup.Escape(skew));
 
         if (Blocker(courier, token) is { Length: > 0 } why)
             AnsiConsole.MarkupLine("[yellow]not ready:[/] " + Markup.Escape(why));
@@ -192,19 +231,29 @@ public sealed class CourierCommand : AsyncCommand<CourierCommand.Settings>
         using var stopping = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; _ = stopping.CancelAsync(); };
 
-        if (settings.Once)
+        // DV4.2 / §6.4: what is running, written down where install.ps1 and a version handshake can
+        // both read it. Cleared on the way out so the next reader sees the truth and not a pid.
+        CourierPresence.Current(settings.TaskName).Write();
+        try
         {
-            var tick = await daemon.PollOnceAsync(stopping.Token).ConfigureAwait(false);
-            AnsiConsole.MarkupLine($"[dim]one poll:[/] {tick.Received.ToString(CultureInfo.InvariantCulture)} received, "
-                + $"{tick.Filed.ToString(CultureInfo.InvariantCulture)} filed, "
-                + $"{tick.Duplicates.ToString(CultureInfo.InvariantCulture)} already filed, "
-                + $"{tick.Parked.ToString(CultureInfo.InvariantCulture)} parked");
+            if (settings.Once)
+            {
+                var tick = await daemon.PollOnceAsync(stopping.Token).ConfigureAwait(false);
+                AnsiConsole.MarkupLine($"[dim]one poll:[/] {tick.Received.ToString(CultureInfo.InvariantCulture)} received, "
+                    + $"{tick.Filed.ToString(CultureInfo.InvariantCulture)} filed, "
+                    + $"{tick.Duplicates.ToString(CultureInfo.InvariantCulture)} already filed, "
+                    + $"{tick.Parked.ToString(CultureInfo.InvariantCulture)} parked");
+                return 0;
+            }
+
+            AnsiConsole.MarkupLine("[dim]" + Markup.Escape(RetentionNotice) + "[/]");
+            await daemon.RunAsync(stopping.Token).ConfigureAwait(false);
             return 0;
         }
-
-        AnsiConsole.MarkupLine("[dim]" + Markup.Escape(RetentionNotice) + "[/]");
-        await daemon.RunAsync(stopping.Token).ConfigureAwait(false);
-        return 0;
+        finally
+        {
+            CourierPresence.Clear();
+        }
     }
 
     // ── the allowlist ───────────────────────────────────────────────────────────────────────
