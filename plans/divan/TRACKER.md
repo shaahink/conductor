@@ -4,28 +4,29 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV5 DONE - both cards. Trap 16 decided the whole stage: `claude --cloud` CREATE is
-  interactive-only on claude 2.1.246 (refuses `-p`, refuses `--bg`, refuses a non-TTY), so no
-  engine can start a cloud session and neither card's headless-create half can exist. Both
-  AMENDED, then delivered against what the CLI really offers. DV5.1: admin-only `/cloud` with the
-  6.8 preflight (six verdicts; remote tip read by `ls-remote`, because status ahead/behind answers
-  against the last fetch) and the headless follow-up `claude -p "msg" --cloud <id>`. DV5.2: the
-  lane is `claude ultrareview` behind plan.cloud.enabled, DEFAULT OFF, payload stored whole and
-  never parsed, cost always the word unknown via KS5.2's own "unknown, not zero" branch.
-find: the live runs caught two guesses that synthetic tests could not - the session-id shape
-  (`session_`/`cse_`, never a UUID) and that ultrareview BUNDLES the branch, so its gate must be
-  NARROWER than /cloud's. Drive the real binary; do not trust the findings doc's shapes.
-next: DV6.1 - bugs and followups as a long-lived GitHub issue class. Trap 5 still binds: the board
-  mirror is the engine's job, and DV6 proofs use a PRIVATE scratch repo.
-red: bug #76 (courier delivers an evidence artifact as text naming the path) still open, untouched.
+last: DV6.1 DONE. Bugs and followups are their own GitHub issue class - conductor:bug /
+  conductor:followup, their own markers, created ONLY while open, closed by the LEDGER (with a
+  comment saying so) and never by the run ending. The retire sweep cannot reach one because it
+  indexes the task marker. The mirror gained a second "is there news" answer: the event cursor is
+  blind to the bugs table, so a filed bug used to wait for whatever happened next. Digest gained
+  one golden-pinned line. 8 new tests + KS11 136 + SF7_1 35 green.
+find: the live rig (tools/dv6/dv6-1-live-proof.ps1, private scratch repo) caught what the fake
+  could not - `github sync --backfill` run twice inside GitHub's replica lag DUPLICATES the board,
+  because the read-only path uses GithubMap.Transient(). Pre-existing since KS9.1, filed as bug #79
+  (high), and DV7.3's owner backfill is the command that hits it. Also: a PowerShell function named
+  Gh swallows every gh call - case-insensitive name resolution, one minute of fake network hang.
+next: DV6.2 - the columns. Token scopes measured today: repo, workflow, gist, read:org, user,
+  delete_repo. Still NO project, so the KS9.3 refusal moves behind a stubbed proof.
+red: bug #79 (new), bug #76 (courier uploads) untouched. KS1_2StagesFromFoldTests flaked once under
+  a parallel filter and passes alone - process-wide ClearAllPools; noted, not filed.
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 23 |
-| Done | 10 |
-| Claimed (unconfirmed) | 4 |
+| Done | 14 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -61,17 +62,17 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV4.1 | The daemon: conductor courier owns the token, polls always, routes to per-project inboxes via an explicit allowlist; durable poll offset in the state home plus update_id dedup - kill the courier between receive and acknowledge, restart, and the note files exactly once; the 24-hour Telegram retention limit stated in docs | DONE | b0cc449 | .conductor/evidence/DV4/dv4-1-courier-daemon.md |
-| DV4.2 | Lifecycle: courier install / uninstall / restart / status as a per-user Scheduled Task with restart-on-failure; tools/install.ps1 stops and restarts a running courier; version handshake at the loopback hello refuses a stale courier by name, naming the restart command; live proof registers a scratch-named task and unregisters it - the real install is the owner's at DV7.3 | DONE | 962d6bc | .conductor/evidence/DV4/dv4-2-lifecycle.md |
-| DV4.3 | The seam: loopback-only listener, per-install shared secret file-permission-protected, own named port; CourierChannel on IMessageChannel so live runs push through the daemon; when a courier is configured, in-run polling refuses to start and names it; courier-less machines byte-identical by golden replay; killing the daemon makes a live run's REPORT.md, /status and owner queue all say so within one boundary | DONE | 5544cff | .conductor/evidence/DV4/dv4-3-loopback-seam.txt |
-| DV4.4 | Promotion: note to followups.md row to Tier-B lane by an explicit button on the acknowledgement; auto-inject from an inbox note refused by design with a negative test proving no code path does it; filing stays admin-only | DONE | 273674c | .conductor/evidence/DV4/dv4-4-promotion.md |
+| DV4.1 | The daemon: conductor courier owns the token, polls always, routes to per-project inboxes via an explicit allowlist; durable poll offset in the state home plus update_id dedup - kill the courier between receive and acknowledge, restart, and the note files exactly once; the 24-hour Telegram retention limit stated in docs | DONE ✓ | b0cc449 | .conductor/evidence/DV4/dv4-1-courier-daemon.md |
+| DV4.2 | Lifecycle: courier install / uninstall / restart / status as a per-user Scheduled Task with restart-on-failure; tools/install.ps1 stops and restarts a running courier; version handshake at the loopback hello refuses a stale courier by name, naming the restart command; live proof registers a scratch-named task and unregisters it - the real install is the owner's at DV7.3 | DONE ✓ | 962d6bc | .conductor/evidence/DV4/dv4-2-lifecycle.md |
+| DV4.3 | The seam: loopback-only listener, per-install shared secret file-permission-protected, own named port; CourierChannel on IMessageChannel so live runs push through the daemon; when a courier is configured, in-run polling refuses to start and names it; courier-less machines byte-identical by golden replay; killing the daemon makes a live run's REPORT.md, /status and owner queue all say so within one boundary | DONE ✓ | 5544cff | .conductor/evidence/DV4/dv4-3-loopback-seam.txt |
+| DV4.4 | Promotion: note to followups.md row to Tier-B lane by an explicit button on the acknowledgement; auto-inject from an inbox note refused by design with a negative test proving no code path does it; filing stays admin-only | DONE ✓ | 273674c | .conductor/evidence/DV4/dv4-4-promotion.md |
 
 ### DV5 — The cloud, the safe shapes - an owner verb, a flagged experiment
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV5.1 | The /cloud admin verb: flags verified against the installed CLI first; preflight requires clean tree and pushed, current branch, refusing by name in the chat with the exact git state; session id and URL returned to the chat and recorded in the event log as an owner action; follow-ups ride claude -p --cloud | TODO | - | - |
-| DV5.2 | The cloud lane behind a flag, default off: only work needing no conductor tools and no verdict; branch consumed, every gate re-run locally, the referee never moves; cost recorded and reported as unknown, pinned by a test that no code path prints zero for a cloud lane; droppable without losing DV5.1 | TODO | - | - |
+| DV5.1 | The /cloud admin verb: flags verified against the installed CLI first; preflight requires clean tree and pushed, current branch, refusing by name in the chat with the exact git state; session id and URL returned to the chat and recorded in the event log as an owner action; follow-ups ride claude -p --cloud | DONE | 32a4868 | .conductor/evidence/DV5/dv5.1-live-proof.md |
+| DV5.2 | The cloud lane behind a flag, default off: only work needing no conductor tools and no verdict; branch consumed, every gate re-run locally, the referee never moves; cost recorded and reported as unknown, pinned by a test that no code path prints zero for a cloud lane; droppable without losing DV5.1 | DONE | 32a4868 | .conductor/evidence/DV5/dv5.2-cloud-lane.md |
 
 ### DV6 — The record that gets out - bugs that outlive the board, columns, the page
 

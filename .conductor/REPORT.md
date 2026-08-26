@@ -1,11 +1,11 @@
 ﻿# Conductor — Divan - the chancellery: inbox, courier, and the record that gets out run report
 
-_Updated 2026-08-26 10:46 UTC · branch `feat/divan` · HEAD `115020b`_
+_Updated 2026-08-26 11:37 UTC · branch `feat/divan` · HEAD `4e9a4f0`_
 
 **Status:** Idle
-**Stage:** DV4 — The courier - one bot, always awake, outliving the run · attempts used 0
-**Checkpoints:** 14/23 done · **Sessions run:** 14 · **Cost:** $196.7014 (agent $196.6050 + gates $0.0963) · **Tokens:** 2,856,287 in / 1,092,751 out
-**Confirmed phases:** DV1, DV2, DV3, DV4
+**Stage:** DV5 — The cloud, the safe shapes - an owner verb, a flagged experiment · attempts used 0
+**Checkpoints:** 16/23 done · **Sessions run:** 15 · **Cost:** $220.6023 (agent $220.4975 + gates $0.1048) · **Tokens:** 3,138,262 in / 1,245,691 out
+**Confirmed phases:** DV1, DV2, DV3, DV4, DV5
 
 ## Stage progress
 
@@ -15,7 +15,7 @@ _Updated 2026-08-26 10:46 UTC · branch `feat/divan` · HEAD `115020b`_
 | DV2 | The sweep - every known defect triaged, the clusters burned down | ██████████ 4/4 | confirmed ✓ |
 | DV3 | The inbox - feedback that arrives when you have it, and survives the run | ██████████ 4/4 | confirmed ✓ |
 | DV4 | The courier - one bot, always awake, outliving the run | ██████████ 4/4 | confirmed ✓ |
-| DV5 | The cloud, the safe shapes - an owner verb, a flagged experiment | ░░░░░░░░░░ 0/2 | todo |
+| DV5 | The cloud, the safe shapes - an owner verb, a flagged experiment | ██████████ 2/2 | confirmed ✓ |
 | DV6 | The record that gets out - bugs that outlive the board, columns, the page | ░░░░░░░░░░ 0/4 | todo |
 | DV7 | Ship Divan - close the era | ░░░░░░░░░░ 0/3 | todo |
 
@@ -61,12 +61,12 @@ _Updated 2026-08-26 10:46 UTC · branch `feat/divan` · HEAD `115020b`_
 
 </details>
 
-<details><summary>DV5 — The cloud, the safe shapes - an owner verb, a flagged experiment (0/2)</summary>
+<details> ✅<summary>DV5 — The cloud, the safe shapes - an owner verb, a flagged experiment (2/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| DV5.1 | The /cloud admin verb: flags verified against the installed CLI first; preflight requires clean tree and pushed, current branch, refusing by name in the chat with the exact git state; session id and URL returned to the chat and recorded in the event log as an owner action; follow-ups ride claude -p --cloud | ⬜ TODO | - |
-| DV5.2 | The cloud lane behind a flag, default off: only work needing no conductor tools and no verdict; branch consumed, every gate re-run locally, the referee never moves; cost recorded and reported as unknown, pinned by a test that no code path prints zero for a cloud lane; droppable without losing DV5.1 | ⬜ TODO | - |
+| DV5.1 | The /cloud admin verb: flags verified against the installed CLI first; preflight requires clean tree and pushed, current branch, refusing by name in the chat with the exact git state; session id and URL returned to the chat and recorded in the event log as an owner action; follow-ups ride claude -p --cloud | ✅ DONE | [`32a4868`](https://github.com/shaahink/conductor/commit/32a4868) |
+| DV5.2 | The cloud lane behind a flag, default off: only work needing no conductor tools and no verdict; branch consumed, every gate re-run locally, the referee never moves; cost recorded and reported as unknown, pinned by a test that no code path prints zero for a cloud lane; droppable without losing DV5.1 | ✅ DONE | [`32a4868`](https://github.com/shaahink/conductor/commit/32a4868) |
 
 </details>
 
@@ -109,6 +109,7 @@ _Updated 2026-08-26 10:46 UTC · branch `feat/divan` · HEAD `115020b`_
 | 12 | DV4 | Deliver | 1 | 08-26 09:03 | 0:37 | Advanced | DV4.3 | 4 | engine-fast:OK · face-fast:OK | $19.8516 | $0.0083 | 271,404/139,580 |
 | 13 | DV4 | Deliver | 1 | 08-26 09:42 | 0:34 | Advanced | DV4.4 | 1 | engine-fast:OK · face-fast:OK | $16.5702 | $0.0079 | 205,156/84,103 |
 | 14 | DV4 | Fix | 2 | 08-26 10:28 | 0:11 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $4.4730 | $0.0076 | 92,592/34,571 |
+| 15 | DV5 | Deliver | 1 | 08-26 10:46 | 0:43 | Advanced | DV5.1 DV5.2 | 6 | engine-fast:OK · face-fast:OK | $23.8924 | $0.0085 | 281,975/152,940 |
 
 ## Money
 
@@ -116,32 +117,21 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 13 | 275.7M | 98.6% | $196.70 | 14 | 19.7M | $14.05 |
+| **run total** | 14 | 306.5M | 98.6% | $220.60 | 16 | 19.2M | $13.79 |
 | stage DV1 | 1 | 23.7M | 98.8% | $16.04 | 2 | 11.8M | $8.02 |
 | stage DV2 | 3 | 77.3M | 98.7% | $52.81 | 4 | 19.3M | $13.20 |
 | stage DV3 | 3 | 78.8M | 98.6% | $55.23 | 4 | 19.7M | $13.81 |
 | stage DV4 | 6 | 95.9M | 98.4% | $72.62 | 4 | 24M | $18.16 |
-| 2026-08 | 13 | 275.7M | 98.6% | $196.70 | 14 | 19.7M | $14.05 |
+| stage DV5 | 1 | 30.8M | 98.6% | $23.90 | 2 | 15.4M | $11.95 |
+| 2026-08 | 14 | 306.5M | 98.6% | $220.60 | 16 | 19.2M | $13.79 |
 
-_Where the money goes: agent $196.61 (100%) · gate $0.10 (0%) · blended $0.71/M tokens._
+_Where the money goes: agent $220.50 (100%) · gate $0.10 (0%) · blended $0.72/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-26 00:58:18  ▪ gate engine-full pass [phase]  (4m53s)
-08-26 00:58:18  ▪ gate face-full pass [phase]  (1.4s)
-08-26 00:58:18  ✓ checkpoint DV3.1 confirmed
-08-26 00:58:18  ✓ checkpoint DV3.2 confirmed
-08-26 00:58:18  ✓ checkpoint DV3.3 confirmed
-08-26 00:58:18  ✓ checkpoint DV3.4 confirmed
-08-26 00:58:18  ▸ stage DV3 confirmed  (2h09m47s)
-08-26 00:58:19  ▸ stage DV4 entered — The courier - one bot, always awake, outliving the run
-08-26 00:58:19  • session #9 DV4 Deliver started (attempt 1/8)
-08-26 01:34:38  • session #9 DV4 → RolledOver · done DV4.1 · 3 commit(s)  (36m18s)
-08-26 01:34:38  • session #10 DV4 Deliver started (attempt 1/8)
-08-26 09:44:28  • session #10 DV4 → TimedOut  (8h09m49s)
 08-26 09:44:39  • session #11 DV4 Resume started (attempt 2/8)
 08-26 10:03:24  ▪ gate engine-fast pass [session]  (1m03s)
 08-26 10:03:24  ▪ gate face-fast pass [session]  (31.9s)
@@ -170,6 +160,18 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-26 11:46:54  ✓ checkpoint DV4.2 confirmed
 08-26 11:46:54  ✓ checkpoint DV4.3 confirmed
 08-26 11:46:54  ✓ checkpoint DV4.4 confirmed
+08-26 11:46:54  ▸ stage DV4 confirmed  (10h48m34s)
+08-26 11:46:54  ▸ stage DV5 entered — The cloud, the safe shapes - an owner verb, a flagged experiment
+08-26 11:46:54  • session #15 DV5 Deliver started (attempt 1/4)
+08-26 12:32:13  ▪ gate engine-fast pass [session]  (1m07s)
+08-26 12:32:13  ▪ gate face-fast pass [session]  (16.7s)
+08-26 12:32:14  • session #15 DV5 → Advanced · done DV5.1,DV5.2 · 6 commit(s)  (45m19s)
+08-26 12:37:10  ▪ gate engine-fast pass [phase]  (0.0s)
+08-26 12:37:10  ▪ gate face-fast pass [phase]  (0.0s)
+08-26 12:37:10  ▪ gate engine-full pass [phase]  (4m51s)
+08-26 12:37:10  ▪ gate face-full pass [phase]  (2.1s)
+08-26 12:37:10  ✓ checkpoint DV5.1 confirmed
+08-26 12:37:10  ✓ checkpoint DV5.2 confirmed
 ```
 
 ## Health
@@ -177,8 +179,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 14 · retries 3 (21 %) · overall Warn
+sessions 15 · retries 3 (20 %) · overall Warn
 ⚠ [context-saturation] session #12: 27,281,149 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #15: 30,383,029 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #2: 23,394,515 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #3: 34,336,668 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 32,631,442 context tokens (≥ 20,000,000)
@@ -200,12 +203,6 @@ vs upstream: up to date
 
 ### Commits by session
 
-- **s6 (DV3 Deliver)** — 5 commit(s):
-  - [`22cb53c`](https://github.com/shaahink/conductor/commit/22cb53c) docs(divan): handoff - DV3.3 opened and returned to TODO at the wrap-up nudge
-  - [`60716a5`](https://github.com/shaahink/conductor/commit/60716a5) docs(divan): handoff after DV3.1 and DV3.2 - the line-boundary trim that un-quotes a note
-  - [`e8bcdc2`](https://github.com/shaahink/conductor/commit/e8bcdc2) feat(DV3.2): the per-project inbox - a note that survives the run that received it
-  - [`96ae444`](https://github.com/shaahink/conductor/commit/96ae444) docs(divan): the handoff for DV3.2 - the seam rule that reads string literals
-  - [`2bebfbe`](https://github.com/shaahink/conductor/commit/2bebfbe) feat(DV3.1): the inbound message kinds - a voice note stops being invisible
 - **s7 (DV3 Deliver)** — 3 commit(s):
   - [`5dd2df3`](https://github.com/shaahink/conductor/commit/5dd2df3) feat(DV3.4): routing - a reply to a push files against that push's project
   - [`bf0cbf0`](https://github.com/shaahink/conductor/commit/bf0cbf0) feat(DV3.3): the live proof, the marks in the prompt, and the handoff
@@ -230,6 +227,13 @@ vs upstream: up to date
   - [`273674c`](https://github.com/shaahink/conductor/commit/273674c) feat(DV4.4): promotion - one tap turns a note into a followups row and a Tier-B lane
 - **s14 (DV4 Fix)** — 1 commit(s):
   - [`115020b`](https://github.com/shaahink/conductor/commit/115020b) fix(DV4): the two architecture ratchets go green by moving code, not by moving a bar
+- **s15 (DV5 Deliver)** — 6 commit(s):
+  - [`4e9a4f0`](https://github.com/shaahink/conductor/commit/4e9a4f0) docs(divan): the handoff for DV5 - what the CLI refuses, and the two guesses the live runs caught
+  - [`39b22fa`](https://github.com/shaahink/conductor/commit/39b22fa) proof(DV5.2): the lane driven live - off spawns nothing, on reaches the real binary
+  - [`98aad09`](https://github.com/shaahink/conductor/commit/98aad09) feat(DV5.2): the cloud lane behind a flag, default off - and the referee stays here
+  - [`afca35d`](https://github.com/shaahink/conductor/commit/afca35d) docs(divan): the handoff for DV5.1 - the create half cannot exist, and the lane DV5.2 should use
+  - [`85c868b`](https://github.com/shaahink/conductor/commit/85c868b) proof(DV5.1): the live run, and the id shape it caught me guessing
+  - [`32a4868`](https://github.com/shaahink/conductor/commit/32a4868) feat(DV5.1): the /cloud verb - and the measurement that says half of it cannot exist
 
 ## Phase handovers (audit)
 
@@ -256,33 +260,32 @@ engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> **both engine-full architecture ratchets fixed by moving code, suite 3339/3339 green**
-> - Type ceiling: CourierJson and CourierConflictException split into their own files, no baseline entry added
-> - Bug #77 closed: AtomicFile extracted from InboxStore, CourierDaemon.Discard deleted so prune is the only inbox deleter again
-> - Nothing weakened: tests/ untouched, architecture-baseline.json byte-identical, same 3339 total as the red run
+> **DV5.1 and DV5.2 both landed; the CLI refuses headless cloud creation, measured**
+> - DV5.1: admin-only /cloud with the §6.8 git preflight (six verdicts, remote tip via ls-remote) and the headless follow-up `claude -p "msg" --cloud <id>`; OwnerCloudAction on every path, cost always the word unknown.
+> - DV5.2: the cloud lane is `claude ultrareview` behind plan.cloud.enabled DEFAULT OFF; payload stored whole and never parsed; the referee-never-moves rule is a source scan over the whole cloud namespace.
+> - Both cards amended, not argued with: `--cloud` create refuses -p, refuses --bg and refuses a non-TTY, so no engine can start a cloud session — and the live runs caught two guesses (session-id shape, and that ultrareview bundles the branch).
 >
-> artefacts: 115020b, src/Conductor.Core/AtomicFile.cs, src/Conductor.Core/Courier/CourierJson.cs, src/Conductor.Core/Courier/CourierConflictException.cs, src/Conductor.Core/Courier/CourierDaemon.cs, src/Conductor.Core/Inbox/InboxStore.cs, plans/divan/TRACKER.md
+> artefacts: 32a4868, 85c868b, 98aad09, 39b22fa, 4e9a4f0, src/Conductor.Core/Integrations/Cloud/, src/Conductor.Core/Models/CloudLaneConfig.cs, src/Conductor.Core/Lanes/LaneCoordinator.cs
 >
-> evidence: .conductor/evidence/DV4/dv4-repair-s014-architecture-ratchets.md
+> evidence: .conductor/evidence/DV5/dv5.1-live-proof.md, .conductor/evidence/DV5/dv5.2-cloud-lane.md
 >
-> gaps: bug #76 still open — the courier delivers an evidence artifact as text naming the path, it uploads no file
+> gaps: bug #76 open and untouched (courier delivers an evidence artifact as text, uploads no file). No real cloud session or cloud review was ever launched — both would drain the same Max pool the local run needs; the create direction is refused by the engine so no conductor code path is left unexercised. One unexplored avenue named in the evidence for the owner to decide: a child process given a real co…
 
 ## Tracker handoff
 
 ```
-last: REPAIR session. The s013 engine-full red was two architecture ratchets, both real, both
-  from DV4's own work, both fixed by MOVING code - no baseline entry, no skip, no relaxed bar.
-  (1) Type ceiling: CourierWire.cs and ICourierSource.cs declared 4 types against 3; split out
-  CourierJson.cs and CourierConflictException.cs. (2) bug #77, CLOSED: the prune-is-the-only-
-  deleter sweep is FILE-level - a .cs is judged for MENTIONING InboxStore/InboxNote, then any
-  File.Delete outside a method named Prune or TryDelete is an offender.
-find: CourierPresence was swept only because it borrowed InboxStore.WriteAtomic as the engine's
-  atomic writer - so did CourierOffset, CourierSettings and DeadLetterBox. Extracted
-  Conductor.Core/AtomicFile.cs and REMOVED InboxStore.WriteAtomic; the note store is no longer a
-  file-utility library. CourierDaemon.Discard was a real second deleter (the Append-race orphan):
-  deleted it, the orphan now stays and is named in the log, which is what RemoteSurface.Inbound
-  has always done in the same race. Do not re-add an inbox clean-up: kilobytes vs the invariant.
-next: DV5.1 - the /cloud admin verb. Verify its flags against the installed claude FIRST (trap 16).
-red: bug #76 (courier delivers an evidence artifact as text naming the path, uploads no file)
-  still open and untouched.
+last: DV5 DONE - both cards. Trap 16 decided the whole stage: `claude --cloud` CREATE is
+  interactive-only on claude 2.1.246 (refuses `-p`, refuses `--bg`, refuses a non-TTY), so no
+  engine can start a cloud session and neither card's headless-create half can exist. Both
+  AMENDED, then delivered against what the CLI really offers. DV5.1: admin-only `/cloud` with the
+  6.8 preflight (six verdicts; remote tip read by `ls-remote`, because status ahead/behind answers
+  against the last fetch) and the headless follow-up `claude -p "msg" --cloud <id>`. DV5.2: the
+  lane is `claude ultrareview` behind plan.cloud.enabled, DEFAULT OFF, payload stored whole and
+  never parsed, cost always the word unknown via KS5.2's own "unknown, not zero" branch.
+find: the live runs caught two guesses that synthetic tests could not - the session-id shape
+  (`session_`/`cse_`, never a UUID) and that ultrareview BUNDLES the branch, so its gate must be
+  NARROWER than /cloud's. Drive the real binary; do not trust the findings doc's shapes.
+next: DV6.1 - bugs and followups as a long-lived GitHub issue class. Trap 5 still binds: the board
+  mirror is the engine's job, and DV6 proofs use a PRIVATE scratch repo.
+red: bug #76 (courier delivers an evidence artifact as text naming the path) still open, untouched.
 ```
