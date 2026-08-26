@@ -4,31 +4,29 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: FIX session. The battery conductor ran after session 7 was RED - 7 failed, and it failed the
-  SC4.1 retry too, so none of it was flake. One real defect: InboxStore's index append opened
-  FileMode.Append with FileShare.ReadWrite, and a .NET append stream resolves end-of-file when the
-  HANDLE opens - two handles at the same length write OVER each other, splicing one JSON line through
-  another. All() repairs a MISSING index line and can do nothing with a corrupt one. Writer now takes
-  the file (FileShare.Read + retry), reader gives it back (ReadLinesShared). Three ratchet reds split,
-  never baselined; `inbox` and `courier.transcribe` added to the registries that pin them.
-find: session 7 wrote `red: none known. Full battery not run by this session` - four of the seven reds
-  are checks ONLY the full suite runs. Run it before claiming. And bug #75: `conductor note` keeps only
-  the FIRST LINE - ledger 465/466/467 survive as their headers alone, DV3.3 and DV3.4's acceptance
-  records are gone. Write every note as ONE line until that is fixed.
-next: DV4.1 the courier daemon, unchanged from session 7's handoff - NoteRouter, ChatRoutes and
-  DeadLetterBox are already machine-level and move across as-is; the durable poll offset and update_id
-  dedup are the new work. New file names to know: TranscriptionOutcome.cs, DeadLetterBox.cs,
-  TelegramService.TestConnection.cs (declared in KS11_1SeamBoundaryTests.AdapterFiles).
-red: none. engine-full 3268/3268 green, run by this session - see the evidence artifact.
-
+last: DV4.2 landed and is claimed. `courier install|uninstall|restart|stop` register a per-user
+  Scheduled Task from XML (RestartOnFailure PT1M, IgnoreNew, ExecutionTimeLimit PT0S, LeastPrivilege
+  + InteractiveToken) - `schtasks /SC ONLOGON` cannot express restart-on-failure at all. `courier run`
+  now writes courier.run.json (pid, protocol, engine, exe, task) and clears it on exit;
+  CourierProtocol.RefuseStale refuses an OLDER courier by task name with the restart command.
+  tools/install.ps1 brackets its publish with tools/lib/courier-guard.ps1.
+find: the live proof found what tests could not - the scheduler DROPS <RunLevel> when it is the
+  default and rewrites <UserId> to a SID (assert the ABSENCE of HighestAvailable, not the element);
+  and courier-guard.ps1 called schtasks directly, which under install.ps1's ErrorActionPreference=Stop
+  made a native stderr write TERMINATING - it would have crashed the installer on every machine
+  without a courier. Also: KS11.1's seam test strips comments but READS STRING LITERALS.
+next: DV4.3 the seam. CourierPresence IS the hello, written down - serve the same record over the
+  loopback socket and reuse RefuseStale unchanged. Rig: tools/dv4/dv4-2-live-proof.ps1 (its token
+  gate and its Sch wrapper are worth copying). This machine HAS a bot token in the user environment.
+red: none from the scoped runs (DV4_2|DV4_1|SF7_1|K7_2|KS11_1 = 121/121, live proof PASS).
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 23 |
-| Done | 6 |
-| Claimed (unconfirmed) | 4 |
+| Done | 10 |
+| Claimed (unconfirmed) | 1 |
 
 ## Checkpoints
 
@@ -55,17 +53,17 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV3.1 | Inbound message kinds: voice, audio, document, photo, caption, reply_to_message, message_thread_id on the DTO; getFile download; the 20 MB bot-API cap refused by name to the sender, never dropped; a stub-wire test drives each kind end to end | DONE | 2bebfbe | .conductor/evidence/DV3/dv3-1-inbound-kinds.md |
-| DV3.2 | The per-project inbox: durable store under .conductor/inbox (never committed - no gitignore allowlist entry, this repo is public), media beside transcript, atomic writes, append-only index deduped by update_id, read cursor with seen-by-session marks; InboxBattery on the IPromptBattery seam, fenced and framed, with an architecture test proving the fencing is always present; a note filed with no run live is read by the next session of the next run, proven in the rig | DONE | 2bebfbe | .conductor/evidence/DV3/dv3-2-the-inbox.md |
-| DV3.3 | Transcription: configured local command (faster-whisper on this machine's GPU), per-segment confidence marked in the stored note, unset command files the note untranscribed with audio kept and the reply saying so; conductor inbox prune is the only deletion path; a real .ogg transcribes in the rig | DONE | 4b1f04a | .conductor/evidence/DV3/dv3-3-transcription.md |
-| DV3.4 | Routing: a voice note sent as a reply to a checkpoint push files against that push's project with no command typed; sticky /project selection; message_thread_id topics in supergroups; unknown slug refused by name; unroutable notes parked in a machine-level dead-letter directory, never dropped | DONE | 4b1f04a | .conductor/evidence/DV3/dv3-4-routing.md |
+| DV3.1 | Inbound message kinds: voice, audio, document, photo, caption, reply_to_message, message_thread_id on the DTO; getFile download; the 20 MB bot-API cap refused by name to the sender, never dropped; a stub-wire test drives each kind end to end | DONE ✓ | 2bebfbe | .conductor/evidence/DV3/dv3-1-inbound-kinds.md |
+| DV3.2 | The per-project inbox: durable store under .conductor/inbox (never committed - no gitignore allowlist entry, this repo is public), media beside transcript, atomic writes, append-only index deduped by update_id, read cursor with seen-by-session marks; InboxBattery on the IPromptBattery seam, fenced and framed, with an architecture test proving the fencing is always present; a note filed with no run live is read by the next session of the next run, proven in the rig | DONE ✓ | 2bebfbe | .conductor/evidence/DV3/dv3-2-the-inbox.md |
+| DV3.3 | Transcription: configured local command (faster-whisper on this machine's GPU), per-segment confidence marked in the stored note, unset command files the note untranscribed with audio kept and the reply saying so; conductor inbox prune is the only deletion path; a real .ogg transcribes in the rig | DONE ✓ | 4b1f04a | .conductor/evidence/DV3/dv3-3-transcription.md |
+| DV3.4 | Routing: a voice note sent as a reply to a checkpoint push files against that push's project with no command typed; sticky /project selection; message_thread_id topics in supergroups; unknown slug refused by name; unroutable notes parked in a machine-level dead-letter directory, never dropped | DONE ✓ | 4b1f04a | .conductor/evidence/DV3/dv3-fix-red-battery.md |
 
 ### DV4 — The courier - one bot, always awake, outliving the run
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| DV4.1 | The daemon: conductor courier owns the token, polls always, routes to per-project inboxes via an explicit allowlist; durable poll offset in the state home plus update_id dedup - kill the courier between receive and acknowledge, restart, and the note files exactly once; the 24-hour Telegram retention limit stated in docs | TODO | - | - |
-| DV4.2 | Lifecycle: courier install / uninstall / restart / status as a per-user Scheduled Task with restart-on-failure; tools/install.ps1 stops and restarts a running courier; version handshake at the loopback hello refuses a stale courier by name, naming the restart command; live proof registers a scratch-named task and unregisters it - the real install is the owner's at DV7.3 | TODO | - | - |
+| DV4.1 | The daemon: conductor courier owns the token, polls always, routes to per-project inboxes via an explicit allowlist; durable poll offset in the state home plus update_id dedup - kill the courier between receive and acknowledge, restart, and the note files exactly once; the 24-hour Telegram retention limit stated in docs | DONE | b0cc449 | .conductor/evidence/DV4/dv4-1-courier-daemon.md |
+| DV4.2 | Lifecycle: courier install / uninstall / restart / status as a per-user Scheduled Task with restart-on-failure; tools/install.ps1 stops and restarts a running courier; version handshake at the loopback hello refuses a stale courier by name, naming the restart command; live proof registers a scratch-named task and unregisters it - the real install is the owner's at DV7.3 | IN PROGRESS | - | - |
 | DV4.3 | The seam: loopback-only listener, per-install shared secret file-permission-protected, own named port; CourierChannel on IMessageChannel so live runs push through the daemon; when a courier is configured, in-run polling refuses to start and names it; courier-less machines byte-identical by golden replay; killing the daemon makes a live run's REPORT.md, /status and owner queue all say so within one boundary | TODO | - | - |
 | DV4.4 | Promotion: note to followups.md row to Tier-B lane by an explicit button on the acknowledgement; auto-inject from an inbox note refused by design with a negative test proving no code path does it; filing stays admin-only | TODO | - | - |
 

@@ -1,11 +1,11 @@
 ﻿# Conductor — Divan - the chancellery: inbox, courier, and the record that gets out run report
 
-_Updated 2026-08-25 22:32 UTC · branch `feat/divan` · HEAD `22cb53c`_
+_Updated 2026-08-26 08:44 UTC · branch `feat/divan` · HEAD `d43a74a`_
 
 **Status:** Idle
-**Stage:** DV3 — The inbox - feedback that arrives when you have it, and survives the run · attempts used 0 · working ▸ DV3.3
-**Checkpoints:** 8/23 done · **Sessions run:** 6 · **Cost:** $92.1481 (agent $92.1024 + gates $0.0457) · **Tokens:** 1,149,431 in / 572,889 out
-**Confirmed phases:** DV1, DV2
+**Stage:** DV4 — The courier - one bot, always awake, outliving the run · attempts used 1 · working ▸ DV4.2
+**Checkpoints:** 11/23 done · **Sessions run:** 10 · **Cost:** $148.4123 (agent $148.3493 + gates $0.0630) · **Tokens:** 2,110,901 in / 778,065 out
+**Confirmed phases:** DV1, DV2, DV3
 
 ## Stage progress
 
@@ -13,8 +13,8 @@ _Updated 2026-08-25 22:32 UTC · branch `feat/divan` · HEAD `22cb53c`_
 |---|---|---|---|
 | DV1 | The channel that says so - health made loud, the queue that reaches you | ██████████ 2/2 | confirmed ✓ |
 | DV2 | The sweep - every known defect triaged, the clusters burned down | ██████████ 4/4 | confirmed ✓ |
-| DV3 | The inbox - feedback that arrives when you have it, and survives the run | █████░░░░░ 2/4 | **← active** |
-| DV4 | The courier - one bot, always awake, outliving the run | ░░░░░░░░░░ 0/4 | todo |
+| DV3 | The inbox - feedback that arrives when you have it, and survives the run | ██████████ 4/4 | confirmed ✓ |
+| DV4 | The courier - one bot, always awake, outliving the run | ██░░░░░░░░ 1/4 | **← active** |
 | DV5 | The cloud, the safe shapes - an owner verb, a flagged experiment | ░░░░░░░░░░ 0/2 | todo |
 | DV6 | The record that gets out - bugs that outlive the board, columns, the page | ░░░░░░░░░░ 0/4 | todo |
 | DV7 | Ship Divan - close the era | ░░░░░░░░░░ 0/3 | todo |
@@ -39,23 +39,23 @@ _Updated 2026-08-25 22:32 UTC · branch `feat/divan` · HEAD `22cb53c`_
 
 </details>
 
-<details><summary>DV3 — The inbox - feedback that arrives when you have it, and survives the run (2/4)</summary>
+<details> ✅<summary>DV3 — The inbox - feedback that arrives when you have it, and survives the run (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| DV3.1 | Inbound message kinds: voice, audio, document, photo, caption, reply_to_message, message_thread_id on the DTO; getFile download; the 20 MB bot-API cap refused by name to the sender, never dropped; a stub-wire test drives each kind end to end | ✅ DONE | - |
-| DV3.2 | The per-project inbox: durable store under .conductor/inbox (never committed - no gitignore allowlist entry, this repo is public), media beside transcript, atomic writes, append-only index deduped by update_id, read cursor with seen-by-session marks; InboxBattery on the IPromptBattery seam, fenced and framed, with an architecture test proving the fencing is always present; a note filed with no run live is read by the next session of the next run, proven in the rig | ✅ DONE | - |
-| DV3.3 | Transcription: configured local command (faster-whisper on this machine's GPU), per-segment confidence marked in the stored note, unset command files the note untranscribed with audio kept and the reply saying so; conductor inbox prune is the only deletion path; a real .ogg transcribes in the rig | ⬜ TODO | - |
-| DV3.4 | Routing: a voice note sent as a reply to a checkpoint push files against that push's project with no command typed; sticky /project selection; message_thread_id topics in supergroups; unknown slug refused by name; unroutable notes parked in a machine-level dead-letter directory, never dropped | ⬜ TODO | - |
+| DV3.1 | Inbound message kinds: voice, audio, document, photo, caption, reply_to_message, message_thread_id on the DTO; getFile download; the 20 MB bot-API cap refused by name to the sender, never dropped; a stub-wire test drives each kind end to end | ✅ DONE | [`2bebfbe`](https://github.com/shaahink/conductor/commit/2bebfbe) |
+| DV3.2 | The per-project inbox: durable store under .conductor/inbox (never committed - no gitignore allowlist entry, this repo is public), media beside transcript, atomic writes, append-only index deduped by update_id, read cursor with seen-by-session marks; InboxBattery on the IPromptBattery seam, fenced and framed, with an architecture test proving the fencing is always present; a note filed with no run live is read by the next session of the next run, proven in the rig | ✅ DONE | [`2bebfbe`](https://github.com/shaahink/conductor/commit/2bebfbe) |
+| DV3.3 | Transcription: configured local command (faster-whisper on this machine's GPU), per-segment confidence marked in the stored note, unset command files the note untranscribed with audio kept and the reply saying so; conductor inbox prune is the only deletion path; a real .ogg transcribes in the rig | ✅ DONE | [`4b1f04a`](https://github.com/shaahink/conductor/commit/4b1f04a) |
+| DV3.4 | Routing: a voice note sent as a reply to a checkpoint push files against that push's project with no command typed; sticky /project selection; message_thread_id topics in supergroups; unknown slug refused by name; unroutable notes parked in a machine-level dead-letter directory, never dropped | ✅ DONE | [`4b1f04a`](https://github.com/shaahink/conductor/commit/4b1f04a) |
 
 </details>
 
-<details><summary>DV4 — The courier - one bot, always awake, outliving the run (0/4)</summary>
+<details><summary>DV4 — The courier - one bot, always awake, outliving the run (1/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| DV4.1 | The daemon: conductor courier owns the token, polls always, routes to per-project inboxes via an explicit allowlist; durable poll offset in the state home plus update_id dedup - kill the courier between receive and acknowledge, restart, and the note files exactly once; the 24-hour Telegram retention limit stated in docs | ⬜ TODO | - |
-| DV4.2 | Lifecycle: courier install / uninstall / restart / status as a per-user Scheduled Task with restart-on-failure; tools/install.ps1 stops and restarts a running courier; version handshake at the loopback hello refuses a stale courier by name, naming the restart command; live proof registers a scratch-named task and unregisters it - the real install is the owner's at DV7.3 | ⬜ TODO | - |
+| DV4.1 | The daemon: conductor courier owns the token, polls always, routes to per-project inboxes via an explicit allowlist; durable poll offset in the state home plus update_id dedup - kill the courier between receive and acknowledge, restart, and the note files exactly once; the 24-hour Telegram retention limit stated in docs | ✅ DONE | [`b0cc449`](https://github.com/shaahink/conductor/commit/b0cc449) |
+| DV4.2 | Lifecycle: courier install / uninstall / restart / status as a per-user Scheduled Task with restart-on-failure; tools/install.ps1 stops and restarts a running courier; version handshake at the loopback hello refuses a stale courier by name, naming the restart command; live proof registers a scratch-named task and unregisters it - the real install is the owner's at DV7.3 | 🔄 IN PROGRESS | - |
 | DV4.3 | The seam: loopback-only listener, per-install shared secret file-permission-protected, own named port; CourierChannel on IMessageChannel so live runs push through the daemon; when a courier is configured, in-run polling refuses to start and names it; courier-less machines byte-identical by golden replay; killing the daemon makes a live run's REPORT.md, /status and owner queue all say so within one boundary | ⬜ TODO | - |
 | DV4.4 | Promotion: note to followups.md row to Tier-B lane by an explicit button on the acknowledgement; auto-inject from an inbox note refused by design with a negative test proving no code path does it; filing stays admin-only | ⬜ TODO | - |
 
@@ -101,6 +101,10 @@ _Updated 2026-08-25 22:32 UTC · branch `feat/divan` · HEAD `22cb53c`_
 | 4 | DV2 | Deliver | 1 | 08-25 20:20 | 0:25 | Advanced | DV2.3 | 3 | engine-fast:OK · face-fast:OK | $7.3377 | $0.0065 | 127,564/54,350 |
 | 5 | DV2 | Deliver | 1 | 08-25 20:46 | 0:50 | Advanced | DV2.4 | 7 | engine-fast:OK · face-fast:OK | $21.9036 | $0.0093 | 245,905/124,874 |
 | 6 | DV3 | Deliver | 1 | 08-25 21:48 | 0:43 | Advanced | DV3.1 DV3.2 | 5 | engine-fast:OK · face-fast:OK | $23.2906 | $0.0067 | 301,366/155,534 |
+| 7 | DV3 | Deliver | 1 | 08-25 22:32 | 0:48 | Advanced | DV3.3 DV3.4 | 3 | engine-fast:OK · face-fast:OK | $24.3567 | $0.0104 | 311,508/159,559 |
+| 8 | DV3 | Fix | 2 | 08-25 23:33 | 0:19 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $7.5553 | $0.0068 | 123,278/43,543 |
+| 9 | DV4 | Deliver | 1 | 08-25 23:58 | 0:36 | RolledOver | DV4.1 | 3 |  | $24.3350 |  | 450,239/1,895 |
+| 10 | DV4 | Deliver | 1 | 08-26 00:34 | 8:09 | TimedOut |  | 0 |  |  |  | 76,445/179 |
 
 ## Money
 
@@ -108,44 +112,20 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 4 | 101M | 98.7% | $68.85 | 6 | 16.8M | $11.48 |
+| **run total** | 8 | 215.1M | 98.7% | $148.41 | 11 | 19.6M | $13.49 |
 | stage DV1 | 1 | 23.7M | 98.8% | $16.04 | 2 | 11.8M | $8.02 |
 | stage DV2 | 3 | 77.3M | 98.7% | $52.81 | 4 | 19.3M | $13.20 |
-| 2026-08 | 4 | 101M | 98.7% | $68.85 | 6 | 16.8M | $11.48 |
+| stage DV3 | 3 | 78.8M | 98.6% | $55.23 | 4 | 19.7M | $13.81 |
+| stage DV4 | 1 | 35.3M | 98.7% | $24.34 | 1 | 35.3M | $24.34 |
+| 2026-08 | 8 | 215.1M | 98.7% | $148.41 | 11 | 19.6M | $13.49 |
 
-_Where the money goes: agent $68.81 (100%) · gate $0.04 (0%) · blended $0.68/M tokens._
+_Where the money goes: agent $148.35 (100%) · gate $0.06 (0%) · blended $0.69/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-25 19:21:49  ▸ stage DV1 entered — The channel that says so - health made loud, the queue that reaches you
-08-25 19:21:50  • session #1 DV1 Deliver started (attempt 1/4)
-08-25 19:25:46  ◆ run resumed · Divan - the chancellery: inbox, courier, and the record that gets out
-08-25 19:25:47  • session #2 DV1 Resume started (attempt 1/4)
-08-25 20:18:03  ▪ gate engine-fast pass [session]  (1m05s)
-08-25 20:18:03  ▪ gate face-fast pass [session]  (1m14s)
-08-25 20:18:04  • session #2 DV1 → Advanced · done DV1.1,DV1.2 · 6 commit(s)  (52m17s)
-08-25 20:23:54  ▪ gate engine-fast pass [phase]  (0.0s)
-08-25 20:23:54  ▪ gate face-fast pass [phase]  (0.0s)
-08-25 20:23:54  ▪ gate engine-full pass [phase]  (5m11s)
-08-25 20:23:54  ▪ gate face-full pass [phase]  (34.4s)
-08-25 20:23:54  ✓ checkpoint DV1.1 confirmed
-08-25 20:23:54  ✓ checkpoint DV1.2 confirmed
-08-25 20:23:54  ▸ stage DV1 confirmed  (1h02m04s)
-08-25 20:23:55  ▸ stage DV2 entered — The sweep - every known defect triaged, the clusters burned down
-08-25 20:23:55  • session #3 DV2 Deliver started (attempt 1/8)
-08-25 21:20:15  ▪ gate engine-fast pass [session]  (1m04s)
-08-25 21:20:15  ▪ gate face-fast pass [session]  (29.1s)
-08-25 21:20:15  • session #3 DV2 → Advanced · done DV2.1,DV2.2 · 5 commit(s)  (56m20s)
-08-25 21:20:17  • session #4 DV2 Deliver started (attempt 1/8)
-08-25 21:46:28  ▪ gate engine-fast pass [session]  (1m02s)
-08-25 21:46:28  ▪ gate face-fast pass [session]  (3.1s)
-08-25 21:46:29  • session #4 DV2 → Advanced · done DV2.3 · 3 commit(s)  (26m11s)
-08-25 21:46:30  • session #5 DV2 Deliver started (attempt 1/8)
-08-25 22:38:49  ▪ gate engine-fast pass [session]  (1m07s)
-08-25 22:38:49  ▪ gate face-fast pass [session]  (25.5s)
 08-25 22:38:50  • session #5 DV2 → Advanced · done DV2.4 · 7 commit(s)  (52m19s)
 08-25 22:48:30  ▪ gate engine-fast pass [phase]  (0.0s)
 08-25 22:48:30  ▪ gate face-fast pass [phase]  (0.0s)
@@ -160,6 +140,32 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-25 22:48:31  • session #6 DV3 Deliver started (attempt 1/8)
 08-25 23:32:48  ▪ gate engine-fast pass [session]  (1m03s)
 08-25 23:32:48  ▪ gate face-fast pass [session]  (2.9s)
+08-25 23:32:49  • session #6 DV3 → Advanced · done DV3.1,DV3.2 · 5 commit(s)  (44m18s)
+08-25 23:32:50  • session #7 DV3 Deliver started (attempt 1/8)
+08-26 00:23:03  ▪ gate engine-fast pass [session]  (1m11s)
+08-26 00:23:03  ▪ gate face-fast pass [session]  (32.8s)
+08-26 00:23:04  • session #7 DV3 → Advanced · done DV3.3,DV3.4 · 3 commit(s)  (50m13s)
+08-26 00:33:02  ▪ gate engine-fast pass [phase]  (0.0s)
+08-26 00:33:02  ▪ gate face-fast pass [phase]  (0.0s)
+08-26 00:33:02  ▪ gate engine-full FAIL [phase]  (5m00s)
+08-26 00:33:02  ▪ gate face-full pass [phase]  (2.9s)
+08-26 00:33:03  • session #8 DV3 Fix started (attempt 2/8)
+08-26 00:53:21  ▪ gate engine-fast pass [session]  (1m04s)
+08-26 00:53:21  ▪ gate face-fast pass [session]  (3.5s)
+08-26 00:53:22  • session #8 DV3 → Progress · 2 commit(s)  (20m18s)
+08-26 00:58:18  ▪ gate engine-fast pass [phase]  (0.0s)
+08-26 00:58:18  ▪ gate face-fast pass [phase]  (0.0s)
+08-26 00:58:18  ▪ gate engine-full pass [phase]  (4m53s)
+08-26 00:58:18  ▪ gate face-full pass [phase]  (1.4s)
+08-26 00:58:18  ✓ checkpoint DV3.1 confirmed
+08-26 00:58:18  ✓ checkpoint DV3.2 confirmed
+08-26 00:58:18  ✓ checkpoint DV3.3 confirmed
+08-26 00:58:18  ✓ checkpoint DV3.4 confirmed
+08-26 00:58:18  ▸ stage DV3 confirmed  (2h09m47s)
+08-26 00:58:19  ▸ stage DV4 entered — The courier - one bot, always awake, outliving the run
+08-26 00:58:19  • session #9 DV4 Deliver started (attempt 1/8)
+08-26 01:34:38  • session #9 DV4 → RolledOver · done DV4.1 · 3 commit(s)  (36m18s)
+08-26 01:34:38  • session #10 DV4 Deliver started (attempt 1/8)
 ```
 
 ## Health
@@ -167,10 +173,13 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 6 · retries 0 (0 %) · overall Warn
+sessions 10 · retries 1 (10 %) · overall Warn
 ⚠ [context-saturation] session #2: 23,394,515 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #3: 34,336,668 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 32,631,442 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #6: 32,762,695 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #7: 34,491,022 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #9: 34,833,588 context tokens (≥ 20,000,000)
 ```
 
 ## Repo
@@ -179,8 +188,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/divan
-working tree: clean
-vs upstream: up to date
+working tree: M .conductor/REPORT.md, M plans/divan/TRACKER.md, M src/Conductor.Core/Courier/CourierHome.cs, ?? src/Conductor.Core/Courier/CourierPresence.cs, ?? src/Conductor.Core/Courier/CourierProtocol.cs, ?? src/Conductor.Core/Courier/CourierTask.cs
+vs upstream: 3 ahead
 ```
 
 ### Commits by session
@@ -216,6 +225,17 @@ vs upstream: up to date
   - [`e8bcdc2`](https://github.com/shaahink/conductor/commit/e8bcdc2) feat(DV3.2): the per-project inbox - a note that survives the run that received it
   - [`96ae444`](https://github.com/shaahink/conductor/commit/96ae444) docs(divan): the handoff for DV3.2 - the seam rule that reads string literals
   - [`2bebfbe`](https://github.com/shaahink/conductor/commit/2bebfbe) feat(DV3.1): the inbound message kinds - a voice note stops being invisible
+- **s7 (DV3 Deliver)** — 3 commit(s):
+  - [`5dd2df3`](https://github.com/shaahink/conductor/commit/5dd2df3) feat(DV3.4): routing - a reply to a push files against that push's project
+  - [`bf0cbf0`](https://github.com/shaahink/conductor/commit/bf0cbf0) feat(DV3.3): the live proof, the marks in the prompt, and the handoff
+  - [`4b1f04a`](https://github.com/shaahink/conductor/commit/4b1f04a) feat(DV3.3): transcription - the words, with the doubt kept
+- **s8 (DV3 Fix)** — 2 commit(s):
+  - [`516c26c`](https://github.com/shaahink/conductor/commit/516c26c) fix(DV3): declare the new adapter partial, and the evidence for a green battery
+  - [`78663f7`](https://github.com/shaahink/conductor/commit/78663f7) fix(DV3): the index that wrote over itself, and four registries the inbox never reached
+- **s9 (DV4 Deliver)** — 3 commit(s):
+  - [`d43a74a`](https://github.com/shaahink/conductor/commit/d43a74a) fix(DV4.1): the orphan the live proof found, and an offset that read itself wrong
+  - [`0986ddf`](https://github.com/shaahink/conductor/commit/0986ddf) feat(DV4.1): the courier - one bot, always awake, outliving the run
+  - [`b0cc449`](https://github.com/shaahink/conductor/commit/b0cc449) refactor(DV4.1): one getFile, one getUpdates - the courier gets a wire to share
 
 ## Phase handovers (audit)
 
@@ -238,37 +258,38 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> **DV3.1 and DV3.2 landed — inbound kinds, the 20 MB refusal, and the durable inbox**
-> - DV3.1: caption/voice/audio/document/photo/reply_to/thread on the DTO, getFile download, oversize refused by name before any round trip; 12 stub-wire tests
-> - DV3.2: atomic per-note store, append-only index deduped by update_id, read cursor, InboxBattery framed and per-line quoted; 20 tests including an adversarial fencing sweep
-> - Found and answered a real hazard: BatteryGroup trims at a line boundary and can un-quote owner text in an autonomous prompt
+> **fixed the index that wrote over itself; engine-full 3268/3268 green**
+> - InboxStore index append was not atomic: two append handles spliced JSON lines together
+> - three architecture ratchets split not baselined; inbox + courier.transcribe reached their registries
+> - filed bug #75: conductor note silently keeps only the first line of a multi-line note
 >
-> artefacts: src/Conductor.Core/Inbox/, src/Conductor.Core/Integrations/TelegramService.Inbound.cs, src/Conductor.Core/Integrations/Messaging/{InboundNote, InboundAck, RemoteSurface.Inbound}.cs, src/Conductor.Core/PromptBuilder.cs, tests/Conductor.Tests/DV3_1InboundKindsTests.cs, tests/Conductor.Tests/DV3_2Inbox*.cs
+> artefacts: 78663f7, 516c26c, src/Conductor.Core/Inbox/InboxStore.cs, src/Conductor.Core/Inbox/TranscriptionOutcome.cs, src/Conductor.Core/Inbox/DeadLetterBox.cs, src/Conductor.Core/Integrations/TelegramService.TestConnection.cs, src/Conductor/Commands/CompletionCommand.cs, docs/operating.md
 >
-> evidence: .conductor/evidence/DV3/dv3-1-inbound-kinds.md, .conductor/evidence/DV3/dv3-2-the-inbox.md
+> evidence: .conductor/evidence/DV3/dv3-fix-red-battery.md, .conductor/evidence/DV3/dv3-fix-engine-full-green.log
 >
-> gaps: DV3.3 and DV3.4 untouched (DV3.3 was opened then returned to TODO at the nudge, nothing edited). Bug #74 filed: the battery names `conductor inbox list` and no inbox verb exists yet — land it with DV3.3's prune. Full gate battery not run by this session.
+> gaps: none
 
 ## Tracker handoff
 
 ```
-last: DV3.1 and DV3.2 both CLAIMED and pushed. Inbound kinds + getFile + the 20 MB refusal by name;
-  then the durable inbox (atomic notes/<update_id>.json, append-only index, read cursor) and
-  InboxBattery on the IPromptBattery seam. 44 new tests green, 688 neighbours green. Evidence
-  .conductor/evidence/DV3/dv3-1-inbound-kinds.md and dv3-2-the-inbox.md. DV3.3 was opened and put
-  straight back to TODO at the wrap-up nudge - nothing was edited for it, start it clean.
-find: BatteryGroup.Fit trims AT A LINE BOUNDARY, so a block quoted only by a ``` fence loses its
-  closing line and un-quotes owner text inside an autonomous prompt. The inbox uses a per-line "> "
-  marker plus a short frame headline first; the sweep test asserts that case is REACHABLE before
-  asserting it is safe. MA0045 exempts PUBLIC methods only - never answer it with a #pragma, the
-  analyzer ratchet counts those. An OPTIONAL param on BatterySection broke ControlPlaneServer's
-  CA1506 ratchet; a separate 5-arg overload fixed it and also keeps the preview out of the inbox.
-next: DV3.3 transcription. Land `conductor inbox list` with its prune (bug #74) - the battery
-  already names a verb that does not exist. RemoteSurface.HandleNoteAsync files the note;
-  InboxNote.TranscriptPath is the field DV3.3 fills, with the audio kept beside it.
-red: none known. Full battery not run by this session (conductor runs it after exit).
+last: FIX session. The battery conductor ran after session 7 was RED - 7 failed, and it failed the
+  SC4.1 retry too, so none of it was flake. One real defect: InboxStore's index append opened
+  FileMode.Append with FileShare.ReadWrite, and a .NET append stream resolves end-of-file when the
+  HANDLE opens - two handles at the same length write OVER each other, splicing one JSON line through
+  another. All() repairs a MISSING index line and can do nothing with a corrupt one. Writer now takes
+  the file (FileShare.Read + retry), reader gives it back (ReadLinesShared). Three ratchet reds split,
+  never baselined; `inbox` and `courier.transcribe` added to the registries that pin them.
+find: session 7 wrote `red: none known. Full battery not run by this session` - four of the seven reds
+  are checks ONLY the full suite runs. Run it before claiming. And bug #75: `conductor note` keeps only
+  the FIRST LINE - ledger 465/466/467 survive as their headers alone, DV3.3 and DV3.4's acceptance
+  records are gone. Write every note as ONE line until that is fixed.
+next: DV4.1 the courier daemon, unchanged from session 7's handoff - NoteRouter, ChatRoutes and
+  DeadLetterBox are already machine-level and move across as-is; the durable poll offset and update_id
+  dedup are the new work. New file names to know: TranscriptionOutcome.cs, DeadLetterBox.cs,
+  TelegramService.TestConnection.cs (declared in KS11_1SeamBoundaryTests.AdapterFiles).
+red: none. engine-full 3268/3268 green, run by this session - see the evidence artifact.
 ```
