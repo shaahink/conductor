@@ -62,6 +62,17 @@ public interface IRunNotifier
     /// text — K5.4 is what actually sends a photo or a document, and it replaces the body of this
     /// method rather than adding a second path. The owner's case is a screenshot nobody forwards.</summary>
     Task PushEvidenceAsync(IReadOnlyList<Evidence.EvidenceArtifact> artifacts, CancellationToken ct = default);
+
+    /// <summary>DV6.3: the board page goes OUT — one self-contained HTML file, as a document, at
+    /// every boundary. Publish, not serve: ADR-0005 keeps the read view off any inbound route, and a
+    /// file that has already left the machine needs none.
+    /// <para>Defaulted like the two above: a notifier that reaches nobody has nobody to send a page
+    /// to, and the boundary must not care which kind it is holding.</para></summary>
+    /// <param name="path">The rendered file, on the engine's disk.</param>
+    /// <param name="snapshot">What was rendered — the caption is composed from it, so the caption and
+    /// the page can never state two different boards.</param>
+    Task PushBoardSnapshotAsync(string path, Publishing.BoardSnapshot snapshot,
+        CancellationToken ct = default) => Task.CompletedTask;
 }
 
 public sealed partial class TelegramService
@@ -275,6 +286,9 @@ public sealed partial class TelegramService
 
     public Task PushEvidenceAsync(IReadOnlyList<Evidence.EvidenceArtifact> artifacts,
         CancellationToken ct = default) => _surface.PushEvidenceAsync(artifacts, ct);
+
+    public Task PushBoardSnapshotAsync(string path, Publishing.BoardSnapshot snapshot,
+        CancellationToken ct = default) => _surface.PushBoardSnapshotAsync(path, snapshot, ct);
 
     /// <summary>KS11.1 — the adapter's whole inbound job: unwrap the Bot API envelope, check the
     /// chat is one of ours, and hand plain text to the seam. What the text MEANS is

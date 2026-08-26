@@ -169,6 +169,29 @@ public sealed partial class MessageComposer
         });
     }
 
+    /// <summary>DV6.3 — the caption on the board page. Composed from the SAME snapshot the page is
+    /// rendered from, so the two cannot disagree about what the board said.</summary>
+    public Task<string> BoardCaptionAsync(Publishing.BoardSnapshot snap)
+    {
+        ArgumentNullException.ThrowIfNull(snap);
+        var s = snap.State;
+        return ComposeAsync("board", NotifyDefaults.Board, new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["headline"] = EscapeHtml(string.Create(CultureInfo.InvariantCulture,
+                $"board — {s.DoneCount} of {s.TotalCount} checkpoints done")),
+            // A document in a chat cannot say how old it is; this line is the whole reason a reader
+            // scrolling back a week does not mistake last Tuesday's board for today's.
+            ["stale"] = EscapeHtml(string.Create(CultureInfo.InvariantCulture,
+                $"as of {snap.RenderedUtc:yyyy-MM-dd HH:mm} UTC · {snap.Boundary} · it does not update")),
+            ["owner"] = snap.Owner.Count > 0
+                ? EscapeHtml(string.Create(CultureInfo.InvariantCulture,
+                    $"{snap.Owner.Count} item{(snap.Owner.Count == 1 ? "" : "s")} need you"))
+                : "",
+            ["ledger"] = snap.LedgerLine.Length > 0 ? EscapeHtml(snap.LedgerLine) : "",
+            ["telemetry"] = Telemetry(TelemetryFacts(s.StageId, null, null)),
+        });
+    }
+
     /// <summary>The artifacts beyond the upload budget, announced exactly as K5.3 announced them.</summary>
     public Task<string> EvidenceOverflowAsync(IReadOnlyList<EvidenceArtifact> rest)
     {

@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Budget;
 using Conductor.Core.Http;
 using System.Net;
@@ -169,45 +169,7 @@ public sealed partial class ControlPlaneServer
     /// <c>TotalCostUsd</c> and <c>SessionCostUsd</c> by <see cref="WithLiveSessionMetrics"/>, so the
     /// window adds the same in-flight figure and the two stay consistent to the cent.</para></remarks>
     internal static StateDto WithBudget(StateDto dto, LimitsConfig? limits, RunState liveState)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-        ArgumentNullException.ThrowIfNull(liveState);
-
-        var inFlight = dto.AgentActive ? dto.SessionCostUsd : 0m;
-        // KS5.2: BilledWindowCostUsd, not PerRunCostUsd — the same sum CheckBudgetCap parks on, so the
-        // spend an operator reads and the spend the run stops at are one number. The lifetime figure
-        // carries the run's side spend for the same reason: window may never exceed lifetime.
-        var window = liveState.BilledWindowCostUsd + inFlight;
-        var lifetime = dto.TotalCostUsd + liveState.TotalSideCostUsd;
-        // KS5.4: the EFFECTIVE ceiling — the plan's cap plus everything an owner has approved on top of
-        // it. Serving the plan's raw cap here would have put the wire back where the field log found it:
-        // a run governed by $6.00 while every surface printed $3.00.
-        var cap = BudgetCeiling.EffectiveCostCap(limits?.MaxRunCostUsd, liveState.BudgetGrantUsd);
-
-        var priced = liveState.History.Where(h => h.EndedUtc != null && h.CostUsd is > 0).ToList();
-        var mean = priced.Count > 0
-            ? decimal.Round(priced.Sum(h => h.CostUsd!.Value) / priced.Count, 4, MidpointRounding.AwayFromZero)
-            : 0m;
-
-        return dto with
-        {
-            CostSpent = window,
-            CostCap = cap,
-            // No cap means no remaining — NOT an unbounded one. A surface must be able to tell
-            // "this plan set no ceiling" apart from "there is plenty left".
-            CostRemaining = cap is { } c ? c - window : null,
-            MeanSessionCost = mean,
-            CheckpointsRemaining = Math.Max(0, dto.TotalCount - dto.DoneCount),
-            // KS5.4: spend SINCE THE LAST RAISE. costSpent/costCap/costRemaining are now one monotone
-            // comparison for the life of the run — an approval widens the ceiling instead of zeroing the
-            // spend — so this is the field that keeps answering SC2.3's question, "what has it spent
-            // since I last approved". With no approval on file it is the whole run, exactly as before.
-            WindowCostUsd = liveState.SpendSinceLastRaiseUsd + inFlight,
-            LifetimeCostUsd = lifetime,
-            BudgetWindowStartedUtc = liveState.BudgetWindowStartedUtc,
-            BudgetApprovals = liveState.BudgetApprovals,
-        };
-    }
+        => ControlPlaneMapper.WithBudget(dto, limits, liveState);
 
     /// <summary>A rate needs enough clock to be a rate. Below this, the first delta divided by a
     /// second or two projects a burn of tens of millions a minute and a nudge "in 4 seconds" — a

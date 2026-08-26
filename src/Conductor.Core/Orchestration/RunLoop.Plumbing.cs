@@ -229,7 +229,14 @@ public sealed partial class RunLoop
         // writes and the tracker regeneration above, so the board it computes is the board the
         // tracker just showed. Fire-and-forget through RunContext: it cannot throw and cannot block.
         _ctx.MirrorBoard($"session {rec.Number} end");
+
+        // DV6.3: and the board goes OUT as a page. Same beat and the same reason as the mirror above
+        // — after the checkpoint writes and the tracker regeneration, so the page shows the board the
+        // tracker just showed — but with no inbound anything: it is a file, pushed, not a view served.
+        var boardTrack = _ctx.ReadWork();
+        _ctx.PublishBoard($"session {rec.Number} end", boardTrack, BaseSnapshot(boardTrack));
     }
+
 
     // ---------------------------------------------------------------- notifications
 

@@ -1,5 +1,6 @@
 ﻿using Conductor.Models;
 using Conductor.Core.Evidence;
+using Conductor.Core.Publishing;
 using Conductor.Core.Store;
 
 namespace Conductor.Core.Integrations.Messaging;
@@ -168,6 +169,30 @@ public sealed partial class RemoteSurface
 
         var body = await _composer.EvidenceOverflowAsync(rest).ConfigureAwait(false);
         await FanOutAsync(body, null, PushSeverity.Quiet, null, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>DV6.3 — the board page LEAVES the machine. One document per boundary, to every
+    /// configured chat, quiet.
+    ///
+    /// <para><b>A document, never a photo.</b> The <c>AsPhoto</c> half of the attachment exists for
+    /// a screenshot; an HTML file sent as one is a 400 from Telegram, so the choice is made here and
+    /// not sniffed from an extension.</para>
+    ///
+    /// <para><b>Quiet.</b> Every severity decision on this surface asks "must the owner act on this",
+    /// and a board is the definition of no — the queue is what buzzes (DV1.2), and a page that woke
+    /// the owner every boundary would teach them to mute the channel the queue arrives on.</para>
+    ///
+    /// <para><b>Observers get it too.</b> Unlike the owner queue, the board carries no command and
+    /// asks for nothing; it is the run's STORY, which CH-3 says goes out unfiltered.</para></summary>
+    public async Task PushBoardSnapshotAsync(string path, BoardSnapshot snapshot, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (!_channel.IsLive || string.IsNullOrWhiteSpace(path)) return;
+
+        var caption = await _composer.BoardCaptionAsync(snapshot).ConfigureAwait(false);
+        await FanOutAsync(caption, snapshot.State.SessionNumber, PushSeverity.Quiet,
+            new OutboundAttachment(path, AsPhoto: false, caption), ct, snapshot.State.StageId)
+            .ConfigureAwait(false);
     }
 
     /// <summary>A keyboard means the engine is ASKING the owner for something — that is the

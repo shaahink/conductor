@@ -76,6 +76,20 @@ An agent is working through a plan on its own; this is where it reports.
 {asks}
 """;
 
+    /// <summary>DV6.3 — the caption that rides the board page. Facts: headline, stale, owner,
+    /// ledger, telemetry.
+    /// <para>The second line is the one that has to be there: a document sitting in a chat has no way
+    /// of saying how old it is, and a reader scrolling back a week would otherwise read last
+    /// Tuesday's board as today's. It names the instant and the boundary, and the page repeats both
+    /// inside itself for the copy that gets forwarded on.</para></summary>
+    public const string Board = """
+<b>{headline}</b>
+{stale}
+{owner}
+{ledger}
+{telemetry}
+""";
+
     /// <summary>Facts: count, noun, lines. What a batch too large to attach is announced as.</summary>
     public const string EvidenceOverflow = """
 <b>evidence</b> — {count} further {noun}, not attached

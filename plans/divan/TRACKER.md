@@ -4,20 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV6.2 DONE. The Projects v2 mutation path exists (GithubProjectSync + a GraphQL door on
-  GithubClient) and the KS9.3 refusal MOVED: the "not implemented" sentence is deleted from src,
-  tests and docs, and with the scope granted the gate returns EMPTY. Columns come from a preference
-  table (blocked falls back to In Progress, skipped to Done) and every fallback is said out loud.
-  21 new tests + KS9 all green.
-find: the token still has no project scope (measured twice, 2026-08-26) - so the WIRE was proven
-  read-only instead: all four documents came back INSUFFICIENT_SCOPES from api.github.com (schema
-  validated, token refused) and both mutation inputs by introspection. The whole CLI path ran
-  against a loopback rig, tools/dv6/dv6-2-live-proof.ps1: 60 issues, 60 items, third pass zero
-  mutations. The rig caught bug #81 - followups.md has 91 rows for 55 ids, so cards oscillated.
-next: DV6.3 - the board snapshot as ONE self-contained HTML file, rendered from Http/Contracts at
-  each boundary and pushed as a Telegram document. CUT-FIRST; DV6.4 goes before it if room runs out.
-red: bug #80 (owner runs gh auth refresh -s project, then a real board), #81 (the ISSUE half still
-  re-patches duplicate ledger rows every pass), #79, #76 untouched.
+last: DV6.3 DONE. The board is ONE self-contained HTML file - columns (DV6.2's own first-choice
+  names), cards with age-in-column, cost, the owner queue with its clearing command, the ledger line
+  and the evidence - rendered from the SAME Http/Contracts the control plane serves and written
+  atomically to <stateDir>/board.html at every session boundary, then pushed as a Telegram document.
+  ADR-0005 holds: a source scan over the publishing path fails on a listener, socket, prefix or
+  tunnel. 15 new tests; 478 green across KS11/K5_4/DV1_2/DV6_/SC23/KS5_/ControlPlane/Harness.
+find: three answers that existed once and were needed twice were MOVED, not copied -
+  ControlPlaneMapper.WithBudget (out of the server assembly), LedgerSummary.Line (out of the digest)
+  and ControlPlaneMapper.FromArtifact. And RunLoop is AT its CA1506 coupling bar: two new type
+  references tripped it at 185/183, so the boundary hook lives in RunContext.Board.cs.
+next: DV6.4 - SARIF for every bug carrying a file and line, uploaded to code scanning; the docs must
+  state the public-free / private-needs-Advanced-Security split. It is the stage's CUT-FIRST row.
+red: bug #80 (owner runs gh auth refresh -s project, then a real Projects v2 board), #81, #79, #76.
 
 ## Baseline numbers (from run.db)
 
@@ -25,7 +24,7 @@ red: bug #80 (owner runs gh auth refresh -s project, then a real board), #81 (th
 |---|---|
 | Total checkpoints | 23 |
 | Done | 16 |
-| Claimed (unconfirmed) | 1 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -78,7 +77,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | DONE | 8d14fe5 | .conductor/evidence/DV6/dv6-1-ledger-issue-class.md |
-| DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | TODO | - | - |
+| DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | DONE | d1e5b0e | .conductor/evidence/DV6/dv6-2-the-columns.md |
 | DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | TODO | - | - |
 | DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | TODO | - | - |
 

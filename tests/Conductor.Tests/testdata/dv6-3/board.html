@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Divan - the chancellery — board as of 2026-08-26 12:00 UTC</title>
+<style>
+:root{--bg:#fbfbfa;--fg:#1b1b1a;--dim:#66655f;--line:#dedcd5;--card:#fff;--ok:#1a7f37;--warn:#9a3412}
+@media(prefers-color-scheme:dark){:root{--bg:#16171a;--fg:#e8e6e1;--dim:#9a978f;--line:#2c2e33;--card:#1e2024;--ok:#3fb950;--warn:#f0883e}}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+h1{font-size:20px;margin:0 0 4px}
+h2{font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin:24px 0 8px}
+h3{font-size:13px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+code{font:12px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;word-break:break-all}
+.stale{margin:0 0 12px;padding:8px 10px;border-left:3px solid var(--warn);background:var(--card);color:var(--dim);font-size:13px}
+.facts{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.facts li{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:13px}
+.facts span{color:var(--dim);margin-right:6px}
+.none{color:var(--dim);font-size:13px;margin:4px 0}
+.warn{color:var(--warn);font-size:13px}
+.queue{margin:0;padding-left:20px}
+.queue li{margin-bottom:10px}
+.qt{font-weight:600}
+.qm,.m{color:var(--dim);font-size:12px}
+.qd{font-size:13px}
+.qc{font-size:12px;margin-top:2px}
+.cols{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.col{flex:1 1 200px;min-width:180px;border:1px solid var(--line);border-radius:8px;padding:10px}
+.col .n{color:var(--dim);font-weight:400}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px;margin-bottom:8px}
+.card .id{font:12px ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--dim)}
+.card .t{font-size:13px;margin:2px 0}
+.ok{color:var(--ok)}
+.ev{list-style:none;margin:0;padding:0}
+.ev li{border-bottom:1px solid var(--line);padding:6px 0}
+.ev .m{display:block}
+footer{margin-top:28px;border-top:1px solid var(--line);padding-top:10px;color:var(--dim);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+<h1>Divan - the chancellery</h1>
+<p class="stale"><b>as of 2026-08-26 12:00 UTC</b> · rendered at session 18 end. This page does not update: it is a snapshot, stale by at most one boundary, and the run may have moved on since.</p>
+<ul class="facts">
+<li><span>status</span>running</li>
+<li><span>stage</span>DV6 · The record that gets out</li>
+<li><span>checkpoints</span>3 of 8 done</li>
+<li><span>cost</span>$41.50 of $280.00</li>
+<li><span>sessions</span>18</li>
+<li><span>gates</span>build OK · tests OK</li>
+<li><span>ledger</span>ledger: 28 open bugs · 12 open followups · oldest bug 21 days</li>
+</ul>
+</header>
+<section class="owner">
+<h2>Owner queue — 2 items</h2>
+<ol class="queue">
+<li>
+<div class="qt">The run has reached its cost cap</div>
+<div class="qm">budget · 2 hours old · unblocks DV6.3</div>
+<div class="qd">only the owner can raise a ceiling</div>
+<div class="qc">clears with <code>conductor approve</code></div>
+</li>
+<li>
+<div class="qt">Blocked until the deploy window opens</div>
+<div class="qm">wait · age unknown · unblocks DV6.4</div>
+<div class="qc none">nothing typed clears this — it clears itself</div>
+</li>
+</ol>
+</section>
+<section class="board">
+<h2>Board</h2>
+<div class="cols">
+<div class="col">
+<h3>Todo <span class="n">1</span></h3>
+<article class="card">
+<div class="id">DV6.4</div>
+<div class="t">SARIF export for file/line bugs</div>
+<div class="m">DV6 · 3 days in column · session 16</div>
+</article>
+</div>
+<div class="col">
+<h3>In Progress <span class="n">1</span></h3>
+<article class="card">
+<div class="id">DV6.3</div>
+<div class="t">The board snapshot as one self-contained HTML file</div>
+<div class="m">DV6 · 40 minutes in column · session 15 · 2 attempts</div>
+</article>
+</div>
+<div class="col">
+<h3>Blocked <span class="n">1</span></h3>
+<article class="card">
+<div class="id">DV5.3</div>
+<div class="t">Waiting on the owner</div>
+<div class="m">DV5 · 1 day in column · session 18</div>
+</article>
+</div>
+<div class="col">
+<h3>Done <span class="n">2</span></h3>
+<article class="card">
+<div class="id">DV6.1 <span class="ok">confirmed</span></div>
+<div class="t">Bugs and followups as a long-lived issue class</div>
+<div class="m">DV6 · 2 days in column · session 13</div>
+</article>
+<article class="card">
+<div class="id">DV6.2 <span class="ok">confirmed</span></div>
+<div class="t">The columns: the Projects v2 mutation path</div>
+<div class="m">DV6 · 20 hours in column · session 14</div>
+</article>
+</div>
+<div class="col">
+<h3>Skipped <span class="n">0</span></h3>
+<p class="none">empty</p>
+</div>
+</div>
+</section>
+<section class="evidence">
+<h2>Evidence — 2 artifacts</h2>
+<ul class="ev">
+<li><code>.conductor/evidence/DV6/dv6-2-the-columns.md</code><span class="m">DV6.2 · text · 8.6 KB · 2026-08-26 09:14 UTC</span></li>
+<li><code>.conductor/evidence/DV6/dv6-1-ledger-issue-class.md</code><span class="m">DV6.1 · text · 512 bytes · 2026-08-25 18:31 UTC</span></li>
+</ul>
+</section>
+<footer>
+<p>C:/code/conductor · run dv63 · conductor 0.4.1</p>
+<p>Published, not served: this file was pushed OUT of the machine that rendered it. There is no port, no tunnel and nothing to connect to, and the paths above are on that machine (ADR-0005).</p>
+</footer>
+</body>
+</html>
