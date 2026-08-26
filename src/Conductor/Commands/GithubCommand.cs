@@ -31,7 +31,7 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
     public sealed class Settings : PlanSettings
     {
         [CommandArgument(0, "[VERB]")]
-        [Description("Sub-command: sync. Omit to show help.")]
+        [Description("Sub-command: sync, sarif. Omit to show help.")]
         public string Verb { get; init; } = "";
 
         [CommandOption("--backfill <RUN>")]
@@ -64,14 +64,33 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         [CommandOption("--home <PATH>")]
         [Description("Read a state home other than this machine's.")]
         public string? Home { get; init; }
+
+        // DV6.4 — the three options the sarif verb adds. --sha and --gitref are not conveniences:
+        // code scanning anchors an alert to a commit that must EXIST in the destination repository,
+        // and a scratch repo has never seen this working tree's HEAD.
+        [CommandOption("--out <PATH>")]
+        [Description("sarif: also write the rendered document here. Written before anything is sent.")]
+        public string? Out { get; init; }
+
+        [CommandOption("--sha <SHA>")]
+        [Description("sarif: the commit the alerts anchor to. Must exist in the destination. Default: this repo's HEAD.")]
+        public string? Sha { get; init; }
+
+        [CommandOption("--gitref <REF>")]
+        [Description("sarif: the ref the alerts belong to, e.g. refs/heads/main. Default: this repo's branch.")]
+        public string? GitRef { get; init; }
     }
 
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
         var verb = settings.Verb.ToLowerInvariant();
-        if (verb is not ("sync" or "backfill")) return Help();
+        if (verb is not ("sync" or "backfill" or "sarif")) return Help();
 
+        // DV6.4 — the sarif verb writes no issues and no columns, so the project-board gates below
+        // are not its business: refusing a SARIF upload because a plan also asked for a Projects v2
+        // board would deny a feature over an unrelated missing scope.
+        var sarif = verb is "sarif";
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
 
         // KS9.3 — the board's own coherence is decided first, because it costs nothing and because a
@@ -79,7 +98,7 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         // against the network. It fires whether the project board was asked for in the plan or with
         // --project, and it fires before a destination is even resolved.
         var board = BoardView(plan, settings.Project);
-        if (board.BoardRefusal() is { } configRefusal)
+        if (!sarif && board.BoardRefusal() is { } configRefusal)
             return Refuse([configRefusal, "nothing was contacted and nothing was written."]);
 
         var repo = Destination(plan, settings.Repo);
@@ -100,7 +119,7 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         // have one is refused WHOLE: pushing the issue half while quietly dropping the half that was
         // asked for is precisely the silent no-op this gate exists to prevent. Set github.board back
         // to 'issues' — which the refusal says — and the issue mirror runs untouched.
-        if (board.WantsProjectBoard)
+        if (!sarif && board.WantsProjectBoard)
         {
             using var probe = new GithubClient(token, TimeSpan.FromSeconds(30));
             var stop = await GithubProjects.PreflightAsync(probe, board, source).ConfigureAwait(false);
@@ -121,7 +140,69 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
             return 1;
         }
 
-        return await PushAsync(view, plan, repo, source, settings).ConfigureAwait(false);
+        return sarif
+            ? await SarifAsync(view, plan, repo, source, settings).ConfigureAwait(false)
+            : await PushAsync(view, plan, repo, source, settings).ConfigureAwait(false);
+    }
+
+    /// <summary>DV6.4 — the bug ledger as code-scanning alerts. Reads the same archive the issue
+    /// mirror reads, resolves every citation against the tracked files of the repository the run
+    /// worked in, and hands GitHub one SARIF run in its own analysis category.</summary>
+    private static async Task<int> SarifAsync(
+        ArchiveView view, PlanConfig plan, string repo, string tokenSource, Settings settings)
+    {
+        var (token, _) = GithubIdentity.ResolveToken(plan);
+        var payload = SarifDocument.Payload(
+            view.Bugs(), SarifBugLocations.Resolver(TrackedFiles(view.Repo)),
+            view.Run.EngineStampText ?? Core.BuildInfo.Current.Full);
+
+        // Written FIRST, always. A document that failed to upload is still the thing a reader needs
+        // to see, and an evidence artifact that only exists on success proves the wrong half.
+        if (!string.IsNullOrWhiteSpace(settings.Out))
+        {
+            var outPath = Path.GetFullPath(settings.Out);
+            Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+            await File.WriteAllTextAsync(outPath, payload.Json).ConfigureAwait(false);
+            AnsiConsole.MarkupLine($"[grey]wrote[/] {Markup.Escape(outPath)}");
+        }
+
+        var sha = string.IsNullOrWhiteSpace(settings.Sha) ? Core.Git.Head(view.Repo) : settings.Sha.Trim();
+        var gitRef = string.IsNullOrWhiteSpace(settings.GitRef)
+            ? "refs/heads/" + Core.Git.Branch(view.Repo)
+            : settings.GitRef.Trim();
+
+        AnsiConsole.MarkupLine(
+            $"[grey]run[/] {Markup.Escape(view.Run.ShortRunId)}  [grey]→[/] [aqua]{Markup.Escape(repo)}[/]  " +
+            $"[grey]category[/] {Markup.Escape(SarifDocument.Category)}  [grey]token from[/] {Markup.Escape(tokenSource)}");
+        AnsiConsole.MarkupLine($"[grey]commit[/] {Markup.Escape(sha)}  [grey]ref[/] {Markup.Escape(gitRef)}");
+        if (GithubClient.ApiBaseIsOverridden)
+            AnsiConsole.MarkupLine($"[yellow]api base overridden[/] → {Markup.Escape(GithubClient.ApiBase)} " +
+                $"[grey]({GithubClient.ApiBaseEnvVar})[/]");
+        if (settings.DryRun) AnsiConsole.MarkupLine("[yellow]dry run[/] — nothing will be sent.");
+
+        using var client = new GithubClient(token!, TimeSpan.FromSeconds(30));
+        var pass = await new GithubSarifSync(client, repo)
+            .PushAsync(payload, sha, gitRef, tokenSource, settings.DryRun).ConfigureAwait(false);
+
+        AnsiConsole.MarkupLine(Markup.Escape(pass.Summary()));
+        foreach (var finding in payload.Findings.Take(10))
+            AnsiConsole.MarkupLine($"  [grey]bug #{finding.Bug.Id}[/] {Markup.Escape(finding.Locations[0].Cite())}");
+        if (payload.Findings.Count > 10)
+            AnsiConsole.MarkupLine($"  [grey]… {payload.Findings.Count - 10} more[/]");
+        foreach (var note in pass.Notes) AnsiConsole.MarkupLine($"[yellow]note[/] [grey]{Markup.Escape(note)}[/]");
+        if (pass.StatusUrl is { } statusUrl) AnsiConsole.MarkupLine($"  [grey]status[/] {Markup.Escape(statusUrl)}");
+        foreach (var error in pass.Errors) AnsiConsole.MarkupLine($"[red]{Markup.Escape(error)}[/]");
+        AnsiConsole.MarkupLine($"[grey]{client.RequestCount} requests[/]");
+        return pass.Ok ? 0 : 1;
+    }
+
+    /// <summary>The tracked files of the repository the run worked in — the authority a bare
+    /// <c>Foo.cs:12</c> is resolved against. Git's list, not a directory walk: build output and
+    /// ignored scratch must never become the target of an alert.</summary>
+    private static IReadOnlyList<string> TrackedFiles(string repo)
+    {
+        var result = Core.Git.Exec(repo, "ls-files");
+        return result.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
     /// <summary>Where this push goes, or null when nobody said. An explicit <c>--repo</c> always
@@ -254,6 +335,12 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         AnsiConsole.MarkupLine($"[grey]  --project <n> mirrors the COLUMNS to a Projects v2 board: needs the " +
             $"'{GithubProjects.RequiredScope}' scope, and refuses by name without it " +
             $"({GithubProjects.GrantCommand}).[/]");
+        AnsiConsole.MarkupLine("  [aqua]github sarif --backfill <run> [[--repo owner/name]] [[--out file.sarif]] " +
+            "[[--sha SHA]] [[--gitref REF]] [[--dry-run]][/]");
+        AnsiConsole.MarkupLine("[grey]  every OPEN bug that names a file and a line becomes a code-scanning alert.[/]");
+        AnsiConsole.MarkupLine("[grey]  free on a PUBLIC repository; a PRIVATE one needs GitHub Advanced Security.[/]");
+        AnsiConsole.MarkupLine($"[grey]  a private repo also needs the '{GithubSarifSync.PrivateScope}' scope " +
+            $"({GithubSarifSync.GrantCommand}).[/]");
         return 1;
     }
 }

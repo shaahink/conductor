@@ -1,0 +1,163 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Conductor",
+          "semanticVersion": "0.4.1",
+          "informationUri": "https://github.com/shaahink/conductor",
+          "rules": [
+            {
+              "id": "conductor/bug/61",
+              "name": "ConductorBug61",
+              "shortDescription": {
+                "text": "CONDUCTOR_RUN_DB does not redirect the measuring verbs"
+              },
+              "fullDescription": {
+                "text": "CONDUCTOR_RUN_DB does not redirect the measuring verbs"
+              },
+              "help": {
+                "text": "StateHome.cs:27-29 is documented as overriding the resolved database FILE.\n\nFiled by: Divan, stage DV6, session 19 on 2026-08-26 09:00:00.\nSeverity: medium.\nCloses with: conductor bug fix 61 \u2014 the alert resolves itself at the next upload, because a fixed bug stops being rendered and code scanning closes what a later analysis no longer reports."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "conductor",
+                  "bug",
+                  "stage:DV6"
+                ]
+              }
+            },
+            {
+              "id": "conductor/bug/70",
+              "name": "ConductorBug70",
+              "shortDescription": {
+                "text": "AgentConfig.Merge silently drops Env"
+              },
+              "fullDescription": {
+                "text": "AgentConfig.Merge silently drops Env"
+              },
+              "help": {
+                "text": "src/Conductor/Models/AgentConfig.cs:36-48 \u2014 the merged instance keeps the stage\u0027s env only.\n\nFiled by: Divan, stage DV6, session 19 on 2026-08-26 09:00:00.\nSeverity: high.\nCloses with: conductor bug fix 70 \u2014 the alert resolves itself at the next upload, because a fixed bug stops being rendered and code scanning closes what a later analysis no longer reports."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "conductor",
+                  "bug",
+                  "stage:DV6"
+                ]
+              }
+            },
+            {
+              "id": "conductor/bug/72",
+              "name": "ConductorBug72",
+              "shortDescription": {
+                "text": "face: bubbles/textarea cannot replace widgets.TextArea"
+              },
+              "fullDescription": {
+                "text": "face: bubbles/textarea cannot replace widgets.TextArea"
+              },
+              "help": {
+                "text": "widgets/editor.go:88 takes a tea.KeyMsg.\n\nFiled by: Divan, stage DV6, session 19 on 2026-08-26 09:00:00.\nSeverity: low.\nCloses with: conductor bug fix 72 \u2014 the alert resolves itself at the next upload, because a fixed bug stops being rendered and code scanning closes what a later analysis no longer reports."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "tags": [
+                  "conductor",
+                  "bug",
+                  "stage:DV6"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "automationDetails": {
+        "id": "conductor-bugs/"
+      },
+      "columnKind": "utf16CodeUnits",
+      "results": [
+        {
+          "ruleId": "conductor/bug/61",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "conductor bug #61: CONDUCTOR_RUN_DB does not redirect the measuring verbs"
+          },
+          "partialFingerprints": {
+            "conductorBugId": "61"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/Conductor.Core/Store/StateHome.cs"
+                },
+                "region": {
+                  "startLine": 27,
+                  "endLine": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "conductor/bug/70",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "conductor bug #70: AgentConfig.Merge silently drops Env"
+          },
+          "partialFingerprints": {
+            "conductorBugId": "70"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/Conductor/Models/AgentConfig.cs"
+                },
+                "region": {
+                  "startLine": 36,
+                  "endLine": 48
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "conductor/bug/72",
+          "ruleIndex": 2,
+          "level": "note",
+          "message": {
+            "text": "conductor bug #72: face: bubbles/textarea cannot replace widgets.TextArea"
+          },
+          "partialFingerprints": {
+            "conductorBugId": "72"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "face-go/internal/tui/widgets/editor.go"
+                },
+                "region": {
+                  "startLine": 88
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
