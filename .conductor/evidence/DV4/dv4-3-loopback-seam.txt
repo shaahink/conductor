@@ -1,0 +1,170 @@
+DV4.3 - the seam: loopback listener, per-install secret, CourierChannel, precedence, channel health
+captured 2026-08-26 on feat/divan
+
+=== 1. LIVE PROOF: tools/dv4/dv4-3-live-proof.ps1 (fresh build, scratch state home, scratch bot) ===
+
+DV4.3 live proof - the run<->courier loopback seam
+  exe:          C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe
+  state home:   C:\Users\shahi\AppData\Local\Temp\dv43-rig\state-home
+  courier port: 62586
+  bot stub:     http://127.0.0.1:62587
+  token:        SCRATCH (the real one, if any, is overwritten in this process)
+
+[1] before anything
+  OK   no courier is running yet
+  OK   no port yet
+  OK   the state home is the SCRATCH one
+
+[2] the daemon starts
+  OK   the presence record carries the bound port
+  OK   the presence record names the daemon's pid
+  OK   it states a protocol
+  OK   status agrees about the port
+  OK   status says the seam is reachable
+  OK   status says the secret is present
+  OK   status says the secret is NOT exposed
+
+[3] the secret file
+  OK   the secret is 32 bytes of hex
+  OK   the secret does NOT inherit the state home's permissions
+  OK   exactly one identity is granted
+  OK   and that identity is this account
+
+[4] the hello
+  OK   no header  -> 401
+  OK   wrong secret -> 401
+  OK   the secret -> 200
+  OK   the hello IS the presence record (pid)
+  OK   the hello IS the presence record (port)
+  OK   the hello IS the presence record (protocol)
+
+[5] a push, all the way out
+  OK   the daemon accepted the push
+  OK   it reached the bot API
+  OK   carrying the RUN's stamp
+  OK   carrying the body
+  OK   carrying the buttons as an inline keyboard
+  OK   Alert buzzed rather than arriving silently
+
+[6] a push from a NEWER run
+  OK   a newer protocol is refused
+  OK   and the refusal names the restart verb
+
+[7] the surface is exactly two verbs
+  OK   an unknown path -> 404
+  OK   not reachable on this machine's own address 192.168.1.235
+
+[8] a second courier
+  OK   a second courier run exits non-zero
+  OK   and says WHICH courier is already running
+  OK   naming the verb that stops it
+  OK   the running courier's presence record is untouched
+
+[9] the daemon is killed
+  OK   status no longer sees a running courier
+  OK   and says why a run cannot reach it
+  OK   a taken port is refused BY NAME
+  OK   pointing at the override rather than scanning
+  OK   and the daemon says it has NO listener rather than claiming one
+  OK   REPORT.md says courier DEAD
+  OK   the owner queue says so too
+  OK   and names the command that fixes it
+
+DV4.3 LIVE PROOF: PASS
+
+
+=== 2. SCOPED SUITE (dotnet test, the classes this checkpoint touched) ===
+  Passed Conductor.Tests.DV4_3CourierSeamTests.The_secret_is_created_once_and_locked_to_this_account [50 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.A_courier_with_no_listener_is_refused_by_name [96 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.The_courier_binds_loopback_and_only_loopback [2 s]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.A_refused_send_comes_back_as_a_sentence_not_an_exception [2 s]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.The_secret_file_grants_this_account_and_nobody_else [22 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.Precedence_needs_a_courier_that_is_actually_operative [51 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.The_hello_is_not_exempt_from_the_shared_secret [91 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.A_stale_courier_is_refused_by_the_same_rule_DV4_2_wrote [28 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.A_push_from_a_newer_run_is_refused_by_name_rather_than_half_delivered [124 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.A_configured_courier_stops_the_run_polling_and_names_itself [126 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.A_taken_port_is_refused_by_name_and_never_scanned_past [41 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.Killing_the_daemon_makes_the_channel_roll_up_say_so [62 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.A_run_dials_the_courier_named_in_the_presence_record_and_pushes_through_it [50 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.A_dead_daemon_makes_the_channel_say_why_instead_of_throwing [2 s]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.The_channel_carries_the_runs_stamp_because_only_a_run_can_render_it [35 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.A_courier_without_a_secret_is_refused_by_name [24 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.A_secret_comparison_refuses_empty_and_wrong_values [10 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.An_artifact_is_named_in_the_message_rather_than_dropped [30 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.A_courier_less_machine_is_byte_identical [13 ms]
+  Passed Conductor.Tests.DV4_3CourierSeamTests.A_run_with_no_courier_is_refused_by_name [7 ms]
+Total tests: 224
+
+Result: 224 passed, 0 failed (20 of them DV4_3CourierSeamTests, the rest the classes
+this checkpoint touched: DV4_1, DV4_2, DV1_1, DV2_3, DV3_1, DV3_4, KS11_1,
+ArchitectureBoundaryTests, SC72, Reporter, OwnerQueue).
+
+=== 3. WHERE EACH CLAIM IS IN THE CODE (measured, not read off a doc comment) ===
+
+loopback only, one named port, never scanned
+  src/Conductor.Core/Courier/CourierEndpoint.cs:27  DefaultPort = 47137 (below the Windows
+      dynamic range, clear of the control plane's 4317-4336 scan window)
+  src/Conductor.Core/Courier/CourierEndpoint.cs:63  PrefixFor -> "http://127.0.0.1:<port>/"
+  src/Conductor/Http/CourierListener.cs:61          TryStart binds ONE prefix; a taken port
+      returns false with a named refusal - there is no loop over ports anywhere in the file
+  proof step 7 dialled this machine's LAN address 192.168.1.235 and was not reached
+
+the per-install shared secret, and the FILE as the boundary
+  src/Conductor.Core/Courier/CourierSecret.cs:34   Resolve creates the file EMPTY, calls
+      Protect, and only then writes the bytes
+  src/Conductor.Core/Courier/CourierSecret.cs:114  ProtectWindows: inheritance broken,
+      owner set, one FullControl rule for this SID
+  src/Conductor.Core/Courier/CourierSecret.cs:126  WindowsComplaint reads the ACL BACK
+  proof step 3 read the ACL with Get-Acl (this script, not the engine): protected=True,
+      one identity, equal to this account's SID
+
+auth on every verb including the hello
+  src/Conductor/Http/CourierListener.cs:112  the secret check is the first thing in
+      HandleAsync, before the method/path switch - the hello has no exemption
+  src/Conductor.Core/Courier/CourierSecret.cs:64   FixedTimeEquals, the control plane's rule
+
+the hello IS the presence record
+  src/Conductor/Http/CourierListener.cs:123  GET /hello writes _presence(), a CourierPresence
+  src/Conductor.Core/Courier/CourierClient.cs:51  TryOpen calls CourierProtocol.RefuseStale
+      UNCHANGED - the DV4.2 sentence, asserted equal by
+      DV4_3CourierSeamTests.A_stale_courier_is_refused_by_the_same_rule_DV4_2_wrote
+
+CourierChannel on the IMessageChannel seam
+  src/Conductor.Core/Integrations/Messaging/CourierChannel.cs:17  implements IMessageChannel
+  src/Conductor.Core/Integrations/TelegramService.Channel.cs:67   EnqueueAsync hands over to
+      the courier when one is configured; null on a courier-less machine, so the queue below
+      is reached exactly as before
+
+precedence (findings 6.9)
+  src/Conductor.Core/Courier/CourierPrecedence.cs:43  PollingRefusal, keyed on CONFIGURATION
+  src/Conductor.Core/Integrations/TelegramService.Lifecycle.cs:37  StartCore decides BEFORE
+      IsConfigured; StartThroughCourier starts NEITHER loop
+
+byte-identical on a courier-less machine
+  src/Conductor.Core/Integrations/ChannelHealth.cs:121  Collect returns the same two channels
+      when no courier is configured and none is running
+  DV4_3CourierSeamTests.A_courier_less_machine_is_byte_identical asserts the roll-up is
+      exactly "telegram ready - github off", the poll loop is running and AllowsControl is true
+
+DV1.1 covers courier-down
+  src/Conductor.Core/Integrations/ChannelHealth.cs:191  ProbeCourier -> Dead, FixCommand is
+      CourierProtocol.RestartVerb
+  the three surfaces read the SAME probe: src/Conductor.Core/Reporter.Channels.cs:26
+      (REPORT.md), src/Conductor.Core/Integrations/Messaging/MessageComposer.Views.cs:66-67
+      (/status), src/Conductor.Core/OwnerQueue.cs:265 (the owner queue)
+  proof step 9 killed the daemon and `conductor report` wrote "courier DEAD" into REPORT.md
+      AND "courier is DEAD" plus the restart verb into the owner queue
+
+=== 4. WHAT IS NOT DONE HERE ===
+
+bug #76: the courier does not upload files. A push carrying an evidence artifact is
+delivered as its text plus a visible "not attached - it is at <path>" line
+(src/Conductor.Core/Integrations/TelegramCourierSource.cs:179), the shape TelegramService
+already uses for an artifact over the size limit. The wire already carries the path and the
+daemon is on the same machine, so the fix is small once TelegramService's multipart sender
+is extracted from _composer.Stamp / BasePayload / RememberAnchor.
+
+/status was proven through the roll-up string it prints (MessageComposer.Views.cs:67 formats
+ChannelHealthProbe.SummaryLine verbatim), not by driving a bot - that needs a live run with a
+messenger, which no rig here may have.

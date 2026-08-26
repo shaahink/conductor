@@ -237,6 +237,21 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
             return 1;
         }
 
+        // DV4.3, FOUND BY THE LIVE PROOF: there is exactly ONE courier per machine by construction -
+        // it owns the token, and the messenger allows one update consumer per token - and until this
+        // check existed nothing enforced it. A second `courier run` fought the first for updates AND
+        // overwrote its presence record with its own pid, then DELETED the record on its way out, so
+        // install.ps1 and every version handshake would have been reading a file that described a
+        // process that had already exited. Refused by name, with what is running.
+        if (CourierPresence.Live() is { } already)
+        {
+            AnsiConsole.MarkupLine("[red]error:[/] a courier is already running on this machine - "
+                + Markup.Escape(already.Describe()) + ".");
+            AnsiConsole.MarkupLine("[dim]Only one may hold the token. Stop it first: "
+                + "`conductor courier stop`, or restart it with `" + CourierProtocol.RestartVerb + "`.[/]");
+            return 1;
+        }
+
         using var factory = LoggerFactory.Create(b => b
             .SetMinimumLevel(LogLevel.Information)
             .AddSimpleConsole(o => { o.SingleLine = true; o.TimestampFormat = "HH:mm:ss "; }));
