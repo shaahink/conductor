@@ -68,3 +68,25 @@ observed there can change what the mirror decides to push, which is a pure funct
 The consequence is the one this ADR already accepts: dragging a card on GitHub changes nothing in the
 run. That is correct behaviour, not a gap. Two-way sync was considered and rejected at L6.3 (D-7); a
 board that could write back would be a second contract competing with the tracker.
+
+## Addendum — three more GitHub surfaces, same decision (DV6, 2026-08-26)
+
+Divan pushed the mirror onto three surfaces beyond issues, and none of them changes the shape above.
+
+- **Ledger issues** (DV6.1, `GithubBoardSync.Ledger.cs`) — bugs and followups become durable issues
+  with their own labels and markers, closed by the ledger with a comment rather than by the run
+  ending.
+- **Projects v2 columns** (DV6.2, `GithubProjectColumns.cs`, `GithubProjectSync.cs`, over GraphQL) —
+  a card's column is *set* from the fold. The board's field and option ids are read first, which is
+  the same identity resolution the addendum above already licenses, not ingress.
+- **Code-scanning alerts** (DV6.4, `GithubSarifSync.cs`) — open bugs that name a file and a line
+  become one SARIF run, uploaded to `/code-scanning/sarifs`.
+
+Two things are read back, and both answer "what would this write do", never "what should the run do":
+issue identity (above) and `GithubRepoInfo` — the repository read for one fact, private or not,
+consulted so a refused SARIF upload can say *why* rather than fail blind. `ArchitectureBoundary
+Tests.TheGithubMirrorNeverWritesRunState` still holds the line by file name for every one of them.
+
+The board snapshot (DV6.3) is not a GitHub surface at all: `board.html` is rendered locally and
+**pushed** as a Telegram document, which is this ADR's original prescription — a richer push — rather
+than an exception to it.
