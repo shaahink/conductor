@@ -92,3 +92,16 @@ is invisible to the replica** is not created and not lost — the close simply l
 "Closed by the commit that closes them": a bug row carries `fixed_session`, not a sha, so the closing
 comment names the **ledger** rather than a commit. Nothing in the store links a bug to the commit that
 fixed it; inventing one would be a guess dressed as provenance.
+
+## Final live run — all checks green
+
+With the settle step in place, `.conductor/bg-logs/dv61-live6-20260826-121217265.log` is clean end to
+end, including the two checks the lag had been hiding: **"the second pass creates NOTHING - every
+entry already has its issue"** and **"the CLOSED followup row's issue is CLOSED"**.
+
+```
+DV6.1 LIVE PROOF: all checks passed
+```
+
+The board it produced was kept for a human to read (private):
+`https://github.com/shaahink/dv61-ledger-scratch` — delete it whenever.
