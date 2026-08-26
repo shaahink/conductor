@@ -1,0 +1,3 @@
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:  3508, Skipped:     0, Total:  3508, Duration: 5 m 1 s - Conductor.Tests.dll (net10.0)

@@ -66,16 +66,23 @@ public sealed partial class SqliteRunStore
         var batch = new List<ConductorEvent>();
         while (!ct.IsCancellationRequested)
         {
-            batch.Clear();
-            while (_eventQueue.TryDequeue(out var evt))
-                batch.Add(evt);
-
-            if (batch.Count > 0)
+            // Never across the await: the gate is for the dequeue-to-commit window only, so a
+            // caller-side flush waits for a batch in flight and not for the 200ms cadence.
+            lock (_drainGate)
             {
-                try { PersistBatch(batch); }
-                catch (Exception ex) when (ex is SqliteException or ObjectDisposedException)
+                batch.Clear();
+                while (_eventQueue.TryDequeue(out var evt))
+                    batch.Add(evt);
+
+                DrainWindowProbe?.Invoke();
+
+                if (batch.Count > 0)
                 {
-                    _logger.LogError(ex, "Failed to persist {Count} events to run.db", batch.Count);
+                    try { PersistBatch(batch); }
+                    catch (Exception ex) when (ex is SqliteException or ObjectDisposedException)
+                    {
+                        _logger.LogError(ex, "Failed to persist {Count} events to run.db", batch.Count);
+                    }
                 }
             }
 
@@ -84,33 +91,59 @@ public sealed partial class SqliteRunStore
         }
 
         // Final drain
-        batch.Clear();
-        while (_eventQueue.TryDequeue(out var evt))
-            batch.Add(evt);
-        if (batch.Count > 0)
+        lock (_drainGate)
         {
-            try { PersistBatch(batch); }
-            catch (Exception ex) when (ex is SqliteException or ObjectDisposedException)
+            batch.Clear();
+            while (_eventQueue.TryDequeue(out var evt))
+                batch.Add(evt);
+            if (batch.Count > 0)
             {
-                _logger.LogError(ex, "Failed to persist final {Count} events on shutdown", batch.Count);
+                try { PersistBatch(batch); }
+                catch (Exception ex) when (ex is SqliteException or ObjectDisposedException)
+                {
+                    _logger.LogError(ex, "Failed to persist final {Count} events on shutdown", batch.Count);
+                }
             }
         }
     }
 
-    /// <summary>Drains and persists everything queued right now, on the caller's thread. Lets a
+    /// <summary>CH1.3. Taking a batch OUT of the queue and committing it is one indivisible step for
+    /// BOTH drainers. It was not, and the old comment here said the opposite — that the two paths
+    /// were safe alongside each other because each event lands exactly once. Each event does land
+    /// exactly once; that was never the promise being broken. The broken one is READ-AFTER-FLUSH:
+    /// the drain loop could dequeue a batch and be anywhere between <c>TryDequeue</c> and
+    /// <c>PersistBatch</c> when a flush arrived, and the flush would find an empty queue, persist
+    /// nothing, and return — telling its caller an event was durable while it sat in a list on
+    /// another thread. Measured on GitHub's windows runner, twice in a row, as
+    /// <c>KS1_2StagesFromFoldTests</c> reading a stage with no sessions out of a store that had
+    /// one; never once on the owner's machine, because the window is a few instructions wide and
+    /// only opens under real contention.</summary>
+    private readonly Lock _drainGate = new();
+
+    /// <summary>CH1.3 test seam, per store instance and null everywhere else: runs inside the gate
+    /// between the dequeue and the commit. The window this gate closes is a few instructions wide,
+    /// so provoking it by racing is hopeless on a fast machine — four attempts here stayed green
+    /// while GitHub's runner failed twice in a row. Widening it on purpose is the only way a test
+    /// can pin the guarantee instead of hoping to catch it.</summary>
+    internal Action? DrainWindowProbe { get; set; }
+
+    /// <summary>Drains and persists everything queued right now, on the caller's thread, and does
+    /// not return until any batch already in flight is committed too. That is what lets a
     /// control-plane write respond only once its event is durably readable, instead of racing the
-    /// 200ms drain cadence. Safe alongside the drain loop: both paths dequeue from the same queue
-    /// (each event lands exactly once) and <see cref="PersistBatch"/> serialises on one gate.</summary>
+    /// 200ms drain cadence.</summary>
     public void FlushEvents()
     {
-        var batch = new List<ConductorEvent>();
-        while (_eventQueue.TryDequeue(out var evt))
-            batch.Add(evt);
-        if (batch.Count == 0) return;
-        try { PersistBatch(batch); }
-        catch (Exception ex) when (ex is SqliteException or ObjectDisposedException)
+        lock (_drainGate)
         {
-            _logger.LogError(ex, "Failed to flush {Count} events to run.db", batch.Count);
+            var batch = new List<ConductorEvent>();
+            while (_eventQueue.TryDequeue(out var evt))
+                batch.Add(evt);
+            if (batch.Count == 0) return;
+            try { PersistBatch(batch); }
+            catch (Exception ex) when (ex is SqliteException or ObjectDisposedException)
+            {
+                _logger.LogError(ex, "Failed to flush {Count} events to run.db", batch.Count);
+            }
         }
     }
 
