@@ -1,0 +1,17 @@
+
+[xUnit.net 00:00:00.63]     Conductor.Tests.SF7_1DocsMatchRealityTests.TheOperatorCommandReferenceNamesEverySubverbToo [FAIL]
+[xUnit.net 00:00:00.65]     Conductor.Tests.SF7_1DocsMatchRealityTests.RemovingOneDocumentedSubverbMakesTheDerivationNameThatExactPair [FAIL]
+[xUnit.net 00:00:00.67]     Conductor.Tests.SF7_1DocsMatchRealityTests.TheCliReferenceNamesEverySubverbACommandDispatchesOn [FAIL]
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.TheOperatorCommandReferenceNamesEverySubverbToo [24 ms]
+  Error Message:
+   docs/operating.md section 2 never names 4 subverb(s): courier install, courier restart, courier stop, courier uninstall - section 2 is the reference an agent driving conductor is handed, and a lifecycle it cannot see is a lifecycle it will not use.
+     at Conductor.Tests.SF7_1DocsMatchRealityTests.TheOperatorCommandReferenceNamesEverySubverbToo() in C:\Code\conductor\tests\Conductor.Tests\SF7_1DocsMatchRealityTests.Subverbs.cs:line 69
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.RemovingOneDocumentedSubverbMakesTheDerivationNameThatExactPair [27 ms]
+  Error Message:
+     at Conductor.Tests.SF7_1DocsMatchRealityTests.RemovingOneDocumentedSubverbMakesTheDerivationNameThatExactPair() in C:\Code\conductor\tests\Conductor.Tests\SF7_1DocsMatchRealityTests.Subverbs.cs:line 84
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.TheCliReferenceNamesEverySubverbACommandDispatchesOn [14 ms]
+  Error Message:
+   docs/cli.md never names 1 subverb(s) the engine dispatches on: inbox parked - give each one a mention on its verb's row. AddCommand<T>("verb") does not see these, so no other bar in this suite can.
+     at Conductor.Tests.SF7_1DocsMatchRealityTests.TheCliReferenceNamesEverySubverbACommandDispatchesOn() in C:\Code\conductor\tests\Conductor.Tests\SF7_1DocsMatchRealityTests.Subverbs.cs:line 53
+Failed!  - Failed:     3, Passed:     0, Skipped:     0, Total:     3, Duration: 62 ms - Conductor.Tests.dll (net10.0)
+

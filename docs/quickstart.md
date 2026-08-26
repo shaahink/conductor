@@ -367,6 +367,22 @@ conductor run -p conductor.plan.json
 
 ## 14. What to do when...
 
+### ...you think of something while the run is not running
+
+Send it to the bot anyway. With the **courier** installed
+(`conductor courier install` — see [operating.md](operating.md)), one always-awake process owns the
+token and files the note into the project it is about, whether or not anything is running. The next
+session reads it as the last block of its prompt, framed as the owner's words rather than the
+engine's. `conductor inbox` shows what has arrived.
+
+A note is context, never a command: it does not move the run, and turning one into work is a
+deliberate act. Voice notes are transcribed by a local command you configure, and nothing in
+`.conductor/inbox/` is ever committed.
+
+One limit worth knowing before you rely on it: Telegram discards an undelivered message after **24
+hours**, so a note sent to a machine that is off all weekend is gone by Monday — dropped there, not
+here.
+
 ### ...a gate fails
 ```powershell
 # Re-run the battery without spawning an agent:

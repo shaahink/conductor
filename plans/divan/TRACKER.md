@@ -1,20 +1,22 @@
-# Divan - the chancellery: inbox, courier, and the record that gets out Phase Tracker
+﻿# Divan - the chancellery: inbox, courier, and the record that gets out Phase Tracker
 
 **Plan:** Divan - the chancellery: inbox, courier, and the record that gets out | **Branch:** `feat/divan` | **Design doc:** docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV6 is closed and now GREEN. The battery after s19 was red on ONE assertion of 3468:
-  GithubSarifDtos.cs declared 4 types against a hard maxTypesPerFile of 3. The SARIF feature was
-  never wrong — the file was. GithubRepoInfo is not a SARIF document, it is the repository read the
-  upload path consults to say WHY code scanning refused, so it came out into its own file (99f1b5a).
-find: architecture-baseline.json is EMPTY — {} for BOTH ceilings. There is no debt slot to widen,
-  so any new file in src/ gets 3 types and 500 lines, full stop. src/Conductor.Core/Integrations/
-  Github/ is already one-type-per-file; follow it and this never bites again. Proof: ArchitectureTests
-  7/7, the Sarif|Github set 57/57, and both ratchets re-measured across all of src — nothing over
-  either. No test touched, no ceiling raised, no baseline entry bought.
-next: DV7.1 — the internal record. DV6 added a courier, an inbox, the board page and the SARIF verb.
-red: bug #82 (no 202 ever seen; the public leg is one command at DV7.3), #81, #80, #79, #76.
+last: DV7.1 DONE (claimed). ADR-0008 for the courier + a 2nd addendum on 0005; ARCHITECTURE
+  reconciled - seams 10->13, surfaces 2->4, "nothing is ever read back" corrected, and a new
+  top-level section for the daemon. Closure ledger in .conductor/followups.md adds ZERO `| FU-`
+  rows (bug #81) - 91 before, 91 after. Budget re-measured: TOKEN-BUDGET-TUNING §13.
+find: use `budget --home <dir> --repo <repo>` over a sqlite3 .backup copy - KS12.1 called the
+  positional-db arg "the only seam"; --home is better and never opens the live file. The NEXT era
+  compiles against 42M / 0.9 and 19M / $14.50 per checkpoint (two eras running the basis came in low).
+next: DV7.2 is delivered EXCEPT one item - the payesh harvest re-run in C:/code/conductor-site, on a
+  BRANCH with a PR, never main. That is the single next action; everything else in the card is landed
+  (see the amendment on the card, and .conductor/evidence/DV7/dv7-2-published-surface.md).
+  New bar: Subverbs.cs pins 29 (verb,subverb) pairs AddCommand<T> cannot see, proven red on a seeded
+  stale doc. CHANGELOG Unreleased now carries BOTH eras - the split-or-single release call is yours.
+red: #82, #81, #80, #79, #76, #75 (note stores only the first line - cost this session 3 notes).
 
 ## Baseline numbers (from run.db)
 
@@ -77,7 +79,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | DONE | 8d14fe5 | .conductor/evidence/DV6/dv6-1-ledger-issue-class.md |
 | DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | DONE | d1e5b0e | .conductor/evidence/DV6/dv6-2-the-columns.md |
 | DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | DONE | e17f09b | .conductor/evidence/DV6/dv6-3-the-page.md |
-| DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | DONE | 7a336e3 | .conductor/evidence/DV6/dv6-4-sarif.md |
+| DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | DONE | 7a336e3 | .conductor/evidence/DV6/dv6-4-ratchet-fix.md |
 
 ### DV7 — Ship Divan - close the era
 

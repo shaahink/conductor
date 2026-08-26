@@ -22,6 +22,64 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ### Added
 
+- **The courier — one bot, always awake.** Until now the Telegram poll loop lived exactly as long as
+  the run that owned it, so a note sent to a machine with nothing running reached nobody. `conductor
+  courier install` registers a per-user scheduled task (logon trigger, restart-on-failure, no admin
+  rights) for a machine-level daemon that owns the bot token, polls whether or not a run is live, and
+  files each note into the project it is about — from an **explicit allowlist**, never the whole
+  state catalogue. `status`, `run`, `restart`, `stop`, `uninstall`, `allow`, `deny`, `chat`,
+  `unchat` complete the lifecycle. The poll offset is durable, so a courier killed between receiving
+  and acknowledging files the note exactly once on restart instead of replaying everything Telegram
+  still holds. Its handover port is loopback-only on a fixed named port with a per-install shared
+  secret, and it accepts notes — never run state. A run that speaks a newer protocol refuses a stale
+  courier **by name**, naming `conductor courier restart`. The honest limit is documented rather than
+  hidden: Telegram discards an undelivered update after 24 hours, so the courier turns "no run is
+  live" into "the machine is on" and cannot do better from one machine. See ADR-0008.
+- **The inbox — what the owner said, as context a session reads.** A filed note lands in that
+  project's `.conductor/inbox/` and reaches the next session as the **last** block of its prompt:
+  the engine's own knowledge first, the human's words last and framed. Only what actually fit is
+  marked seen — the remainder is counted in one line and reaches the session after that, so a
+  long-lived project's battery cannot grow without bound and nothing is skipped. `conductor inbox`
+  reads it (`list`, `show`, `add`, `transcribe`, `parked`, `prune`); `prune` is the only thing in
+  conductor that deletes a note, and it refuses to run without being told which. **Nothing in the
+  inbox moves a run** — promotion into a followup or a task is a deliberate act, one button or one
+  verb. Transcripts are never committed: `.conductor/.gitignore` is deny-by-default and the inbox
+  gets no allowlist entry, which on a public repo is the whole difference.
+- **Voice notes become words, locally.** `courier.transcribe.command` (or
+  `CONDUCTOR_TRANSCRIBE_COMMAND` for a machine with no plan in front of it) shells out to a command
+  you choose — `tools/transcribe/whisper-json.py` is a local faster-whisper wrapper this repo ships,
+  so audio never leaves the machine. Per-segment confidence below `confidenceFloor` (default 0.45)
+  is marked in the stored note. With no command configured the note still files and the audio is
+  still kept; the reply says it was not transcribed rather than dropping it silently.
+- **A dead-letter box.** A note for a project that has moved, been deleted or was never allowed is
+  parked under the state home and the sender is told by name. `conductor inbox parked` lists them.
+  Nothing is discarded on a routing miss.
+- **`/cloud` — a session on Anthropic's infrastructure, owner-only.** Following up on an existing
+  cloud session is headless, so conductor drives it and brings the answer back to the chat; creating
+  one is interactive-only on today's CLI and is refused with the platform's own words plus the exact
+  command to type, rather than by faking a TTY. Creating preflights git first — a cloud agent clones
+  from the **remote** — with six verdicts (nothing to clone, detached head, dirty tree with the
+  count and the files, no upstream, branch missing on the remote, remote tip differing from local
+  `HEAD`), each quoting the state that produced it, in the chat. Cost is always reported as a word
+  and never as a number, because there is no per-turn telemetry out there.
+- **An opt-in cloud review lane.** The `cloud` plan block runs a per-session review out there
+  alongside the local analysis lanes. **Off by default, with deliberately no environment override**
+  to switch it on by accident, bounded by `timeoutMinutes` (default 30, 1–240). The referee never
+  moves: every gate still runs on your machine and nothing the cloud says confirms a checkpoint.
+- **Tracked bugs and followups become durable GitHub issues.** They get their own labels and markers,
+  are created only while open, and are closed by the ledger with a comment rather than by the run
+  ending. The daily digest gains the ledger line.
+- **Projects v2 columns.** `conductor github sync --project <n>` drives a Projects v2 board's columns
+  from the same fold that writes the issues. It needs a token carrying the `project` scope and says
+  so by name when it does not have one — `gh auth refresh -s project` is the one-command fix.
+- **`conductor github sarif` — bugs as code-scanning alerts.** Every open tracked bug that names a
+  file and a line becomes one SARIF run uploaded to GitHub code scanning, so a defect the run already
+  knows about appears where a reviewer is looking. Free on a public repository; a private one needs
+  GitHub Advanced Security, and without it the upload is refused **by name**, quoting the repository
+  it read, rather than failing blind. `--out` writes the SARIF and uploads nothing.
+- **The board as one page for a phone.** `board.html` is a self-contained snapshot rendered from the
+  control plane's own contracts at each boundary and pushed as a Telegram document. It states its own
+  staleness at the top. Nothing inbound.
 - **Chat profiles — `admin` and `observer`.** `telegram.chats` gives each chat a profile, so a
   stakeholder can be put in a chat the bot serves without also being handed `/inject` and the
   control verbs. A plan carrying only `allowedChatIds` behaves exactly as before; an unknown profile
@@ -74,6 +132,20 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ### Changed
 
+- **The bot token moves to the courier, where one is installed.** Telegram allows exactly one
+  `getUpdates` consumer per token, so a run polling alongside a courier would fight it for updates.
+  Where a courier is configured, in-run polling refuses to start and names the courier; the run
+  pushes through it instead. **A machine with no courier behaves byte-identically to before**, pinned
+  by golden replay rather than asserted.
+- **`tools/install.ps1` stops the courier and puts it back.** A running courier holds the published
+  exe open, so the publish would fail on a file lock — and a courier left down is a bot that stops
+  answering, while a courier not restarted keeps running the old engine indefinitely, precisely
+  because it is built to outlive everything else. The installer now owns both halves and warns
+  loudly if the restart did not take.
+- **The prompt batteries are bounded, and say so.** `batteries.ledgerMaxEntries` and
+  `batteries.maxBytes` cap what the knowledge ledger contributes to a prompt. An unbounded ledger was
+  measured starving the open-bugs battery out of the prompt entirely, which is a run whose sessions
+  cannot see the defects they are meant to avoid.
 - **The messenger seam.** Message composition, chat profiles and the command surface are now defined
   without knowing which messenger will carry them (`Conductor.Core.Integrations.Messaging`:
   `IMessageChannel`, `MessageComposer`, `CommandRouter`, `RemoteSurface`); `TelegramService` is the
@@ -123,6 +195,26 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ### Fixed
 
+- **A prompt battery could be truncated to nothing.** `BatteryGroup.Render` clipped the
+  *concatenation* rather than each block, so whichever battery happened to sort last vanished
+  silently; and the open-bugs battery dropped every bug past the twelfth with no line saying it had.
+  Both are the same failure — a session that cannot see what it was given, and no signal that
+  anything was withheld.
+- **Budget counters restarted at zero on every engine process start**, so a resumed run measured
+  itself against a ceiling it had already spent.
+- **A stage-boundary squash could silently rewind the branch.**
+- **A rate-limit storm could burn a stage's whole attempt budget in minutes**, turning a transient
+  429 into an exhausted stage.
+- **Two engines on one bot token looped on 409 conflicts.** Closed by the courier owning the token —
+  one consumer per token, by construction.
+- **A composed prompt over roughly 8,191 characters silently stopped a `cmd.exe` agent**, and nothing
+  warned when a plan's packs pushed it over the argv ceiling; `doctor`'s argv lint under-measured the
+  real spawn because it did not count the batteries.
+- **Telegram diagnostics on an empty chat list.** The startup line counted the wrong collection, and
+  `POST /telegram/test` indexed the first configured chat without checking there was one.
+- **`report push failed:` logged with an empty reason**, so a repeated failure said nothing about
+  itself.
+- **A brand-new `run.db` logged a foreign-key constraint failure on first write.**
 - **An unattended run under a restricted permission posture could silently lose its own claim path.**
   Probed against the shipped agent CLI rather than assumed: an allowlist profile cannot replace
   `--dangerously-skip-permissions` for this workload, and the finding is filed with the exact refusal
