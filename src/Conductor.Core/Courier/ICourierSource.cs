@@ -16,8 +16,11 @@ namespace Conductor.Core.Courier;
 /// source is what knows which chats this machine listed. Null means the chat is not listed at all.</param>
 /// <param name="Command">The text of a slash command, without the slash, or null when this is a
 /// note. A command and a note are different things: one steers the courier, the other is filed.</param>
+/// <param name="Callback">DV4.4 — a button press rather than a message. Null for everything else.
+/// Its own field rather than a synthetic note: a note is filed and a press is acted on, and giving
+/// the daemon one type for both is how a button ends up in an inbox.</param>
 public sealed record CourierDelivery(long UpdateId, InboundNote? Note, ChatProfile? Profile,
-    string? Command = null)
+    string? Command = null, CourierCallback? Callback = null)
 {
     /// <summary>An update the courier will not act on — an unlisted chat, or a kind it has no use
     /// for. It is still a DELIVERY, and that is the point: the daemon has to advance its offset past
@@ -25,9 +28,29 @@ public sealed record CourierDelivery(long UpdateId, InboundNote? Note, ChatProfi
     /// is deliberate — a bot that argues with a stranger has told them it exists.</summary>
     public static CourierDelivery Ignored(long updateId) => new(updateId, null, null);
 
+    /// <summary>A button press this source understood, off the wire and answered.</summary>
+    public static CourierDelivery Pressed(long updateId, ChatProfile profile, CourierCallback press) =>
+        new(updateId, null, profile, null, press);
+
     /// <summary>Whether there is anything here to file or answer.</summary>
-    public bool Actionable => Note is not null && Profile is not null;
+    public bool Actionable => (Note is not null || Callback is not null) && Profile is not null;
 }
+
+/// <summary>DV4.4 — one inline-keyboard press, as the seam sees it.
+///
+/// <para>It exists because the courier could not see one at all: an update carrying a
+/// <c>callback_query</c> has no <c>message</c>, the adapter's delivery reader returned Ignored, and
+/// the offset advanced past it. Every promote button the courier hung on an acknowledgement was
+/// therefore decorative — pressed, silently discarded, and never answered. Telegram permits ONE
+/// getUpdates consumer per token, so on a machine where the courier owns the token there is no other
+/// component that could have picked it up.</para></summary>
+/// <param name="Id">The <c>callback_query_id</c>. The Bot API requires it be answered or the client
+/// spins its progress ring for a minute; the adapter owns that obligation, not the daemon.</param>
+/// <param name="ChatId">Where the answer goes — the presser, which is not always the chat the
+/// keyboard was posted in.</param>
+/// <param name="Data">The payload this side put on the button.</param>
+/// <param name="ThreadId">The forum topic the keyboard was posted in, so the answer lands there.</param>
+public sealed record CourierCallback(string Id, string ChatId, string Data, long? ThreadId = null);
 
 /// <summary>DV4.1 — where the courier's messages come from, and where its answers go.
 ///
@@ -55,7 +78,11 @@ public interface ICourierSource
     /// <summary>Answers one chat. Every path through the daemon ends in one of these or in a
     /// deliberate, documented silence — an unlisted chat, and a replay that was answered the first
     /// time.</summary>
-    Task ReplyAsync(string chatId, string text, long? threadId, CancellationToken ct);
+    /// <param name="buttons">DV4.4 — the promote button that rides an acknowledgement. Optional so
+    /// every existing caller is unchanged; a source that cannot draw one may ignore it, and the text
+    /// still says what happened.</param>
+    Task ReplyAsync(string chatId, string text, long? threadId, CancellationToken ct,
+        IReadOnlyList<CourierButton>? buttons = null);
 
     /// <summary>DV4.3 — delivers one push handed over by a live run across the loopback seam, and
     /// returns null when it went out or the reason it did not.

@@ -237,6 +237,16 @@ public sealed class LaneCoordinator
 
         foreach (var entry in entries)
         {
+            // DV4.4 — a row promoted from the inbox names no stage, because the courier that wrote it
+            // had no run. The first stage to reach it takes ownership BEFORE the lane runs: claimed
+            // after, a lane that crashed would leave the row unclaimed and it would open again at the
+            // next boundary, and the one after that, forever.
+            if (FollowupParser.Unclaimed(entry))
+            {
+                FollowupParser.ClaimStage(followupsPath, entry.Id, stageId);
+                _log($"fix-lane '{entry.Id}' was promoted from the inbox with no stage — claimed by {stageId}");
+            }
+
             var lane = FollowupEntryToMutatingLane(entry);
             _log($"fix-lane '{entry.Id}' starting — {entry.Item}");
 

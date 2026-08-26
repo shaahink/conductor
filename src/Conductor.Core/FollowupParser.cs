@@ -76,7 +76,53 @@ public static class FollowupParser
     {
         return Read(filePath).Where(e =>
             e.Status.Equals("OPEN", StringComparison.OrdinalIgnoreCase) &&
-            e.OwningStage.Contains(stageId, StringComparison.OrdinalIgnoreCase)).ToList();
+            (e.OwningStage.Contains(stageId, StringComparison.OrdinalIgnoreCase) || Unclaimed(e))).ToList();
+    }
+
+    /// <summary>DV4.4 — a row whose owning stage is the literal <c>next</c>: it belongs to whichever
+    /// stage is confirmed first, because whoever wrote it had no run to name.
+    ///
+    /// <para>Exact match, not substring, and that is the whole of the safety: "B12 fix-lane, next
+    /// era" would otherwise become a row that opens a lane at every stage boundary in the plan. The
+    /// stage that picks one up rewrites the cell (<see cref="ClaimStage"/>), so it fires once.</para></summary>
+    public static bool Unclaimed(FollowupEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return entry.OwningStage.Trim().Equals("next", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Writes a concrete stage id into an unclaimed row's owning-stage cell. Returns true
+    /// when a row was rewritten.
+    ///
+    /// <para>Separate from <see cref="UpdateStatus"/> because it runs BEFORE the work rather than
+    /// after it: an unclaimed row that is claimed and then fails its lane must not come back at the
+    /// next stage boundary as though nobody had ever tried.</para></summary>
+    public static bool ClaimStage(string filePath, string id, string stageId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(stageId);
+        if (!File.Exists(filePath)) return false;
+
+        var lines = File.ReadAllLines(filePath, Encoding.UTF8);
+
+        for (var j = 0; j < lines.Length; j++)
+        {
+            var trimmed = lines[j].Trim();
+            var cells = SplitPipeRow(trimmed);
+            var idIdx = FindIdIndex(trimmed);
+            if (idIdx < 0 || idIdx >= cells.Length || !cells[idIdx].Equals(id, StringComparison.Ordinal))
+                continue;
+
+            var stageIdx = FindStageIndexNear(lines, j);
+            if (stageIdx < 0 || stageIdx >= cells.Length) return false;
+            if (!cells[stageIdx].Equals("next", StringComparison.OrdinalIgnoreCase)) return false;
+
+            cells[stageIdx] = " " + stageId + " ";
+            lines[j] = "|" + string.Join("|", cells) + "|";
+            File.WriteAllText(filePath, string.Join("\n", lines) + "\n", Encoding.UTF8);
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -148,7 +194,14 @@ public static class FollowupParser
         int? id = null, item = null, detail = null, stage = null, status = null;
         for (var i = 0; i < cells.Length; i++)
         {
-            var c = cells[i];
+            // DV4.4 — lower-cased first, and that is a FIX rather than a tidy-up. Header DETECTION
+            // is case-insensitive (see cellEq above) but this mapping was not, so the header
+            // VerdictEngine's audit writer emits — "| Id | Item | Stage | Status |" — was recognised
+            // as a header and then mapped to no id column at all. Every row beneath it was skipped
+            // for want of one, including every row in every LATER section, because the mapping
+            // persists until the next header replaces it. Audit followups have therefore never
+            // opened a fix lane. Widening the match can only make rows visible; it cannot lose one.
+            var c = cells[i].ToLowerInvariant();
             if (c is "id") id = i;
             else if (c is "rule" or "item") item = i;
             else if (c is "detail" or "sites" or "why deferred" or "location") detail = i;
@@ -167,6 +220,25 @@ public static class FollowupParser
         for (var i = 0; i < cells.Length; i++)
             if (cells[i].StartsWith("FU-", StringComparison.Ordinal))
                 return i;
+        return -1;
+    }
+
+    /// <summary>The owning-stage column for the row at <paramref name="row"/>, from the nearest
+    /// header above it. Stops at a <c>##</c> heading: each section re-declares its own columns, and
+    /// borrowing the mapping from the section above would rewrite the wrong cell. Returns -1 when
+    /// there is no header to trust — which makes <see cref="ClaimStage"/> refuse rather than guess.</summary>
+    private static int FindStageIndexNear(string[] allLines, int row)
+    {
+        for (var j = row - 1; j >= 0; j--)
+        {
+            var line = allLines[j].Trim();
+            if (line.StartsWith("##", StringComparison.Ordinal)) return -1;
+            if (!line.StartsWith('|') || !line.EndsWith('|')) continue;
+            var cells = SplitPipeRow(line);
+            if (!cellEq(cells, 0, "id")) continue;
+            var (_, _, _, stage, _) = MapHeader(cells);
+            if (stage is { } s) return s;
+        }
         return -1;
     }
 

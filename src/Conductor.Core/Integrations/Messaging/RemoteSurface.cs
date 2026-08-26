@@ -296,6 +296,10 @@ public sealed partial class RemoteSurface
                 await SelectProjectAsync(chatId, threadId, outcome.Text ?? "", ct).ConfigureAwait(false);
                 return;
 
+            case SurfaceAction.Promote:
+                await PromoteAsync(chatId, outcome.Text ?? "", ct).ConfigureAwait(false);
+                return;
+
             case SurfaceAction.Onboard:
                 await ForceOnboardAsync(chatId, profile, ct).ConfigureAwait(false);
                 return;

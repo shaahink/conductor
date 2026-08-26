@@ -155,6 +155,22 @@ public sealed class CourierDaemon
 
     private async Task<DeliveryOutcome> HandleAsync(CourierDelivery delivery, CancellationToken ct)
     {
+        // DV4.4 — a button press. Before the note branch because a press carries no note at all, and
+        // its own admin gate: the surface's rule is that a callback is refused for every non-admin
+        // profile by name, and a courier serving several chats from one bot must apply it too.
+        if (delivery is { Callback: { } press, Profile: { } presser })
+        {
+            if (presser != ChatProfile.Admin)
+            {
+                await _source.ReplyAsync(press.ChatId,
+                    "That button is not part of the observer surface.", press.ThreadId, ct).ConfigureAwait(false);
+                return DeliveryOutcome.Other;
+            }
+
+            await PromoteAsync(press, ct).ConfigureAwait(false);
+            return DeliveryOutcome.Other;
+        }
+
         // Nothing here for a courier — an unlisted chat, or an update kind it has no use for. The
         // offset still advances past it in PollOnceAsync, which is what stops it being fetched again
         // on every poll for the next 24 hours.
@@ -217,9 +233,52 @@ public sealed class CourierDaemon
             return DeliveryOutcome.Duplicate;
         }
 
-        await ReplyAsync(note, ack + "\n" + InboundAck.FiledAgainst(route.Describe()), ct)
+        await ReplyAsync(note, ack + "\n" + InboundAck.FiledAgainst(route.Describe()), ct,
+            [new CourierButton(NotePromoter.ButtonText, NotePromoter.Callback(project.Slug, id))])
             .ConfigureAwait(false);
         return DeliveryOutcome.Filed;
+    }
+
+    /// <summary>DV4.4 — one press of the promote button, on the path where NO run is alive.
+    ///
+    /// <para>The daemon has no plan, no stage and no current run, so the row it writes is owned by
+    /// <c>next</c>: the first stage that project confirms claims it. That is the whole reason the
+    /// token exists — a note filed at midnight, promoted at midnight, and made into work by whichever
+    /// stage happens to be running when the machine is next asked to do something.</para>
+    ///
+    /// <para>Note the rung it stops at. There is no branch here that writes an injection, and there
+    /// is no injection API on anything this method can reach: §1.8's compound failure needs a path
+    /// from a transcript to a running agent's prompt, and the courier is the component that would
+    /// otherwise have one, because it is awake when nothing is watching.</para></summary>
+    private async Task PromoteAsync(CourierCallback press, CancellationToken ct)
+    {
+        if (!NotePromoter.TryParse(press.Data, out var slug, out var noteId))
+        {
+            // A payload this side never wrote. Answered rather than ignored: the press already got
+            // its answerCallbackQuery, and silence after that reads as a bot that broke.
+            await _source.ReplyAsync(press.ChatId,
+                "The courier does not know that button.", press.ThreadId, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var project = slug is { Length: > 0 }
+            ? _router.Projects.Resolve(slug).Project
+            : _router.Route(press.ChatId, press.ThreadId, null).Project;
+
+        if (project is null)
+        {
+            await _source.ReplyAsync(press.ChatId,
+                "Cannot promote: no project on this machine matches that note. "
+                + "This machine has: " + MessageComposer.EscapeHtml(_router.Projects.Listed()),
+                press.ThreadId, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var outcome = NotePromoter.Promote(project.Inbox(), noteId, stageId: null);
+        _log($"courier: {outcome.Result} — note {noteId.ToString(CultureInfo.InvariantCulture)} "
+           + $"of {project.Name}{(outcome.RowId is { } row ? " is " + row : "")}");
+
+        await _source.ReplyAsync(press.ChatId, outcome.Message, press.ThreadId, ct).ConfigureAwait(false);
     }
 
     /// <summary>The acknowledgement for a note that is words only. <see cref="InboundAck.For"/>
@@ -299,8 +358,9 @@ public sealed class CourierDaemon
         }
     }
 
-    private Task ReplyAsync(InboundNote note, string text, CancellationToken ct) =>
-        _source.ReplyAsync(note.ChatId, text, note.MessageThreadId, ct);
+    private Task ReplyAsync(InboundNote note, string text, CancellationToken ct,
+        IReadOnlyList<CourierButton>? buttons = null) =>
+        _source.ReplyAsync(note.ChatId, text, note.MessageThreadId, ct, buttons);
 
     /// <summary>The note as the store holds it, filed under the DELIVERY's id. <c>RemoteSurface</c>
     /// makes the same record for the same reason: the id is the dedup key, so the two producers must

@@ -4,23 +4,23 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV4.3 landed and is claimed. The courier serves CourierPresence over a loopback-only
-  listener on ONE named port (47137, never scanned), gated by a per-install secret in the state
-  home whose file is ACL'd to this account alone. CourierChannel is on the IMessageChannel seam;
-  TelegramService.StartCore now refuses to POLL when a courier is configured and pushes through
-  it instead - neither loop runs in courier mode. ChannelHealthProbe.ProbeCourier makes a killed
-  daemon loud in REPORT.md and the owner queue (both proven live).
-find: the live proof found what tests could not - NOTHING stopped a second courier: it fought
-  the first for updates and clobbered then DELETED its presence record. RunAsync refuses by name
-  now. KS11.1's seam test caught a real leak: the precedence refusal named the messenger in a
-  STRING LITERAL. Two rig traps are in the ledger (Stop-Job on a blocked GetContext, and
-  ErrorDetails vs the response stream) - both made a working proof look like a stall.
-next: DV4.4 promotion - a button on the acknowledgement turns a note into a followups.md row and
-  a Tier-B lane; auto-inject REFUSED by design with a negative test; filing stays admin-only.
-  Rig: tools/dv4/dv4-3-live-proof.ps1 (its bot stub and Http helper are worth copying).
-red: none. Open in scope: bug #76 - the courier does not upload files; a push with an artifact
-  is delivered as text NAMING the path, the wire already carries it.
-
+last: DV4.4 landed and is claimed. Every acknowledgement of a filed note - in-run AND courier -
+  carries one Promote button; the press writes a parser-round-tripping followups.md row that
+  LaneCoordinator turns into a real Tier-B lane (proven with a real git repo, agent, merge gate
+  and CLOSED row). The courier writes `next` for the owning stage because it has no run; the first
+  stage to reach the row CLAIMS it, so it fires once. Auto-inject refused by design, asserted as
+  an absence in source and in behaviour. 17/17 DV4_4 tests green.
+find: two defects the tests found, both real. (1) The courier could not see a button press AT ALL:
+  a callback_query update has no `message`, DeliveryOfAsync returned Ignored and the offset
+  advanced past it - on a courier-owned token nothing else could pick it up. (2) bug #78, fixed:
+  FollowupParser.MapHeader matched columns case-sensitively while header detection did not, so
+  every row under the audit writer's `| Id | Item | Stage | Status |` was dropped - audit
+  followups have never opened a lane. Trap: followups.md's LAST section owns any EOF append.
+next: DV5.1 - the /cloud admin verb. Verify its flags against the installed claude FIRST (trap 16).
+red: bug #77 - DV3_3 Prune_is_the_only_code_that_deletes_an_inbox_file is RED and was RED on
+  a179857 with this work stashed (offenders: CourierDaemon.Discard, CourierPresence.Clear; the
+  sweep's allowlist predates both). Not fixed here on purpose. Bug #76 (courier uploads no files)
+  still open.
 
 ## Baseline numbers (from run.db)
 
@@ -28,7 +28,7 @@ red: none. Open in scope: bug #76 - the courier does not upload files; a push wi
 |---|---|
 | Total checkpoints | 23 |
 | Done | 10 |
-| Claimed (unconfirmed) | 2 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -66,7 +66,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | DV4.1 | The daemon: conductor courier owns the token, polls always, routes to per-project inboxes via an explicit allowlist; durable poll offset in the state home plus update_id dedup - kill the courier between receive and acknowledge, restart, and the note files exactly once; the 24-hour Telegram retention limit stated in docs | DONE | b0cc449 | .conductor/evidence/DV4/dv4-1-courier-daemon.md |
 | DV4.2 | Lifecycle: courier install / uninstall / restart / status as a per-user Scheduled Task with restart-on-failure; tools/install.ps1 stops and restarts a running courier; version handshake at the loopback hello refuses a stale courier by name, naming the restart command; live proof registers a scratch-named task and unregisters it - the real install is the owner's at DV7.3 | DONE | 962d6bc | .conductor/evidence/DV4/dv4-2-lifecycle.md |
-| DV4.3 | The seam: loopback-only listener, per-install shared secret file-permission-protected, own named port; CourierChannel on IMessageChannel so live runs push through the daemon; when a courier is configured, in-run polling refuses to start and names it; courier-less machines byte-identical by golden replay; killing the daemon makes a live run's REPORT.md, /status and owner queue all say so within one boundary | TODO | - | - |
+| DV4.3 | The seam: loopback-only listener, per-install shared secret file-permission-protected, own named port; CourierChannel on IMessageChannel so live runs push through the daemon; when a courier is configured, in-run polling refuses to start and names it; courier-less machines byte-identical by golden replay; killing the daemon makes a live run's REPORT.md, /status and owner queue all say so within one boundary | DONE | 5544cff | .conductor/evidence/DV4/dv4-3-loopback-seam.txt |
 | DV4.4 | Promotion: note to followups.md row to Tier-B lane by an explicit button on the acknowledgement; auto-inject from an inbox note refused by design with a negative test proving no code path does it; filing stays admin-only | TODO | - | - |
 
 ### DV5 — The cloud, the safe shapes - an owner verb, a flagged experiment

@@ -432,7 +432,8 @@ public sealed class DV4_1CourierTests : IDisposable
         public Task<IReadOnlyList<CourierDelivery>> FetchAsync(long offset, CancellationToken ct) =>
             inner.FetchAsync(offset, ct);
 
-        public Task ReplyAsync(string chatId, string text, long? threadId, CancellationToken ct) =>
+        public Task ReplyAsync(string chatId, string text, long? threadId, CancellationToken ct,
+            IReadOnlyList<CourierButton>? buttons = null) =>
             throw new KilledException();
 
         public Task<string?> SendAsync(CourierPush push, CancellationToken ct) =>

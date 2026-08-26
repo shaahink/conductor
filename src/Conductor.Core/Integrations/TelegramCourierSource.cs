@@ -98,6 +98,32 @@ public sealed class TelegramCourierSource : ICourierSource, IDisposable
     /// because a bot that argues with a stranger has told them it exists.</para></summary>
     private async Task<CourierDelivery> DeliveryOfAsync(TgUpdate update, CancellationToken ct)
     {
+        // DV4.4 — a press, not a message. Until this branch existed a callback_query had no
+        // update.Message, fell straight through to Ignored, and the offset advanced past it: every
+        // button the courier drew was decorative. Answered HERE rather than in the daemon because
+        // answerCallbackQuery is a Bot API obligation about a wire id, and the daemon must not learn
+        // what a wire id is.
+        if (update.CallbackQuery is { } cb)
+        {
+            var from = cb.Message?.Chat?.Id.ToString(CultureInfo.InvariantCulture)
+                    ?? cb.From?.Id.ToString(CultureInfo.InvariantCulture);
+            await AnswerCallbackAsync(cb.Id, ct).ConfigureAwait(false);
+
+            if (_settings.ProfileFor(from) is not { } pressed)
+            {
+                _log.LogDebug("Courier ignored a button press from unlisted chat {Chat}", from ?? "none");
+                return CourierDelivery.Ignored(update.UpdateId);
+            }
+
+            // The answer goes to the PRESSER, which in a group is not the chat the keyboard is in.
+            var answerTo = cb.From?.Id.ToString(CultureInfo.InvariantCulture) ?? from!;
+            _log.LogInformation("Courier button press from chat {Chat}, update {UpdateId}, data {Data}",
+                from, update.UpdateId, cb.Data ?? "");
+
+            return CourierDelivery.Pressed(update.UpdateId, pressed,
+                new CourierCallback(cb.Id, answerTo, cb.Data ?? "", cb.Message?.MessageThreadId));
+        }
+
         if (update.Message is not { } msg) return CourierDelivery.Ignored(update.UpdateId);
 
         var chatId = msg.Chat?.Id.ToString(CultureInfo.InvariantCulture);
@@ -151,10 +177,12 @@ public sealed class TelegramCourierSource : ICourierSource, IDisposable
     }
 
     /// <inheritdoc />
-    public async Task ReplyAsync(string chatId, string text, long? threadId, CancellationToken ct)
+    public async Task ReplyAsync(string chatId, string text, long? threadId, CancellationToken ct,
+        IReadOnlyList<CourierButton>? buttons = null)
     {
         var payload = Payload(chatId, text);
         if (threadId is { } thread) payload["message_thread_id"] = thread;
+        if (Keyboard(buttons) is { } keyboard) payload["reply_markup"] = keyboard;
 
         // A reply that does not arrive costs the receipt, never the note: the note is already on
         // disk by the time this runs, which is the ordering RemoteSurface established at DV3.1.
@@ -235,6 +263,23 @@ public sealed class TelegramCourierSource : ICourierSource, IDisposable
                                       && !ct.IsCancellationRequested)
         {
             return $"the bot API could not be reached ({ex.Message}).";
+        }
+    }
+
+    /// <summary>DV4.4 — the Bot API's obligation on a press: acknowledge it, or the client keeps
+    /// spinning its progress ring for a minute and the owner presses again. Best effort and never
+    /// throws — the promotion behind it is worth more than the animation.</summary>
+    private async Task AnswerCallbackAsync(string callbackQueryId, CancellationToken ct)
+    {
+        try
+        {
+            var url = $"{_apiBase}{_token}/answerCallbackQuery?callback_query_id={Uri.EscapeDataString(callbackQueryId)}";
+            using var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException
+                                      && !ct.IsCancellationRequested)
+        {
+            _log.LogWarning("Courier could not answer a button press: {Why}", ex.Message);
         }
     }
 

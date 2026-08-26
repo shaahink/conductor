@@ -51,8 +51,15 @@ public sealed class InboxStore
     public InboxStore(string stateDir)
     {
         ArgumentNullException.ThrowIfNull(stateDir);
+        StateDir = stateDir;
         Dir = Path.Combine(stateDir, DirName);
     }
+
+    /// <summary>The project's <c>.conductor</c> — the inbox's parent. Kept rather than recomputed
+    /// from <see cref="Dir"/> because DV4.4 writes a promoted followups row BESIDE the inbox, and
+    /// walking back up a path to find the directory we were handed is how a trailing separator turns
+    /// into a row written one level too high.</summary>
+    public string StateDir { get; }
 
     /// <summary>The inbox root. Media written by the channel adapter lives beside the notes, under
     /// <c>media/</c>, which is why a transcript and its audio never drift apart.</summary>
@@ -105,6 +112,14 @@ public sealed class InboxStore
     /// media into the inbox first, and on a replayed delivery that adoption ran, Append then refused,
     /// and the inbox kept an orphan audio file no note referenced and no prune could ever remove.</para></summary>
     public bool Has(long id) => File.Exists(NotePath(id));
+
+    /// <summary>One note by id, or null. DV4.4 — a promote button carries an id and nothing else, so
+    /// the press has to be able to find the note without reading the whole inbox back.</summary>
+    public InboxNote? Find(long id)
+    {
+        var path = NotePath(id);
+        return File.Exists(path) ? ReadNote(path) : null;
+    }
 
     public IReadOnlyList<InboxNote> All()
     {

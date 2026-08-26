@@ -272,6 +272,25 @@ because it is built to survive everything else. It states the protocol it speaks
 is still running, and names `conductor courier restart` as the fix. A NEWER courier than the run is
 not an error — that is the ordinary state of a machine between a reinstall and the next logon.
 
+**Promotion: a note becomes work by one tap, and never by itself.** Every acknowledgement the
+courier sends for a filed note carries a **Promote to followup** button. Press it and that note
+becomes a row in that project's `.conductor/followups.md` — which is what `LaneCoordinator` turns
+into a Tier-B fix lane at the next stage confirmation. Three things about it are deliberate:
+
+- **The courier has no run, so it writes `next` in the owning-stage column.** Whichever stage that
+  project confirms first picks the row up, rewrites the cell to its own id, and runs the lane once.
+  A promotion made at midnight is work on Monday morning without anybody editing a table.
+- **Pressing twice writes one row.** The keyboard stays on the message forever and nothing about it
+  says "already used", so the second press answers with the id the first one made.
+- **A note can never become an injection.** That is the third tier and it stays a deliberate verb —
+  a misheard word in a transcript plus an agent running unattended is the one compound failure this
+  whole path is shaped to avoid. Promotion moves a note exactly one rung, and a test asserts that no
+  code path from an inbound note reaches the injection API at all.
+
+A live run offers the same button and behaves the same way, with one difference: it knows what stage
+it is on, so its row is owned by that stage rather than by `next`. Observers are refused the button
+as they are refused every other callback.
+
 Its state lives at `<state home>/courier/` — `courier.json` (what you configured), `offset.json` (how
 far it has acknowledged, written *after* each delivery is handled so a crash replays rather than
 loses), `courier.run.json` (what the running daemon says about itself: pid, protocol, engine, the exe

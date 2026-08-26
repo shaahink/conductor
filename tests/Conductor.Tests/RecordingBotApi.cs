@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -24,7 +24,8 @@ public sealed record BotCall(
     string? FileField,
     string? FileName,
     long FileBytes,
-    string? ChatId = null)
+    string? ChatId = null,
+    string? ReplyMarkup = null)
 {
     public string Describe()
     {
@@ -76,7 +77,7 @@ public sealed class RecordingBotApi : IDisposable
     public void QueueCommand(string chatId, string text)
     {
         lock (_gate) _pending.Enqueue(id =>
-            "{\"message_id\":" + id.ToString(CultureInfo.InvariantCulture)
+            "\"message\":{\"message_id\":" + id.ToString(CultureInfo.InvariantCulture)
             + ",\"chat\":{\"id\":" + chatId + "}"
             + ",\"text\":" + JsonSerializer.Serialize(text) + "}");
     }
@@ -89,7 +90,24 @@ public sealed class RecordingBotApi : IDisposable
     /// <c>chat</c>. The <c>update_id</c> around it is this stub's to assign.</param>
     public void QueueMessage(string messageJson)
     {
-        lock (_gate) _pending.Enqueue(_ => messageJson);
+        lock (_gate) _pending.Enqueue(_ => "\"message\":" + messageJson);
+    }
+
+    /// <summary>DV4.4 - queue a BUTTON PRESS. Not a message: a <c>callback_query</c> update has no
+    /// <c>message</c> field at all, which is precisely the shape that made the courier discard every
+    /// press it was ever sent, and a stub that can only wrap messages cannot show that.</summary>
+    /// <param name="chatId">The chat the keyboard was posted in - what the profile is resolved from.</param>
+    /// <param name="data">The <c>callback_data</c> the button carried.</param>
+    /// <param name="fromId">The presser, or null for the chat itself. In a group these differ, and
+    /// the answer goes to the presser.</param>
+    public void QueueCallback(string chatId, string data, string? fromId = null)
+    {
+        lock (_gate) _pending.Enqueue(id =>
+            "\"callback_query\":{\"id\":\"cb" + id.ToString(CultureInfo.InvariantCulture) + "\""
+            + ",\"from\":{\"id\":" + (fromId ?? chatId) + "}"
+            + ",\"message\":{\"message_id\":" + id.ToString(CultureInfo.InvariantCulture)
+            + ",\"chat\":{\"id\":" + chatId + "}}"
+            + ",\"data\":" + JsonSerializer.Serialize(data) + "}");
     }
 
     /// <summary>Each entry builds one message body once the stub has assigned its update id - the
@@ -199,7 +217,7 @@ public sealed class RecordingBotApi : IDisposable
         {
             if (i > 0) sb.Append(',');
             sb.Append("{\"update_id\":").Append(serve[i].Id.ToString(CultureInfo.InvariantCulture))
-              .Append(",\"message\":").Append(serve[i].Json)
+              .Append(',').Append(serve[i].Json)
               .Append('}');
         }
         return sb.Append("]}").ToString();
@@ -280,7 +298,13 @@ public sealed class RecordingBotApi : IDisposable
                 continue;
             }
 
-            var call = ctx.Request.ContentType?.Contains("multipart/", StringComparison.OrdinalIgnoreCase) == true
+            // DV4.4: a GET with no body is still a call the engine made. answerCallbackQuery is one,
+            // and it was invisible here — which matters because "no call recorded" is also what a
+            // missing call looks like, and the Bot API's obligation to answer a press is exactly the
+            // kind of thing that gets dropped in a refactor and noticed by nobody.
+            var call = body.Length == 0
+                ? new BotCall(method, ctx.Request.Url?.Query, null, false, null, false, null, null, null, 0)
+                : ctx.Request.ContentType?.Contains("multipart/", StringComparison.OrdinalIgnoreCase) == true
                 ? ParseMultipart(method, body, ctx.Request.ContentType!)
                 : ParseJson(method, body);
             if (call != null) { lock (_gate) _calls.Add(call); }
@@ -324,7 +348,8 @@ public sealed class RecordingBotApi : IDisposable
             Num(root, "reply_to_message_id"),
             Bool(root, "allow_sending_without_reply"),
             Num(root, "message_thread_id"),
-            null, null, 0, Str(root, "chat_id"));
+            null, null, 0, Str(root, "chat_id"),
+            root.TryGetProperty("reply_markup", out var markup) ? markup.GetRawText() : null);
     }
 
     /// <summary>A hand-rolled multipart reader, deliberately: the point of this stub is to see the

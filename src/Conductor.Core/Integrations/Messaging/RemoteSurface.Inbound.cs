@@ -66,9 +66,44 @@ public sealed partial class RemoteSurface
         if (Transcribable(note))
             ack += "\n" + (willTranscribe ? InboundAck.Transcribing() : InboundAck.NotTranscribed());
 
-        await ReplyAsync(note.ChatId, ack, null, ct).ConfigureAwait(false);
+        // DV4.4 / findings §1.7: the acknowledgement is where promotion lives, and the ONLY place it
+        // lives. "The bot's acknowledgement should carry the buttons that promote a note to the other
+        // two tiers, so promotion is one tap and never an accident" — one tap, and one tier: the
+        // inject rung is not offered here and no code path from a note reaches it.
+        await ReplyAsync(note.ChatId, ack, [NotePromoter.Button(outcome.Route.Project?.Slug, NoteId(note))], ct)
+            .ConfigureAwait(false);
 
         if (willTranscribe) await TranscribeAsync(note, outcome, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>DV4.4 — one press of the promote button, on the path where a run is live.
+    ///
+    /// <para>The stage handed to the promoter is this run's CURRENT stage, so the row opens its fix
+    /// lane at the next confirmation of the stage the owner was watching when they pressed it. The
+    /// courier's press has no run and writes <c>next</c> instead; both end in the same row.</para></summary>
+    private async Task PromoteAsync(string chatId, string data, CancellationToken ct)
+    {
+        if (!NotePromoter.TryParse(data, out var slug, out var noteId)) return;
+
+        if (slug is { Length: > 0 } wanted && _notes is not null)
+        {
+            var match = _notes.Projects.Resolve(wanted);
+            if (match.Project is not { } project)
+            {
+                await ReplyAsync(chatId,
+                    "Cannot promote: <code>" + MessageComposer.EscapeHtml(wanted)
+                    + "</code> is not a project this machine serves any more.", null, ct).ConfigureAwait(false);
+                return;
+            }
+
+            await ReplyAsync(chatId,
+                NotePromoter.Promote(project.Inbox(), noteId, _state.CurrentStage).Message, null, ct)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        await ReplyAsync(chatId, NotePromoter.Promote(_inbox, noteId, _state.CurrentStage).Message, null, ct)
+            .ConfigureAwait(false);
     }
 
     /// <summary>Audio that a transcript would be ABOUT. A photo has no words in it and a document is

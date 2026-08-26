@@ -49,6 +49,13 @@ public enum SurfaceAction
     /// A separate action because the selection lives on DISK, under the machine's state home, and
     /// the router that decides has no business writing files.</summary>
     Project = 9,
+
+    /// <summary>DV4.4 / findings §1.7 — turn the filed note named by <see cref="CommandOutcome.Text"/>
+    /// into a followups.md row. A separate action for the same reason as <see cref="Project"/>: it
+    /// writes a file. It is also the rung the note stops at — promotion reaches
+    /// <c>NotePromoter</c> and nothing else, and there is no action here that would let a note
+    /// become an <see cref="Inject"/>.</summary>
+    Promote = 10,
 }
 
 /// <param name="Text">The reply body, or the instruction for <see cref="SurfaceAction.Inject"/>.</param>
@@ -239,6 +246,12 @@ public sealed class CommandRouter
         if (data.StartsWith("inject:", StringComparison.Ordinal))
             return new CommandOutcome(SurfaceAction.ArmInjection,
                 "Reply to this message with the text you want to inject into the next session.");
+
+        // DV4.4 — before the generic action:intent:confirmed split below, which would otherwise read
+        // a note id as an intent id and answer Nothing. The payload travels whole: this class decides,
+        // and the surface is what owns an inbox to look the note up in.
+        if (data.StartsWith(Inbox.NotePromoter.CallbackPrefix, StringComparison.Ordinal))
+            return new CommandOutcome(SurfaceAction.Promote, data);
 
         if (data.StartsWith("chat:", StringComparison.Ordinal))
             return CommandOutcome.Reply(
