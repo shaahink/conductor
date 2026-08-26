@@ -147,13 +147,17 @@ public sealed class KS11_1SeamBoundaryTests
         }
 
         // Config and contract types are named for the messenger they CONFIGURE, which is what they
+        // are. CH1.2 split the plan schema in two when the repo-relative resolver took PlanConfig.cs
+        // past the architecture ceiling; the half holding "validate the telegram block" went with it,
+        // so both halves are config exceptions of exactly the same kind and for the same reason.
         // are; renaming TelegramConfig would rename a plan file key, and renaming the DTOs would
         // rename an HTTP contract. This list is exact - every entry is a file that really does name
         // one, so a stale entry fails the assertion below rather than sitting here unnoticed.
         var config = new SortedSet<string>(
         [
             "TelegramConfig.cs", "TelegramStatusDtos.cs", "TelegramTokenDtos.cs",
-            "ControlPlaneJsonContext.cs", "PlanConfig.cs", "SupervisorConfig.cs", "WatchRoster.cs",
+            "ControlPlaneJsonContext.cs", "PlanConfig.cs", "PlanConfig.Validation.cs",
+            "SupervisorConfig.cs", "WatchRoster.cs",
         ], StringComparer.Ordinal);
         Assert.True(config.IsSubsetOf(naming),
             "a config exception no longer names a Telegram type - strike it off: "
