@@ -1,10 +1,10 @@
 ﻿# Conductor — Divan - the chancellery: inbox, courier, and the record that gets out run report
 
-_Updated 2026-08-26 12:15 UTC · branch `feat/divan` · HEAD `32ee261`_
+_Updated 2026-08-26 13:26 UTC · branch `feat/divan` · HEAD `e17f09b`_
 
 **Status:** Idle
-**Stage:** DV6 — The record that gets out - bugs that outlive the board, columns, the page · attempts used 0 · working ▸ DV6.2
-**Checkpoints:** 17/23 done · **Sessions run:** 16 · **Cost:** $243.3088 (agent $243.1944 + gates $0.1145) · **Tokens:** 3,413,033 in / 1,368,330 out
+**Stage:** DV6 — The record that gets out - bugs that outlive the board, columns, the page · attempts used 0 · working ▸ DV6.4
+**Checkpoints:** 19/23 done · **Sessions run:** 18 · **Cost:** $274.9970 (agent $274.8602 + gates $0.1368) · **Tokens:** 3,655,215 in / 1,490,046 out
 **Confirmed phases:** DV1, DV2, DV3, DV4, DV5
 
 ## Stage progress
@@ -16,7 +16,7 @@ _Updated 2026-08-26 12:15 UTC · branch `feat/divan` · HEAD `32ee261`_
 | DV3 | The inbox - feedback that arrives when you have it, and survives the run | ██████████ 4/4 | confirmed ✓ |
 | DV4 | The courier - one bot, always awake, outliving the run | ██████████ 4/4 | confirmed ✓ |
 | DV5 | The cloud, the safe shapes - an owner verb, a flagged experiment | ██████████ 2/2 | confirmed ✓ |
-| DV6 | The record that gets out - bugs that outlive the board, columns, the page | ██░░░░░░░░ 1/4 | **← active** |
+| DV6 | The record that gets out - bugs that outlive the board, columns, the page | ████████░░ 3/4 | **← active** |
 | DV7 | Ship Divan - close the era | ░░░░░░░░░░ 0/3 | todo |
 
 <details> ✅<summary>DV1 — The channel that says so - health made loud, the queue that reaches you (2/2)</summary>
@@ -70,13 +70,13 @@ _Updated 2026-08-26 12:15 UTC · branch `feat/divan` · HEAD `32ee261`_
 
 </details>
 
-<details><summary>DV6 — The record that gets out - bugs that outlive the board, columns, the page (1/4)</summary>
+<details><summary>DV6 — The record that gets out - bugs that outlive the board, columns, the page (3/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | ✅ DONE | - |
-| DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | ⬜ TODO | - |
-| DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | ⬜ TODO | - |
+| DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | ✅ DONE | [`8d14fe5`](https://github.com/shaahink/conductor/commit/8d14fe5) |
+| DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | ✅ DONE | [`d1e5b0e`](https://github.com/shaahink/conductor/commit/d1e5b0e) |
+| DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | ✅ DONE | - |
 | DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | ⬜ TODO | - |
 
 </details>
@@ -111,6 +111,8 @@ _Updated 2026-08-26 12:15 UTC · branch `feat/divan` · HEAD `32ee261`_
 | 14 | DV4 | Fix | 2 | 08-26 10:28 | 0:11 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $4.4730 | $0.0076 | 92,592/34,571 |
 | 15 | DV5 | Deliver | 1 | 08-26 10:46 | 0:43 | Advanced | DV5.1 DV5.2 | 6 | engine-fast:OK · face-fast:OK | $23.8924 | $0.0085 | 281,975/152,940 |
 | 16 | DV6 | Deliver | 1 | 08-26 11:37 | 0:37 | Advanced | DV6.1 | 3 | engine-fast:OK · face-fast:OK | $22.6969 | $0.0097 | 274,771/122,639 |
+| 17 | DV6 | Deliver | 1 | 08-26 12:16 | 0:32 | Advanced | DV6.2 | 2 | engine-fast:OK · face-fast:OK | $14.8605 | $0.0105 | 240,661/121,419 |
+| 18 | DV6 | Deliver | 1 | 08-26 12:50 | 0:33 | Advanced | DV6.3 | 1 | engine-fast:OK · face-fast:OK | $16.8054 | $0.0118 | 1,521/297 |
 
 ## Money
 
@@ -118,29 +120,22 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 14 | 306.5M | 98.6% | $220.60 | 16 | 19.2M | $13.79 |
+| **run total** | 16 | 359.8M | 98.6% | $258.18 | 18 | 20M | $14.34 |
 | stage DV1 | 1 | 23.7M | 98.8% | $16.04 | 2 | 11.8M | $8.02 |
 | stage DV2 | 3 | 77.3M | 98.7% | $52.81 | 4 | 19.3M | $13.20 |
 | stage DV3 | 3 | 78.8M | 98.6% | $55.23 | 4 | 19.7M | $13.81 |
 | stage DV4 | 6 | 95.9M | 98.4% | $72.62 | 4 | 24M | $18.16 |
 | stage DV5 | 1 | 30.8M | 98.6% | $23.90 | 2 | 15.4M | $11.95 |
-| 2026-08 | 14 | 306.5M | 98.6% | $220.60 | 16 | 19.2M | $13.79 |
+| stage DV6 | 2 | 53.3M | 98.6% | $37.58 | 2 | 26.7M | $18.79 |
+| 2026-08 | 16 | 359.8M | 98.6% | $258.18 | 18 | 20M | $14.34 |
 
-_Where the money goes: agent $220.50 (100%) · gate $0.10 (0%) · blended $0.72/M tokens._
+_Where the money goes: agent $258.05 (100%) · gate $0.12 (0%) · blended $0.72/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-26 10:42:01  ▪ gate engine-fast pass [session]  (1m17s)
-08-26 10:42:01  ▪ gate face-fast pass [session]  (5.3s)
-08-26 10:42:02  • session #12 DV4 → Advanced · done DV4.3 · 4 commit(s)  (38m37s)
-08-26 10:42:03  • session #13 DV4 Deliver started (attempt 1/8)
-08-26 11:18:17  ▪ gate engine-fast pass [session]  (1m05s)
-08-26 11:18:17  ▪ gate face-fast pass [session]  (14.1s)
-08-26 11:18:18  • session #13 DV4 → Advanced · done DV4.4 · 1 commit(s)  (36m14s)
-08-26 11:28:45  ▪ gate engine-fast pass [phase]  (0.0s)
 08-26 11:28:45  ▪ gate face-fast pass [phase]  (0.0s)
 08-26 11:28:45  ▪ gate engine-full FAIL [phase]  (5m34s)
 08-26 11:28:46  ▪ gate face-full pass [phase]  (3.0s)
@@ -173,6 +168,14 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-26 12:37:11  • session #16 DV6 Deliver started (attempt 1/8)
 08-26 13:15:56  ▪ gate engine-fast pass [session]  (1m07s)
 08-26 13:15:56  ▪ gate face-fast pass [session]  (29.6s)
+08-26 13:15:57  • session #16 DV6 → Advanced · done DV6.1 · 3 commit(s)  (38m45s)
+08-26 13:16:03  • session #17 DV6 Deliver started (attempt 1/8)
+08-26 13:50:40  ▪ gate engine-fast pass [session]  (1m40s)
+08-26 13:50:40  ▪ gate face-fast pass [session]  (4.5s)
+08-26 13:50:41  • session #17 DV6 → Advanced · done DV6.2 · 2 commit(s)  (34m37s)
+08-26 13:50:41  • session #18 DV6 Deliver started (attempt 1/8)
+08-26 14:26:00  ▪ gate engine-fast pass [session]  (1m29s)
+08-26 14:26:00  ▪ gate face-fast pass [session]  (29.0s)
 ```
 
 ## Health
@@ -180,9 +183,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 16 · retries 3 (19 %) · overall Warn
+sessions 18 · retries 3 (17 %) · overall Warn
 ⚠ [context-saturation] session #12: 27,281,149 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 30,383,029 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #16: 33,752,373 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #2: 23,394,515 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #3: 34,336,668 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 32,631,442 context tokens (≥ 20,000,000)
@@ -198,19 +202,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/divan
-working tree: clean
+working tree: M .conductor/REPORT.md
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s8 (DV3 Fix)** — 2 commit(s):
-  - [`516c26c`](https://github.com/shaahink/conductor/commit/516c26c) fix(DV3): declare the new adapter partial, and the evidence for a green battery
-  - [`78663f7`](https://github.com/shaahink/conductor/commit/78663f7) fix(DV3): the index that wrote over itself, and four registries the inbox never reached
-- **s9 (DV4 Deliver)** — 3 commit(s):
-  - [`d43a74a`](https://github.com/shaahink/conductor/commit/d43a74a) fix(DV4.1): the orphan the live proof found, and an offset that read itself wrong
-  - [`0986ddf`](https://github.com/shaahink/conductor/commit/0986ddf) feat(DV4.1): the courier - one bot, always awake, outliving the run
-  - [`b0cc449`](https://github.com/shaahink/conductor/commit/b0cc449) refactor(DV4.1): one getFile, one getUpdates - the courier gets a wire to share
 - **s11 (DV4 Resume)** — 3 commit(s):
   - [`e6d0d1c`](https://github.com/shaahink/conductor/commit/e6d0d1c) docs(divan): the handoff for DV4.2 - the presence record is DV4.3's hello, written down
   - [`5c78d3f`](https://github.com/shaahink/conductor/commit/5c78d3f) proof(DV4.2): the scheduler accepts it, and the guard defect the live run found
@@ -235,6 +232,11 @@ vs upstream: up to date
   - [`32ee261`](https://github.com/shaahink/conductor/commit/32ee261) proof(DV6.1): the rig, all green, with the settle the replica needs
   - [`d4e51c1`](https://github.com/shaahink/conductor/commit/d4e51c1) proof(DV6.1): the ledger class on a real board, and the duplicate the rig caught
   - [`8d14fe5`](https://github.com/shaahink/conductor/commit/8d14fe5) feat(DV6.1): bugs and followups as an issue class that outlives the run
+- **s17 (DV6 Deliver)** — 2 commit(s):
+  - [`bcc91c2`](https://github.com/shaahink/conductor/commit/bcc91c2) docs(divan): the handoff for DV6.2 - what the columns cost, and the ledger duplicate the rig found
+  - [`d1e5b0e`](https://github.com/shaahink/conductor/commit/d1e5b0e) feat(DV6.2): the columns - the Projects v2 mutation path, and the refusal that moved
+- **s18 (DV6 Deliver)** — 1 commit(s):
+  - [`e17f09b`](https://github.com/shaahink/conductor/commit/e17f09b) feat(DV6.3): the page - the board as one self-contained file, published not served
 
 ## Phase handovers (audit)
 
@@ -261,33 +263,24 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> **DV6.1 done — bugs and followups are a GitHub issue class that outlives the run**
-> - Own labels, own markers, created only while open, closed by the ledger with a comment — never by the run ending; the retire sweep indexes the task marker so it structurally cannot reach one
-> - The mirror gained a second "is there news" answer because the event cursor is blind to the bugs table; the daily digest gained one golden-pinned ledger line
-> - Live rig against the real API in a private scratch repo passed every check, and caught bug #79: `github sync --backfill` run twice inside GitHub's replica lag duplicates the board (pre-existing, hits DV7.3)
->
-> artefacts: 8d14fe5, d4e51c1, 32ee261, src/Conductor.Core/Integrations/Github/GithubLedgerPlan.cs, src/Conductor.Core/Integrations/Github/GithubBoardSync.Ledger.cs, src/Conductor.Core/Integrations/Github/GithubMirror.cs, src/Conductor.Core/Integrations/Messaging/MessageComposer.Views.cs, src/Conductor.Core/History/RunArchive.Bugs.cs
->
-> evidence: .conductor/evidence/DV6/dv6-1-ledger-issue-class.md
->
-> gaps: bug #79 (backfill duplicates under replica lag) filed, not fixed; bug #76 untouched; the closing comment names the ledger, not a commit sha, because no bug row carries one; KS1_2StagesFromFoldTests flaked once under a parallel filter and passes alone (process-wide ClearAllPools) — noted, not filed; private scratch repo shaahink/dv61-ledger-scratch left in place for a human to read
+> That notification is the leftover waiter for the test run I already read (478 passed, 0 failed) — nothing new in it.
+> 
+> DV6.3 is closed out: claimed with evidence, committed as `e17f09b`, pushed on `feat/divan`, handoff block written for the next session. No background children of mine are still running, and the working tree is clean apart from the engine's own live `REPORT.md`.
 
 ## Tracker handoff
 
 ```
-last: DV6.1 DONE. Bugs and followups are their own GitHub issue class - conductor:bug /
-  conductor:followup, their own markers, created ONLY while open, closed by the LEDGER (with a
-  comment saying so) and never by the run ending. The retire sweep cannot reach one because it
-  indexes the task marker. The mirror gained a second "is there news" answer: the event cursor is
-  blind to the bugs table, so a filed bug used to wait for whatever happened next. Digest gained
-  one golden-pinned line. 8 new tests + KS11 136 + SF7_1 35 green.
-find: the live rig (tools/dv6/dv6-1-live-proof.ps1, private scratch repo) caught what the fake
-  could not - `github sync --backfill` run twice inside GitHub's replica lag DUPLICATES the board,
-  because the read-only path uses GithubMap.Transient(). Pre-existing since KS9.1, filed as bug #79
-  (high), and DV7.3's owner backfill is the command that hits it. Also: a PowerShell function named
-  Gh swallows every gh call - case-insensitive name resolution, one minute of fake network hang.
-next: DV6.2 - the columns. Token scopes measured today: repo, workflow, gist, read:org, user,
-  delete_repo. Still NO project, so the KS9.3 refusal moves behind a stubbed proof.
-red: bug #79 (new), bug #76 (courier uploads) untouched. KS1_2StagesFromFoldTests flaked once under
-  a parallel filter and passes alone - process-wide ClearAllPools; noted, not filed.
+last: DV6.3 DONE. The board is ONE self-contained HTML file - columns (DV6.2's own first-choice
+  names), cards with age-in-column, cost, the owner queue with its clearing command, the ledger line
+  and the evidence - rendered from the SAME Http/Contracts the control plane serves and written
+  atomically to <stateDir>/board.html at every session boundary, then pushed as a Telegram document.
+  ADR-0005 holds: a source scan over the publishing path fails on a listener, socket, prefix or
+  tunnel. 15 new tests; 478 green across KS11/K5_4/DV1_2/DV6_/SC23/KS5_/ControlPlane/Harness.
+find: three answers that existed once and were needed twice were MOVED, not copied -
+  ControlPlaneMapper.WithBudget (out of the server assembly), LedgerSummary.Line (out of the digest)
+  and ControlPlaneMapper.FromArtifact. And RunLoop is AT its CA1506 coupling bar: two new type
+  references tripped it at 185/183, so the boundary hook lives in RunContext.Board.cs.
+next: DV6.4 - SARIF for every bug carrying a file and line, uploaded to code scanning; the docs must
+  state the public-free / private-needs-Advanced-Security split. It is the stage's CUT-FIRST row.
+red: bug #80 (owner runs gh auth refresh -s project, then a real Projects v2 board), #81, #79, #76.
 ```
