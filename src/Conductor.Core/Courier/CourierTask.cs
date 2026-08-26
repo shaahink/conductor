@@ -209,9 +209,13 @@ public sealed class CourierTask
           + "</Task>\n";
     }
 
+    /// <summary>What a person sees in the Task Scheduler. It says what the task IS, in the words
+    /// somebody scrolling a list of scheduled tasks needs — and it deliberately does not name the
+    /// messenger: <c>TelegramCourierSource</c> is the only file in the courier that does, and the
+    /// seam boundary test (KS11.1) holds that line through string literals too.</summary>
     internal const string Description =
-        "conductor courier - one bot, always awake, outliving the run. Polls Telegram and files "
-      + "notes into the projects on its allowlist. Started at logon; restarts on failure.";
+        "conductor courier - one bot, always awake, outliving the run. Polls for notes and files "
+      + "them into the projects on its allowlist. Started at logon; restarts on failure.";
 
     private static string Escape(string s) =>
         s.Replace("&", "&amp;", StringComparison.Ordinal)

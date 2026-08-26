@@ -48,10 +48,20 @@ function Get-ConductorCourierPresence {
     return $presence
 }
 
+# schtasks writes "ERROR: The system cannot find the file specified." to STDERR for a task name
+# it does not know - and install.ps1 runs with $ErrorActionPreference = "Stop", under which a
+# native command's stderr is a TERMINATING error in Windows PowerShell. Unguarded, that crashed
+# the installer on every machine that has NOT installed a courier, which is every machine today.
+# So each of these functions neutralises it in its OWN scope and reads $LASTEXITCODE instead.
+function Invoke-CourierSchtasks {
+    $ErrorActionPreference = "Continue"
+    & schtasks.exe @args 2>&1 | Out-Null
+    return $LASTEXITCODE
+}
+
 function Test-ConductorCourierTask {
     param([string]$TaskName = $script:CourierDefaultTaskName)
-    & schtasks.exe /Query /TN "$TaskName" /FO CSV /NH > $null 2>&1
-    return ($LASTEXITCODE -eq 0)
+    return ((Invoke-CourierSchtasks /Query /TN "$TaskName" /FO CSV /NH) -eq 0)
 }
 
 # Stops the courier and reports whether it WAS running, so the caller knows whether to start it
@@ -79,7 +89,7 @@ function Stop-ConductorCourier {
 
     if (-not $registered -and -not $presence) { return $result }
 
-    if ($registered) { & schtasks.exe /End /TN "$TaskName" > $null 2>&1 }
+    if ($registered) { Invoke-CourierSchtasks /End /TN "$TaskName" | Out-Null }
 
     # Wait for the process to actually go: /End returns as soon as the scheduler has asked.
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
@@ -100,6 +110,5 @@ function Stop-ConductorCourier {
 function Start-ConductorCourier {
     param([string]$TaskName = $script:CourierDefaultTaskName)
     if (-not (Test-ConductorCourierTask -TaskName $TaskName)) { return $false }
-    & schtasks.exe /Run /TN "$TaskName" > $null 2>&1
-    return ($LASTEXITCODE -eq 0)
+    return ((Invoke-CourierSchtasks /Run /TN "$TaskName") -eq 0)
 }

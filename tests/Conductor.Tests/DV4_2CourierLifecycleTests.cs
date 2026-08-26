@@ -300,7 +300,16 @@ public sealed class DV4_2CourierLifecycleTests : IDisposable
         Assert.True(start > publish, "install.ps1 must start the courier again after publishing");
 
         // Trap 12: Windows PowerShell 5.1 reads a BOM-less UTF-8 script as ANSI.
-        Assert.All(File.ReadAllText(guard), c => Assert.True(c < 128, "courier-guard.ps1 must be ASCII"));
+        var guardText = File.ReadAllText(guard);
+        Assert.All(guardText, c => Assert.True(c < 128, "courier-guard.ps1 must be ASCII"));
+
+        // The defect the live proof found: install.ps1 runs with $ErrorActionPreference = "Stop",
+        // under which schtasks writing to STDERR for an unknown task name is a TERMINATING error —
+        // so the guard crashed the installer on every machine that has NOT installed a courier.
+        // Every shell-out goes through the one wrapper that neutralises it.
+        Assert.Contains("Invoke-CourierSchtasks", guardText, StringComparison.Ordinal);
+        Assert.Contains("$ErrorActionPreference = \"Continue\"", guardText, StringComparison.Ordinal);
+        Assert.Equal(1, guardText.Split("& schtasks.exe").Length - 1);
     }
 
     private static string RepoRoot()

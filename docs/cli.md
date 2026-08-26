@@ -238,6 +238,10 @@ therefore the *one* consumer on a machine that has one.
 |---|---|
 | `courier status` | Whether it can run at all: is the token set, how far the poll offset has got, which projects it may file into, which chats it answers, and what is missing if anything is. `--json` for machines. |
 | `courier run` | Poll until stopped. Ctrl-C is a stop, not a kill: the delivery in flight is finished and its offset written before the process exits. `--once` polls a single time and prints what happened — the shape a rig and a scheduled task both use. |
+| `courier install [--task-name <NAME>] [--exe <PATH>] [--no-start]` | Register the courier as a **per-user Scheduled Task**: starts at your logon, restarts on failure every minute, `LeastPrivilege` — no admin rights and no elevation prompt. `--exe` names the binary the task runs (this one, by default); `--no-start` registers without starting it now; `--task-name` is for a rig that must not touch yours. |
+| `courier uninstall [--task-name <NAME>]` | Stop it and remove the registration. Nothing polls for this machine afterwards. |
+| `courier restart [--task-name <NAME>]` | Stop and start it again — the fix for a courier still running the engine it was installed with. |
+| `courier stop [--task-name <NAME>]` | End the running instance. It comes back at your next logon. |
 | `courier allow --repo <PATH> [--plan <NAME>]` | Add a project to the allowlist. `--plan` is the name a push's identity line carries; with it omitted the plan file in the repo is read, and failing that the folder name is used. A path that is not a directory is refused rather than stored. |
 | `courier deny --repo <PATH>` | Take a project off the allowlist. Notes for it are parked from then on — never filed somewhere close. |
 | `courier chat --id <CHAT_ID> [--profile admin\|observer]` | Answer this chat. `admin` may file notes; `observer` may not, and nothing is downloaded on an observer's behalf. Defaults to admin. |
@@ -259,9 +263,20 @@ there is no bottom rung — a note that names nothing routable is parked rather 
 > to a laptop that sleeps until Monday was never handed over by Telegram at all. This is the honest
 > limit of a courier that runs on your own machine, and `courier status` prints it.
 
+**It outlives a reinstall, and that is the one thing to know about upgrading it.** A running courier
+holds the published `conductor.exe` open, so `tools/install.ps1` stops it before publishing and
+starts it again afterwards — otherwise the publish fails on a file lock, and, worse, a courier that is
+never restarted keeps running yesterday's engine for as long as the machine stays up, precisely
+because it is built to survive everything else. It states the protocol it speaks in
+`courier.run.json`; a newer run refuses a stale courier **by name**, with its pid and the engine it
+is still running, and names `conductor courier restart` as the fix. A NEWER courier than the run is
+not an error — that is the ordinary state of a machine between a reinstall and the next logon.
+
 Its state lives at `<state home>/courier/` — `courier.json` (what you configured), `offset.json` (how
 far it has acknowledged, written *after* each delivery is handled so a crash replays rather than
-loses), and `media/` (where bytes land before they are adopted into a project's inbox).
+loses), `courier.run.json` (what the running daemon says about itself: pid, protocol, engine, the exe
+it holds open, the task that started it — written at startup, cleared on the way out), and `media/`
+(where bytes land before they are adopted into a project's inbox).
 
 ## The board, on GitHub
 

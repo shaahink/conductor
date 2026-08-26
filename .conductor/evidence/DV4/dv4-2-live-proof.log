@@ -1,0 +1,186 @@
+DV4.2 live proof - courier lifecycle
+  exe:        C:\code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe
+  state home: C:\Users\shahi\AppData\Local\Temp\dv42-rig\state-home
+  task:       Conductor Courier SCRATCH dv4-2
+  elevated:   False
+  bot token present (process/user/machine): True/True/False
+  machine courier configured (C:\Users\shahi\AppData\Local\conductor\courier\courier.json): False
+  safe to start the scratch task: True
+  owner task registered before: False
+
+[1] status before install
+  OK   task reports not installed
+  OK   nothing is running
+  OK   this build states its protocol
+  OK   no stale-courier refusal when there is no courier
+
+[2] courier install --no-start
+installed Conductor Courier SCRATCH dv4-2 → 
+C:\code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe courier run
+starts at your logon · restarts on failure every minute · no admin rights, no 
+elevation
+not started — it starts at your next logon, or now with conductor courier 
+restart --task-name "Conductor Courier SCRATCH dv4-2"
+  OK   install reported success
+  OK   registered WITHOUT elevation
+
+[3] the scheduler's own copy of the definition
+<?xml version="1.0" encoding="UTF-16"?>
+
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+
+  <RegistrationInfo>
+
+    <Author>conductor</Author>
+
+    <Description>conductor courier - one bot, always awake, outliving the run. Polls for notes and files them into the projects on its allowlist. Started at logon; restarts on failure.</Description>
+
+    <URI>\Conductor Courier SCRATCH dv4-2</URI>
+
+  </RegistrationInfo>
+
+  <Principals>
+
+    <Principal id="Author">
+
+      <UserId>S-1-5-21-1240453685-1107349473-2324191613-1001</UserId>
+
+      <LogonType>InteractiveToken</LogonType>
+
+    </Principal>
+
+  </Principals>
+
+  <Settings>
+
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+
+    <RestartOnFailure>
+
+      <Count>99</Count>
+
+      <Interval>PT1M</Interval>
+
+    </RestartOnFailure>
+
+    <StartWhenAvailable>true</StartWhenAvailable>
+
+    <IdleSettings>
+
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+
+      <RestartOnIdle>false</RestartOnIdle>
+
+    </IdleSettings>
+
+    <UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine>
+
+  </Settings>
+
+  <Triggers>
+
+    <LogonTrigger>
+
+      <UserId>MSI\shahi</UserId>
+
+    </LogonTrigger>
+
+  </Triggers>
+
+  <Actions Context="Author">
+
+    <Exec>
+
+      <Command>C:\code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe</Command>
+
+      <Arguments>courier run</Arguments>
+
+    </Exec>
+
+  </Actions>
+
+</Task>
+  OK   logon trigger
+  OK   restart on failure PT1M
+  OK   no elevation requested
+  OK   principal is this user
+  OK   InteractiveToken logon
+  OK   IgnoreNew - one poller
+  OK   no execution time limit
+  OK   runs THIS build
+  OK   action is the courier verb
+
+[4] status after install
+  OK   task reports registered
+  OK   task named in status
+courier C:\Users\shahi\AppData\Local\Temp\dv42-rig\state-home\courier
+token: set (CONDUCTOR_TELEGRAM_TOKEN)
+poll: offset 0 (nothing acknowledged yet — the next poll takes everything still 
+undelivered) · every 4s
+projects: none — `conductor courier allow --repo <path>`
+chats: none — `conductor courier chat --id <chat-id>`
+task: Conductor Courier SCRATCH dv4-2
+running: no — nothing is polling for this machine · this build speaks protocol 1
+not ready: no chats are listed, so there is nobody to answer. Add one with 
+`conductor courier chat --id <chat-id>`.
+Telegram keeps an undelivered message for 24 hours. The courier answers "no run 
+live", not "machine off": a note sent to a sleeping machine is gone before it 
+wakes, and nothing on this machine can change that.
+
+[4b] courier restart - the scheduler really runs it
+restarted Conductor Courier SCRATCH dv4-2 — it is running this machine's 
+installed engine again.
+  OK   restart reported success
+  scheduler row: "\Conductor Courier SCRATCH dv4-2","N/A","Ready"
+
+[5] a stale courier is refused BY NAME
+courier C:\Users\shahi\AppData\Local\Temp\dv42-rig\state-home\courier
+token: set (CONDUCTOR_TELEGRAM_TOKEN)
+poll: offset 0 (nothing acknowledged yet — the next poll takes everything still 
+undelivered) · every 4s
+projects: none — `conductor courier allow --repo <path>`
+chats: none — `conductor courier chat --id <chat-id>`
+task: Conductor Courier SCRATCH dv4-2
+running: yes pid 20008 · protocol 0 · engine 0.4.0 · task Conductor Courier 
+SCRATCH dv4-2 · since 2026-08-26 08:59:17Z · this build speaks protocol 1
+stale courier: the courier "Conductor Courier SCRATCH dv4-2" (pid 20008) speaks 
+protocol 0; this run speaks 1. It is still running the engine it was started 
+with (0.4.0). Restart it: conductor courier restart --task-name "Conductor 
+Courier SCRATCH dv4-2"
+not ready: no chats are listed, so there is nobody to answer. Add one with 
+`conductor courier chat --id <chat-id>`.
+Telegram keeps an undelivered message for 24 hours. The courier answers "no run 
+live", not "machine off": a note sent to a sleeping machine is gone before it 
+wakes, and nothing on this machine can change that.
+  OK   status sees the courier as running
+  OK   refused as stale
+  OK   refused BY NAME
+  OK   names the restart verb
+  OK   names THIS task's flag
+  OK   names the stale engine
+  OK   the refusal reaches the terminal, not only --json
+
+[6] tools/lib/courier-guard.ps1 - what install.ps1 dot-sources
+  guard saw: registered=True wasRunning=True pid=20008 stopped=False
+  OK   guard sees the registered task
+  OK   guard sees a live courier
+  OK   guard reports it did NOT stop
+  OK   no-op when nothing is running
+  OK   guard start is a no-op for an unknown task
+  OK   guard survives ErrorActionPreference=Stop on a machine with no courier
+
+[7] courier uninstall
+uninstalled Conductor Courier SCRATCH dv4-2 — nothing polls for this machine 
+now. Notes sent from now on reach nobody, and Telegram keeps them for 24 hours.
+  OK   the scheduler no longer knows the name
+  OK   status agrees it is gone
+  OK   uninstalling twice is not an error
+  OK   owner's task unchanged
+
+DV4.2 LIVE PROOF: PASS
