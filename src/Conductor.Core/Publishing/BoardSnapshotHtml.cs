@@ -271,10 +271,20 @@ public static class BoardSnapshotHtml
            .Replace(">", "&gt;", StringComparison.Ordinal)
            .Replace("\"", "&quot;", StringComparison.Ordinal);
 
+    /// <summary>A raw string literal inherits the line endings of ITS SOURCE FILE, so the CSS block
+    /// below arrives as CRLF on a CRLF checkout while every other line of this renderer appends an
+    /// explicit LF -- and the page becomes a mixed document whose bytes depend on how the repository
+    /// was cloned. Normalise at the literal's own site, not over the finished document: a blanket
+    /// pass at the seam would make <c>CH1_1BoardPageLineEndingsTests</c> unable to fail, and that
+    /// test is the guard on the NEXT raw string to arrive in this file.</summary>
+    private static string Lf(string s) => s.Contains('\r', StringComparison.Ordinal)
+        ? s.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\r", "\n", StringComparison.Ordinal)
+        : s;
+
     /// <summary>Inline, and every value literal. No font is fetched (the system stack renders on the
     /// device the file reached), and the dark half is a media query rather than a script — a page
     /// that needs JavaScript to be legible is not one document.</summary>
-    private const string Css = """
+    private static readonly string Css = Lf("""
 :root{--bg:#fbfbfa;--fg:#1b1b1a;--dim:#66655f;--line:#dedcd5;--card:#fff;--ok:#1a7f37;--warn:#9a3412}
 @media(prefers-color-scheme:dark){:root{--bg:#16171a;--fg:#e8e6e1;--dim:#9a978f;--line:#2c2e33;--card:#1e2024;--ok:#3fb950;--warn:#f0883e}}
 *{box-sizing:border-box}
@@ -306,5 +316,5 @@ code{font:12px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;word-break:bre
 .ev li{border-bottom:1px solid var(--line);padding:6px 0}
 .ev .m{display:block}
 footer{margin-top:28px;border-top:1px solid var(--line);padding-top:10px;color:var(--dim);font-size:12px}
-""";
+""");
 }

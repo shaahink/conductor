@@ -1,0 +1,5 @@
+=== POST-FIX: same commands, same CRLF checkout ===
+Test run for C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    17, Skipped:     0, Total:    17, Duration: 304 ms - Conductor.Tests.dll (net10.0)

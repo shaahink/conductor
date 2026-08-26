@@ -319,7 +319,10 @@ public sealed class DV6_3BoardPageTests
 
     // ────────────────────────────── the fixture ──────────────────────────────
 
-    private static BoardSnapshot Snapshot() => new(
+    /// <summary>Every column, an owner queue, evidence and a ledger line — the shape that exercises
+    /// the whole renderer. <c>CH1_1BoardPageLineEndingsTests</c> reads it too, so the line-ending
+    /// property is asserted over the same document this class pins.</summary>
+    internal static BoardSnapshot Snapshot() => new(
         State: State(),
         Tasks: new TasksDto(
         [
