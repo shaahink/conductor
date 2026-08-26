@@ -134,7 +134,7 @@ public sealed class CH1_3CiAgreementTests
             gates: ["dotnet build Conductor.slnx"]);
         try
         {
-            var row = CiAgreementProbe.Collect(plan, "windows").Single();
+            var row = Row(plan);
 
             Assert.Equal(ChannelState.Dead, row.State);
             Assert.True(row.IsLoud);
@@ -158,6 +158,193 @@ public sealed class CH1_3CiAgreementTests
             Assert.Equal(ChannelState.Off, row.State);
             Assert.False(row.IsLoud);
             Assert.Equal("ci-battery off", row.Summary);
+        }
+        finally { TestTemp.DeleteTree(plan.Repo); }
+    }
+
+    // ──────────────────── and the other question: what did CI say about THIS commit ────────────────
+
+    /// <summary>Nobody has asked, so nothing is claimed — the <c>telegramStarted: null</c> rule. A
+    /// probe that has not measured must not report a verdict, and must not report agreement
+    /// either.</summary>
+    [Fact]
+    public void With_no_recorded_verdict_the_row_is_off_and_says_how_to_ask()
+    {
+        var plan = Rig(workflow: null, gates: []);
+        try
+        {
+            var row = Verdict(plan);
+
+            Assert.Equal(ChannelState.Off, row.State);
+            Assert.False(row.IsLoud);
+            Assert.Equal("conductor github ci", row.FixCommand);
+        }
+        finally { TestTemp.DeleteTree(plan.Repo); }
+    }
+
+    /// <summary>The state this project actually held for 23 checkpoints: the gates passed here and CI
+    /// is red on the same commit.</summary>
+    [Fact]
+    public void A_red_CI_on_the_commit_the_gates_just_passed_is_dead()
+    {
+        var plan = Rig(workflow: null, gates: []);
+        try
+        {
+            Record(plan, "deadbee", ("CI", "active", "deadbee", "completed", "failure"));
+            var row = Verdict(plan, "deadbee");
+
+            Assert.Equal(ChannelState.Dead, row.State);
+            Assert.Contains("CI is red on deadbee", row.Detail, StringComparison.Ordinal);
+            Assert.Contains("while this run's gates passed", row.Detail, StringComparison.Ordinal);
+        }
+        finally { TestTemp.DeleteTree(plan.Repo); }
+    }
+
+    /// <summary>Trap 16's shape, and the difference between two claims that are read as one: "CI is
+    /// green" and "CI is green ON THIS COMMIT". A green verdict for a different sha says nothing
+    /// about the tree this run is building on, and it must not be allowed to read as if it did.</summary>
+    [Fact]
+    public void A_green_verdict_for_a_different_commit_is_not_a_verdict_for_this_one()
+    {
+        var plan = Rig(workflow: null, gates: []);
+        try
+        {
+            Record(plan, "0000001", ("CI", "active", "0000001", "completed", "success"));
+            var row = Verdict(plan, "9999999");
+
+            Assert.Equal(ChannelState.Degraded, row.State);
+            Assert.True(row.IsLoud);
+            Assert.Contains("CI has no verdict for 9999999", row.Detail, StringComparison.Ordinal);
+            Assert.Contains("newest run is for 0000001", row.Detail, StringComparison.Ordinal);
+        }
+        finally { TestTemp.DeleteTree(plan.Repo); }
+    }
+
+    /// <summary>A workflow that has never run on this branch is a row saying so, not an absence. This
+    /// is the half a commit's check-run list cannot see at all.</summary>
+    [Fact]
+    public void A_workflow_that_never_ran_on_this_branch_is_named()
+    {
+        var plan = Rig(workflow: null, gates: []);
+        try
+        {
+            Record(plan, "abc1234",
+                ("CI", "active", "abc1234", "completed", "success"),
+                ("Nightly", "active", "", "", ""));
+            var row = Verdict(plan, "abc1234");
+
+            Assert.Equal(ChannelState.Degraded, row.State);
+            Assert.Contains("Nightly has never run on", row.Detail, StringComparison.Ordinal);
+        }
+        finally { TestTemp.DeleteTree(plan.Repo); }
+    }
+
+    /// <summary>Every active workflow green on this very sha. The only shape that is quiet.</summary>
+    [Fact]
+    public void Green_on_this_commit_is_the_only_quiet_verdict()
+    {
+        var plan = Rig(workflow: null, gates: []);
+        try
+        {
+            Record(plan, "abc1234",
+                ("CI", "active", "abc1234", "completed", "success"),
+                ("Release", "disabled_manually", "", "", ""));
+            var row = Verdict(plan, "abc1234");
+
+            Assert.Equal(ChannelState.Ready, row.State);
+            Assert.False(row.IsLoud);
+        }
+        finally { TestTemp.DeleteTree(plan.Repo); }
+    }
+
+    /// <summary>Every workflow switched off is not "green": there is nothing on the server re-running
+    /// these gates at all, and a disabled workflow's last run can be a year old.</summary>
+    [Fact]
+    public void A_repo_whose_workflows_are_all_disabled_is_dead_not_green()
+    {
+        var plan = Rig(workflow: null, gates: []);
+        try
+        {
+            Record(plan, "abc1234", ("CI", "disabled_manually", "abc1234", "completed", "success"));
+            var row = Verdict(plan, "abc1234");
+
+            Assert.Equal(ChannelState.Dead, row.State);
+            Assert.Contains("no ACTIVE workflow", row.Detail, StringComparison.Ordinal);
+        }
+        finally { TestTemp.DeleteTree(plan.Repo); }
+    }
+
+    /// <summary>A tag-triggered workflow is SUPPOSED never to run on a feature branch, and calling
+    /// that a finding on every branch forever is how a check earns the right to be ignored. Measured
+    /// on this repo: the first live run of <c>conductor github ci</c> raised exactly this about
+    /// Release. The observation still RECORDS "never ran" — only the derived health stops calling it
+    /// a fault.</summary>
+    [Fact]
+    public void A_workflow_that_cannot_fire_on_a_branch_push_is_not_a_finding()
+    {
+        var plan = Rig(
+            workflow: Workflow("windows-latest", "dotnet test Conductor.slnx"),
+            gates: ["dotnet test Conductor.slnx"]);
+        try
+        {
+            // A second workflow file that only a tag can start.
+            File.WriteAllText(Path.Combine(plan.Repo, ".github", "workflows", "release.yml"),
+                "name: Release\non:\n  workflow_dispatch:\n  release:\n    types: [published]\njobs:\n  publish:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ship\n");
+
+            Record(plan, "abc1234",
+                ("ci", "active", "abc1234", "completed", "success"),
+                ("release", "active", "", "", ""));
+
+            // …and the shape this repo's own release.yml has: a push trigger that names only tags.
+            File.WriteAllText(Path.Combine(plan.Repo, ".github", "workflows", "tagonly.yml"),
+                "name: Tag\non:\n  push:\n    tags: [\"v*\"]\n  workflow_dispatch:\njobs:\n  x:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ship\n");
+
+            Assert.False(CiWorkflows.BranchTriggered(plan.Repo, ".github/workflows/release.yml"));
+            Assert.False(CiWorkflows.BranchTriggered(plan.Repo, ".github/workflows/tagonly.yml"));
+            Assert.True(CiWorkflows.BranchTriggered(plan.Repo, ".github/workflows/ci.yml"));
+            Assert.Null(CiWorkflows.BranchTriggered(plan.Repo, ".github/workflows/gone.yml"));
+
+            var row = Verdict(plan, "abc1234");
+            Assert.Equal(ChannelState.Ready, row.State);
+            Assert.Equal(2, CiStatus.Read(plan)!.Workflows.Count);   // recorded, just not counted against
+        }
+        finally { TestTemp.DeleteTree(plan.Repo); }
+    }
+
+    /// <summary>A run still going is not a green. It is "no verdict yet for this commit", which is
+    /// loud for the same reason a verdict for a different sha is: the gates being green here is not
+    /// yet corroborated by anything. It clears itself the moment CI lands.</summary>
+    [Fact]
+    public void A_run_still_in_progress_on_this_commit_is_not_a_green()
+    {
+        var plan = Rig(workflow: null, gates: []);
+        try
+        {
+            Record(plan, "abc1234", ("CI", "active", "abc1234", "in_progress", ""));
+            var row = Verdict(plan, "abc1234");
+
+            Assert.Equal(ChannelState.Degraded, row.State);
+            Assert.Contains("has not finished judging abc1234", row.Detail, StringComparison.Ordinal);
+            Assert.Contains("CI in_progress", row.Detail, StringComparison.Ordinal);
+        }
+        finally { TestTemp.DeleteTree(plan.Repo); }
+    }
+
+    /// <summary>The observation survives a round trip through the file the surfaces read.</summary>
+    [Fact]
+    public void The_observation_is_read_back_exactly_as_it_was_recorded()
+    {
+        var plan = Rig(workflow: null, gates: []);
+        try
+        {
+            Record(plan, "abc1234", ("CI", "active", "abc1234", "completed", "failure"));
+
+            var back = CiStatus.Read(plan)!;
+            Assert.Equal("abc1234", back.HeadSha);
+            Assert.Equal("feat/x", back.Branch);
+            var w = Assert.Single(back.Workflows);
+            Assert.Equal("failure", w.Conclusion);
+            Assert.True(File.Exists(Path.Combine(plan.StateDir, CiStatus.FileName)));
         }
         finally { TestTemp.DeleteTree(plan.Repo); }
     }
@@ -254,7 +441,20 @@ public sealed class CH1_3CiAgreementTests
 
     // ────────────────────────────────────────── fixtures ──────────────────────────────────────────
 
-    private static ChannelHealth Row(PlanConfig plan) => CiAgreementProbe.Collect(plan, "windows").Single();
+    private static ChannelHealth Row(PlanConfig plan) =>
+        CiAgreementProbe.Collect(plan, "windows").First(r => r.Channel == CiAgreementProbe.BatteryCheck);
+
+    private static ChannelHealth Verdict(PlanConfig plan, string? head = null) =>
+        CiAgreementProbe.Collect(plan, "windows", head).First(r => r.Channel == CiAgreementProbe.VerdictCheck);
+
+    /// <summary>Record an observation the way <c>conductor github ci</c> does, without the network.</summary>
+    private static void Record(PlanConfig plan, string head,
+        params (string Workflow, string State, string RunSha, string Status, string Conclusion)[] workflows) =>
+        CiStatus.Write(plan, new CiStatus("2026-08-26 12:00:00Z", "owner/repo", "feat/x", head,
+            [.. workflows.Select(w => new CiWorkflowVerdict(
+                w.Workflow, ".github/workflows/" + w.Workflow.ToLowerInvariant() + ".yml", w.State,
+                w.RunSha, w.Status, w.Conclusion,
+                w.RunSha.Length == 0 ? "" : "https://github.com/owner/repo/actions/runs/1"))]));
 
     private static string Workflow(string runsOn, params string[] steps)
     {

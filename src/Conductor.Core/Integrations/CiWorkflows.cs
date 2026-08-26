@@ -48,6 +48,61 @@ public static class CiWorkflows
         return jobs;
     }
 
+    /// <summary>CH1.3 — could this workflow ever fire on a branch push?
+    ///
+    /// <para>Without this, "Release has never run on feat/charkh" is reported as a finding on every
+    /// feature branch forever — and it is not one: a tag-triggered or release-triggered workflow is
+    /// SUPPOSED never to run there. Measured on this repo, 2026-08-26: the first live run of
+    /// <c>conductor github ci</c> raised exactly that false finding.</para>
+    ///
+    /// <para><c>null</c> when the file is not on disk to be read — unknown, and an unknown is
+    /// reported rather than hidden. The observation still RECORDS that the workflow never ran; this
+    /// only decides whether the derived health calls it a fault.</para></summary>
+    public static bool? BranchTriggered(string repoRoot, string workflowPath)
+    {
+        if (string.IsNullOrWhiteSpace(workflowPath)) return null;
+        var path = Path.Combine(repoRoot ?? "", workflowPath.Replace('/', Path.DirectorySeparatorChar));
+        if (!File.Exists(path)) return null;
+
+        string[] lines;
+        try { lines = File.ReadAllLines(path); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
+
+        var block = new List<string>();
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (Indent(lines[i]) != 0 || !lines[i].TrimStart().StartsWith("on:", StringComparison.Ordinal)) continue;
+            block.Add(lines[i]);
+            for (var k = i + 1; k < lines.Length && (lines[k].Trim().Length == 0 || Indent(lines[k]) > 0); k++)
+                block.Add(lines[k]);
+            break;
+        }
+        if (block.Count == 0) return null;
+
+        // `pull_request` always can. A bare `push:` (or `on: [push]`) always can. A `push:` that
+        // declares ONLY `tags:` never can — release.yml on this repo is exactly that, and reading it
+        // as branch-triggered raised "Release has never run on feat/charkh" as a finding on the very
+        // first live run. A finding that is true on every branch forever is one an operator learns
+        // to skip, and then the real one goes with it.
+        if (block.Any(l => l.Contains("pull_request", StringComparison.OrdinalIgnoreCase))) return true;
+
+        var pushAt = block.FindIndex(l => l.TrimStart().StartsWith("push", StringComparison.OrdinalIgnoreCase));
+        if (pushAt < 0)
+            return block[0].Contains("push", StringComparison.OrdinalIgnoreCase);   // the `on: [push]` one-liner
+
+        var pushIndent = Indent(block[pushAt]);
+        var sub = new List<string>();
+        for (var k = pushAt + 1; k < block.Count; k++)
+        {
+            if (block[k].Trim().Length == 0) continue;
+            if (Indent(block[k]) <= pushIndent) break;
+            sub.Add(block[k]);
+        }
+        if (sub.Count == 0) return true;                                            // bare `push:`
+        if (sub.Any(l => l.TrimStart().StartsWith("branches", StringComparison.OrdinalIgnoreCase))) return true;
+        return !sub.Any(l => l.TrimStart().StartsWith("tags", StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>The scan, exposed so it can be tested on text rather than on a directory.</summary>
     public static IReadOnlyList<CiJob> Parse(string file, IReadOnlyList<string> lines)
     {

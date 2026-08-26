@@ -4,15 +4,18 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: nothing - this era has not started. Authored 2026-08-26, the day v0.5.0 shipped.
-find: the era begins from four measurements taken during that release, all in the design doc:
-  KS12.3 was recorded as performed and was one-seventh performed; GitHub CI's windows battery had
-  been red for the whole Divan era while the local battery was green for all 23 checkpoints;
-  demo.gif and payesh's social cards were both stale, and only payesh refused to merge over it;
-  and a backfill of an older run would have retired the newer run's whole board.
-next: CH1.1 - the CSS raw string literal in BoardSnapshotHtml.cs inherits the checkout's line
-  endings. Both CH1 causes are already diagnosed and reproduced; fix them and close the class.
-red: none carried into this era beyond the open bug ledger the prompt battery already surfaces.
+last: CH1.1 and CH1.2 DONE and confirmed by their own negative controls. CH1.3 is IN PROGRESS and
+  its code is landed and green locally: ci-battery (does CI run the same commands plan.gates does)
+  and ci-verdict (what CI said about THIS commit) in the DV1.1 shape, reaching the report header,
+  the owner queue, doctor, and a new `conductor github ci` verb. 28 tests, docs/cli.md +
+  docs/operating.md updated (SF7.1 demanded both). Live proof: .conductor/evidence/CH1/.
+red: CI on feat/charkh is RED at the RATCHET step - 'ANALYZER SUPPRESSIONS ABOVE CEILING (35 > 31)'.
+  Measured: 35 '#pragma warning disable' in src/, ZERO added by this branch, so it predates the era;
+  it was hidden because dotnet test failed first for all of Divan. It fails locally too. This is
+  exactly what CH1.3's own ci-battery row predicts.
+next: remove 4 suppressions from src/ (fix the analyzer complaints - NEVER raise the ceiling, the
+  gate calls that a human decision), then re-run the FULL suite: it has not run since the CH1.3 work.
+  CH1.3's exit is CI green on master, which needs feat/charkh merged after it is green here.
 
 ## Baseline numbers (from run.db)
 

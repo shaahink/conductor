@@ -26,12 +26,12 @@ namespace Conductor.Commands;
 /// mirror must not be able to touch the thing it mirrors, and pointing this at a live run's database
 /// must be safe.</para>
 /// </summary>
-public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
+public sealed partial class GithubCommand : AsyncCommand<GithubCommand.Settings>
 {
     public sealed class Settings : PlanSettings
     {
         [CommandArgument(0, "[VERB]")]
-        [Description("Sub-command: sync, sarif. Omit to show help.")]
+        [Description("Sub-command: sync, sarif, ci. Omit to show help.")]
         public string Verb { get; init; } = "";
 
         [CommandOption("--backfill <RUN>")]
@@ -61,6 +61,13 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         [Description("Also mirror a Projects v2 board (needs a token with the 'project' scope). Refuses without it.")]
         public int? Project { get; init; }
 
+        // CH1.3 - `ci` asks about a BRANCH, and the branch it should ask about is this checkout is
+        // the default. The override is what lets a proof ask about a branch this working tree is
+        // not on.
+        [CommandOption("--branch <BRANCH>")]
+        [Description("ci: ask about this branch instead of the one this checkout is on.")]
+        public string? Branch { get; init; }
+
         [CommandOption("--home <PATH>")]
         [Description("Read a state home other than this machine's.")]
         public string? Home { get; init; }
@@ -85,12 +92,17 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
     {
         ArgumentNullException.ThrowIfNull(settings);
         var verb = settings.Verb.ToLowerInvariant();
-        if (verb is not ("sync" or "backfill" or "sarif")) return Help();
+        if (verb is not ("sync" or "backfill" or "sarif" or "ci")) return Help();
 
         // DV6.4 — the sarif verb writes no issues and no columns, so the project-board gates below
         // are not its business: refusing a SARIF upload because a plan also asked for a Projects v2
         // board would deny a feature over an unrelated missing scope.
         var sarif = verb is "sarif";
+        // CH1.3 - `ci` writes nothing to the mirror and needs no run: it READS the destination
+        // repository and asks what CI said. The board gates below are about writing issues and
+        // columns, so refusing this verb over a project-board misconfiguration would deny a
+        // read because a write is not set up.
+        var ci = verb is "ci";
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
 
         // KS9.3 — the board's own coherence is decided first, because it costs nothing and because a
@@ -98,7 +110,7 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         // against the network. It fires whether the project board was asked for in the plan or with
         // --project, and it fires before a destination is even resolved.
         var board = BoardView(plan, settings.Project);
-        if (!sarif && board.BoardRefusal() is { } configRefusal)
+        if (!sarif && !ci && board.BoardRefusal() is { } configRefusal)
             return Refuse([configRefusal, "nothing was contacted and nothing was written."]);
 
         var repo = Destination(plan, settings.Repo);
@@ -119,12 +131,14 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         // have one is refused WHOLE: pushing the issue half while quietly dropping the half that was
         // asked for is precisely the silent no-op this gate exists to prevent. Set github.board back
         // to 'issues' — which the refusal says — and the issue mirror runs untouched.
-        if (!sarif && board.WantsProjectBoard)
+        if (!sarif && !ci && board.WantsProjectBoard)
         {
             using var probe = new GithubClient(token, TimeSpan.FromSeconds(30));
             var stop = await GithubProjects.PreflightAsync(probe, board, source).ConfigureAwait(false);
             if (stop.Count > 0) return Refuse(stop);
         }
+
+        if (ci) return await CiAsync(plan, repo, source, settings.Branch).ConfigureAwait(false);
 
         if (string.IsNullOrWhiteSpace(settings.Backfill))
         {
