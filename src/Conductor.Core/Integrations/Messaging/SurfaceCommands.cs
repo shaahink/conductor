@@ -1,4 +1,4 @@
-namespace Conductor.Core.Integrations.Messaging;
+﻿namespace Conductor.Core.Integrations.Messaging;
 
 /// <summary>What a verb DOES, which is what decides who may use it.
 ///
@@ -53,6 +53,7 @@ public static class SurfaceCommands
         new("/money", SurfaceScope.Browse),                          // KS11.5
         new("/tokens", SurfaceScope.Browse),                         // KS11.5
         new("/project", SurfaceScope.Steer),                         // DV3.4
+        new("/cloud", SurfaceScope.Steer),                           // DV5.1
         new("/inject", SurfaceScope.Steer),
         new("/chat", SurfaceScope.Steer),
         new("/pause", SurfaceScope.Control),

@@ -44,6 +44,14 @@ public sealed partial class MessageComposer
         _warn = warn ?? (_ => { });
     }
 
+    /// <summary>DV5.1 — the run's own checkout. Handed out because <c>/cloud</c> has to MEASURE a
+    /// repo (a cloud session clones from its remote), and the surface must not carry a second copy of
+    /// the plan to find out where it is.</summary>
+    public string RepoDir => _plan.Repo;
+
+    /// <summary>What this run is called in a sentence — the plan's name, or the word conductor.</summary>
+    public string RunLabel => string.IsNullOrWhiteSpace(_plan.Name) ? "conductor" : _plan.Name.Trim();
+
     // ────────────────────────────── the composed bodies ──────────────────────────────
 
     /// <summary>K5.2 — the session-end body, rebuilt from the owner's own transcribed run (15

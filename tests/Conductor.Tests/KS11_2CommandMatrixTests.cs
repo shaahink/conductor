@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 using Conductor.Core;
 using Conductor.Core.Integrations.Messaging;
@@ -147,6 +147,9 @@ public sealed class KS11_2CommandMatrixTests : IDisposable
                     // DV3.4: bare "/project" is a QUESTION - which project do notes here go to -
                     // so unlike bare "/inject" it has an answer of its own.
                     (SurfaceScope.Steer, _, _) when cmd.Verb == "/project" => SurfaceAction.Project,
+                    // DV5.1: bare "/cloud" is a question too - is this repo in a state a cloud
+                    // session could clone - so it answers rather than falling through to silence.
+                    (SurfaceScope.Steer, _, _) when cmd.Verb == "/cloud" => SurfaceAction.Cloud,
                     // Bare "/inject" is not the "/inject <text>" prefix, so it falls through to the
                     // control router, which does not know it: silence, two-way or not.
                     (SurfaceScope.Steer, _, _) => SurfaceAction.None,

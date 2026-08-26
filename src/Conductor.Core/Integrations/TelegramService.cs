@@ -189,7 +189,11 @@ public sealed partial class TelegramService
             // about itself - and everything else comes from the machine catalogue (findings 1.5).
             notes: new Inbox.NoteRouter(
                 new Inbox.ProjectDirectory(local: LocalProject(plan)),
-                new Inbox.ChatRoutes(Store.StateHome.Root)));
+                new Inbox.ChatRoutes(Store.StateHome.Root)),
+            // DV5.1: the cloud verb. Constructed unconditionally and it costs nothing until asked -
+            // every path it has starts by MEASURING the repo, and none of them starts a cloud
+            // session, because starting one is interactive-only on the CLI this engine drives.
+            cloud: new Cloud.CloudVerb());
         _cfg = plan.Telegram;
         _token = ResolveToken(plan);
 

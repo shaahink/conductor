@@ -43,6 +43,11 @@ public sealed partial class RemoteSurface
     /// <summary>DV3.4 / findings §6.10 — where a note goes when it cannot go where it belongs.</summary>
     private readonly Inbox.DeadLetterBox? _parked;
 
+    /// <summary>DV5.1 — the cloud verb, or null when this surface has no project behind it. Null and
+    /// not-configured behave identically and neither ever shells out: a test that never asks for the
+    /// cloud verb must never find git or claude on its path because of it.</summary>
+    private readonly Cloud.CloudVerb? _cloud;
+
     /// <summary>Chats that have been asked for injection text and whose next plain message is
     /// therefore an instruction rather than a command.</summary>
     private readonly Dictionary<string, bool> _injectionArmed = new(StringComparer.Ordinal);
@@ -72,8 +77,10 @@ public sealed partial class RemoteSurface
     public RemoteSurface(IMessageChannel channel, MessageComposer composer, CommandRouter router,
         RunState state, IRunStore? store, Func<string, bool, string?, Task> writeControl,
         Action<string, string?> log, PullRateLimiter? pulls = null, Inbox.InboxStore? inbox = null,
-        Inbox.ITranscriber? transcriber = null, Inbox.NoteRouter? notes = null)
+        Inbox.ITranscriber? transcriber = null, Inbox.NoteRouter? notes = null,
+        Cloud.CloudVerb? cloud = null)
     {
+        _cloud = cloud;
         _inbox = inbox;
         _transcriber = transcriber;
         _notes = notes;
@@ -294,6 +301,10 @@ public sealed partial class RemoteSurface
         {
             case SurfaceAction.Project:
                 await SelectProjectAsync(chatId, threadId, outcome.Text ?? "", ct).ConfigureAwait(false);
+                return;
+
+            case SurfaceAction.Cloud:
+                await CloudAsync(chatId, threadId, outcome.Text ?? "", ct).ConfigureAwait(false);
                 return;
 
             case SurfaceAction.Promote:

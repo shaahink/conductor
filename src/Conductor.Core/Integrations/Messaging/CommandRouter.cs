@@ -1,4 +1,4 @@
-using Conductor.Models;
+﻿using Conductor.Models;
 
 namespace Conductor.Core.Integrations.Messaging;
 
@@ -56,6 +56,12 @@ public enum SurfaceAction
     /// <c>NotePromoter</c> and nothing else, and there is no action here that would let a note
     /// become an <see cref="Inject"/>.</summary>
     Promote = 10,
+
+    /// <summary>DV5.1 / findings §2.3 CL-2 and §6.8 — talk to a cloud session about this chat's
+    /// project. A separate action because it READS THE REPO before it does anything: a cloud session
+    /// clones from the remote, so the git state has to be measured before the verb can honestly say
+    /// what a session would see, and a router that only decides cannot shell out to git.</summary>
+    Cloud = 11,
 }
 
 /// <param name="Text">The reply body, or the instruction for <see cref="SurfaceAction.Inject"/>.</param>
@@ -166,6 +172,16 @@ public sealed class CommandRouter
 
         if (text.StartsWith("/project ", StringComparison.OrdinalIgnoreCase))
             return new CommandOutcome(SurfaceAction.Project, text["/project ".Length..].Trim());
+
+        // DV5.1: bare is usage plus the git state (the useful question from a phone is "is this repo
+        // ready for one"), and with an argument it is either a message to a session or a task.
+        // Which of those it is, is the verb's decision and not the router's - it turns on whether the
+        // first token parses as a session id, and this router does not own that grammar.
+        if (text.Equals("/cloud", StringComparison.OrdinalIgnoreCase))
+            return new CommandOutcome(SurfaceAction.Cloud, "");
+
+        if (text.StartsWith("/cloud ", StringComparison.OrdinalIgnoreCase))
+            return new CommandOutcome(SurfaceAction.Cloud, text["/cloud ".Length..].Trim());
 
         if (text.StartsWith("/inject ", StringComparison.OrdinalIgnoreCase))
             return new CommandOutcome(SurfaceAction.Inject, text[8..].Trim());

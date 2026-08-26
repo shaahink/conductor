@@ -45,6 +45,7 @@ namespace Conductor.Core.Events;
         [JsonDerivedType(typeof(RollbackExecuted),     "rollbackExecuted")]
         [JsonDerivedType(typeof(PlanReloaded),         "planReloaded")]
         [JsonDerivedType(typeof(EvidenceRegistered),   "evidenceRegistered")]
+        [JsonDerivedType(typeof(OwnerCloudAction),     "ownerCloudAction")]
 public abstract record ConductorEvent
 {
     /// <summary>Monotonic 1-based ordinal within the log (continues across restarts). Stamped by
