@@ -359,21 +359,38 @@ public sealed class DV6_4SarifTests
             && n.Contains("free", StringComparison.Ordinal));
     }
 
-    /// <summary>The KS9.3 shape: a scope that is certainly missing is a refusal with the ONE command
-    /// that grants it, and nothing is sent.</summary>
+    /// <summary>NOT the KS9.3 shape, and the difference was measured. A real POST to a private
+    /// repository with a token carrying <c>repo</c> and not <c>security_events</c> answers 403 "Code
+    /// scanning is not enabled for this repository" - the entitlement wall, saying nothing about the
+    /// token. So the missing scope is NOTED with the command that grants it and the call is made
+    /// anyway; refusing on an unproven scope requirement would deny an owner whose organisation HAS
+    /// Advanced Security a call that may well succeed.</summary>
     [Fact]
-    public async Task A_private_repository_without_the_scope_is_refused_by_name()
+    public async Task A_private_repository_without_the_scope_is_told_so_and_still_attempted()
     {
         using var fake = new FakeCodeScanning { Private = true, Scopes = "repo,workflow,gist,read:org,user,delete_repo" };
 
         var pass = await PushAsync(fake);
 
+        Assert.True(pass.Ok, string.Join(" | ", pass.Errors));
+        Assert.Single(fake.Uploads);
+        var notes = string.Join(" ", pass.Notes);
+        Assert.Contains("Advanced Security", notes, StringComparison.Ordinal);
+        Assert.Contains("gh auth refresh -s security_events", notes, StringComparison.Ordinal);
+    }
+
+    /// <summary>The one hard client-side stop: a repository that cannot be read at all. Nothing is
+    /// uploaded blind.</summary>
+    [Fact]
+    public async Task A_repository_that_cannot_be_read_stops_before_the_upload()
+    {
+        using var fake = new FakeCodeScanning { RepoStatus = HttpStatusCode.NotFound };
+
+        var pass = await PushAsync(fake);
+
         Assert.False(pass.Ok);
-        var refusal = string.Join(" ", pass.Errors);
-        Assert.Contains("security_events", refusal, StringComparison.Ordinal);
-        Assert.Contains("gh auth refresh -s security_events", refusal, StringComparison.Ordinal);
+        Assert.Contains("could not read shaahink/scratch", string.Join(" ", pass.Errors), StringComparison.Ordinal);
         Assert.Empty(fake.Uploads);
-        Assert.Contains(pass.Notes, n => n.Contains("Advanced Security", StringComparison.Ordinal));
     }
 
     /// <summary>Visibility alone is NOT a refusal: an organisation with Advanced Security is exactly
@@ -455,6 +472,7 @@ public sealed class DV6_4SarifTests
         public bool Private { get; init; }
         public string? Scopes { get; init; }
         public HttpStatusCode UploadStatus { get; init; } = HttpStatusCode.Accepted;
+        public HttpStatusCode RepoStatus { get; init; } = HttpStatusCode.OK;
         public string? UploadBody { get; init; }
         public string Processing { get; init; } = "complete";
         public List<string>? ProcessingErrors { get; init; }
@@ -488,7 +506,7 @@ public sealed class DV6_4SarifTests
             if (path == "/user")
                 return Reply(HttpStatusCode.OK, "{\"login\":\"shaahink\"}");
 
-            return Reply(HttpStatusCode.OK,
+            return Reply(RepoStatus,
                 $"{{\"full_name\":\"shaahink/scratch\",\"private\":{(Private ? "true" : "false")}," +
                 $"\"visibility\":\"{(Private ? "private" : "public")}\",\"default_branch\":\"main\"}}");
         }

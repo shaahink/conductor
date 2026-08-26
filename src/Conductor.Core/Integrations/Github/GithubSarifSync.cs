@@ -107,10 +107,19 @@ public sealed class GithubSarifSync(GithubClient client, string repo)
         return pass;
     }
 
-    /// <summary>Reads the repository, states the caveat that applies to it, and refuses only for the
-    /// one condition that is certain client-side: a private repo with no <c>security_events</c>.
-    /// Visibility alone is NOT a refusal — an org with Advanced Security is exactly the case where
-    /// a private upload succeeds, and guessing otherwise would deny a paying owner their feature.
+    /// <summary>
+    /// Reads the repository and states the caveat that applies to it. The ONLY hard stop here is a
+    /// repository that cannot be read at all; everything else is a note, and GitHub answers.
+    ///
+    /// <para><b>Why the missing scope is not a refusal, unlike KS9.3's.</b> The obvious gate — a
+    /// private repo without <c>security_events</c> is refused by name, the shape the project board
+    /// uses — was BUILT and then removed on a measurement. A POST of a real payload to a private
+    /// repository with a token carrying <c>repo</c> and NOT <c>security_events</c> answers
+    /// <c>403 "Code scanning is not enabled for this repository"</c>: the entitlement wall, saying
+    /// nothing about the token. The scope requirement is therefore unproven on this path, and a
+    /// client-side refusal built on it would deny an owner whose organisation HAS Advanced Security
+    /// a call that may well succeed. Notes cost nothing and are true; a refusal built on a guess is
+    /// the failure this project has paid for before.</para>
     /// </summary>
     private async Task<bool> PreflightAsync(GithubSarifPass pass, string tokenSource, CancellationToken ct)
     {
@@ -129,14 +138,14 @@ public sealed class GithubSarifSync(GithubClient client, string repo)
 
         pass.Notes.Add($"{repo} is PRIVATE — {AdvancedSecurityNote}");
         var (scopes, scopeError) = await client.ProbeScopesAsync(ct).ConfigureAwait(false);
-        if (scopeError is not null) return true;   // could not ask; let GitHub answer for itself
-        if (scopes is null) return true;           // a fine-grained PAT reports no scopes at all
+        if (scopeError is not null || scopes is null) return true;
         if (GithubProjects.Scopes(scopes).Contains(PrivateScope, StringComparer.OrdinalIgnoreCase)) return true;
 
-        pass.Errors.Add(
-            $"a PRIVATE repository needs the '{PrivateScope}' scope and this token ({tokenSource}) carries " +
-            $"[{scopes}]. nothing was uploaded. the owner grants it once: {GrantCommand}");
-        return false;
+        pass.Notes.Add(
+            $"GitHub documents '{PrivateScope}' for a private upload and this token ({tokenSource}) carries " +
+            $"[{scopes}]. attempting anyway — if the 403 below is about the TOKEN, the owner grants it " +
+            $"once: {GrantCommand}");
+        return true;
     }
 
     /// <summary>Asks what became of the upload until GitHub stops saying "pending". A document

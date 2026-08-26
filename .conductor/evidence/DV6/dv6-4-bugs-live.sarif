@@ -1,0 +1,321 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Conductor",
+          "semanticVersion": "0.4.2-alpha.0.79\u002B870786f5b17a.dirty",
+          "informationUri": "https://github.com/shaahink/conductor",
+          "rules": [
+            {
+              "id": "conductor/bug/43",
+              "name": "ConductorBug43",
+              "shortDescription": {
+                "text": "Import bridges: a 4-digit phase/task count mints ids that pass the progress provider but fail EvidenceArtifact\u0027s [A-Za-z]{1,4}\\d{1,3}[._]\\d{1,3} reader (Evid..."
+              },
+              "fullDescription": {
+                "text": "Import bridges: a 4-digit phase/task count mints ids that pass the progress provider but fail EvidenceArtifact\u0027s [A-Za-z]{1,4}\\d{1,3}[._]\\d{1,3} reader (Evid..."
+              },
+              "help": {
+                "text": "Filed by: Karvansara core - the open door, stage KS3, session 17 on 2026-08-15 01:01:49.\nSeverity: medium.\nCloses with: conductor bug fix 43 \u2014 the alert resolves itself at the next upload, because a fixed bug stops being rendered and code scanning closes what a later analysis no longer reports."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "conductor",
+                  "bug",
+                  "stage:KS3"
+                ]
+              }
+            },
+            {
+              "id": "conductor/bug/45",
+              "name": "ConductorBug45",
+              "shortDescription": {
+                "text": "Any verb from a newer build silently migrates the live run.db and locks the RUNNING engine out of its own store"
+              },
+              "fullDescription": {
+                "text": "Any verb from a newer build silently migrates the live run.db and locks the RUNNING engine out of its own store"
+              },
+              "help": {
+                "text": "Measured live 2026-08-15 at KS10.1, on this run. MigrationRunner.Run (src/Conductor.Core/Store/MigrationRunner.cs:21-45) upgrades the store on EVERY RunDb construction, with no opt-out and no read-only mode - so a purely reporting verb does it. This session ran \u0027dotnet run --project src/Conductor -- budget --json\u0027 against the live store to satisfy KS10.1\u0027s own acceptance; that took the store 13 -\u003E 14 (KS9.2 shipped v14_github_cursor.sql). The engine driving the run is the published snapshot 0.4.1-alpha.0.49\u002B9bf2742 whose CurrentVersion is 13, so from that moment every NEW invocation of the PATH binary refuses at MigrationRunner.cs:29 - \u0027run.db schema version is newer (14) than supported (13)\u0027. conductor note, conductor task and conductor bug all died mid-session; the claim channel the prompt mandates went with them. The run itself survived only because ConductorHost.cs:160 registers IRunStore as a SINGLETON, so the supervisor holds the connection it opened at v13 and never re-migrates. The sharp edge: if that engine is ever restarted before the owner installs a newer build, it cannot reopen its own store and the run cannot resume. Fix shape: migrate only when the caller intends to write (or a --read-only open that tolerates a newer schema), and refuse-with-guidance rather than refuse-with-nothing.\n\nFiled by: Karvansara core - the open door, stage KS10, session 23 on 2026-08-15 03:32:27.\nSeverity: high.\nCloses with: conductor bug fix 45 \u2014 the alert resolves itself at the next upload, because a fixed bug stops being rendered and code scanning closes what a later analysis no longer reports."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "conductor",
+                  "bug",
+                  "stage:KS10"
+                ]
+              }
+            },
+            {
+              "id": "conductor/bug/49",
+              "name": "ConductorBug49",
+              "shortDescription": {
+                "text": "KS1_2StagesFromFoldTests.DerivedStatusMatchesTheStatusSurface_ForEverySeededRun flakes under full-suite parallel load"
+              },
+              "fullDescription": {
+                "text": "KS1_2StagesFromFoldTests.DerivedStatusMatchesTheStatusSurface_ForEverySeededRun flakes under full-suite parallel load"
+              },
+              "help": {
+                "text": "MEASURED at KS11.4, 2026-08-18, at commit cb84b1e.\n\nFull suite: Failed 1, Passed 2762, Total 2763 (2m20s, .conductor/evidence/KS11/ks11-4-full-suite.txt). The single failure is KS1_2StagesFromFoldTests.cs:174 - Assert.Equal(expected.State, s.Status) - with Actual: \u0022active\u0022.\n\nRun alone, the same class passes 5/5 in 338ms. So it is load- or ordering-dependent, not deterministic.\n\nNOT caused by this checkpoint: KS11.4 touches only Integrations/Messaging (composition, router, remote surface, a rate limiter) plus two test rigs. The failing test compares RunStateProjection.Fold \u002B SnapshotBuilder against RunArchive.Stages over seeded runs, and nothing on that path is in the diff. The scoped suites over everything KS11.4 touches were 347/347 green.\n\nNote the neighbouring line: the test calls SqliteConnection.ClearAllPools() before folding, which is a global on the whole process - under xUnit\u0027s parallel classes that reaches every other test\u0027s SQLite connections too, so the suspicion is a store/pool interaction rather than a real derivation bug. Whoever picks this up: seed a status that is expected to be terminal and see whether the archive row is being read before the last event of the run has landed.\n\nThe same session found and FIXED a second parallel-load defect of the same family (a test class setting CONDUCTOR_TELEGRAM_TOKEN process-wide, which broke three token-absence assertions in other classes) - see the KS11 ledger. Process-global state in this suite is worth one deliberate sweep.\n\nFiled by: Karvansara edge - gates that can\u0027t be gamed, and the courier, stage KS11 on 2026-08-18 20:12:32.\nSeverity: medium.\nCloses with: conductor bug fix 49 \u2014 the alert resolves itself at the next upload, because a fixed bug stops being rendered and code scanning closes what a later analysis no longer reports."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "conductor",
+                  "bug",
+                  "stage:KS11"
+                ]
+              }
+            },
+            {
+              "id": "conductor/bug/61",
+              "name": "ConductorBug61",
+              "shortDescription": {
+                "text": "CONDUCTOR_RUN_DB does not redirect the measuring verbs: budget resolves by repo first and reports \u0027no runs to measure\u0027"
+              },
+              "fullDescription": {
+                "text": "CONDUCTOR_RUN_DB does not redirect the measuring verbs: budget resolves by repo first and reports \u0027no runs to measure\u0027"
+              },
+              "help": {
+                "text": "MEASURED at KS12.1, 2026-08-19. StateHome.RunDbEnvVar (src/Conductor.Core/Store/StateHome.cs:27-29) is documented as \u0027Overrides the resolved database FILE, ignoring root and catalogue entirely. Highest precedence, because it is the bluntest.\u0027 It does not hold for budget. With CONDUCTOR_RUN_DB pointed at a valid v14 run.db holding four runs, \u0027dotnet run --project src/Conductor -- budget --json -p plans/karvansara/edge.plan.json\u0027 answered: \u0027no runs to measure for C:\\Code\\conductor. a budget is measured from a run\u0027s own sessions; try conductor budget --repo all or point it at a database: conductor budget path/to/run.db\u0027. Passing the SAME file as budget\u0027s positional db argument works and produced the full four-run report. So the verb resolves the run by repo path before the env override is consulted - RunSources.Resolve is the place to look. WHY IT MATTERS BEYOND TIDINESS: this is the documented escape hatch for measuring a run WITHOUT opening the live store, which is the only safe way to run budget/money from a session while bug 45 is open (a fresh build\u0027s MigrationRunner migrates the live store and locks the running engine out of it). KS12.1 had to work around it with a sqlite3.backup copy plus the positional path. Either make the env var work for the measuring verbs or correct StateHome\u0027s doc comment so it stops promising something the verbs do not honour.\n\nFiled by: Karvansara edge - gates that can\u0027t be gamed, and the courier, stage KS12, session 21 on 2026-08-19 18:32:38.\nSeverity: medium.\nCloses with: conductor bug fix 61 \u2014 the alert resolves itself at the next upload, because a fixed bug stops being rendered and code scanning closes what a later analysis no longer reports."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "conductor",
+                  "bug",
+                  "stage:KS12"
+                ]
+              }
+            },
+            {
+              "id": "conductor/bug/72",
+              "name": "ConductorBug72",
+              "shortDescription": {
+                "text": "face: bubbles/textarea cannot replace widgets.TextArea until key dispatch stops being a string"
+              },
+              "fullDescription": {
+                "text": "face: bubbles/textarea cannot replace widgets.TextArea until key dispatch stops being a string"
+              },
+              "help": {
+                "text": "RECOVERED 2026-08-25 by the DV2.1 triage from the pre-state-home-split copy at .conductor/run.db, where it is karvan bug #31 (see bug #46). K6.4 measured the blocker: bubbles textarea.Update takes a tea.Msg but the Face routes keys as msg.String() from update.go:36 through handleKey(key string) - 220 call sites. The USER-FACING defect is real: widgets.TextArea clips every line except the caret\u0027s (editor.go renderLine calls clipLine for row != cy), so editing a template with long lines shows truncated neighbours with no indication. Four call sites: templates editor, knowledge input, kanban ctxEditor, plan promptEditor. Deferred - next era, face lane.\n\nFiled by: Divan - the chancellery: inbox, courier, and the record that gets out, stage K6, session 3 on 2026-08-25 19:31:52.\nSeverity: medium.\nCloses with: conductor bug fix 72 \u2014 the alert resolves itself at the next upload, because a fixed bug stops being rendered and code scanning closes what a later analysis no longer reports."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "conductor",
+                  "bug",
+                  "stage:K6"
+                ]
+              }
+            },
+            {
+              "id": "conductor/bug/79",
+              "name": "ConductorBug79",
+              "shortDescription": {
+                "text": "github sync --backfill duplicates the whole board when run twice within the API\u0027s replica lag: the read-only path uses GithubMap.Transient() so nothing survi..."
+              },
+              "fullDescription": {
+                "text": "github sync --backfill duplicates the whole board when run twice within the API\u0027s replica lag: the read-only path uses GithubMap.Transient() so nothing survi..."
+              },
+              "help": {
+                "text": "MEASURED live at DV6.1, 2026-08-26, against a private scratch repo. Pass 1 created 8 issues with 0 errors. Pass 2, seconds later, listed the repository, saw only 3 of them, and created 4 MORE - bug:1 was #5 and became #10, bug:2 was #4 and became #9, the run diary was #8 and became #12. This is exactly the failure KS9.2 measured and fixed FOR THE LIVE MIRROR by persisting github_map rows in run.db; GithubCommand.PushAsync builds its sync with no map at all (src/Conductor/Commands/GithubCommand.cs:186 - new GithubBoardSync(client, repo, prefix)) because a read-only backfill must not write to the archive it is reading. Pre-existing since KS9.1 and NOT introduced by DV6.1, but DV6.1 multiplies the blast radius (bugs and followups are issues now) and DV7.3\u0027s owner backfill is the exact command that will hit it. A map kept beside the archive in the state home, or a settle-and-verify pass, would close it.\n\nFiled by: Divan - the chancellery: inbox, courier, and the record that gets out, stage DV6, session 16 on 2026-08-26 12:12:01.\nSeverity: high.\nCloses with: conductor bug fix 79 \u2014 the alert resolves itself at the next upload, because a fixed bug stops being rendered and code scanning closes what a later analysis no longer reports."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "conductor",
+                  "bug",
+                  "stage:DV6"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "automationDetails": {
+        "id": "conductor-bugs/"
+      },
+      "columnKind": "utf16CodeUnits",
+      "results": [
+        {
+          "ruleId": "conductor/bug/43",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "conductor bug #43: Import bridges: a 4-digit phase/task count mints ids that pass the progress provider but fail EvidenceArtifact\u0027s [A-Za-z]{1,4}\\d{1,3}[._]\\d{1,3} reader (Evid..."
+          },
+          "partialFingerprints": {
+            "conductorBugId": "43"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/Conductor.Core/Evidence/EvidenceArtifact.cs"
+                },
+                "region": {
+                  "startLine": 87
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "conductor/bug/45",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "conductor bug #45: Any verb from a newer build silently migrates the live run.db and locks the RUNNING engine out of its own store"
+          },
+          "partialFingerprints": {
+            "conductorBugId": "45"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/Conductor.Core/Store/MigrationRunner.cs"
+                },
+                "region": {
+                  "startLine": 21,
+                  "endLine": 45
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/Conductor.Core/Store/MigrationRunner.cs"
+                },
+                "region": {
+                  "startLine": 29
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/Conductor/Hosting/ConductorHost.cs"
+                },
+                "region": {
+                  "startLine": 160
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "conductor/bug/49",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "conductor bug #49: KS1_2StagesFromFoldTests.DerivedStatusMatchesTheStatusSurface_ForEverySeededRun flakes under full-suite parallel load"
+          },
+          "partialFingerprints": {
+            "conductorBugId": "49"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/Conductor.Tests/KS1_2StagesFromFoldTests.cs"
+                },
+                "region": {
+                  "startLine": 174
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "conductor/bug/61",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "conductor bug #61: CONDUCTOR_RUN_DB does not redirect the measuring verbs: budget resolves by repo first and reports \u0027no runs to measure\u0027"
+          },
+          "partialFingerprints": {
+            "conductorBugId": "61"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/Conductor.Core/Store/StateHome.cs"
+                },
+                "region": {
+                  "startLine": 27,
+                  "endLine": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "conductor/bug/72",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "conductor bug #72: face: bubbles/textarea cannot replace widgets.TextArea until key dispatch stops being a string"
+          },
+          "partialFingerprints": {
+            "conductorBugId": "72"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "face-go/internal/tui/update.go"
+                },
+                "region": {
+                  "startLine": 36
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "conductor/bug/79",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "conductor bug #79: github sync --backfill duplicates the whole board when run twice within the API\u0027s replica lag: the read-only path uses GithubMap.Transient() so nothing survi..."
+          },
+          "partialFingerprints": {
+            "conductorBugId": "79"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/Conductor/Commands/GithubCommand.cs"
+                },
+                "region": {
+                  "startLine": 186
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

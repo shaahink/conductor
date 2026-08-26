@@ -310,6 +310,7 @@ that is correct, not a gap. The tracker and the event log stay the contract.
 | `github sync --backfill <run> --dry-run` | Reconcile and report what would change, writing nothing. |
 | `github sync --backfill <run> --no-diary` | Board only — skip the run issue and its per-session comments. |
 | `github sync … --project <n>` | Mirror the **columns** to a Projects v2 board as well, without editing the plan (the same thing as `board: "issues+project"`). Needs a token carrying the classic `project` scope; without it the verb refuses by name and writes nothing — see below. |
+| `github sarif --backfill <run>` | Push every **open bug that names a file and a line** to GitHub **code scanning** as one SARIF 2.1.0 run. `--out <path>` also writes the document to disk, `--sha` / `--gitref` anchor the alerts to a commit that must exist in the destination, `--dry-run` renders and sends nothing. Free on a public repository; a private one needs Advanced Security — see below. |
 
 Identity is a marker in the issue body (`<!-- conductor:task KS9.1 -->`), not the title, so re-running
 a backfill mints **zero** duplicates and a reworded checkpoint updates its issue instead of growing a
@@ -365,6 +366,58 @@ with no status set, reported by name along with the options the board did offer.
 silently. A second pass over an unchanged board issues **zero** mutations; a board whose item
 listing is stale (GitHub's replica lag) costs redundant writes and can never mint a second item,
 because `addProjectV2ItemById` returns the item that is already there.
+
+### Bugs as code-scanning alerts, and the one thing that is not free
+
+`github sarif --backfill <run>` renders the bug ledger as a single SARIF 2.1.0 run and uploads it to
+the repository's **code scanning** tab: filterable, dismissable, shown on the PR diff, visible in the
+GitHub mobile app, and — unlike an issue — not something the issue list has to carry.
+
+Only bugs that **name a place in the tree** become alerts. The `bugs` table has no file column, so
+the citation is lifted out of the prose a session wrote, and it is refused rather than guessed:
+
+- a citation with **no line number** is not a location (SARIF would default the region to line 1,
+  which hangs every bug that merely *mentions* a file at the top of it, and that reads as a fact);
+- a **bare file name** — `VerdictEngine.cs:370`, which is how most sessions write it — resolves only
+  when exactly **one** tracked file bears that name; two `agent.go`s and it is dropped;
+- a path **no tracked file matches** is dropped, because an alert anchored to nothing is worse than
+  no alert.
+
+The verb reports both halves — `sarif: 6 located, 26 without a file and line` — so the reach is never
+overstated. Bugs with no citation are still mirrored as issues by `github sync`.
+
+Three properties of the document are load-bearing. It declares its own **analysis category**
+(`conductor-bugs/`), so an upload cannot close alerts another tool raised. Every result is
+**fingerprinted by the bug's row id**, so re-uploading from a later commit *updates* an alert instead
+of raising a second one. And **only open bugs are rendered** — which is the closing mechanism, not an
+omission: code scanning resolves an alert whose result stops appearing in a later analysis of the same
+category, so `conductor bug fix <id>` closes the alert at the next upload with no second call.
+
+A 202 from GitHub is a **receipt, not an ingestion**. GitHub validates the document afterwards, so
+conductor polls `GET /code-scanning/sarifs/<id>` until it stops saying `pending` and reports a
+rejected document by the reason GitHub gives. A pass that stopped at the 202 would call a rejected
+SARIF a success.
+
+**Public repositories get code scanning free. Private repositories need GitHub Advanced Security
+(GitHub Code Security).** That is GitHub's rule, not conductor's, and conductor cannot work around
+it — what it does is say so before the call and translate the 403 into the sentence that names the
+cause. Measured on 2026-08-26 against a private scratch repository with a token carrying `repo`:
+
+```
+note shaahink/dv61-ledger-scratch is PRIVATE — code scanning is free on PUBLIC repositories; a
+     PRIVATE repository needs GitHub Advanced Security (GitHub Code Security) and refuses the
+     upload with 403 without it.
+403 Forbidden from https://api.github.com/repos/…/code-scanning/sarifs [token scopes: delete_repo,
+     gist, read:org, repo, user, workflow] — {"message":"Code scanning is not enabled for this
+     repository. Please enable code scanning in the repository settings."}
+```
+
+Note what that refusal does **not** say: anything about the token. GitHub documents the
+`security_events` scope for this endpoint, but the observed wall on a private repository is the
+repository's entitlement, not the credential — so conductor **notes** a missing `security_events`
+(with `gh auth refresh -s security_events`, which is yours to run) and makes the call anyway. An
+organisation that *has* Advanced Security must not be refused on a scope requirement nobody here has
+been able to observe.
 
 ## Overriding the defaults
 
