@@ -93,11 +93,27 @@ public sealed partial class SF7_1DocsMatchRealityTests
 
         var program = Doc("src", "Conductor", "Program.cs");
         Assert.Contains("AddCommand<HubCommand>(\"hub\").IsHidden()", program, StringComparison.Ordinal);
-        Assert.True(
-            Regex.IsMatch(program, @"argv\.Length\s*==\s*0\s*\?\s*\[\s*""hub""\s*\]",
-                RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(5)),
-            "Program.cs no longer rewrites an empty argv to the hub, so plain `conductor` does not " +
-            "open it - but README.md still tells the reader to type exactly that.");
+
+        // DV4.1 moved the rewrite out of a local function into VerbRewrites, so this pin now runs the
+        // ENGINE'S OWN code rather than pattern-matching Program.cs's source. Strictly stronger: a
+        // rewrite that is present but wrong used to pass, and no longer does.
+        Assert.Equal(["hub"], Rewrite("HubWhenBare", []));
+        Assert.Equal(["status"], Rewrite("HubWhenBare", ["status"]));
+    }
+
+    /// <summary>One of <c>Conductor.VerbRewrites</c>' rewrites, by name, run against the argv the
+    /// reader would type. Reflected rather than referenced so the failure names the rewrite that went
+    /// missing instead of failing to compile.</summary>
+    private static string[] Rewrite(string name, string[] argv)
+    {
+        var method = Assembly.LoadFrom(Path.Combine(AppContext.BaseDirectory, "conductor.dll"))
+            .GetType("Conductor.VerbRewrites")?
+            .GetMethod(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.True(method is not null,
+            $"Conductor.VerbRewrites.{name} is gone from the engine assembly. If the rewrite moved, "
+            + "point this pin at the new one - do not drop it, or the two-word spelling the README "
+            + "teaches stops being checked anywhere.");
+        return (string[])method!.Invoke(null, [argv])!;
     }
 
     /// <summary>KS12.2 — the argv the PARSER sees, not the argv the reader types. Two of the front
@@ -107,26 +123,12 @@ public sealed partial class SF7_1DocsMatchRealityTests
     /// --atif</c> as <c>history</c> and calls a working command broken — which is what it did the
     /// first time the README documented the ATIF export.
     ///
-    /// <para>The <c>history export</c> arm runs the ENGINE'S OWN rewrite by reflection, so the two
-    /// cannot drift apart. <c>run close|adopt</c> is a local function inside top-level statements and
-    /// has no reflectable name, so it is mirrored here and
-    /// <see cref="ProgramStillPerformsTheArgvRewritesThisPinMirrors"/> is what stops the mirror
-    /// rotting.</para></summary>
-    private static IReadOnlyList<string> EngineRewrites(IReadOnlyList<string> argv)
-    {
-        if (argv.Count >= 2 && argv[0] == "run" && argv[1] is "close" or "adopt")
-            return ["run-record", .. argv.Skip(1)];
-
-        var rewrite = Assembly.LoadFrom(Path.Combine(AppContext.BaseDirectory, "conductor.dll"))
-            .GetType("Conductor.VerbRewrites")?
-            .GetMethod("HistoryExport", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-        Assert.True(rewrite is not null,
-            "Conductor.VerbRewrites.HistoryExport is gone from the engine assembly. If the rewrite " +
-            "moved, point this pin at the new one - do not drop it, or `conductor history export` " +
-            "stops being checked on the page that teaches it.");
-
-        return (string[])rewrite!.Invoke(null, [argv.ToArray()])!;
-    }
+    /// <para>BOTH arms now run the ENGINE'S OWN rewrite by reflection, so neither can drift from what
+    /// the parser actually sees. <c>run close|adopt</c> used to be mirrored here because it was a
+    /// local function inside top-level statements with no reflectable name; DV4.1 moved it into
+    /// <c>VerbRewrites</c> beside the other two, and the mirror went with it.</para></summary>
+    private static IReadOnlyList<string> EngineRewrites(IReadOnlyList<string> argv) =>
+        Rewrite("HistoryExport", Rewrite("RunRecordVerbs", [.. argv]));
 
     /// <summary>The pin on the mirror. <see cref="EngineRewrites"/> can only be honest while
     /// <c>Program.cs</c> still applies both rewrites to the argv it hands the parser; if either call
@@ -139,7 +141,8 @@ public sealed partial class SF7_1DocsMatchRealityTests
         var dispatch = program.Split('\n').FirstOrDefault(l => l.Contains("app.RunAsync(", StringComparison.Ordinal));
         Assert.NotNull(dispatch);
 
-        foreach (var rewrite in new[] { "VerbRewrites.HistoryExport", "RewriteRunRecordVerbs", "HubWhenBare" })
+        foreach (var rewrite in new[]
+                 { "VerbRewrites.HistoryExport", "VerbRewrites.RunRecordVerbs", "VerbRewrites.HubWhenBare" })
             Assert.Contains(rewrite, dispatch!, StringComparison.Ordinal);
 
         // And the engine's own rewrite does what the mirror assumes it does.

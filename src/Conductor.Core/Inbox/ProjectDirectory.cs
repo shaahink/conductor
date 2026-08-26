@@ -49,15 +49,22 @@ public sealed class ProjectDirectory
 {
     private readonly string _root;
     private readonly ProjectRef? _local;
+    private readonly IReadOnlyList<ProjectRef>? _only;
 
     /// <param name="stateHomeRoot">The machine's state home. Defaults to the resolved one.</param>
     /// <param name="local">The project whose engine is running this surface, if any. Always
     /// routable even when the catalogue has not seen it yet — a fresh run must not be unable to
     /// receive a note about itself.</param>
-    public ProjectDirectory(string? stateHomeRoot = null, ProjectRef? local = null)
+    /// <param name="only">DV4.1 — an EXPLICIT list that replaces the catalogue entirely. Null, the
+    /// default, is the run's behaviour unchanged: the catalogue is the list. The courier passes one,
+    /// because a machine-level daemon holding the bot token would otherwise be able to write into
+    /// every checkout this machine has ever run — see <c>CourierSettings</c>.</param>
+    public ProjectDirectory(string? stateHomeRoot = null, ProjectRef? local = null,
+        IReadOnlyList<ProjectRef>? only = null)
     {
         _root = string.IsNullOrWhiteSpace(stateHomeRoot) ? StateHome.Root : stateHomeRoot;
         _local = local;
+        _only = only;
     }
 
     /// <summary>The machine's state home, as this directory resolved it. Where the dead-letter box
@@ -72,6 +79,15 @@ public sealed class ProjectDirectory
     public IReadOnlyList<ProjectRef> All()
     {
         var byKey = new Dictionary<string, ProjectRef>(StringComparer.OrdinalIgnoreCase);
+
+        // DV4.1: an explicit list is the WHOLE list. The catalogue is not consulted at all — not as a
+        // fallback and not to fill in a name — because a fallback is how an allowlist stops being one.
+        if (_only is not null)
+        {
+            foreach (var project in _only) byKey[project.Slug] = project;
+            if (_local is { } named) byKey[named.Slug] = named;
+            return [.. byKey.Values.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)];
+        }
 
         foreach (var entry in Read())
         {

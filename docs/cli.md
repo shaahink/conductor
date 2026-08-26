@@ -223,6 +223,46 @@ An unknown or ambiguous name is refused **by name**, listing what this machine a
 project whose checkout has moved or vanished cannot be filed against — that note is **parked** in
 `<state home>/dead-letter/` with its audio and the sender is told where it is. Nothing is dropped.
 
+## The courier — one bot, always awake
+
+`conductor courier` is the only verb in this CLI that is about the **machine** rather than a project.
+It owns `CONDUCTOR_TELEGRAM_TOKEN`, polls whether or not a run is live, and files each note into
+whichever project it is about. That is the whole point: feedback should be possible when you *have*
+it, at midnight with nothing running, not only while a run happens to be up.
+
+**It holds the token, so a run must not.** Telegram allows exactly one `getUpdates` consumer per bot
+token — two pollers steal each other's updates and inbound goes unreliable for both. The courier is
+therefore the *one* consumer on a machine that has one.
+
+| Verb | What it does |
+|---|---|
+| `courier status` | Whether it can run at all: is the token set, how far the poll offset has got, which projects it may file into, which chats it answers, and what is missing if anything is. `--json` for machines. |
+| `courier run` | Poll until stopped. Ctrl-C is a stop, not a kill: the delivery in flight is finished and its offset written before the process exits. `--once` polls a single time and prints what happened — the shape a rig and a scheduled task both use. |
+| `courier allow --repo <PATH> [--plan <NAME>]` | Add a project to the allowlist. `--plan` is the name a push's identity line carries; with it omitted the plan file in the repo is read, and failing that the folder name is used. A path that is not a directory is refused rather than stored. |
+| `courier deny --repo <PATH>` | Take a project off the allowlist. Notes for it are parked from then on — never filed somewhere close. |
+| `courier chat --id <CHAT_ID> [--profile admin\|observer]` | Answer this chat. `admin` may file notes; `observer` may not, and nothing is downloaded on an observer's behalf. Defaults to admin. |
+| `courier unchat --id <CHAT_ID>` | Stop answering it. |
+
+**The allowlist is explicit, and it is deliberately not the state catalogue.** A run can only file
+against itself or a project you named in that chat. A daemon holding the bot token could write into
+every checkout this machine has ever run, so it files only into projects written down with
+`courier allow`. Anything else is **parked** in `<state home>/dead-letter/` with the reason, and the
+sender is told where it is.
+
+**Which project a note is about** is DV3.4's ladder, unchanged: a reply to a push files against that
+push's project, else this chat's (or this topic's) `/project` selection. The selection lives in the
+machine's state home, so the courier and a live run read the same one. A courier has no local run, so
+there is no bottom rung — a note that names nothing routable is parked rather than guessed at.
+
+> **Telegram keeps an undelivered message for 24 hours, and nothing on this machine can change
+> that.** The courier answers *"no run live"*, not *"machine off"*: a voice note sent on Friday night
+> to a laptop that sleeps until Monday was never handed over by Telegram at all. This is the honest
+> limit of a courier that runs on your own machine, and `courier status` prints it.
+
+Its state lives at `<state home>/courier/` — `courier.json` (what you configured), `offset.json` (how
+far it has acknowledged, written *after* each delivery is handled so a crash replays rather than
+loses), and `media/` (where bytes land before they are adopted into a project's inbox).
+
 ## The board, on GitHub
 
 One way out, off by default, nothing ever read back. Conductor **pushes** a run's board to GitHub

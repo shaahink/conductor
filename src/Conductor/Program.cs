@@ -154,6 +154,8 @@ app.Configure(c =>
         .WithDescription("Background process management: start|status|logs|stop.");
     c.AddCommand<InboxCommand>("inbox")
         .WithDescription("DV3.3: the project's inbox of owner notes - `inbox list [[--unseen]] [[--full]]`, `inbox show --id N`, `inbox prune --seen|--older-than DAYS|--id N [[--yes]]`, `inbox parked`. Prune is the only deletion path.");
+    c.AddCommand<CourierCommand>("courier")
+        .WithDescription(CourierCommand.VerbDescription);
     c.AddCommand<PsCommand>("ps")
         .WithDescription("SF5.4: every conductor run on this machine — repo, plan, run id, port, pid, status. Read-only; --json for machines.");
     c.AddCommand<VersionCommand>("version")
@@ -172,33 +174,10 @@ app.Configure(c =>
         return 1;
     });
 });
-return await app.RunAsync(Conductor.VerbRewrites.HistoryExport(RewriteRunRecordVerbs(HubWhenBare(args)))).ConfigureAwait(false);
-
-// KS2.1: typing nothing is a question, and the answer used to be forty-one verbs — a table of
-// contents handed to someone who asked to come in. An empty argv now opens the hub: what is running
-// on this machine, what it remembers, what plans are here, and the four things worth doing about it.
-//
-// A REWRITE, NOT SetDefaultCommand. Spectre's default command changes how an unknown first token
-// parses: with one configured, `conductor nosuchverb` is no longer an unknown command, it is the
-// default command with a stray argument — and UseStrictParsing above cannot help, because a bare word
-// is not an option. Every scripted verb call and every typo is on the other side of that difference.
-// Rewriting only a genuinely EMPTY argv leaves the parser's behaviour byte-identical for everything
-// else: `--help`, `--version`, every verb, every mistyped flag.
-static string[] HubWhenBare(string[] argv) => argv.Length == 0 ? ["hub"] : argv;
-
-// KS0.2: `conductor run close <id>` and `conductor run adopt <id>` read as two words and are one
-// command. Spectre cannot have both — a branch named `run` could hold subcommands but could no
-// longer BE the verb that starts a run, and `run` starting a run is the whole CLI's front door. So
-// the two record verbs are a hidden top-level command, and the only thing that knows they are
-// spelled with a space is this rewrite. Nothing else is touched: `run`, `run --paused`, and a plan
-// path that happens to be called close all reach RunCommand exactly as before, because the rewrite
-// fires only on the literal second word.
-static string[] RewriteRunRecordVerbs(string[] argv)
-{
-    if (argv.Length < 2 || !string.Equals(argv[0], "run", StringComparison.Ordinal)) return argv;
-    if (argv[1] is not ("close" or "adopt")) return argv;
-    return ["run-record", .. argv[1..]];
-}
+// The three argv rewrites all live in VerbRewrites.cs — see that type's own remarks: top-level
+// statements compile into one Program class, CA1505's maintainability index is measured on it, and
+// this file sits ON the floor. DV4.1's `courier` registration is what put it back there.
+return await app.RunAsync(Conductor.VerbRewrites.HistoryExport(Conductor.VerbRewrites.RunRecordVerbs(Conductor.VerbRewrites.HubWhenBare(args)))).ConfigureAwait(false);
 
 // Deliberately independent of the DI-built Serilog logger (not constructed yet at this point, and
 // this must survive even if that construction is what's failing). Best-effort: a crash-logging

@@ -152,32 +152,72 @@ public sealed class RecordingBotApi : IDisposable
         return false;
     }
 
-    /// <summary>Hands over every queued command ONCE. A long-poll that kept re-serving the same
-    /// update would have the engine answer it on every tick, which is a livelock rather than a
-    /// test.</summary>
-    private string DrainUpdates()
+    /// <summary>DV4.1 — behave like the real Bot API's confirmation protocol instead of handing each
+    /// update over once.
+    ///
+    /// <para>Off by default, so no existing test moves: those drive a run's poll loop, which keeps its
+    /// offset in a field, and re-serving an update to it would be a livelock rather than a test. The
+    /// courier's whole claim is about what happens when a process DIES holding an unconfirmed update,
+    /// and that cannot be asserted against a stub that has already forgotten the update. With this on,
+    /// an update is re-served until a <c>getUpdates?offset=</c> above its id confirms it — which is
+    /// what api.telegram.org does, and the reason a restart replays at all.</para></summary>
+    public bool HonourOffset { get; set; }
+
+    /// <summary>The highest <c>offset</c> this stub has been asked with. A test that wants to prove
+    /// the courier acknowledged something needs to see the acknowledgement, not infer it.</summary>
+    public long LastOffsetSeen { get { lock (_gate) return _lastOffset; } }
+
+    private long _lastOffset;
+    private readonly List<(int Id, string Json)> _unconfirmed = new();
+
+    /// <summary>Hands over every queued command. With <see cref="HonourOffset"/> off, once — a
+    /// long-poll that kept re-serving the same update would have the engine answer it on every tick.
+    /// With it on, everything not yet confirmed by an offset, exactly as the real API does.</summary>
+    private string DrainUpdates(string query)
     {
-        Func<int, string>[] batch;
-        int first;
+        List<(int Id, string Json)> serve;
         lock (_gate)
         {
-            if (_pending.Count == 0) return """{"ok":true,"result":[]}""";
-            batch = _pending.ToArray();
-            _pending.Clear();
-            first = _nextUpdateId;
-            _nextUpdateId += batch.Length;
+            var offset = OffsetIn(query);
+            if (offset > _lastOffset) _lastOffset = offset;
+            if (HonourOffset && offset > 0) _unconfirmed.RemoveAll(u => u.Id < offset);
+
+            serve = HonourOffset ? new List<(int, string)>(_unconfirmed) : new List<(int, string)>();
+            while (_pending.Count > 0)
+            {
+                var build = _pending.Dequeue();
+                var id = _nextUpdateId++;
+                var item = (id, build(id));
+                serve.Add(item);
+                if (HonourOffset) _unconfirmed.Add(item);
+            }
+            if (serve.Count == 0) return """{"ok":true,"result":[]}""";
         }
 
         var sb = new StringBuilder("""{"ok":true,"result":[""");
-        for (var i = 0; i < batch.Length; i++)
+        for (var i = 0; i < serve.Count; i++)
         {
             if (i > 0) sb.Append(',');
-            var id = first + i;
-            sb.Append("{\"update_id\":").Append(id.ToString(CultureInfo.InvariantCulture))
-              .Append(",\"message\":").Append(batch[i](id))
+            sb.Append("{\"update_id\":").Append(serve[i].Id.ToString(CultureInfo.InvariantCulture))
+              .Append(",\"message\":").Append(serve[i].Json)
               .Append('}');
         }
         return sb.Append("]}").ToString();
+    }
+
+    /// <summary>The <c>offset</c> query parameter, or 0. Parsed rather than assumed: the whole point
+    /// is that the stub answers what it was ASKED, so a courier that never advances its offset gets
+    /// the same update back.</summary>
+    private static long OffsetIn(string query)
+    {
+        var key = "offset=";
+        var at = query.IndexOf(key, StringComparison.Ordinal);
+        if (at < 0) return 0;
+        var rest = query[(at + key.Length)..];
+        var end = rest.IndexOf('&', StringComparison.Ordinal);
+        var value = end < 0 ? rest : rest[..end];
+        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed : 0;
     }
 
     private static int FreePort()
@@ -226,7 +266,7 @@ public sealed class RecordingBotApi : IDisposable
                     await RespondAsync(ctx, conflict, HttpStatusCode.Conflict).ConfigureAwait(false);
                     continue;
                 }
-                await RespondAsync(ctx, DrainUpdates()).ConfigureAwait(false);
+                await RespondAsync(ctx, DrainUpdates(ctx.Request.Url?.Query ?? "")).ConfigureAwait(false);
                 continue;
             }
 

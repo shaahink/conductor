@@ -45,6 +45,14 @@ public sealed class DeadLetterBox
             Directory.CreateDirectory(Dir);
             var stamp = note.ReceivedUtc.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
             var id = note.Id.ToString(CultureInfo.InvariantCulture);
+
+            // DV4.1: already here, so leave it alone and say where it is. The courier replays exactly
+            // one delivery when it is killed between receive and acknowledge (findings §6.2), and the
+            // inbox's own dedup — a rename that refuses to overwrite — cannot cover this path, because
+            // the parked file's name carries a timestamp that is different on the second attempt. The
+            // note that could not be filed must not be the one note that arrives twice.
+            if (Existing(id) is { Length: > 0 } already) return already;
+
             var target = Path.Combine(Dir, stamp + "-" + id + ".json");
 
             string? mediaName = null;
@@ -67,6 +75,16 @@ public sealed class DeadLetterBox
         {
             return null;
         }
+    }
+
+    /// <summary>The file this note is already parked in, or null. Matched on the id suffix rather
+    /// than the whole name, because the timestamp in front of it is the arrival instant and a replay
+    /// has a different one.</summary>
+    private string? Existing(string id)
+    {
+        if (!Directory.Exists(Dir)) return null;
+        var files = Directory.GetFiles(Dir, "*-" + id + ".json");
+        return files.Length > 0 ? files.OrderBy(f => f, StringComparer.Ordinal).First() : null;
     }
 
     /// <summary>Everything parked here, newest last. Read by nothing in the engine — this is for a
