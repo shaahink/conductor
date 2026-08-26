@@ -1,4 +1,5 @@
-﻿using Conductor.Core.Integrations.Messaging;
+﻿using Conductor.Core.Courier;
+using Conductor.Core.Integrations.Messaging;
 using Conductor.Models;
 
 namespace Conductor.Core.Integrations;
@@ -24,7 +25,10 @@ public sealed partial class TelegramService
     /// chat list with nothing in it makes the fan-out a no-op instead, exactly as before.</summary>
     public bool IsLive => _started;
 
-    public bool AllowsControl => _cfg?.EnableTwoWay == true;
+    /// <summary>Two-way traffic needs a poll loop, and in courier mode there is not one: the daemon
+    /// is the single consumer of the token's updates (findings 6.9), so a run that still claimed to
+    /// accept control verbs would be advertising a surface nothing is reading.</summary>
+    public bool AllowsControl => _courier is null && _cfg?.EnableTwoWay == true;
 
     /// <summary>KS11.2 / CH-2: every chat this bot serves and what each one is for, resolved from
     /// the plan's <c>chats</c> block merged over the old <c>allowedChatIds</c> list.
@@ -57,9 +61,15 @@ public sealed partial class TelegramService
         // and a push split across two queues would be delivered twice or not at all.
         var queue = _sendQueue;
         if (!_started) return Task.CompletedTask;
+
+        // DV4.3: the one line that makes a live run push THROUGH the daemon. Null on a courier-less
+        // machine, so the queue below is reached exactly as before.
+        if (_courier is { } courier) return courier.EnqueueAsync(message, ct);
+
         queue.Writer.TryWrite(message);
         return Task.CompletedTask;
     }
 
-    Task IMessageChannel.SendAsync(OutboundMessage message, CancellationToken ct) => SendAsync(message, ct);
+    Task IMessageChannel.SendAsync(OutboundMessage message, CancellationToken ct) =>
+        _courier is { } courier ? courier.SendAsync(message, ct) : SendAsync(message, ct);
 }

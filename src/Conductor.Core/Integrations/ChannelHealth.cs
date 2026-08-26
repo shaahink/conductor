@@ -1,3 +1,4 @@
+using Conductor.Core.Courier;
 using Conductor.Core.Integrations.Github;
 using Conductor.Models;
 
@@ -97,14 +98,30 @@ public static class ChannelHealthProbe
     /// <inheritdoc cref="TelegramChannel"/>
     public const string GithubChannel = "github";
 
+    /// <inheritdoc cref="TelegramChannel"/>
+    public const string CourierChannel = Messaging.CourierChannel.ChannelName;
+
     /// <summary>Every configured outbound channel, in a stable order.</summary>
     /// <param name="telegramStarted">The one condition only a live engine process can answer.
     /// <c>null</c> — the default, and what <c>doctor</c>, the report and <c>/status</c> all pass —
     /// means "not knowable here", and a probe that cannot know does not claim.</param>
-    public static IReadOnlyList<ChannelHealth> Collect(PlanConfig plan, bool? telegramStarted = null)
+    /// <param name="courierStateHome">Where to look for the machine's courier, or null for the
+    /// resolved state home. A rig sets it; nothing else does.</param>
+    public static IReadOnlyList<ChannelHealth> Collect(PlanConfig plan, bool? telegramStarted = null,
+        string? courierStateHome = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        return [ProbeTelegram(plan, telegramStarted), ProbeGithub(plan)];
+
+        // DV4.3: the courier appears ONLY on a machine that has one, and that is not the "off is
+        // still a row" rule being broken - it is the rule being applied. The other two are PLAN
+        // channels, where "github is absent from this list" and "github is fine" must not look the
+        // same. The courier is a MACHINE channel: on a machine without one there is nothing to be
+        // off, and a row saying so would change the roll-up that findings 6.9 requires to stay
+        // byte-identical for an old-shape plan on a courier-less machine.
+        if (!CourierPrecedence.Configured(courierStateHome) && CourierPresence.Live(courierStateHome) is null)
+            return [ProbeTelegram(plan, telegramStarted), ProbeGithub(plan)];
+
+        return [ProbeTelegram(plan, telegramStarted), ProbeGithub(plan), ProbeCourier(courierStateHome)];
     }
 
     /// <summary>The channels worth shouting about — dead or degraded, most broken first.</summary>
@@ -159,6 +176,42 @@ public static class ChannelHealthProbe
         };
 
         return new ChannelHealth(TelegramChannel, ChannelState.Dead, missing, fix, command);
+    }
+
+    /// <summary>DV4.3 / findings 1.4-B — the cost of option B, made loud.
+    ///
+    /// <para>B is recommended with its price stated up front: the daemon is a NEW single point of
+    /// failure for a live run's pushes, and if it is down the run goes quiet. That makes DV1.1 a
+    /// hard prerequisite rather than a nicety - without this probe, B trades one silent failure for
+    /// another, which is precisely the trade the Karvansara edge run already paid for once.</para>
+    ///
+    /// <para>Every refusal here is <see cref="CourierClient.TryOpen"/>'s, in its own words: there is
+    /// one definition of "this run cannot reach the courier", and the surface that tells the owner
+    /// reads it from the same place the push path does.</para></summary>
+    private static ChannelHealth ProbeCourier(string? stateHomeRoot)
+    {
+        var configured = CourierPrecedence.Configured(stateHomeRoot);
+        using var client = CourierClient.TryOpen(stateHomeRoot, out var refusal);
+
+        if (refusal is null)
+        {
+            var live = CourierPresence.Live(stateHomeRoot);
+            return new ChannelHealth(CourierChannel, ChannelState.Ready,
+                live?.Describe() ?? "running", "", "");
+        }
+
+        if (!configured)
+            // A courier is RUNNING but this machine's courier.json is absent or half-written, so it
+            // files nowhere and no run defers to it. Degraded, not dead: pushes still go out the
+            // run's own token, which is today's behaviour and not a failure.
+            return new ChannelHealth(CourierChannel, ChannelState.Degraded,
+                "a courier is running but this machine has no usable " + CourierHome.SettingsFileName
+                    + ", so nothing can be filed against a project",
+                "list a chat and a project for it", "conductor courier status");
+
+        return new ChannelHealth(CourierChannel, ChannelState.Dead, refusal,
+            "start the courier again - until it is back, this run's pushes go nowhere",
+            CourierProtocol.RestartVerb);
     }
 
     /// <summary>The github mirror, asking the SAME questions <c>GithubMirror.TryCreate</c> asks, in

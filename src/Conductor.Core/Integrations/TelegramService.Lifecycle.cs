@@ -1,3 +1,5 @@
+using Conductor.Core.Courier;
+using Conductor.Core.Integrations.Messaging;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
 
@@ -27,6 +29,19 @@ public sealed partial class TelegramService
     private void StartCore()
     {
         if (_started) return;
+
+        // DV4.3 / findings 6.9: the token handover. Decided BEFORE IsConfigured, because the
+        // destination state is a machine where the courier holds the token and this run has none -
+        // and a run that bailed out at "no token" there would never push at all, having handed its
+        // phone to a process that is holding it perfectly well.
+        _pollingRefusedBy = CourierPrecedence.PollingRefusal(CourierStateHome);
+        if (_pollingRefusedBy is { Length: > 0 } && _cfg is { } block && block.ChatCount > 0)
+        {
+            StartThroughCourier(block);
+            return;
+        }
+
+        _pollingRefusedBy = null;
         if (!IsConfigured)
         {
             var missing = TelegramReadiness.MissingHalf(
@@ -63,6 +78,32 @@ public sealed partial class TelegramService
         else
             _log.LogInformation("Telegram bot started (poll interval {Interval}s, {ChatIds} allowed chat id(s))",
                 _cfg.PollIntervalSeconds, chatIds);
+    }
+
+    /// <summary>Courier mode: neither loop runs, because both belong to the token and the courier
+    /// owns it. The poll loop would fight it for updates (the 409 above); the send loop would push
+    /// straight to the Bot API, and 6.9 is explicit that the run pushes THROUGH the courier or not
+    /// at all - two writers on one bot is how a chat ends up with a run's message stamped by nothing
+    /// and a courier's reply threaded under it.
+    ///
+    /// <para>The service still reports <c>IsLive</c>, and that is deliberate: composition, profiles
+    /// and the evidence browser must go on producing messages, or a courier that comes back finds a
+    /// run that stopped talking. Where those messages go is <see cref="CourierChannel"/>'s problem,
+    /// and whether they arrived is DV1.1's.</para></summary>
+    private void StartThroughCourier(TelegramConfig block)
+    {
+        _cts = new CancellationTokenSource();
+        _sendQueue = NewSendQueue();
+        _courier = new CourierChannel(
+            ResolveTargets(block),
+            CourierStateHome,
+            origin: _plan.Name,
+            log: m => _log.LogWarning("{Message}", m),
+            stamp: _composer.Stamp);
+        _started = true;
+
+        _log.LogWarning("Telegram polling not started: {Reason}", _pollingRefusedBy);
+        _log.LogInformation("Telegram pushes go through the courier ({ChatIds} chat id(s))", block.ChatCount);
     }
 
     /// <summary>

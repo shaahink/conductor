@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using Conductor.Core.Planning;
+using Conductor.Core.Courier;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations.Messaging;
 using Conductor.Core.Store;
@@ -118,6 +119,30 @@ public sealed partial class TelegramService
 
     /// <summary>Bot API prefix up to and including <c>/bot</c>; the token is appended per call.</summary>
     private string _apiBase;
+
+    /// <summary>DV4.3 / findings 6.9 — set when a courier owns the token on this machine, and null
+    /// on a courier-less one. Every branch it guards is skipped when it is null, which is what makes
+    /// the golden replay of an old-shape plan byte-identical.</summary>
+    private CourierChannel? _courier;
+
+    /// <summary>Why this run is not polling, or null. Read by the health probe and by /telegram/status
+    /// so an operator is told which process took the phone rather than that nothing is wrong.</summary>
+    private string? _pollingRefusedBy;
+
+    /// <summary>The state home the courier is looked for in. Null - always, outside a rig - means the
+    /// resolved machine state home. A rig sets it so a test can put a courier.json somewhere that is
+    /// not the operator's real one.</summary>
+    internal string? CourierStateHome { get; set; }
+
+    /// <summary>What this run pushes through, or null when it pushes itself. Test seam.</summary>
+    internal CourierChannel? Courier => _courier;
+
+    /// <summary>Why in-run polling did not start, or null. Never a bare false — DV1.1's rule.</summary>
+    internal string? PollingRefusedBy => _pollingRefusedBy;
+
+    /// <summary>Whether the long-poll loop is actually running. The claim findings 6.9 makes is
+    /// about POLLING specifically, so the test asserts the loop and not a flag that stands for it.</summary>
+    internal bool Polling => _pollTask is not null;
 
     public TelegramService(
         PlanConfig plan,
