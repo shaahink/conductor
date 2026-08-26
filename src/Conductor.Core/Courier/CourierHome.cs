@@ -10,7 +10,7 @@ namespace Conductor.Core.Courier;
 /// <c>chat-routes.json</c> (the sticky selections) and <c>dead-letter/</c> (the notes nobody could
 /// file) — because those were always going to be read by a process with no plan in front of it.</para>
 ///
-/// <para>Four paths, and the split between the first two is deliberate. <c>courier.json</c> is
+/// <para>Five paths, and the split between the first two is deliberate. <c>courier.json</c> is
 /// EDITED BY A PERSON (which projects may be filed against, which chats may talk to it); the offset
 /// is written by the poll loop several times a minute. One file for both would mean the hot writer
 /// rewriting the human's file all day, and the first crash mid-write would take the allowlist with
@@ -31,6 +31,13 @@ public static class CourierHome
     /// rather than a socket answers this question before DV4.3's listener exists.</summary>
     public const string PresenceFileName = "courier.run.json";
 
+    /// <summary>DV4.3 - the per-install shared secret a run proves itself with at the loopback
+    /// hello. Its own file rather than a field in <see cref="SettingsFileName"/> for one reason:
+    /// courier.json is EDITED BY A PERSON and gets pasted into a bug report, and a secret in a file
+    /// people paste is a secret that leaks. See <see cref="CourierSecret"/> for why the file's
+    /// permissions, not the call that set them, are the boundary.</summary>
+    public const string SecretFileName = "courier.secret";
+
     /// <summary>Where inbound media lands before it is adopted into a project's inbox. Under the
     /// state home rather than any repo: at download time the courier does not yet know which project
     /// the note is for, and a file written into the wrong repo is a file in a public checkout.</summary>
@@ -48,6 +55,9 @@ public static class CourierHome
 
     public static string PresencePathFor(string? stateHomeRoot = null) =>
         Path.Combine(DirFor(stateHomeRoot), PresenceFileName);
+
+    public static string SecretPathFor(string? stateHomeRoot = null) =>
+        Path.Combine(DirFor(stateHomeRoot), SecretFileName);
 
     public static string MediaDirFor(string? stateHomeRoot = null) =>
         Path.Combine(DirFor(stateHomeRoot), MediaDirName);

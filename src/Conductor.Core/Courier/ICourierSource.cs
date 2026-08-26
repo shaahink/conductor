@@ -56,6 +56,17 @@ public interface ICourierSource
     /// deliberate, documented silence — an unlisted chat, and a replay that was answered the first
     /// time.</summary>
     Task ReplyAsync(string chatId, string text, long? threadId, CancellationToken ct);
+
+    /// <summary>DV4.3 — delivers one push handed over by a live run across the loopback seam, and
+    /// returns null when it went out or the reason it did not.
+    ///
+    /// <para>It is on THIS interface and not <c>IMessageChannel</c>, and the distinction is the one
+    /// the type remarks draw: a channel owns a queue and a shutdown flush because it belongs to a
+    /// run that ends, while the daemon has neither and must not grow them — the run already queued
+    /// this message and is waiting on the answer. A reason rather than a bool because the run prints
+    /// it: DV1.1's rule is that a channel which cannot deliver says why, and the new hop is exactly
+    /// where that could have been lost.</para></summary>
+    Task<string?> SendAsync(CourierPush push, CancellationToken ct);
 }
 
 /// <summary>Somebody else is already consuming this source's messages.

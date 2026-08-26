@@ -5,6 +5,7 @@ using Conductor.Core.Courier;
 using Conductor.Core.Integrations;
 using Conductor.Core.Integrations.Messaging;
 using Conductor.Core.Store;
+using Conductor.Http;
 using Conductor.Models;
 
 using Microsoft.Extensions.Logging;
@@ -142,6 +143,14 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
                 task = new { state.Name, state.Registered, state.SchedulerState },
                 running = state.Running,
                 stale,
+                port = state.Running?.Port,
+                unreachable = CourierEndpoint.Unreachable(state.Running),
+                secret = new
+                {
+                    path = CourierHome.SecretPathFor(),
+                    present = CourierSecret.Read() is { Length: > 0 },
+                    exposed = CourierSecret.ProtectionComplaint(),
+                },
             }, PlanConfig.JsonOpts));
             return 0;
         }
@@ -172,6 +181,16 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
             : "[yellow]no[/] [dim]— nothing is polling for this machine[/]")
             + " [dim]· this build speaks protocol "
             + CourierProtocol.Version.ToString(CultureInfo.InvariantCulture) + "[/]");
+
+        // §6.5: the seam a run pushes through, and the file that is its whole access control. A
+        // secret nothing has locked down is a secret every process running as this user already has,
+        // so it is said out loud here rather than assumed by the code that wrote it.
+        AnsiConsole.MarkupLine("[dim]loopback:[/] " + (state.Running?.Port is > 0
+            ? "[green]" + Markup.Escape(CourierEndpoint.BaseUrl(state.Running.Port!.Value)) + "[/]"
+            : "[yellow]none[/] [dim]- runs on this machine cannot push through it[/]")
+            + " [dim]· secret " + (CourierSecret.Read() is { Length: > 0 } ? "present" : "absent") + "[/]");
+        if (CourierSecret.ProtectionComplaint() is { Length: > 0 } exposed)
+            AnsiConsole.MarkupLine("[red]secret exposed:[/] " + Markup.Escape(exposed));
 
         // §6.4: the one process designed to outlive a reinstall is the one that keeps running the
         // engine it started with. Say so by name, with the command, before anything talks to it.
@@ -231,9 +250,38 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
         using var stopping = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; _ = stopping.CancelAsync(); };
 
+        // DV4.3 / §6.5: the loopback seam, opened before the presence record is written so the
+        // record can state the port it actually bound. `--once` never opens it: a one-shot poll has
+        // no run to serve, and binding the named port from a rig is how a test starves the real
+        // courier of the socket its runs are dialling.
+        var secret = CourierSecret.Resolve();
+        var presence = CourierPresence.Current(settings.TaskName);
+        using var listener = settings.Once
+            ? null
+            : new CourierListener(() => presence, (push, c) => DeliverAsync(source, push, c), secret, log);
+
+        if (listener is not null)
+        {
+            if (listener.TryStart(out var refused))
+            {
+                presence = presence with { Port = listener.Port };
+                log.LogInformation("Courier listening on {Url} - runs on this machine push through it",
+                    CourierEndpoint.BaseUrl(listener.Port));
+            }
+            else
+            {
+                // Not fatal, and that is the point: inbound notes are the half of this daemon that
+                // works with no run alive at all, and they do not need a socket.
+                log.LogWarning("Courier has no loopback listener: {Why}", refused);
+            }
+        }
+
+        if (CourierSecret.ProtectionComplaint() is { Length: > 0 } exposed)
+            log.LogWarning("Courier secret: {Why}", exposed);
+
         // DV4.2 / §6.4: what is running, written down where install.ps1 and a version handshake can
         // both read it. Cleared on the way out so the next reader sees the truth and not a pid.
-        CourierPresence.Current(settings.TaskName).Write();
+        presence.Write();
         try
         {
             if (settings.Once)
@@ -254,6 +302,21 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
         {
             CourierPresence.Clear();
         }
+    }
+
+    /// <summary>What the daemon does with a push a run handed over the loopback seam.
+    ///
+    /// <para>The chat comes from the RUN, not from the courier's allowlist, and that is deliberate:
+    /// the allowlist governs what the courier will FILE against — which checkouts on this disk a
+    /// stranger's message can reach — while the chats a run pushes to are the run's own plan, and
+    /// were reachable by that run when it held the token itself. Delivering them grants no authority
+    /// that did not already exist; refusing them would silently break every plan that names a
+    /// stakeholder group this machine does not answer.</para></summary>
+    private static async Task<CourierAck> DeliverAsync(ICourierSource source, CourierPush push,
+        CancellationToken ct)
+    {
+        var why = await source.SendAsync(push, ct).ConfigureAwait(false);
+        return why is { Length: > 0 } ? new CourierAck(false, why) : new CourierAck(true);
     }
 
     // ── the allowlist ───────────────────────────────────────────────────────────────────────

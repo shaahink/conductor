@@ -434,6 +434,9 @@ public sealed class DV4_1CourierTests : IDisposable
 
         public Task ReplyAsync(string chatId, string text, long? threadId, CancellationToken ct) =>
             throw new KilledException();
+
+        public Task<string?> SendAsync(CourierPush push, CancellationToken ct) =>
+            throw new KilledException();
     }
 
     private sealed class KilledException : Exception

@@ -153,30 +153,88 @@ public sealed class TelegramCourierSource : ICourierSource, IDisposable
     /// <inheritdoc />
     public async Task ReplyAsync(string chatId, string text, long? threadId, CancellationToken ct)
     {
-        var payload = new Dictionary<string, object>(StringComparer.Ordinal)
+        var payload = Payload(chatId, text);
+        if (threadId is { } thread) payload["message_thread_id"] = thread;
+
+        // A reply that does not arrive costs the receipt, never the note: the note is already on
+        // disk by the time this runs, which is the ordering RemoteSurface established at DV3.1.
+        if (await PostAsync(chatId, payload, ct).ConfigureAwait(false) is { Length: > 0 } why)
+            _log.LogWarning("Courier reply to chat {Chat} failed: {Why}", chatId, why);
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> SendAsync(CourierPush push, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(push);
+
+        var text = push.Stamped();
+
+        // DV4.3 scope, stated rather than hidden. The daemon carries text and buttons; it does not
+        // yet upload files, and the multipart path that does lives on TelegramService coupled to a
+        // composer and a message anchor the courier has neither of. A push with an artifact is
+        // therefore delivered as its text plus a line NAMING the file and where it is - the same
+        // shape TelegramService already uses for an artifact over the size limit, and the opposite
+        // of the silent drop findings 1.2 gap 2 is about. Tracked, not forgotten.
+        if (push.AttachmentPath is { Length: > 0 } artifact)
+            text += "\n<i>not attached - the courier does not carry files; it is at "
+                  + MessageComposer.EscapeHtml(artifact) + "</i>";
+
+        var payload = Payload(push.ChatId, text);
+        payload["disable_notification"] = push.ParsedSeverity() == PushSeverity.Quiet;
+        if (Keyboard(push.Buttons) is { } keyboard) payload["reply_markup"] = keyboard;
+
+        var why = await PostAsync(push.ChatId, payload, ct).ConfigureAwait(false);
+        if (why is { Length: > 0 })
+            _log.LogWarning("Courier push to chat {Chat} failed: {Why}", push.ChatId, why);
+        return why;
+    }
+
+    private static Dictionary<string, object> Payload(string chatId, string text) =>
+        new(StringComparer.Ordinal)
         {
             ["chat_id"] = chatId,
             ["text"] = text,
             ["parse_mode"] = "HTML",
             ["disable_web_page_preview"] = true,
         };
-        if (threadId is { } thread) payload["message_thread_id"] = thread;
 
+    /// <summary>KS11.1's rule at the courier's end: buttons cross the seam as themselves and only
+    /// the adapter knows what an inline keyboard looks like on the wire.</summary>
+    private static object? Keyboard(IReadOnlyList<CourierButton>? buttons) =>
+        buttons is { Count: > 0 }
+            ? new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["inline_keyboard"] = buttons
+                    .Select(b => new[]
+                    {
+                        new Dictionary<string, string>(StringComparer.Ordinal)
+                        {
+                            ["text"] = b.Text,
+                            ["callback_data"] = b.CallbackData,
+                        },
+                    })
+                    .ToArray(),
+            }
+            : null;
+
+    /// <summary>One sendMessage, and why it did not go out. Never throws: both callers are on a path
+    /// where an exception would cost something already on disk.</summary>
+    private async Task<string?> PostAsync(string chatId, Dictionary<string, object> payload, CancellationToken ct)
+    {
         try
         {
             var json = System.Text.Json.JsonSerializer.Serialize(payload, TelegramService.JsonOpts);
             using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             using var resp = await _http.PostAsync($"{_apiBase}{_token}/sendMessage", content, ct)
                 .ConfigureAwait(false);
-            if (!resp.IsSuccessStatusCode)
-                _log.LogWarning("Courier reply to chat {Chat} was refused: {Status}", chatId, resp.StatusCode);
+            return resp.IsSuccessStatusCode
+                ? null
+                : $"the bot API refused the message to chat {chatId} ({(int)resp.StatusCode} {resp.StatusCode}).";
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException
                                       && !ct.IsCancellationRequested)
         {
-            // A reply that does not arrive costs the receipt, never the note: the note is already on
-            // disk by the time this runs, which is the ordering RemoteSurface established at DV3.1.
-            _log.LogWarning(ex, "Courier reply to chat {Chat} failed", chatId);
+            return $"the bot API could not be reached ({ex.Message}).";
         }
     }
 

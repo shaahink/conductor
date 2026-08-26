@@ -18,8 +18,13 @@ public static class CourierProtocol
     /// <summary>The protocol this build speaks. Bump it when the run↔courier contract changes in a
     /// way an older courier would get wrong — a new field a run relies on, a changed meaning, a new
     /// verb. Never bump it for something a stale courier handles correctly anyway: every bump makes
-    /// somebody restart a daemon.</summary>
-    public const int Version = 1;
+    /// somebody restart a daemon.
+    ///
+    /// <para>2 (DV4.3): the courier serves the hello over a loopback socket and accepts a push. A
+    /// protocol-1 courier has no listener at all, so a run that dials one gets a refused connection
+    /// with nothing to name — which is exactly the skew this constant exists to turn into a
+    /// sentence.</para></summary>
+    public const int Version = 2;
 
     /// <summary>The verb that fixes skew. Named in every refusal, because "restart the courier" with
     /// no command is how a person ends up killing a pid by hand.</summary>

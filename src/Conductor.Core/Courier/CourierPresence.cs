@@ -27,13 +27,18 @@ namespace Conductor.Core.Courier;
 /// <param name="Exe">The binary it is holding open, which is what a reinstall collides with.</param>
 /// <param name="TaskName">The scheduled task it was started by, or null when started by hand.</param>
 /// <param name="StartedUtc">When it started — also the guard against a recycled pid.</param>
+/// <param name="Port">DV4.3 — the loopback port its listener actually bound, or null when it has
+/// none (a courier from before the listener existed, or one whose named port was taken). A run
+/// reads the port from the SAME record it reads the protocol from rather than assuming the
+/// constant, so a rig's port override cannot make a run dial a stranger.</param>
 public sealed record CourierPresence(
     int Protocol,
     int Pid,
     string? Engine,
     string? Exe,
     string? TaskName,
-    DateTimeOffset StartedUtc)
+    DateTimeOffset StartedUtc,
+    int? Port = null)
 {
     private static readonly JsonSerializerOptions Json = new()
     {
@@ -44,7 +49,9 @@ public sealed record CourierPresence(
     };
 
     /// <summary>The presence of THIS process — what <c>courier run</c> writes as it starts.</summary>
-    public static CourierPresence Current(string? taskName = null)
+    /// <param name="taskName">The scheduled task that started it, or null when started by hand.</param>
+    /// <param name="port">The loopback port its listener bound, or null when it has no listener.</param>
+    public static CourierPresence Current(string? taskName = null, int? port = null)
     {
         using var self = Process.GetCurrentProcess();
         return new CourierPresence(
@@ -53,7 +60,8 @@ public sealed record CourierPresence(
             Engine: typeof(CourierPresence).Assembly.GetName().Version?.ToString(),
             Exe: Environment.ProcessPath,
             TaskName: string.IsNullOrWhiteSpace(taskName) ? null : taskName,
-            StartedUtc: StartTimeOf(self) ?? DateTimeOffset.UtcNow);
+            StartedUtc: StartTimeOf(self) ?? DateTimeOffset.UtcNow,
+            Port: port is > 0 ? port : null);
     }
 
     /// <summary>Writes the record. Atomic, like everything else the courier writes: install.ps1 reads
@@ -116,6 +124,7 @@ public sealed record CourierPresence(
         $"pid {Pid.ToString(CultureInfo.InvariantCulture)}"
       + $" · protocol {Protocol.ToString(CultureInfo.InvariantCulture)}"
       + (string.IsNullOrWhiteSpace(Engine) ? "" : $" · engine {Engine}")
+      + (Port is > 0 ? $" · port {Port.Value.ToString(CultureInfo.InvariantCulture)}" : " · no listener")
       + (string.IsNullOrWhiteSpace(TaskName) ? " · started by hand" : $" · task {TaskName}")
       + $" · since {StartedUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture)}";
 
