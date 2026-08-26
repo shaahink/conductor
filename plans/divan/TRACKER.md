@@ -4,21 +4,22 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV4.2 landed and is claimed. `courier install|uninstall|restart|stop` register a per-user
-  Scheduled Task from XML (RestartOnFailure PT1M, IgnoreNew, ExecutionTimeLimit PT0S, LeastPrivilege
-  + InteractiveToken) - `schtasks /SC ONLOGON` cannot express restart-on-failure at all. `courier run`
-  now writes courier.run.json (pid, protocol, engine, exe, task) and clears it on exit;
-  CourierProtocol.RefuseStale refuses an OLDER courier by task name with the restart command.
-  tools/install.ps1 brackets its publish with tools/lib/courier-guard.ps1.
-find: the live proof found what tests could not - the scheduler DROPS <RunLevel> when it is the
-  default and rewrites <UserId> to a SID (assert the ABSENCE of HighestAvailable, not the element);
-  and courier-guard.ps1 called schtasks directly, which under install.ps1's ErrorActionPreference=Stop
-  made a native stderr write TERMINATING - it would have crashed the installer on every machine
-  without a courier. Also: KS11.1's seam test strips comments but READS STRING LITERALS.
-next: DV4.3 the seam. CourierPresence IS the hello, written down - serve the same record over the
-  loopback socket and reuse RefuseStale unchanged. Rig: tools/dv4/dv4-2-live-proof.ps1 (its token
-  gate and its Sch wrapper are worth copying). This machine HAS a bot token in the user environment.
-red: none from the scoped runs (DV4_2|DV4_1|SF7_1|K7_2|KS11_1 = 121/121, live proof PASS).
+last: DV4.3 landed and is claimed. The courier serves CourierPresence over a loopback-only
+  listener on ONE named port (47137, never scanned), gated by a per-install secret in the state
+  home whose file is ACL'd to this account alone. CourierChannel is on the IMessageChannel seam;
+  TelegramService.StartCore now refuses to POLL when a courier is configured and pushes through
+  it instead - neither loop runs in courier mode. ChannelHealthProbe.ProbeCourier makes a killed
+  daemon loud in REPORT.md and the owner queue (both proven live).
+find: the live proof found what tests could not - NOTHING stopped a second courier: it fought
+  the first for updates and clobbered then DELETED its presence record. RunAsync refuses by name
+  now. KS11.1's seam test caught a real leak: the precedence refusal named the messenger in a
+  STRING LITERAL. Two rig traps are in the ledger (Stop-Job on a blocked GetContext, and
+  ErrorDetails vs the response stream) - both made a working proof look like a stall.
+next: DV4.4 promotion - a button on the acknowledgement turns a note into a followups.md row and
+  a Tier-B lane; auto-inject REFUSED by design with a negative test; filing stays admin-only.
+  Rig: tools/dv4/dv4-3-live-proof.ps1 (its bot stub and Http helper are worth copying).
+red: none. Open in scope: bug #76 - the courier does not upload files; a push with an artifact
+  is delivered as text NAMING the path, the wire already carries it.
 
 
 ## Baseline numbers (from run.db)
