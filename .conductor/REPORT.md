@@ -1,10 +1,10 @@
 ﻿# Conductor — Divan - the chancellery: inbox, courier, and the record that gets out run report
 
-_Updated 2026-08-26 14:48 UTC · branch `feat/divan` · HEAD `9cab36f`_
+_Updated 2026-08-26 15:06 UTC · branch `feat/divan` · HEAD `76af3f8`_
 
 **Status:** Idle
-**Stage:** DV7 — Ship Divan - close the era · attempts used 0 · working ▸ DV7.2
-**Checkpoints:** 21/23 done · **Sessions run:** 21 · **Cost:** $312.7092 (agent $312.5518 + gates $0.1574) · **Tokens:** 4,141,737 in / 1,721,470 out
+**Stage:** DV7 — Ship Divan - close the era · attempts used 0 · working ▸ DV7.3
+**Checkpoints:** 22/23 done · **Sessions run:** 22 · **Cost:** $316.8720 (agent $316.7079 + gates $0.1641) · **Tokens:** 4,230,974 in / 1,764,118 out
 **Confirmed phases:** DV1, DV2, DV3, DV4, DV5, DV6
 
 ## Stage progress
@@ -17,7 +17,7 @@ _Updated 2026-08-26 14:48 UTC · branch `feat/divan` · HEAD `9cab36f`_
 | DV4 | The courier - one bot, always awake, outliving the run | ██████████ 4/4 | confirmed ✓ |
 | DV5 | The cloud, the safe shapes - an owner verb, a flagged experiment | ██████████ 2/2 | confirmed ✓ |
 | DV6 | The record that gets out - bugs that outlive the board, columns, the page | ██████████ 4/4 | confirmed ✓ |
-| DV7 | Ship Divan - close the era | ███░░░░░░░ 1/3 | **← active** |
+| DV7 | Ship Divan - close the era | ███████░░░ 2/3 | **← active** |
 
 <details> ✅<summary>DV1 — The channel that says so - health made loud, the queue that reaches you (2/2)</summary>
 
@@ -81,12 +81,12 @@ _Updated 2026-08-26 14:48 UTC · branch `feat/divan` · HEAD `9cab36f`_
 
 </details>
 
-<details><summary>DV7 — Ship Divan - close the era (1/3)</summary>
+<details><summary>DV7 — Ship Divan - close the era (2/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | DV7.1 | The internal record: ARCHITECTURE.md and docs/dev reconciled for everything Divan changed, the courier's lifecycle section and ADR included; closure ledger reconciled against DV2's triage; conductor budget re-measured through the fresh build against a backup copy and written into TOKEN-BUDGET-TUNING for the next era | ✅ DONE | [`fc33699`](https://github.com/shaahink/conductor/commit/fc33699) |
-| DV7.2 | The published surface: README, cli.md, operating.md, plan-config.md, quickstart/troubleshooting where touched, docs index; CHANGELOG Unreleased written as the release body (it may still carry edge's entries - the split call is the owner's); docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushing main | 🔄 IN PROGRESS | - |
+| DV7.2 | The published surface: README, cli.md, operating.md, plan-config.md, quickstart/troubleshooting where touched, docs index; CHANGELOG Unreleased written as the release body (it may still carry edge's entries - the split call is the owner's); docs-match-reality tests extended and proven red on a seeded stale doc; payesh harvest re-run on a branch with a PR, never pushing main | ✅ DONE | - |
 | DV7.3 | OWNER-ONLY ship: merge (stacked on feat/karvansara-edge - KS12.3 lands first or together), tag, reinstall, real courier install, github sync backfill of this run, payesh PR merge, tracker and findings doc move to docs/history; a session pre-flights and parks with the runbook, it does not perform them | ⬜ TODO | - |
 
 </details>
@@ -116,6 +116,7 @@ _Updated 2026-08-26 14:48 UTC · branch `feat/divan` · HEAD `9cab36f`_
 | 19 | DV6 | Deliver | 1 | 08-26 13:26 | 0:24 | Advanced | DV6.4 | 3 | engine-fast:OK · face-fast:OK | $11.9147 | $0.0061 | 169,907/89,104 |
 | 20 | DV6 | Fix | 2 | 08-26 14:00 | 0:04 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $2.1144 | $0.0072 | 55,183/16,357 |
 | 21 | DV7 | Deliver | 1 | 08-26 14:12 | 0:35 | Advanced | DV7.1 | 6 | engine-fast:OK · face-fast:OK | $23.6626 | $0.0073 | 261,432/125,963 |
+| 22 | DV7 | Deliver | 1 | 08-26 14:48 | 0:16 | Advanced | DV7.2 | 2 | engine-fast:OK · face-fast:OK | $4.1560 | $0.0068 | 89,237/42,648 |
 
 ## Money
 
@@ -140,10 +141,6 @@ _Where the money goes: agent $312.55 (100%) · gate $0.16 (0%) · blended $0.76/
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-26 12:37:10  ▸ stage DV5 confirmed  (50m15s)
-08-26 12:37:11  ▸ stage DV6 entered — The record that gets out - bugs that outlive the board, columns, the page
-08-26 12:37:11  • session #16 DV6 Deliver started (attempt 1/8)
-08-26 13:15:56  ▪ gate engine-fast pass [session]  (1m07s)
 08-26 13:15:56  ▪ gate face-fast pass [session]  (29.6s)
 08-26 13:15:57  • session #16 DV6 → Advanced · done DV6.1 · 3 commit(s)  (38m45s)
 08-26 13:16:03  • session #17 DV6 Deliver started (attempt 1/8)
@@ -180,6 +177,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-26 15:48:57  ▪ gate engine-fast pass [session]  (1m08s)
 08-26 15:48:57  ▪ gate face-fast pass [session]  (3.7s)
 08-26 15:48:58  • session #21 DV7 → Advanced · done DV7.1 · 6 commit(s)  (36m17s)
+08-26 15:48:59  ◆ plan reloaded — v1 · 7 stages · 4 gates
+08-26 15:48:59  • session #22 DV7 Deliver started (attempt 1/6)
+08-26 16:06:54  ▪ gate engine-fast pass [session]  (1m04s)
+08-26 16:06:54  ▪ gate face-fast pass [session]  (3.2s)
 ```
 
 ## Health
@@ -187,7 +188,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 21 · retries 4 (19 %) · overall Warn
+sessions 22 · retries 4 (18 %) · overall Warn
 ⚠ [context-saturation] session #12: 27,281,149 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 30,383,029 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #16: 33,752,373 context tokens (≥ 20,000,000)
@@ -207,14 +208,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/divan
-working tree: M .conductor/REPORT.md, M plans/divan/TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s14 (DV4 Fix)** — 1 commit(s):
-  - [`115020b`](https://github.com/shaahink/conductor/commit/115020b) fix(DV4): the two architecture ratchets go green by moving code, not by moving a bar
 - **s15 (DV5 Deliver)** — 6 commit(s):
   - [`4e9a4f0`](https://github.com/shaahink/conductor/commit/4e9a4f0) docs(divan): the handoff for DV5 - what the CLI refuses, and the two guesses the live runs caught
   - [`39b22fa`](https://github.com/shaahink/conductor/commit/39b22fa) proof(DV5.2): the lane driven live - off spawns nothing, on reaches the real binary
@@ -245,6 +244,11 @@ vs upstream: up to date
   - [`8a42c22`](https://github.com/shaahink/conductor/commit/8a42c22) docs(DV7.1): the closure ledger, and the budget the next era compiles against
   - [`e73cc46`](https://github.com/shaahink/conductor/commit/e73cc46) docs(DV7.1): ARCHITECTURE reconciled - the seam count, the surface count, and a home for the daemon
   - [`fc33699`](https://github.com/shaahink/conductor/commit/fc33699) docs(DV7.1): ADR 0008 - the courier outlives the run, and the port 0005 forbade
+- **s22 (DV7 Deliver)** — 2 commit(s) (+2 in satellite repo(s)):
+  - [`76af3f8`](https://github.com/shaahink/conductor/commit/76af3f8) docs(DV7.2): the handoff - the payesh PR is stacked, and what DV7.3 must say about it
+  - [`dd9fb81`](https://github.com/shaahink/conductor/commit/dd9fb81) docs(DV7.2): the harvest re-run at the era close - two eras join the record, and a word the page cannot paint
+  - `f0ff21b` feat(corpus): the two eras that built this engine join the record, and a word the page cannot paint is refused where it is made [conductor-site]
+  - `eac0f80` chore(harvest): the Divan era-close re-harvest - the machine still runs, and nothing moved [conductor-site]
 
 ## Phase handovers (audit)
 
@@ -271,31 +275,31 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> **DV7.1 landed and claimed; DV7.2 delivered bar the payesh harvest**
-> - DV7.1: ADR-0008 for the courier, ARCHITECTURE reconciled (seams 10→13, surfaces 2→4, a section for the daemon), closure ledger adding zero new FU rows, budget re-measured → 42M/0.9 for the next era
-> - DV7.2: README and docs index had zero Divan vocabulary — now covered; a new derivation pins 29 subverb pairs `AddCommand<T>` cannot see, proven red on a seeded stale doc; three real gaps found by it
-> - Corrected in place: two shipped pages contradicted each other on `--project`, one over-claimed zero duplicates against bug #79, and the DV2 sweep had re-opened a row KS0.2 closed
+> **DV7.2 closed - payesh harvest re-run, PR #3 stacked, two eras join the record**
+> - The plain re-harvest moved only a timestamp against 15 new runs; that no-op exposed a corpus that stopped in early August
+> - Publishing the two closed eras (18->20 runs, 648/677->781/813 gates, all recomputed) hit `needs_human`, a status the pages paint in no role - fixed, plus a harvest-side refusal for any unpaintable status, both proven red
+> - Live run deliberately unpublished at 21/23; bug #83 filed for a second anonymity false positive
 >
-> artefacts: fc33699, e73cc46, 8a42c22, 856659c, bc49015, 9cab36f, docs/dev/adr/0008-the-courier-outlives-the-run.md, ARCHITECTURE.md
+> artefacts: payesh eac0f80, payesh f0ff21b, payesh PR #3, dd9fb81, 76af3f8
 >
-> evidence: .conductor/evidence/DV7/dv7-1-closure-ledger.md, .conductor/evidence/DV7/dv7-2-published-surface.md
+> evidence: .conductor/evidence/DV7/dv7-2-payesh-harvest.md
 >
-> gaps: DV7.2's payesh harvest re-run (C:/code/conductor-site, branch + PR, never main) is not done — the single next action, recorded as an amendment on the card and in the handoff. DV7.3 untouched (owner-only). Bugs #75, #76, #79, #80, #81, #82 remain open.
+> gaps: npm run anonymity red at 77 findings (76 = bugs #47/#41, 1 = new bug #83), none caused here; eleven runs still excluded from the corpus pending owner labels; DV7.3 must merge TWO payesh PRs, #2 then #3
 
 ## Tracker handoff
 
 ```
-last: DV7.1 DONE (claimed). ADR-0008 for the courier + a 2nd addendum on 0005; ARCHITECTURE
-  reconciled - seams 10->13, surfaces 2->4, "nothing is ever read back" corrected, and a new
-  top-level section for the daemon. Closure ledger in .conductor/followups.md adds ZERO `| FU-`
-  rows (bug #81) - 91 before, 91 after. Budget re-measured: TOKEN-BUDGET-TUNING §13.
-find: use `budget --home <dir> --repo <repo>` over a sqlite3 .backup copy - KS12.1 called the
-  positional-db arg "the only seam"; --home is better and never opens the live file. The NEXT era
-  compiles against 42M / 0.9 and 19M / $14.50 per checkpoint (two eras running the basis came in low).
-next: DV7.2 is delivered EXCEPT one item - the payesh harvest re-run in C:/code/conductor-site, on a
-  BRANCH with a PR, never main. That is the single next action; everything else in the card is landed
-  (see the amendment on the card, and .conductor/evidence/DV7/dv7-2-published-surface.md).
-  New bar: Subverbs.cs pins 29 (verb,subverb) pairs AddCommand<T> cannot see, proven red on a seeded
-  stale doc. CHANGELOG Unreleased now carries BOTH eras - the split-or-single release call is yours.
-red: #82, #81, #80, #79, #76, #75 (note stores only the first line - cost this session 3 notes).
+last: DV7.2 DONE (claimed, evidence .conductor/evidence/DV7/dv7-2-payesh-harvest.md). The payesh
+  harvest re-run: PR https://github.com/shaahink/payesh/pull/3, base ks12/harvest-era-close, main
+  never pushed. The plain re-harvest moved nothing - which exposed that the corpus stopped in early
+  August, so the two closed eras joined it (18->20 runs, 340->387 sessions, $3,016->$3,488,
+  648/677 -> 781/813 gates, all recomputed). `needs_human` was a status the pages paint in no role:
+  fixed, plus a harvest-side refusal for ANY unpaintable status, both proven red. 128/128 tests.
+find: the live run is deliberately NOT published (21/23 would freeze wrong) - it earns its
+  anonymise.json entry from the harvest AFTER its last checkpoint closes. Bug #83 filed: a second
+  anonymity false positive, from a source #47/#41 do not cover.
+next: DV7.3 - pre-flight each precondition and PARK with the runbook, the KS12.3 pattern at
+  .conductor/evidence/KS12/ks12-3-owner-runbook.md. Two things it must say: "merge the payesh PR"
+  is now TWO merges, #2 then #3; and feat/divan stacks on feat/karvansara-edge.
+red: #83, #82, #81, #80, #79, #76, #75 (a note keeps only its first line - write one long line).
 ```
