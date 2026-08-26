@@ -1,20 +1,19 @@
-﻿# Divan - the chancellery: inbox, courier, and the record that gets out Phase Tracker
+# Divan - the chancellery: inbox, courier, and the record that gets out Phase Tracker
 
 **Plan:** Divan - the chancellery: inbox, courier, and the record that gets out | **Branch:** `feat/divan` | **Design doc:** docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md
 
-## Handoff (overwrite this block, ≤ 12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV6.4 DONE — DV6 is closed. `conductor github sarif --backfill <run>` renders every OPEN bug
-  that names a file and a line as one SARIF 2.1.0 run and uploads it to code scanning. Its own
-  analysis category (so it cannot close another tool's alerts), the bug's row id as the
-  partialFingerprint (so a re-upload updates, never duplicates — bug #79 designed out), and no clock
-  anywhere (so the golden is a bar). Only open bugs render, which IS how `bug fix` closes an alert.
-find: two measurements moved the work. (1) The bugs table has no file column, so citations come out
-  of prose — on the real ledger that is 6 located of 32 open, reported not hidden; a bare name
-  resolves only if exactly one tracked file bears it. (2) A KS9.3-shaped scope gate was BUILT and
-  then REMOVED: a private repo answers 403 "Code scanning is not enabled for this repository", the
-  entitlement wall, saying nothing about the token — so security_events is only noted, never refused.
-next: DV7.1 — the internal record. DV6 added a courier, an inbox, the board page and this verb.
+last: DV6 is closed and now GREEN. The battery after s19 was red on ONE assertion of 3468:
+  GithubSarifDtos.cs declared 4 types against a hard maxTypesPerFile of 3. The SARIF feature was
+  never wrong — the file was. GithubRepoInfo is not a SARIF document, it is the repository read the
+  upload path consults to say WHY code scanning refused, so it came out into its own file (99f1b5a).
+find: architecture-baseline.json is EMPTY — {} for BOTH ceilings. There is no debt slot to widen,
+  so any new file in src/ gets 3 types and 500 lines, full stop. src/Conductor.Core/Integrations/
+  Github/ is already one-type-per-file; follow it and this never bites again. Proof: ArchitectureTests
+  7/7, the Sarif|Github set 57/57, and both ratchets re-measured across all of src — nothing over
+  either. No test touched, no ceiling raised, no baseline entry bought.
+next: DV7.1 — the internal record. DV6 added a courier, an inbox, the board page and the SARIF verb.
 red: bug #82 (no 202 ever seen; the public leg is one command at DV7.3), #81, #80, #79, #76.
 
 ## Baseline numbers (from run.db)
@@ -23,7 +22,7 @@ red: bug #82 (no 202 ever seen; the public leg is one command at DV7.3), #81, #8
 |---|---|
 | Total checkpoints | 23 |
 | Done | 16 |
-| Claimed (unconfirmed) | 3 |
+| Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
 
@@ -78,7 +77,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | DONE | 8d14fe5 | .conductor/evidence/DV6/dv6-1-ledger-issue-class.md |
 | DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | DONE | d1e5b0e | .conductor/evidence/DV6/dv6-2-the-columns.md |
 | DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | DONE | e17f09b | .conductor/evidence/DV6/dv6-3-the-page.md |
-| DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | TODO | - | - |
+| DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | DONE | 7a336e3 | .conductor/evidence/DV6/dv6-4-sarif.md |
 
 ### DV7 — Ship Divan - close the era
 

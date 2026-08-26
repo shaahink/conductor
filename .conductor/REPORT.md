@@ -1,10 +1,10 @@
 ﻿# Conductor — Divan - the chancellery: inbox, courier, and the record that gets out run report
 
-_Updated 2026-08-26 13:26 UTC · branch `feat/divan` · HEAD `e17f09b`_
+_Updated 2026-08-26 14:00 UTC · branch `feat/divan` · HEAD `fda60bd`_
 
 **Status:** Idle
-**Stage:** DV6 — The record that gets out - bugs that outlive the board, columns, the page · attempts used 0 · working ▸ DV6.4
-**Checkpoints:** 19/23 done · **Sessions run:** 18 · **Cost:** $274.9970 (agent $274.8602 + gates $0.1368) · **Tokens:** 3,655,215 in / 1,490,046 out
+**Stage:** DV6 — The record that gets out - bugs that outlive the board, columns, the page · attempts used 1
+**Checkpoints:** 20/23 done · **Sessions run:** 19 · **Cost:** $286.9178 (agent $286.7749 + gates $0.1429) · **Tokens:** 3,825,122 in / 1,579,150 out
 **Confirmed phases:** DV1, DV2, DV3, DV4, DV5
 
 ## Stage progress
@@ -16,7 +16,7 @@ _Updated 2026-08-26 13:26 UTC · branch `feat/divan` · HEAD `e17f09b`_
 | DV3 | The inbox - feedback that arrives when you have it, and survives the run | ██████████ 4/4 | confirmed ✓ |
 | DV4 | The courier - one bot, always awake, outliving the run | ██████████ 4/4 | confirmed ✓ |
 | DV5 | The cloud, the safe shapes - an owner verb, a flagged experiment | ██████████ 2/2 | confirmed ✓ |
-| DV6 | The record that gets out - bugs that outlive the board, columns, the page | ████████░░ 3/4 | **← active** |
+| DV6 | The record that gets out - bugs that outlive the board, columns, the page | ██████████ 4/4 | gating… |
 | DV7 | Ship Divan - close the era | ░░░░░░░░░░ 0/3 | todo |
 
 <details> ✅<summary>DV1 — The channel that says so - health made loud, the queue that reaches you (2/2)</summary>
@@ -70,14 +70,14 @@ _Updated 2026-08-26 13:26 UTC · branch `feat/divan` · HEAD `e17f09b`_
 
 </details>
 
-<details><summary>DV6 — The record that gets out - bugs that outlive the board, columns, the page (3/4)</summary>
+<details> ✅<summary>DV6 — The record that gets out - bugs that outlive the board, columns, the page (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | DV6.1 | Bugs and followups as a long-lived issue class: conductor:bug / conductor:followup labels, opened when filed, closed by the closing commit, surviving the run; the daily digest gains the ledger line, golden-pinned | ✅ DONE | [`8d14fe5`](https://github.com/shaahink/conductor/commit/8d14fe5) |
 | DV6.2 | The columns: Projects v2 mutation path landed - live if the token now carries project scope, else behind the existing refusal with stubbed proof and a filed finding naming gh auth refresh -s project as the owner's one-command unblock; the KS9.3 refusal moves either way | ✅ DONE | [`d1e5b0e`](https://github.com/shaahink/conductor/commit/d1e5b0e) |
-| DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | ✅ DONE | - |
-| DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | ⬜ TODO | - |
+| DV6.3 | CUT-FIRST - board snapshot as one self-contained HTML file rendered from Http/Contracts at each boundary, pushed as a Telegram document; the page states its own staleness; no inbound anything | ✅ DONE | [`e17f09b`](https://github.com/shaahink/conductor/commit/e17f09b) |
+| DV6.4 | CUT-FIRST - SARIF export for file/line bugs uploaded to code scanning; docs state the public-free / private-needs-Advanced-Security split | ✅ DONE | [`7a336e3`](https://github.com/shaahink/conductor/commit/7a336e3) |
 
 </details>
 
@@ -113,6 +113,7 @@ _Updated 2026-08-26 13:26 UTC · branch `feat/divan` · HEAD `e17f09b`_
 | 16 | DV6 | Deliver | 1 | 08-26 11:37 | 0:37 | Advanced | DV6.1 | 3 | engine-fast:OK · face-fast:OK | $22.6969 | $0.0097 | 274,771/122,639 |
 | 17 | DV6 | Deliver | 1 | 08-26 12:16 | 0:32 | Advanced | DV6.2 | 2 | engine-fast:OK · face-fast:OK | $14.8605 | $0.0105 | 240,661/121,419 |
 | 18 | DV6 | Deliver | 1 | 08-26 12:50 | 0:33 | Advanced | DV6.3 | 1 | engine-fast:OK · face-fast:OK | $16.8054 | $0.0118 | 1,521/297 |
+| 19 | DV6 | Deliver | 1 | 08-26 13:26 | 0:24 | Advanced | DV6.4 | 3 | engine-fast:OK · face-fast:OK | $11.9147 | $0.0061 | 169,907/89,104 |
 
 ## Money
 
@@ -120,31 +121,22 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 16 | 359.8M | 98.6% | $258.18 | 18 | 20M | $14.34 |
+| **run total** | 18 | 374.5M | 98.6% | $286.92 | 20 | 18.7M | $14.35 |
 | stage DV1 | 1 | 23.7M | 98.8% | $16.04 | 2 | 11.8M | $8.02 |
 | stage DV2 | 3 | 77.3M | 98.7% | $52.81 | 4 | 19.3M | $13.20 |
 | stage DV3 | 3 | 78.8M | 98.6% | $55.23 | 4 | 19.7M | $13.81 |
 | stage DV4 | 6 | 95.9M | 98.4% | $72.62 | 4 | 24M | $18.16 |
 | stage DV5 | 1 | 30.8M | 98.6% | $23.90 | 2 | 15.4M | $11.95 |
-| stage DV6 | 2 | 53.3M | 98.6% | $37.58 | 2 | 26.7M | $18.79 |
-| 2026-08 | 16 | 359.8M | 98.6% | $258.18 | 18 | 20M | $14.34 |
+| stage DV6 | 4 | 68M | 98.5% | $66.32 | 4 | 17M | $16.58 |
+| 2026-08 | 18 | 374.5M | 98.6% | $286.92 | 20 | 18.7M | $14.35 |
 
-_Where the money goes: agent $258.05 (100%) · gate $0.12 (0%) · blended $0.72/M tokens._
+_Where the money goes: agent $286.77 (100%) · gate $0.14 (0%) · blended $0.77/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-26 11:28:45  ▪ gate face-fast pass [phase]  (0.0s)
-08-26 11:28:45  ▪ gate engine-full FAIL [phase]  (5m34s)
-08-26 11:28:46  ▪ gate face-full pass [phase]  (3.0s)
-08-26 11:28:46  • session #14 DV4 Fix started (attempt 2/8)
-08-26 11:41:34  ▪ gate engine-fast pass [session]  (1m12s)
-08-26 11:41:34  ▪ gate face-fast pass [session]  (3.3s)
-08-26 11:41:34  • session #14 DV4 → Progress · 1 commit(s)  (12m48s)
-08-26 11:46:54  ▪ gate engine-fast pass [phase]  (0.0s)
-08-26 11:46:54  ▪ gate face-fast pass [phase]  (0.0s)
 08-26 11:46:54  ▪ gate engine-full pass [phase]  (5m15s)
 08-26 11:46:54  ▪ gate face-full pass [phase]  (1.7s)
 08-26 11:46:54  ✓ checkpoint DV4.1 confirmed
@@ -176,6 +168,15 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-26 13:50:41  • session #18 DV6 Deliver started (attempt 1/8)
 08-26 14:26:00  ▪ gate engine-fast pass [session]  (1m29s)
 08-26 14:26:00  ▪ gate face-fast pass [session]  (29.0s)
+08-26 14:26:01  • session #18 DV6 → Advanced · done DV6.3 · 1 commit(s)  (35m19s)
+08-26 14:26:06  • session #19 DV6 Deliver started (attempt 1/8)
+08-26 14:51:11  ▪ gate engine-fast pass [session]  (58.4s)
+08-26 14:51:11  ▪ gate face-fast pass [session]  (3.0s)
+08-26 14:51:12  • session #19 DV6 → Advanced · done DV6.4 · 3 commit(s)  (25m06s)
+08-26 15:00:58  ▪ gate engine-fast pass [phase]  (0.0s)
+08-26 15:00:58  ▪ gate face-fast pass [phase]  (0.0s)
+08-26 15:00:58  ▪ gate engine-full FAIL [phase]  (4m37s)
+08-26 15:00:58  ▪ gate face-full pass [phase]  (2.3s)
 ```
 
 ## Health
@@ -183,7 +184,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 18 · retries 3 (17 %) · overall Warn
+sessions 19 · retries 3 (16 %) · overall Warn
 ⚠ [context-saturation] session #12: 27,281,149 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 30,383,029 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #16: 33,752,373 context tokens (≥ 20,000,000)
@@ -193,7 +194,7 @@ sessions 18 · retries 3 (17 %) · overall Warn
 ⚠ [context-saturation] session #6: 32,762,695 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 34,491,022 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #9: 34,833,588 context tokens (≥ 20,000,000)
-⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 4x
+⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 5x
 ```
 
 ## Repo
@@ -202,16 +203,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/divan
-working tree: M .conductor/REPORT.md
+working tree: M .conductor/REPORT.md, M plans/divan/TRACKER.md
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s11 (DV4 Resume)** — 3 commit(s):
-  - [`e6d0d1c`](https://github.com/shaahink/conductor/commit/e6d0d1c) docs(divan): the handoff for DV4.2 - the presence record is DV4.3's hello, written down
-  - [`5c78d3f`](https://github.com/shaahink/conductor/commit/5c78d3f) proof(DV4.2): the scheduler accepts it, and the guard defect the live run found
-  - [`962d6bc`](https://github.com/shaahink/conductor/commit/962d6bc) feat(DV4.2): the courier gets a lifecycle - a logon task, a presence record, and a version it states
 - **s12 (DV4 Deliver)** — 4 commit(s):
   - [`a179857`](https://github.com/shaahink/conductor/commit/a179857) docs(divan): the handoff for DV4.3 - the seam is open, and a second courier is refused
   - [`54a9444`](https://github.com/shaahink/conductor/commit/54a9444) proof(DV4.3): the seam holds against a real daemon, and the defect the live run found
@@ -237,6 +234,10 @@ vs upstream: up to date
   - [`d1e5b0e`](https://github.com/shaahink/conductor/commit/d1e5b0e) feat(DV6.2): the columns - the Projects v2 mutation path, and the refusal that moved
 - **s18 (DV6 Deliver)** — 1 commit(s):
   - [`e17f09b`](https://github.com/shaahink/conductor/commit/e17f09b) feat(DV6.3): the page - the board as one self-contained file, published not served
+- **s19 (DV6 Deliver)** — 3 commit(s):
+  - [`fda60bd`](https://github.com/shaahink/conductor/commit/fda60bd) docs(divan): the handoff for DV6.4 - what the ledger could cite, and the gate that came out
+  - [`2758427`](https://github.com/shaahink/conductor/commit/2758427) proof(DV6.4): the live call, and the gate a measurement removed
+  - [`7a336e3`](https://github.com/shaahink/conductor/commit/7a336e3) feat(DV6.4): the alerts - every bug that names a place, as one SARIF run
 
 ## Phase handovers (audit)
 
@@ -259,28 +260,59 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:FAIL-retry · face-full:OK
+
+<details><summary>engine-full — exit 1</summary>
+
+```
+[conductor] retried once (SC4.1): the first attempt exited 1 after 304s. Below is the SECOND run.
+Determining projects to restore...
+  All projects are up-to-date for restore.
+  Conductor.Planning -> C:\code\conductor\src\Conductor.Planning\bin\Debug\net10.0\Conductor.Planning.dll
+  Conductor.Core -> C:\code\conductor\src\Conductor.Core\bin\Debug\net10.0\Conductor.Core.dll
+  Conductor -> C:\code\conductor\src\Conductor\bin\Debug\net10.0\conductor.dll
+  Conductor.Tests -> C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+Test run for C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed Conductor.Tests.ArchitectureTests.NoFileGrowsPastItsTypeCeilingOrItsRecordedDebt [226 ms]
+  Error Message:
+   Architecture ratchet — type count went the wrong way:
+  GithubSarifDtos.cs             declares 4 types (allowed 3). Give each type its own file.
+  Stack Trace:
+     at Conductor.Tests.ArchitectureTests.NoFileGrowsPastItsTypeCeilingOrItsRecordedDebt() in C:\code\conductor\tests\Conductor.Tests\ArchitectureTests.cs:line 108
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:     1, Passed:  3467, Skipped:     0, Total:  3468, Duration: 3 m 29 s - Conductor.Tests.dll (net10.0)
+```
+</details>
 
 ## Last session result
 
-> That notification is the leftover waiter for the test run I already read (478 passed, 0 failed) — nothing new in it.
-> 
-> DV6.3 is closed out: claimed with evidence, committed as `e17f09b`, pushed on `feat/divan`, handoff block written for the next session. No background children of mine are still running, and the working tree is clean apart from the engine's own live `REPORT.md`.
+> **DV6.4 landed — bugs with a file and line become code-scanning alerts**
+> - 32 new tests, golden-pinned SARIF; 98 green across Github/DV6, 102 across Docs/Cli/Help
+> - live call reached GitHub and measured the private-repo 403; that measurement removed a scope gate I had built
+> - 6 of 32 open bugs carry a resolvable citation — reported, not hidden; docs state the public-free/private-GHAS split
+>
+> artefacts: 7a336e3, 2758427, fda60bd, src/Conductor.Core/Integrations/Github/Sarif*.cs, src/Conductor/Commands/GithubCommand.cs, docs/cli.md, tests/Conductor.Tests/DV6_4SarifTests.cs
+>
+> evidence: .conductor/evidence/DV6/dv6-4-sarif.md, .conductor/evidence/DV6/dv6-4-bugs-live.sarif, tests/Conductor.Tests/testdata/dv6-4/bugs.sarif
+>
+> gaps: bug #82 — no 202 from GitHub yet; the public-repo leg is one command at DV7.3. Bugs #81, #80, #79, #76 still open.
 
 ## Tracker handoff
 
 ```
-last: DV6.3 DONE. The board is ONE self-contained HTML file - columns (DV6.2's own first-choice
-  names), cards with age-in-column, cost, the owner queue with its clearing command, the ledger line
-  and the evidence - rendered from the SAME Http/Contracts the control plane serves and written
-  atomically to <stateDir>/board.html at every session boundary, then pushed as a Telegram document.
-  ADR-0005 holds: a source scan over the publishing path fails on a listener, socket, prefix or
-  tunnel. 15 new tests; 478 green across KS11/K5_4/DV1_2/DV6_/SC23/KS5_/ControlPlane/Harness.
-find: three answers that existed once and were needed twice were MOVED, not copied -
-  ControlPlaneMapper.WithBudget (out of the server assembly), LedgerSummary.Line (out of the digest)
-  and ControlPlaneMapper.FromArtifact. And RunLoop is AT its CA1506 coupling bar: two new type
-  references tripped it at 185/183, so the boundary hook lives in RunContext.Board.cs.
-next: DV6.4 - SARIF for every bug carrying a file and line, uploaded to code scanning; the docs must
-  state the public-free / private-needs-Advanced-Security split. It is the stage's CUT-FIRST row.
-red: bug #80 (owner runs gh auth refresh -s project, then a real Projects v2 board), #81, #79, #76.
+last: DV6.4 DONE — DV6 is closed. `conductor github sarif --backfill <run>` renders every OPEN bug
+  that names a file and a line as one SARIF 2.1.0 run and uploads it to code scanning. Its own
+  analysis category (so it cannot close another tool's alerts), the bug's row id as the
+  partialFingerprint (so a re-upload updates, never duplicates — bug #79 designed out), and no clock
+  anywhere (so the golden is a bar). Only open bugs render, which IS how `bug fix` closes an alert.
+find: two measurements moved the work. (1) The bugs table has no file column, so citations come out
+  of prose — on the real ledger that is 6 located of 32 open, reported not hidden; a bare name
+  resolves only if exactly one tracked file bears it. (2) A KS9.3-shaped scope gate was BUILT and
+  then REMOVED: a private repo answers 403 "Code scanning is not enabled for this repository", the
+  entitlement wall, saying nothing about the token — so security_events is only noted, never refused.
+next: DV7.1 — the internal record. DV6 added a courier, an inbox, the board page and this verb.
+red: bug #82 (no 202 ever seen; the public leg is one command at DV7.3), #81, #80, #79, #76.
 ```

@@ -1,0 +1,20 @@
+# DV6.4 ratchet fix - the two runs, verbatim
+
+## 1. ArchitectureTests, fresh build of the working tree
+```
+dotnet test tests/Conductor.Tests/Conductor.Tests.csproj --filter FullyQualifiedName~ArchitectureTests
+Passed!  - Failed:     0, Passed:     7, Skipped:     0, Total:     7, Duration: 319 ms - Conductor.Tests.dll (net10.0)
+```
+
+## 2. The GitHub + SARIF regression set (the moved DTO still round-trips)
+```
+dotnet test tests/Conductor.Tests/Conductor.Tests.csproj --filter 'FullyQualifiedName~Sarif|FullyQualifiedName~Github'
+Passed!  - Failed:     0, Passed:    57, Skipped:     0, Total:    57, Duration: 250 ms - Conductor.Tests.dll (net10.0)
+```
+
+## 3. Both ratchets measured independently across all of src/
+(the test's own regex and file scope, run outside the test host)
+```
+types>3: []
+lines>500: []
+```
