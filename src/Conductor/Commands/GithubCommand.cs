@@ -187,7 +187,7 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         var sync = new GithubBoardSync(client, repo, prefix);
         var result = await sync.BackfillAsync(
             view.Log(), view.Run, view.Run.EngineStampText ?? Core.BuildInfo.Current.Full,
-            diary, settings.DryRun).ConfigureAwait(false);
+            diary, settings.DryRun, Ledger(view, prefix)).ConfigureAwait(false);
 
         AnsiConsole.MarkupLine(Markup.Escape(result.Summary()));
         foreach (var (key, url) in result.Urls.OrderBy(u => u.Key, StringComparer.Ordinal).Take(5))
@@ -198,6 +198,16 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
             AnsiConsole.MarkupLine($"[red]{Markup.Escape(error)}[/]");
         AnsiConsole.MarkupLine($"[grey]{client.RequestCount} requests[/]");
         return result.Ok ? 0 : 1;
+    }
+
+    /// <summary>DV6.1 — the bug and followup half of a backfill. Read from the ARCHIVE (read-only,
+    /// never migrated) and from the followups file of the repo that run worked in, because that is
+    /// where the rows the ledger is talking about actually live.</summary>
+    private static IReadOnlyList<GithubLedgerCard> Ledger(ArchiveView view, string prefix)
+    {
+        var followupsPath = Path.Combine(view.Repo, StateHome.ScratchDirName, "followups.md");
+        var followups = File.Exists(followupsPath) ? Core.FollowupParser.Read(followupsPath) : [];
+        return GithubLedgerPlan.Cards(view.Bugs(), followups, prefix);
     }
 
     private static int RefuseNoDestination(PlanConfig plan)

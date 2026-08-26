@@ -40,6 +40,7 @@ public sealed class KS11_5MetricsOnDemandTests : IDisposable
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
 
     private readonly string _repo;
+    private readonly string _db;
     private readonly SqliteRunStore _store;
     private readonly PlanConfig _plan;
     private readonly RunState _state;
@@ -58,7 +59,8 @@ public sealed class KS11_5MetricsOnDemandTests : IDisposable
             + "| KS11.5 | metrics on demand | IN PROGRESS | | |\n"
             + "| KS12.1 | the record | TODO | | |\n");
 
-        var db = Path.Combine(_repo, ".conductor", "rig.db");
+        _db = Path.Combine(_repo, ".conductor", "rig.db");
+        var db = _db;
         _store = new SqliteRunStore(db, NullLogger<SqliteRunStore>.Instance);
         _store.SetRunId(RunId);
         // The pointer is what makes plan.RunDbPath resolve to THIS database instead of deriving a
@@ -120,6 +122,42 @@ public sealed class KS11_5MetricsOnDemandTests : IDisposable
 
         _store.RecordGate(RunId, 1, "KS11", "build", "fast", "repo", "abc1234", true, false, false, 0, 900, null);
         _store.RecordGate(RunId, 2, "KS11", "tests", "full", "repo", "bcd2345", true, false, false, 0, 90_000, null);
+
+        SeedLedger();
+    }
+
+    /// <summary>DV6.1 — the bug and followup ledger the digest's one line counts. Deliberately mixed:
+    /// a fixed bug and a CLOSED row that must NOT be counted, and a prose <c>**OPEN, ...**</c> cell
+    /// that must be — the file this feature reads really does spell rows that way, and an exact match
+    /// undercounts exactly the rows a reader most wants to see.</summary>
+    private void SeedLedger()
+    {
+        var old = _store.WriteBug(RunId, "the courier does not upload files", null, "medium", "KS11", 1);
+        _store.WriteBug(RunId, "a note stores only its first line", null, "high", "KS11", 2);
+        var closed = _store.WriteBug(RunId, "already fixed", null, "low", "KS11", 1);
+        _store.UpdateBugStatus(RunId, closed, "fixed", 3);
+        // The age is written RELATIVE to now, so the golden pins "26 days" for good rather than
+        // rotting one day after it is generated.
+        Age(old, 26);
+
+        File.WriteAllText(Path.Combine(_repo, ".conductor", "followups.md"),
+            "# Tracked followups\n\n| id | item | detail | owning stage | status |\n|---|---|---|---|---|\n"
+            + "| FU-KS11-1 | the digest says nothing about the ledger | - | KS11 | OPEN |\n"
+            + "| FU-KS11-2 | owner-gated, and stated as such | - | next | **OPEN, owner-gated** - the owner |\n"
+            + "| FU-KS11-3 | long since done | - | KS11 | CLOSED (abc1234) |\n");
+    }
+
+    /// <summary>Back-date a bug row. <c>WriteBug</c> stamps <c>datetime('now')</c> and takes no date,
+    /// and adding one purely for a fixture would be a production seam that exists for a test.</summary>
+    private void Age(long bugId, int days)
+    {
+        using var conn = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=" + _db);
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE bugs SET created_at = datetime('now', @delta) WHERE id = @id";
+        cmd.Parameters.AddWithValue("@delta", "-" + days.ToString(CultureInfo.InvariantCulture) + " days");
+        cmd.Parameters.AddWithValue("@id", bugId);
+        cmd.ExecuteNonQuery();
     }
 
     public void Dispose()
@@ -323,6 +361,35 @@ public sealed class KS11_5MetricsOnDemandTests : IDisposable
 
         var literals = Regex.Matches(source, @"\b\d+\.\d+m\b", RegexOptions.ExplicitCapture, RegexTimeout).Select(m => m.Value).Distinct().ToList();
         Assert.Equal(["0.01m"], literals);
+    }
+
+    // ────────────────────────── DV6.1: the ledger line ──────────────────────────
+
+    /// <summary>The line counts what is OPEN, from both halves, and dates the half that carries
+    /// dates. The digest golden pins the sentence; this pins the arithmetic behind it, so a change
+    /// that quietly started counting fixed bugs would fail as a WRONG NUMBER rather than as a diff.</summary>
+    [Fact]
+    public void The_ledger_line_counts_only_what_is_open()
+    {
+        var line = _composer.LedgerLine();
+
+        // three bugs seeded, one of them fixed; three followup rows, one of them CLOSED.
+        Assert.Equal(3, _store.QueryBugLedger().Count);
+        Assert.Equal("ledger: 2 open bugs · 2 open followups · oldest bug 26 days", line);
+        Assert.Contains(line, _composer.DailyDigestText(), StringComparison.Ordinal);
+    }
+
+    /// <summary>An empty ledger says NOTHING. A digest that printed "0 open bugs" every day would
+    /// teach a reader to skip the line that one day says eleven.</summary>
+    [Fact]
+    public void An_empty_ledger_prints_no_line_at_all()
+    {
+        foreach (var row in _store.QueryBugLedger())
+            _store.UpdateBugStatus(RunId, row.Bug.Id, "fixed", 3);
+        File.Delete(Path.Combine(_repo, ".conductor", "followups.md"));
+
+        Assert.Equal("", _composer.LedgerLine());
+        Assert.DoesNotContain("ledger:", _composer.DailyDigestText(), StringComparison.Ordinal);
     }
 
     // ────────────────────────── the goldens ──────────────────────────

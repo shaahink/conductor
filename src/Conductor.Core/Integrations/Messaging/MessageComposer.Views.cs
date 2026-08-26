@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 using Conductor.Core.Events;
@@ -159,6 +160,12 @@ public sealed partial class MessageComposer
             catch { /* best-effort: digest is advisory */ }
         }
 
+        if (LedgerLine() is { Length: > 0 } ledger)
+        {
+            sb.AppendLine();
+            sb.AppendLine(EscapeHtml(ledger));
+        }
+
         if (ProofLine(gates, []) is { Length: > 0 } proof)
         {
             sb.AppendLine();
@@ -169,4 +176,67 @@ public sealed partial class MessageComposer
         sb.Append(Telemetry(PulledFacts()));
         return sb.ToString().TrimEnd();
     }
+    /// <summary>
+    /// DV6.1 — the one line that makes the ledger visible: how much is outstanding, and how long the
+    /// oldest of it has been.
+    ///
+    /// <para><b>Why in the digest and nowhere else.</b> The bug table and followups.md are real,
+    /// durable and invisible: measured at the start of this era, 28 open bugs and a dozen open
+    /// followup rows reached exactly one surface - a session's own prompt. The digest is the one
+    /// message a day a reader is guaranteed to see, and one line in it is the whole intervention.</para>
+    ///
+    /// <para><b>The age is a BUG age, and says so.</b> followups.md carries no dates at all, so a
+    /// combined "oldest" would be an average of a measurement and a guess. Empty ledger, no line -
+    /// a digest that says "0 open bugs" every day teaches a reader to skip the line that will one day
+    /// say eleven.</para>
+    /// </summary>
+    public string LedgerLine()
+    {
+        if (_store is null) return "";
+
+        List<Store.BugRow> openBugs;
+        try { openBugs = [.. _store.QueryBugLedger().Select(b => b.Bug).Where(b => string.Equals(b.Status, "open", StringComparison.OrdinalIgnoreCase))]; }
+        catch (Microsoft.Data.Sqlite.SqliteException) { return ""; }
+        catch (InvalidOperationException) { return ""; }
+
+        var followups = 0;
+        try
+        {
+            var path = Path.Combine(_plan.StateDir, "followups.md");
+            if (File.Exists(path)) followups = FollowupParser.Read(path).Count(FollowupParser.IsOpen);
+        }
+        catch (IOException) { /* best-effort: the digest is advisory, and a locked file is not news */ }
+
+        if (openBugs.Count == 0 && followups == 0) return "";
+
+        var line = new StringBuilder("ledger: ")
+            .Append(Count(openBugs.Count, "open bug"))
+            .Append(" · ")
+            .Append(Count(followups, "open followup"));
+        if (OldestDays(openBugs) is { } days) line.Append(" · oldest bug ").Append(Count(days, "day"));
+        return line.ToString();
+    }
+
+    /// <summary>Whole days since the oldest open bug was filed, or null when nothing is open or
+    /// nothing carries a readable date. Floored: a bug filed 47 hours ago is one day old, because
+    /// rounding up would make a bug filed this morning "1 day" and cost the line its meaning.</summary>
+    private static int? OldestDays(IReadOnlyList<Store.BugRow> open)
+    {
+        DateTime? oldest = null;
+        foreach (var bug in open)
+        {
+            // SQLite's datetime('now') writes "2026-08-26 09:12:33" with no zone marker, and it is
+            // UTC. Parsed as universal on purpose: read as local time, every age here would be wrong
+            // by the operator's offset, which is invisible until someone runs this in Tehran.
+            if (!DateTime.TryParse(bug.CreatedAt, CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var filed)) continue;
+            if (oldest is null || filed < oldest) oldest = filed;
+        }
+        if (oldest is null) return null;
+        var days = (int)(DateTime.UtcNow - oldest.Value).TotalDays;
+        return days < 0 ? 0 : days;
+    }
+
+    private static string Count(int n, string noun) =>
+        string.Create(CultureInfo.InvariantCulture, $"{n} {noun}{(n == 1 ? "" : "s")}");
 }

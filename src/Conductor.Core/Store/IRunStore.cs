@@ -126,6 +126,10 @@ public interface IRunStore : IDisposable
     /// found it and not just the session. See <see cref="CarriedBugRow"/>.</summary>
     IReadOnlyList<CarriedBugRow> QueryCarriedBugs(string currentRunId);
 
+    /// <summary>DV6.1: every bug in this database, any run, any status — what the GitHub ledger class
+    /// reconciles against, where an open row opens an issue and a closed row closes one.</summary>
+    IReadOnlyList<CarriedBugRow> QueryBugLedger();
+
     // ---------------------------------------------------------------- handovers
 
     void WriteHandover(string runId, int sessionNumber, string stageId, string content);

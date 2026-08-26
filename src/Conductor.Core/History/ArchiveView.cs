@@ -193,6 +193,17 @@ public sealed partial class ArchiveView
     /// the archive plane serves it verbatim over SSE; nothing here can mutate it.</summary>
     public IReadOnlyList<ConductorEvent> Log() => Events;
 
+    /// <summary>DV6.1 — this database's whole bug ledger, read-only. Behind the view rather than on
+    /// the archive directly for the same reason <see cref="Log"/> is: a caller holds a view, and a
+    /// second handle on the same file is a second thing to keep honest.</summary>
+    public IReadOnlyList<Store.CarriedBugRow> Bugs()
+    {
+        var plans = _archive.Runs().GroupBy(r => r.RunId, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First().PlanName, StringComparer.Ordinal);
+        return [.. _archive.BugLedger().Select(b =>
+            new Store.CarriedBugRow(b, plans.GetValueOrDefault(b.RunId, "")))];
+    }
+
     private IReadOnlyList<ArchivedCost> CostRows => _costs.Value;
 
     /// <summary>The task graph the run ended with, folded from the log the way the live plane folds it.

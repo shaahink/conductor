@@ -79,6 +79,27 @@ public static class FollowupParser
             (e.OwningStage.Contains(stageId, StringComparison.OrdinalIgnoreCase) || Unclaimed(e))).ToList();
     }
 
+    /// <summary>
+    /// DV6.1 — is this row still outstanding? The LEDGER's question, and deliberately a looser test
+    /// than <see cref="ReadOpenForStage"/>'s exact match.
+    ///
+    /// <para>MEASURED against the file itself: rows written by a triage pass spell the cell
+    /// <c>**OPEN, owner-gated, and stated as such (SF0.4)** - not carried as if a session could clear
+    /// it</c>. An exact match calls that row closed. For counting what is outstanding — the digest
+    /// line, the issue class — that is an undercount of exactly the rows a human most wants to see,
+    /// which is the graveyard this checkpoint exists to empty.</para>
+    ///
+    /// <para><b>The fix-lane path keeps the stricter test on purpose.</b> Counting a row is free;
+    /// opening a Tier-B MUTATING lane for one is not, and a row whose status is a paragraph is
+    /// exactly the row nobody meant to hand to an agent.</para>
+    /// </summary>
+    public static bool IsOpen(FollowupEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        var cell = entry.Status.Trim().TrimStart('*', '_', '`', ' ');
+        return cell.StartsWith("OPEN", StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>DV4.4 — a row whose owning stage is the literal <c>next</c>: it belongs to whichever
     /// stage is confirmed first, because whoever wrote it had no run to name.
     ///

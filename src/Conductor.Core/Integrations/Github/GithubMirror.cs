@@ -56,13 +56,16 @@ public sealed class GithubMirror : IDisposable
 
     public GithubMirror(
         IRunStore store, string runId, string repo, string token, string labelPrefix,
-        bool includeDiary, Action<string> log, HttpMessageHandler? handler = null)
+        bool includeDiary, Action<string> log, HttpMessageHandler? handler = null,
+        string? followupsPath = null)
     {
         _store = store;
         RunId = runId;
         Repo = repo;
         _log = log;
         _includeDiary = includeDiary;
+        _labelPrefix = labelPrefix;
+        _followupsPath = followupsPath;
         _client = new GithubClient(token, TimeSpan.FromSeconds(30), handler, disposeHandler: handler is null);
 
         // The local map is loaded ONCE and written through on every create. GitHub's issue list is a
@@ -74,6 +77,23 @@ public sealed class GithubMirror : IDisposable
     }
 
     private readonly GithubMap _map;
+    private readonly string _labelPrefix;
+
+    /// <summary>DV6.1 — <c>.conductor/followups.md</c>, or null for a mirror with no followup half.
+    /// A path rather than a parsed list, because the file changes UNDER a running mirror: a verdict
+    /// writes rows into it mid-run, and a snapshot taken at construction would mirror the file as it
+    /// was when the process started.</summary>
+    private readonly string? _followupsPath;
+
+    /// <summary>DV6.1 — what the ledger said at the end of the last pass that LANDED. In memory on
+    /// purpose: a restart re-reconciles once, which is one listing and zero writes, and the
+    /// alternative is a schema change to persist a fingerprint that is only ever compared with
+    /// itself. Held on failure as well as on idle, so a failed pass re-pushes the ledger it could not
+    /// push.</summary>
+    /// <para>Starts EMPTY rather than null so a run whose ledger is empty - the common case, and
+    /// the one KS9.2 pinned with "nothing new means zero requests" - stays idle at its first
+    /// boundary instead of listing a repository to push nothing.</para>
+    private string _ledgerMark = "";
 
     /// <summary>The mirror for this run, or null when the plan has not asked for one. Off by default
     /// means absent: a null <c>github</c> block, <c>enabled: false</c>, <c>liveMirror: false</c>, no
@@ -113,7 +133,8 @@ public sealed class GithubMirror : IDisposable
                 "(the issue board is unaffected)");
 
         log($"github mirror on → {repo} (token from {source})");
-        return new GithubMirror(store, runId, repo, token, cfg.LabelPrefix, cfg.RunHistoryIssue, log, handler);
+        return new GithubMirror(store, runId, repo, token, cfg.LabelPrefix, cfg.RunHistoryIssue, log, handler,
+            Path.Combine(plan.StateDir, "followups.md"));
     }
 
     // ── the pass ─────────────────────────────────────────────────────────────────────────────────
@@ -143,15 +164,23 @@ public sealed class GithubMirror : IDisposable
         {
             var cursor = _store.ReadGithubCursor(RunId, Repo);
             var delta = _store.ReadEventsAfter(RunId, cursor.Seq);
-            if (delta.Count == 0)
+
+            // DV6.1 — the event cursor cannot see the ledger. `conductor bug new` writes a row and
+            // emits no event, so a boundary whose only news is a filed bug would look like nothing
+            // new and issue zero requests: the bug would wait for whatever happened next. The ledger
+            // gets its own "has this changed" answer, and a pass runs when EITHER half has news.
+            var (ledger, ledgerMark) = ReadLedger();
+            var ledgerChanged = !string.Equals(ledgerMark, _ledgerMark, StringComparison.Ordinal);
+            if (delta.Count == 0 && !ledgerChanged)
                 return GithubMirrorPass.Idle(reason, "nothing new since seq " + cursor.Seq.ToString(CultureInfo.InvariantCulture));
 
-            var head = delta.Max(e => e.Seq);
+            var head = delta.Count > 0 ? delta.Max(e => e.Seq) : cursor.Seq;
             var all = _store.ReadAllEvents(RunId);
             var run = Describe(runStatusOverride);
 
             var result = await _sync.BackfillAsync(
-                all, run, run.EngineVersion ?? BuildInfo.Current.Full, _includeDiary, dryRun: false, ct)
+                all, run, run.EngineVersion ?? BuildInfo.Current.Full, _includeDiary, dryRun: false,
+                ledger, ct)
                 .ConfigureAwait(false);
             var requests = _client.RequestCount - before;
 
@@ -167,6 +196,7 @@ public sealed class GithubMirror : IDisposable
             }
 
             _store.WriteGithubCursor(RunId, Repo, head, null);
+            _ledgerMark = ledgerMark;
             _log($"github mirror {reason}: {result.Summary()} — cursor {cursor.Seq}→{head}, {requests} requests");
             return GithubMirrorPass.Pushed(reason, head, requests, result);
         }
@@ -250,6 +280,25 @@ public sealed class GithubMirror : IDisposable
         }
         _log($"github mirror: a pass was still running after {budget.TotalSeconds:0}s at shutdown — " +
              "the cursor did not move, so the next run pushes the same batch");
+    }
+
+    /// <summary>DV6.1 — the ledger as it stands RIGHT NOW, plus the mark that says whether it has
+    /// moved since the last pass that landed.
+    ///
+    /// <para>The mark is the reconciled shape itself — every key and whether it is closed — and not a
+    /// row count or a max(updated_at). A count cannot see a bug going open→fixed, and the bugs table
+    /// has no trigger keeping updated_at honest for a row edited by anything but the status verb.
+    /// followups.md has no timestamps at all.</para></summary>
+    private (IReadOnlyList<GithubLedgerCard> Cards, string Mark) ReadLedger()
+    {
+        var bugs = _store.QueryBugLedger();
+        var followups = _followupsPath is { Length: > 0 } && File.Exists(_followupsPath)
+            ? FollowupParser.Read(_followupsPath)
+            : [];
+        var cards = GithubLedgerPlan.Cards(bugs, followups, _labelPrefix);
+        var mark = new System.Text.StringBuilder();
+        foreach (var card in cards) mark.Append(card.Key).Append(card.Closed ? "=x;" : "=o;");
+        return (cards, mark.ToString());
     }
 
     /// <summary>The run's identity as the diary header wants it. Read from the store, so a resumed

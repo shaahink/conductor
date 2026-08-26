@@ -22,7 +22,7 @@ namespace Conductor.Core.Integrations.Github;
 /// <para><b>One direction.</b> Observed issues answer exactly one question — which issue is ours —
 /// and never influence what the run believes. D-7 / A16 / ADR 0005.</para>
 /// </summary>
-public sealed class GithubBoardSync(GithubClient client, string repo, string labelPrefix, GithubMap? map = null)
+public sealed partial class GithubBoardSync(GithubClient client, string repo, string labelPrefix, GithubMap? map = null)
 {
     private readonly string _prefix = string.IsNullOrWhiteSpace(labelPrefix) ? "conductor" : labelPrefix.Trim();
 
@@ -34,9 +34,13 @@ public sealed class GithubBoardSync(GithubClient client, string repo, string lab
     /// <summary>Push a whole run — board then diary. <paramref name="dryRun"/> reconciles and
     /// reports without issuing a single write, which is what makes "what would this do to a real
     /// repository" answerable before it is done to one.</summary>
+    /// <param name="ledger">DV6.1 — the bug and followup entries to reconcile alongside the board,
+    /// or null for a caller that has no ledger to push. They ride the SAME issue listing as the
+    /// cards, so a mirror that gained a ledger did not gain a request.</param>
     public async Task<GithubSyncResult> BackfillAsync(
         IReadOnlyList<ConductorEvent> events, ArchivedRun run, string engineVersion,
-        bool includeDiary, bool dryRun, CancellationToken ct = default)
+        bool includeDiary, bool dryRun, IReadOnlyList<GithubLedgerCard>? ledger = null,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(events);
         var result = new GithubSyncResult();
@@ -46,6 +50,8 @@ public sealed class GithubBoardSync(GithubClient client, string repo, string lab
         var observed = issues ?? [];
 
         await SyncCardsAsync(GithubBoardPlan.Cards(events, _prefix), observed, result, dryRun, ct).ConfigureAwait(false);
+        if (ledger is { Count: > 0 })
+            await SyncLedgerAsync(ledger, observed, result, dryRun, ct).ConfigureAwait(false);
         if (includeDiary)
             await SyncDiaryAsync(GithubBoardPlan.Diary(events, run, engineVersion), observed, result, dryRun, ct)
                 .ConfigureAwait(false);

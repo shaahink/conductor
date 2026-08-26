@@ -76,7 +76,9 @@ public sealed partial class SqliteRunStore
         return rows.Select(ToBugRow).ToList();
     }
 
-    private static BugRow ToBugRow(Dictionary<string, object?> r) => new(
+    /// <summary>Internal so the read-only <c>RunArchive</c> half can share one definition of what a
+    /// bug row IS: a backfill that mapped its own columns would be a second thing to get wrong.</summary>
+    internal static BugRow ToBugRow(Dictionary<string, object?> r) => new(
         Id: Convert.ToInt64(r["id"], CultureInfo.InvariantCulture),
         RunId: (string)r["run_id"]!,
         Title: (string)r["title"]!,
@@ -102,6 +104,23 @@ public sealed partial class SqliteRunStore
             "FROM bugs b LEFT JOIN runs r ON r.run_id = b.run_id " +
             "WHERE b.status = 'open' AND b.run_id <> @runId ORDER BY b.id DESC",
             ("@runId", currentRunId));
+        return rows.Select(r => new CarriedBugRow(ToBugRow(r), r["plan_name"] as string ?? "")).ToList();
+    }
+
+    /// <summary>DV6.1: EVERY bug in this database, whichever run filed it and whatever its status,
+    /// newest first, each paired with the plan that filed it.
+    ///
+    /// <para>Distinct from <see cref="QueryCarriedBugs"/>, which answers "what is still outstanding
+    /// from elsewhere" for a prompt. This answers "what does the whole ledger say", which is the
+    /// question the GitHub issue class asks: an OPEN row decides whether an issue should exist, and a
+    /// CLOSED row is what closes the issue that already does. Reading only the open ones would leave
+    /// every fixed bug's issue open forever, because a fixed bug simply disappears from the set.</para></summary>
+    public IReadOnlyList<CarriedBugRow> QueryBugLedger()
+    {
+        var rows = Query(
+            "SELECT b.id, b.run_id, b.title, b.detail, b.severity, b.status, b.stage_id, b.found_session, " +
+            "b.fixed_session, b.created_at, b.updated_at, r.plan_name " +
+            "FROM bugs b LEFT JOIN runs r ON r.run_id = b.run_id ORDER BY b.id DESC");
         return rows.Select(r => new CarriedBugRow(ToBugRow(r), r["plan_name"] as string ?? "")).ToList();
     }
 

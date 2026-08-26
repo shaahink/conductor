@@ -38,6 +38,23 @@ public static class GithubIdentity
     public static string SessionMarker(string runId, int number) =>
         $"<!-- conductor:session {runId}#{number.ToString(CultureInfo.InvariantCulture)} -->";
 
+    /// <summary>DV6.1 — the marker a BUG's issue carries. A separate marker from the checkpoint's,
+    /// and that separation is the checkpoint: a bug is a different KIND of issue with a different
+    /// lifetime, so the retire sweep — which reads the task marker — can never reach it when the run
+    /// that filed it ends.</summary>
+    public static string BugMarker(long bugId) => $"<!-- conductor:bug {bugId.ToString(CultureInfo.InvariantCulture)} -->";
+
+    /// <summary>DV6.1 — the marker a FOLLOWUP's issue carries. Keyed on the <c>FU-</c> id, which is
+    /// what <c>.conductor/followups.md</c> itself treats as the identity of a row.</summary>
+    public static string FollowupMarker(string followupId) => $"<!-- conductor:followup {followupId} -->";
+
+    /// <summary>The bug id carried by a body, or null. Used ONLY to answer "which issue is ours" —
+    /// what the issue should then SAY is decided from the local ledger, never from GitHub.</summary>
+    public static string? BugIdIn(string? body) => Between(body, "<!-- conductor:bug ", " -->");
+
+    /// <summary>The followup id carried by a body, or null. Same one direction as everything else here.</summary>
+    public static string? FollowupIdIn(string? body) => Between(body, "<!-- conductor:followup ", " -->");
+
     /// <summary>The task id carried by <paramref name="body"/>, or null when the body is not ours.
     /// Deliberately a scan for the literal marker rather than a regex: the body is arbitrary user
     /// text once a human has edited it, and a catastrophic-backtracking pattern on arbitrary text is

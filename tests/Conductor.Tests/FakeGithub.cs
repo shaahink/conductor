@@ -60,6 +60,20 @@ internal sealed class FakeGithub : HttpMessageHandler
 
     public IReadOnlyList<string> LabelsOf(int issueNumber) => _issues[issueNumber].Labels;
 
+    /// <summary>DV6.1 — the issue carrying an arbitrary marker. <see cref="NumberOfTask"/> knows the
+    /// checkpoint marker's spelling; the ledger has two more of its own, and a fake that hard-coded
+    /// each one would be a third place to keep the identity rule.</summary>
+    public int NumberOfMarker(string marker) =>
+        _issues.Values.Single(i => i.Body.Contains(marker, StringComparison.Ordinal)).Number;
+
+    /// <summary>DV6.1 — is that issue still open? The whole ledger claim is a lifetime, so "was this
+    /// one closed" has to be answerable about the SERVER's state, not about a request that was sent.</summary>
+    public bool IsOpen(int issueNumber) => _issues[issueNumber].State == "open";
+
+    /// <summary>DV6.1 — every comment body on an issue, in order.</summary>
+    public IReadOnlyList<string> CommentsOn(int issueNumber) =>
+        _comments.TryGetValue(issueNumber, out var list) ? list : [];
+
     /// <summary>The run diary's issue number, found the way the mirror finds it — by the marker in
     /// the body, never by assuming what the fake numbered it.</summary>
     public int RunIssueNumber =>
