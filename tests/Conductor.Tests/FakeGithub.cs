@@ -19,7 +19,7 @@ namespace Conductor.Tests;
 /// request said. Both are exactly the kind of difference that makes a reconciler that passed its
 /// tests re-PATCH every card forever against the real API.</para>
 /// </summary>
-internal sealed class FakeGithub : HttpMessageHandler
+internal sealed partial class FakeGithub : HttpMessageHandler
 {
     internal sealed record Recorded(string Method, string Path, string Body, string UserAgent, string Accept, string? Authorization);
 
@@ -166,6 +166,8 @@ internal sealed class FakeGithub : HttpMessageHandler
             return method == "GET" ? Serialize(_issues[number]) : PatchIssue(number, body);
         if (tail is ["issues", var m, "comments"] && int.TryParse(m, CultureInfo.InvariantCulture, out var owner))
             return method == "POST" ? AddComment(owner, body) : ListComments(owner, query);
+        // DV6.2 — Projects v2 has no REST surface at all, so the project half arrives here instead.
+        if (segments is ["graphql"]) return GraphQl(body);
         return "{}";
     }
 
@@ -245,7 +247,9 @@ internal sealed class FakeGithub : HttpMessageHandler
     /// the reconciler's "is it already what we would write" comparison normalises line endings — a
     /// comparison that did not would report every card as changed on every pass.</summary>
     private static string Serialize(Issue i) =>
-        $"{{\"number\":{Num(i.Number)},\"title\":{Str(i.Title)},\"body\":{Str(i.Body.ReplaceLineEndings("\r\n"))}," +
+        // DV6.2 — node_id on every issue document, exactly as the real API sends it: it is the only
+        // place this integration ever learns the global id Projects v2 adds an item BY.
+        $"{{\"number\":{Num(i.Number)},\"node_id\":{Str(NodeId(i.Number))},\"title\":{Str(i.Title)},\"body\":{Str(i.Body.ReplaceLineEndings("\r\n"))}," +
         $"\"state\":{Str(i.State)},\"html_url\":\"https://github.test/i/{Num(i.Number)}\"," +
         $"\"labels\":[{string.Join(",", i.Labels.Select(l => $"{{\"name\":{Str(l)}}}"))}]," +
         (i.Milestone is { } ms ? $"\"milestone\":{{\"number\":{Num(ms)},\"title\":\"\",\"state\":\"open\"}}" : "\"milestone\":null") +

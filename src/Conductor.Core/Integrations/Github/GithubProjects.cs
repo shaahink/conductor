@@ -3,24 +3,23 @@ using Conductor.Models;
 namespace Conductor.Core.Integrations.Github;
 
 /// <summary>
-/// KS9.3 — the gate in front of a Projects v2 board, and, today, the whole of the project half.
+/// KS9.3, moved by DV6.2 — the gate in front of a Projects v2 board. It is no longer the whole of
+/// the project half: <see cref="GithubProjectSync"/> is.
 ///
-/// <para><b>Why there is no GraphQL mutation in this file.</b> Projects v2 exists only in GitHub's
-/// GraphQL API — REST cannot move a board item, so a REST attempt here would be a plausible-looking
-/// no-op that passes a naive test. Writing one needs the classic <c>project</c> scope, and the
-/// machine's token does not carry it (<c>gh auth status</c>: delete_repo, gist, read:org, repo,
-/// user, workflow). Granting it is an interactive owner act. So the mutation path was NOT written:
-/// it could not have been exercised even once, and this stage's contract makes half-done explicitly
-/// worse than skipped — a board mirror that has never run against a real board is not a feature, it
-/// is a claim. What IS here is the gate, which was exercised, and which refuses precisely.</para>
+/// <para><b>What this file used to say, and why it no longer says it.</b> KS9.3 left the mutation
+/// path unwritten on purpose — it could not have been exercised even once, and half-done was
+/// explicitly worse than skipped — so a token that DID carry the scope was still refused, with a
+/// sentence saying the path did not exist. DV6.2 wrote the path, so that sentence would now be a
+/// lie, and it is gone: with the scope granted this gate returns EMPTY and the board is written.
+/// The refusal MOVED rather than being deleted, which is the distinction this checkpoint turns on.
+/// </para>
 ///
-/// <para><b>Every branch refuses, and says which branch it is.</b> A caller asking for a project
-/// board gets a named reason — bad config, missing scope, unreadable scopes, or "the mutation path
-/// does not exist" — and never silence. The last of those is the one that keeps a later reader
-/// honest: with the scope granted, this still refuses, and says so, rather than appearing to work.</para>
+/// <para><b>Every remaining branch refuses, and says which branch it is.</b> A caller asking for a
+/// project board gets a named reason — bad config, missing scope, or unreadable scopes — and never
+/// silence.</para>
 ///
-/// <para><b>Nothing here writes.</b> The scope check is a GET (<see cref="GithubClient.ProbeScopesAsync"/>).
-/// The bar "zero mutations without the scope" is therefore structural, not a matter of ordering.</para>
+/// <para><b>Nothing here writes.</b> The scope check is a GET (<see cref="GithubClient.ProbeScopesAsync"/>),
+/// so the bar "zero mutations without the scope" is structural and not a matter of ordering.</para>
 /// </summary>
 public static class GithubProjects
 {
@@ -33,18 +32,21 @@ public static class GithubProjects
     /// decision and not a session's.</summary>
     public const string GrantCommand = "gh auth refresh -s project";
 
-    /// <summary>The standing fact, in one sentence, for the surfaces that state it without having
-    /// probed anything — the live mirror says this at run start rather than making a network call on
-    /// the startup path, and it is true whatever the token's scopes turn out to be.</summary>
-    public const string NotImplementedLine = "the Projects v2 board is not implemented, so nothing was written.";
+    /// <summary>DV6.2 — the standing fact for the surfaces that state it WITHOUT probing: the live
+    /// mirror says this at run start rather than making a network call on the startup path, and it is
+    /// true whatever the token's scopes turn out to be. It replaces KS9.3's "not implemented", which
+    /// stopped being true the moment <see cref="GithubProjectSync"/> was merged.</summary>
+    public const string NeedsScopeLine =
+        "the Projects v2 board is attempted at each boundary; it needs the '" + RequiredScope +
+        "' scope, and a pass whose token lacks it says so by name and leaves the issue board alone.";
 
     /// <summary>
-    /// Everything that must be true before a project board could be touched, checked in cost order:
-    /// configuration first (free), then one GET for the token's scopes, then the standing fact that
-    /// the mutation path is unbuilt. Returns the refusal to print, or an EMPTY list to proceed.
+    /// Everything that must be true before a project board is touched, checked in cost order:
+    /// configuration first (free), then one GET for the token's scopes. Returns the refusal to print,
+    /// or an EMPTY list to proceed.
     ///
-    /// <para>Empty is unreachable today and the last branch says why. It is the shape the success
-    /// branch will need, not a promise that one exists.</para>
+    /// <para>DV6.2 — empty is REACHABLE now, and it means the board will be written. Under KS9.3 it
+    /// was the shape a success branch would need; there is one.</para>
     /// </summary>
     /// <param name="config">The plan's github block. Callers that never asked for a project board
     /// should not call this at all — <see cref="GithubConfig.WantsProjectBoard"/> is that question.</param>
@@ -69,10 +71,7 @@ public static class GithubProjects
                 $"token source: {Describe(tokenSource)}",
             ];
 
-        if (!HasScope(rawScopes))
-            return ScopeRefusal(rawScopes, tokenSource);
-
-        return UnimplementedRefusal(rawScopes);
+        return HasScope(rawScopes) ? [] : ScopeRefusal(rawScopes, tokenSource);
     }
 
     /// <summary>True when GitHub's <c>X-OAuth-Scopes</c> header, verbatim, grants
@@ -116,22 +115,6 @@ public static class GithubProjects
             $"until then set github.board to '{GithubConfig.BoardIssues}' — the issue board mirrors in full without it.",
         ];
     }
-
-    /// <summary>
-    /// The refusal for the branch nobody expects to hit: the scope IS present, and there is still no
-    /// project board, because the mutation path was never built. It exists so that granting the scope
-    /// produces a clear statement instead of a silent success — the failure this stage's cut line is
-    /// aimed at is a reader concluding, from a passing gate, that a board is being mirrored.
-    /// </summary>
-    public static IReadOnlyList<string> UnimplementedRefusal(string? rawScopes) =>
-    [
-        NotImplementedLine,
-        $"the '{RequiredScope}' scope IS present on this token ({string.Join(", ", Scopes(rawScopes))}), " +
-        "so the gate is not what stopped this.",
-        "KS9.3 was left SKIPPED rather than half-built: no GraphQL mutation path is merged, and there is " +
-        "nothing here that could partly mirror a board.",
-        $"the issue board (github.board '{GithubConfig.BoardIssues}') is unaffected and mirrors in full.",
-    ];
 
     private static string Describe(string tokenSource) =>
         string.IsNullOrWhiteSpace(tokenSource) ? "(unknown)" : tokenSource;

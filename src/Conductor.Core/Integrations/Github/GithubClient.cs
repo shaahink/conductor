@@ -26,7 +26,7 @@ namespace Conductor.Core.Integrations.Github;
 /// DEFAULT is the real API and an override is announced by every surface that uses it, because a
 /// destination that writes issues must never be redirected silently.</para>
 /// </summary>
-public sealed class GithubClient : IDisposable
+public sealed partial class GithubClient : IDisposable
 {
     /// <summary>Where the mirror writes when nothing overrides it.</summary>
     public const string DefaultApiBase = "https://api.github.com";

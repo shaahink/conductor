@@ -90,23 +90,24 @@ public sealed class KS9_3ProjectsScopeRefusalTests
         Assert.Equal(["GET /user"], github.Seen.Select(r => $"{r.Method} {r.Path}"));
     }
 
-    /// <summary>The one that keeps a later reader honest. Grant the scope and this STILL refuses,
-    /// and says the mutation path does not exist — a gate that fell through to silence would read,
-    /// from the outside, exactly like a board being mirrored.</summary>
+    /// <summary>
+    /// DV6.2 — the branch this file used to assert the opposite of. Under KS9.3 a token that DID
+    /// carry the scope was still refused, because no mutation path existed and a gate falling through
+    /// to silence would have read, from the outside, exactly like a board being mirrored. There is a
+    /// mutation path now (<c>GithubProjectSync</c>), so the gate falls through on purpose: empty
+    /// means proceed, and the refusal MOVED to the scope check rather than being deleted.
+    /// </summary>
     [Fact]
-    public async Task WithTheScopeGrantedItStillRefusesAndSaysTheBoardIsNotImplemented()
+    public async Task WithTheScopeGrantedTheGateFallsThroughAndTheBoardIsWritten()
     {
         using var github = new Recorder(MachineScopes + ", project");
         using var client = new GithubClient("t", TimeSpan.FromSeconds(5), github, disposeHandler: false);
 
         var refusal = await GithubProjects.PreflightAsync(client, ProjectBoard(), "src").ConfigureAwait(true);
-        var text = string.Join("\n", refusal);
 
-        Assert.NotEmpty(refusal);
-        Assert.Contains(GithubProjects.NotImplementedLine, text, StringComparison.Ordinal);
-        Assert.Contains("the gate is not what stopped this", text, StringComparison.Ordinal);
-        Assert.Contains("SKIPPED rather than half-built", text, StringComparison.Ordinal);
-        Assert.All(github.Seen, r => Assert.Equal(HttpMethod.Get, r.Method));
+        Assert.Empty(refusal);
+        // Still one GET and nothing else: the gate learns the answer by asking, never by attempting.
+        Assert.Equal(["GET /user"], github.Seen.Select(r => $"{r.Method} {r.Path}"));
     }
 
     // ── the scope question itself ────────────────────────────────────────────────────────────────
@@ -243,7 +244,6 @@ public sealed class KS9_3ProjectsScopeRefusalTests
     /// silence, which is what the field's first ten weeks of having no reader looked like.
     /// </summary>
     [Theory]
-    [InlineData(GithubConfig.BoardIssuesAndProject, 3, "not implemented")]
     [InlineData(GithubConfig.BoardIssuesAndProject, 0, "github.projectNumber is 0")]
     [InlineData("issues+projekt", 3, "is not a board")]
     public void ARunAskedForAProjectBoardIsToldOnceAndKeepsItsIssueMirror(string board, int number, string expected)
@@ -271,6 +271,47 @@ public sealed class KS9_3ProjectsScopeRefusalTests
             var told = Assert.Single(lines, l => l.StartsWith("github project board off:", StringComparison.Ordinal));
             Assert.Contains(expected, told, StringComparison.Ordinal);
             Assert.Contains("the issue board is unaffected", told, StringComparison.Ordinal);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch (IOException) { /* not the assertion */ }
+        }
+    }
+
+    /// <summary>
+    /// DV6.2 — the same boundary, for a plan whose project board is COHERENT. Under KS9.3 this said
+    /// "off: not implemented"; the board is attempted now, so the line says which board and what the
+    /// token needs. The scopes are still not probed at creation — that would be a network call on the
+    /// run's startup path — so a refusal, if there is one, arrives from the pass that met it.
+    /// </summary>
+    [Fact]
+    public void ARunWithACoherentProjectBoardIsToldWhichBoardAndWhatTheTokenNeeds()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "ks93p-" + Guid.NewGuid().ToString("N")[..8]);
+        try
+        {
+            Directory.CreateDirectory(dir);
+            var plan = new PlanConfig
+            {
+                Name = "p",
+                Repo = dir,
+                Github = new GithubConfig
+                {
+                    Enabled = true, Repo = "owner/scratch",
+                    Board = GithubConfig.BoardIssuesAndProject, ProjectNumber = 3,
+                },
+            };
+            var lines = new List<string>();
+            Token(plan);
+
+            using var store = Store(dir);
+            using var mirror = GithubMirror.TryCreate(plan, store, "run-ks930000000", lines.Add);
+
+            Assert.NotNull(mirror);
+            var told = Assert.Single(lines, l => l.StartsWith("github project board #3 on:", StringComparison.Ordinal));
+            Assert.Contains("'project' scope", told, StringComparison.Ordinal);
+            Assert.DoesNotContain("not implemented", told, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(lines, l => l.StartsWith("github project board off:", StringComparison.Ordinal));
         }
         finally
         {

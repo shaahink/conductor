@@ -1,0 +1,70 @@
+rig       : C:\Users\shahi\AppData\Local\Temp\dv62rig-faf44708
+api base  : http://127.0.0.1:8791  (nothing can reach github.com)
+
+=== pass 1 - conductor github sync --project 7 (fresh build) ===
+60 created · 17 updated · 4 unchanged · 0 retired · 0 comments · 0 errors
+project: 60 added · 60 moved · 0 in place · 0 unplaced · 0 errors
+column 21 of 81 cards named an issue another card had already claimed — the 
+ledger has more rows than ids. One placement per issue was made.
+column no 'Blocked' option on this board, so 'blocked' cards are placed in 'In 
+Progress'.
+  board http://127.0.0.1:8791/users/owner/projects/7
+  F0.1 http://127.0.0.1:8791/i/100
+  F1.1 http://127.0.0.1:8791/i/101
+  F1.2 http://127.0.0.1:8791/i/102
+  F2.1 http://127.0.0.1:8791/i/103
+  F3.1 http://127.0.0.1:8791/i/104
+  … 55 more
+258 requests
+exit=0
+after pass 1: 120 mutations, 60 board items
+
+=== pass 2 - conductor github sync --project 7 (fresh build) ===
+0 created · 28 updated · 64 unchanged · 0 retired · 0 comments · 0 errors
+project: 0 added · 11 moved · 49 in place · 0 unplaced · 0 errors
+column 32 of 92 cards named an issue another card had already claimed — the 
+ledger has more rows than ids. One placement per issue was made.
+column no 'Blocked' option on this board, so 'blocked' cards are placed in 'In 
+Progress'.
+  board http://127.0.0.1:8791/users/owner/projects/7
+  followup:FU-B10-2 http://127.0.0.1:8791/i/149
+  followup:FU-B11-2 http://127.0.0.1:8791/i/152
+  followup:FU-B11-3 http://127.0.0.1:8791/i/143
+  followup:FU-B2-2 http://127.0.0.1:8791/i/147
+  followup:FU-B2-3 http://127.0.0.1:8791/i/151
+  … 8 more
+54 requests
+exit=0
+after pass 2: 131 mutations, 60 board items
+
+=== pass 3 - conductor github sync --project 7 (fresh build) ===
+0 created · 35 updated · 57 unchanged · 0 retired · 0 comments · 0 errors
+project: 0 added · 0 moved · 60 in place · 0 unplaced · 0 errors
+column 32 of 92 cards named an issue another card had already claimed — the 
+ledger has more rows than ids. One placement per issue was made.
+column no 'Blocked' option on this board, so 'blocked' cards are placed in 'In 
+Progress'.
+  board http://127.0.0.1:8791/users/owner/projects/7
+  followup:FU-B10-2 http://127.0.0.1:8791/i/149
+  followup:FU-B11-2 http://127.0.0.1:8791/i/152
+  followup:FU-B11-3 http://127.0.0.1:8791/i/143
+  followup:FU-B2-2 http://127.0.0.1:8791/i/147
+  followup:FU-B2-3 http://127.0.0.1:8791/i/151
+  … 8 more
+39 requests
+exit=0
+after pass 3: 131 mutations, 60 board items
+
+=== the board the engine actually wrote ===
+issues created : 60
+board items    : 60
+mutations      : 131  (both passes together)
+--- columns ---
+  Done         35
+  In Progress  1
+  Todo         24
+--- the graphql documents the engine put on the wire ---
+  query($owner:String!,$number:Int!){ repositoryOwner(login:$o
+  query($project:ID!,$cursor:String){ node(id:$project){ ... o
+  mutation($project:ID!,$content:ID!){ addProjectV2ItemById(in
+  mutation($project:ID!,$item:ID!,$field:ID!,$option:String!){

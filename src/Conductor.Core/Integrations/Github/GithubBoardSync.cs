@@ -22,7 +22,9 @@ namespace Conductor.Core.Integrations.Github;
 /// <para><b>One direction.</b> Observed issues answer exactly one question — which issue is ours —
 /// and never influence what the run believes. D-7 / A16 / ADR 0005.</para>
 /// </summary>
-public sealed partial class GithubBoardSync(GithubClient client, string repo, string labelPrefix, GithubMap? map = null)
+public sealed partial class GithubBoardSync(
+    GithubClient client, string repo, string labelPrefix, GithubMap? map = null,
+    GithubProjectSync? project = null)
 {
     private readonly string _prefix = string.IsNullOrWhiteSpace(labelPrefix) ? "conductor" : labelPrefix.Trim();
 
@@ -30,6 +32,12 @@ public sealed partial class GithubBoardSync(GithubClient client, string repo, st
     /// is a read replica: it does not show a just-created issue for seconds, which is how one process
     /// once put two complete copies of a board on one repository. See <see cref="GithubMap"/>.</summary>
     private readonly GithubMap _map = map ?? GithubMap.Transient();
+
+    /// <summary>DV6.2 — every issue this pass touched, with the status its card should carry, for the
+    /// project half to place. Rebuilt at the top of every <see cref="BackfillAsync"/> rather than
+    /// held across passes: a placement is a fact about ONE pass, and the mirror serialises its passes
+    /// (a boundary that fires while one is in flight is coalesced into a single follow-up).</summary>
+    private List<GithubProjectPlacement> _placements = [];
 
     /// <summary>Push a whole run — board then diary. <paramref name="dryRun"/> reconciles and
     /// reports without issuing a single write, which is what makes "what would this do to a real
@@ -44,6 +52,7 @@ public sealed partial class GithubBoardSync(GithubClient client, string repo, st
     {
         ArgumentNullException.ThrowIfNull(events);
         var result = new GithubSyncResult();
+        _placements = [];
 
         var (issues, listError) = await client.ListIssuesAsync(repo, ct).ConfigureAwait(false);
         if (listError is not null) { result.Errors.Add(listError); return result; }
@@ -55,6 +64,12 @@ public sealed partial class GithubBoardSync(GithubClient client, string repo, st
         if (includeDiary)
             await SyncDiaryAsync(GithubBoardPlan.Diary(events, run, engineVersion), observed, result, dryRun, ct)
                 .ConfigureAwait(false);
+
+        // DV6.2 — the columns, LAST, and only when a project board was asked for and the scope gate
+        // let it through. The issue board is complete before a single project request is made, so a
+        // board that cannot be written costs the issue mirror nothing: KS9.2's posture, unchanged.
+        if (project is not null && _placements.Count > 0)
+            result.Project = await project.PlaceAsync(_placements, dryRun, ct).ConfigureAwait(false);
         return result;
     }
 
@@ -103,6 +118,7 @@ public sealed partial class GithubBoardSync(GithubClient client, string repo, st
                     // the two costs an open issue that the next pass closes, not a second issue.
                     _map.RecordIssue(card.TaskId, made.Number);
                     result.Urls[card.TaskId] = made.HtmlUrl;
+                    Place(card.TaskId, made, card.Status);
                     if (card.Closed)
                         await CloseAsync(made.Number, card, result, ct).ConfigureAwait(false);
                 }
@@ -112,6 +128,7 @@ public sealed partial class GithubBoardSync(GithubClient client, string repo, st
             // Also learn from the listing: an issue an EARLIER run of this plan created is ours too,
             // and the map is what stops the next pass re-deciding that from a replica.
             _map.RecordIssue(card.TaskId, existing.Number);
+            Place(card.TaskId, existing, card.Status);
 
             var patch = Diff(card, existing, milestone);
             if (patch is null) { result.Unchanged.Add(card.TaskId); continue; }
@@ -123,6 +140,16 @@ public sealed partial class GithubBoardSync(GithubClient client, string repo, st
         }
 
         await RetireAsync(desired, byTask, result, dryRun, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>DV6.2 — remember an issue for the project half. A card that does not EXIST yet cannot
+    /// be placed, so a dry run (which creates nothing) places only the cards already on the
+    /// repository — reporting a board move for an issue that has no number would be a number the
+    /// operator could not act on.</summary>
+    private void Place(string key, GithubIssue issue, string status)
+    {
+        if (project is null || issue.Number <= 0 || string.IsNullOrWhiteSpace(issue.NodeId)) return;
+        _placements.Add(new GithubProjectPlacement(key, issue.Number, issue.NodeId, status));
     }
 
     /// <summary>The fields that DIFFER, or null when the mirror already says what the fold says.

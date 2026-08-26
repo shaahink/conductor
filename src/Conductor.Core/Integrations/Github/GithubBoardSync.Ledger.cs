@@ -57,6 +57,10 @@ public sealed partial class GithubBoardSync
             }
 
             _map.RecordIssue(card.Key, existing.Number);
+            // DV6.2 — a ledger entry has two states, not five: open work belongs in the board's first
+            // column and a closed one in its last, which is exactly what the issue half already says
+            // about it.
+            Place(card.Key, existing, card.Closed ? "done" : "todo");
             await UpdateLedgerIssueAsync(card, existing, result, dryRun, ct).ConfigureAwait(false);
         }
     }
@@ -82,6 +86,7 @@ public sealed partial class GithubBoardSync
         }
         _map.RecordIssue(card.Key, made.Number);
         result.Urls[card.Key] = made.HtmlUrl;
+        Place(card.Key, made, card.Closed ? "done" : "todo");
     }
 
     private async Task UpdateLedgerIssueAsync(

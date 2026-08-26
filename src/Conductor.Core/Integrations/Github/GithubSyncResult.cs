@@ -25,11 +25,20 @@ public sealed class GithubSyncResult
     /// transcript quotes.</summary>
     public Dictionary<string, string> Urls { get; } = new(StringComparer.Ordinal);
 
-    public bool Ok => Errors.Count == 0;
+    /// <summary>DV6.2 — what the COLUMNS did, or null when no project board was asked for or the
+    /// scope gate refused. Null and empty are different answers: null is "nobody asked", and an empty
+    /// pass is "asked, and there was nothing to place".</summary>
+    public GithubProjectPass? Project { get; set; }
 
-    public string Summary() => string.Create(CultureInfo.InvariantCulture,
-        $"{Created.Count} created · {Updated.Count} updated · {Unchanged.Count} unchanged · " +
-        $"{Retired.Count} retired · {Comments.Count} comments · {Errors.Count} errors");
+    public bool Ok => Errors.Count == 0 && (Project?.Ok ?? true);
+
+    public string Summary()
+    {
+        var issues = string.Create(CultureInfo.InvariantCulture,
+            $"{Created.Count} created · {Updated.Count} updated · {Unchanged.Count} unchanged · " +
+            $"{Retired.Count} retired · {Comments.Count} comments · {Errors.Count} errors");
+        return Project is null ? issues : issues + Environment.NewLine + Project.Summary();
+    }
 }
 
 /// <summary>KS9.1 — stages, as GitHub milestones. Listed once per pass and created lazily, so a

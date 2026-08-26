@@ -6,6 +6,9 @@ namespace Conductor.Core.Integrations.Github;
 /// <param name="TaskId">The graph's task id — the identity, carried in the body as a marker.</param>
 /// <param name="Retired">The card left the declared plan. It is closed and LABELLED, never deleted:
 /// a deleted issue takes its history with it, and the history is the reason to mirror at all.</param>
+/// <param name="Status">DV6.2 — the fold's own status word, carried through so the project half can
+/// pick a COLUMN without parsing it back out of a label. The issue board renders status as a label
+/// and a closed state; a Kanban needs the word itself.</param>
 public sealed record GithubCard(
     string TaskId,
     string Title,
@@ -13,7 +16,8 @@ public sealed record GithubCard(
     List<string> Labels,
     string Stage,
     bool Closed,
-    bool Retired = false);
+    bool Retired = false,
+    string Status = "");
 
 /// <summary>One session's line in the run diary. The key is the session marker, which is what makes
 /// "one comment per SessionFinished" survive a second backfill.</summary>

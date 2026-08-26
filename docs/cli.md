@@ -309,7 +309,7 @@ that is correct, not a gap. The tracker and the event log stay the contract.
 | `github sync --backfill <run> --repo owner/name` | Mirror into a repository other than the plan's. Point it at a scratch repo the first time; a backfill will *not* derive its destination from your working repo's `origin` unless the plan opted in with `github.enabled`. |
 | `github sync --backfill <run> --dry-run` | Reconcile and report what would change, writing nothing. |
 | `github sync --backfill <run> --no-diary` | Board only — skip the run issue and its per-session comments. |
-| `github sync … --project <n>` | Ask for a Projects v2 board as well, without editing the plan (the same thing as `board: "issues+project"`). **It refuses today, by design** — see below. |
+| `github sync … --project <n>` | Mirror the **columns** to a Projects v2 board as well, without editing the plan (the same thing as `board: "issues+project"`). Needs a token carrying the classic `project` scope; without it the verb refuses by name and writes nothing — see below. |
 
 Identity is a marker in the issue body (`<!-- conductor:task KS9.1 -->`), not the title, so re-running
 a backfill mints **zero** duplicates and a reworded checkpoint updates its issue instead of growing a
@@ -325,10 +325,11 @@ every surface that writes announces the override — a destination that writes i
 redirected silently. Plan-side configuration lives in the `github` block: see
 [plan-config.md](plan-config.md).
 
-### The Projects v2 half refuses, and says why
+### The Projects v2 board, and the one scope it needs
 
-`--project <n>`, or `board: "issues+project"`, asks for a Projects v2 board on top of the issue
-board. Projects v2 exists **only** in GitHub's GraphQL API — REST cannot move a board item — and a
+`--project <n>`, or `board: "issues+project"`, mirrors the **columns** on top of the issue board:
+each checkpoint's issue is added to the board and its `Status` field set from the checkpoint's own
+status. Projects v2 exists **only** in GitHub's GraphQL API — REST cannot move a board item — and a
 mutation there needs the classic `project` scope, which `repo` does not imply. Conductor checks that
 scope with a `GET /user` **before** anything is written, and refuses by name if it is missing:
 
@@ -343,11 +344,27 @@ a Projects v2 board needs the 'project' scope and this token does not carry it. 
 ```
 
 Granting the scope is yours to do: `gh auth refresh -s project` is interactive and it rewrites the
-machine's stored credential, so conductor names it and never runs it. **With the scope granted the
-board still refuses**, saying it is not implemented — the GraphQL mutation path was deliberately not
-written, because it could not have been exercised even once against a real board. A gate that fell
-silent instead would look, from the outside, exactly like a board being mirrored. The issue board is
-unaffected either way; inside a run the refusal is one log line and the issue mirror carries on.
+machine's stored credential, so conductor names it and never runs it. The issue board is unaffected
+either way; inside a run the refusal is one log line and the issue mirror carries on.
+
+**Which column a card lands in.** GitHub's default board template offers three options — Todo, In
+Progress, Done — and conductor has five statuses, so each status names the options it would like,
+best first, and the first one *your* board offers wins:
+
+| Status | Column, best first |
+|---|---|
+| **todo** | Todo · To do · Backlog · New |
+| **in_progress** | In Progress · Doing · Started |
+| **blocked** | Blocked · On hold · Paused · *In Progress* |
+| **done** | Done · Complete · Completed · Shipped |
+| **skipped** | Skipped · Won't do · Cancelled · *Done* |
+
+Every fallback is announced — *"no 'Blocked' option on this board, so 'blocked' cards are placed in
+'In Progress'"* — and a status your board has no word for at all leaves the card **on** the board
+with no status set, reported by name along with the options the board did offer. Nothing is guessed
+silently. A second pass over an unchanged board issues **zero** mutations; a board whose item
+listing is stale (GitHub's replica lag) costs redundant writes and can never mint a second item,
+because `addProjectV2ItemById` returns the item that is already there.
 
 ## Overriding the defaults
 

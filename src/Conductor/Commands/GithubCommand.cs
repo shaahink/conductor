@@ -184,12 +184,30 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         if (settings.DryRun) AnsiConsole.MarkupLine("[yellow]dry run[/] — nothing will be written.");
 
         using var client = new GithubClient(token!, TimeSpan.FromSeconds(30));
-        var sync = new GithubBoardSync(client, repo, prefix);
+
+        // DV6.2 — the columns. Only when the board was asked for, and only AFTER the scope gate above
+        // returned empty: a project sync built here is one that GitHub has already said this token
+        // may write.
+        var board = BoardView(plan, settings.Project);
+        var project = board.WantsProjectBoard
+            ? new GithubProjectSync(client, repo.Split('/', 2)[0], board.ProjectNumber)
+            : null;
+        if (project is not null)
+            AnsiConsole.MarkupLine($"[grey]project board[/] #{board.ProjectNumber} " +
+                $"[grey]under[/] {Markup.Escape(repo.Split('/', 2)[0])}");
+
+        var sync = new GithubBoardSync(client, repo, prefix, map: null, project);
         var result = await sync.BackfillAsync(
             view.Log(), view.Run, view.Run.EngineStampText ?? Core.BuildInfo.Current.Full,
             diary, settings.DryRun, Ledger(view, prefix)).ConfigureAwait(false);
 
         AnsiConsole.MarkupLine(Markup.Escape(result.Summary()));
+        foreach (var note in result.Project?.Notes ?? [])
+            AnsiConsole.MarkupLine($"[yellow]column[/] [grey]{Markup.Escape(note)}[/]");
+        if (result.Project?.ProjectUrl is { } boardUrl)
+            AnsiConsole.MarkupLine($"  [grey]board[/] {Markup.Escape(boardUrl)}");
+        foreach (var error in result.Project?.Errors.Take(5) ?? [])
+            AnsiConsole.MarkupLine($"[red]{Markup.Escape(error)}[/]");
         foreach (var (key, url) in result.Urls.OrderBy(u => u.Key, StringComparer.Ordinal).Take(5))
             AnsiConsole.MarkupLine($"  [grey]{Markup.Escape(key)}[/] {Markup.Escape(url)}");
         if (result.Urls.Count > 5)
@@ -233,8 +251,9 @@ public sealed class GithubCommand : AsyncCommand<GithubCommand.Settings>
         AnsiConsole.MarkupLine("[grey]  one issue per checkpoint, one run issue with a comment per session.[/]");
         AnsiConsole.MarkupLine("[grey]  re-running mints nothing: identity is a marker in the issue body.[/]");
         AnsiConsole.MarkupLine("[grey]  nothing is ever read back from GitHub into the run.[/]");
-        AnsiConsole.MarkupLine($"[grey]  --project <n> asks for a Projects v2 board: needs the " +
-            $"'{GithubProjects.RequiredScope}' scope, and refuses by name without it.[/]");
+        AnsiConsole.MarkupLine($"[grey]  --project <n> mirrors the COLUMNS to a Projects v2 board: needs the " +
+            $"'{GithubProjects.RequiredScope}' scope, and refuses by name without it " +
+            $"({GithubProjects.GrantCommand}).[/]");
         return 1;
     }
 }

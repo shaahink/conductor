@@ -54,10 +54,13 @@ public sealed class GithubMirror : IDisposable
     /// behind, which is the designed posture during an outage.</summary>
     public int FailedPasses { get; private set; }
 
+    /// <param name="projectNumber">DV6.2 — the Projects v2 board this run mirrors its columns to, or
+    /// 0 for none. A number here is the plan asking for it; whether the TOKEN can deliver it is
+    /// GitHub's answer at the first pass, not a startup probe's.</param>
     public GithubMirror(
         IRunStore store, string runId, string repo, string token, string labelPrefix,
         bool includeDiary, Action<string> log, HttpMessageHandler? handler = null,
-        string? followupsPath = null)
+        string? followupsPath = null, int projectNumber = 0)
     {
         _store = store;
         RunId = runId;
@@ -73,7 +76,10 @@ public sealed class GithubMirror : IDisposable
         // four more created — so "have I already made this" is answered from here, not from there.
         _map = new GithubMap((key, kind, number) => store.WriteGithubMapEntry(RunId, Repo, key, kind, number));
         foreach (var row in store.ReadGithubMap(runId, repo)) _map.Seed(row.Key, row.Kind, row.IssueNumber);
-        _sync = new GithubBoardSync(_client, repo, labelPrefix, _map);
+        _sync = new GithubBoardSync(_client, repo, labelPrefix, _map,
+            projectNumber > 0
+                ? new GithubProjectSync(_client, repo.Split('/', 2)[0], projectNumber)
+                : null);
     }
 
     private readonly GithubMap _map;
@@ -122,19 +128,22 @@ public sealed class GithubMirror : IDisposable
             return null;
         }
 
-        // KS9.3 — the run's own boundary for the project half. Loud, once, at creation, and then the
-        // ISSUE mirror carries on: unlike the CLI, a run must not lose a working issue board over an
-        // extra it cannot have, because KS9.2's whole posture is that the run is never harmed by this
-        // integration. The scopes are NOT probed here — that is a network call on the run's startup
-        // path, and `github sync --project` is where an operator asks the question on purpose.
+        // KS9.3, moved by DV6.2 — the run's own boundary for the project half. Loud, once, at
+        // creation, and then the ISSUE mirror carries on regardless: unlike the CLI, a run must not
+        // lose a working issue board over an extra it cannot have, because KS9.2's whole posture is
+        // that the run is never harmed by this integration. The scopes are still NOT probed here —
+        // that is a network call on the run's startup path — but the board is ATTEMPTED now, and a
+        // pass that GitHub refuses reports the refusal by name in that pass's errors.
         var boardRefusal = cfg.BoardRefusal();
-        if (boardRefusal is not null || cfg.WantsProjectBoard)
-            log($"github project board off: {boardRefusal ?? GithubProjects.NotImplementedLine} " +
-                "(the issue board is unaffected)");
+        if (boardRefusal is not null)
+            log($"github project board off: {boardRefusal} (the issue board is unaffected)");
+        else if (cfg.WantsProjectBoard)
+            log($"github project board #{cfg.ProjectNumber} on: {GithubProjects.NeedsScopeLine}");
 
         log($"github mirror on → {repo} (token from {source})");
         return new GithubMirror(store, runId, repo, token, cfg.LabelPrefix, cfg.RunHistoryIssue, log, handler,
-            Path.Combine(plan.StateDir, "followups.md"));
+            Path.Combine(plan.StateDir, "followups.md"),
+            boardRefusal is null && cfg.WantsProjectBoard ? cfg.ProjectNumber : 0);
     }
 
     // ── the pass ─────────────────────────────────────────────────────────────────────────────────

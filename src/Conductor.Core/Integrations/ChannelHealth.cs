@@ -251,12 +251,17 @@ public static class ChannelHealthProbe
                 "fix the github.board / github.projectNumber pair in the plan, or accept the issue board alone",
                 "");
 
+        // DV6.2 — the project board is BUILT now, so this is no longer "off". It is conditional: the
+        // pass needs the 'project' scope, and this surface does not probe (a network call on the
+        // health path would make a status read cost a round trip). So it states the condition and
+        // names the one command that satisfies it; a pass that is actually refused says so itself,
+        // by name, in that pass's errors.
         if (cfg.WantsProjectBoard)
-            return new ChannelHealth(GithubChannel, ChannelState.Degraded,
+            return new ChannelHealth(GithubChannel, ChannelState.Ready,
                 FormattableString.Invariant(
-                    $"mirroring issues to {repo}, but the project board is off: {GithubProjects.NotImplementedLine}"),
-                "set github.board to 'issues' to stop asking for a board this engine cannot write",
-                "");
+                    $"mirroring to {repo} + project board #{cfg.ProjectNumber} - {GithubProjects.NeedsScopeLine}"),
+                "if the board never fills, the token is missing the scope: " + GithubProjects.GrantCommand,
+                GithubProjects.GrantCommand);
 
         return new ChannelHealth(GithubChannel, ChannelState.Ready,
             FormattableString.Invariant(

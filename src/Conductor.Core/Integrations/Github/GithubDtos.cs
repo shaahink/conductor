@@ -7,6 +7,12 @@ namespace Conductor.Core.Integrations.Github;
 public sealed record GithubIssue
 {
     [JsonPropertyName("number")] public int Number { get; init; }
+
+    /// <summary>DV6.2 — the GraphQL global id. Projects v2 adds an item by CONTENT id, and REST is
+    /// the only place this integration ever learns one: every issue document GitHub returns carries
+    /// it, so the project half costs no extra request to find out what it is adding.</summary>
+    [JsonPropertyName("node_id")] public string NodeId { get; init; } = "";
+
     [JsonPropertyName("title")] public string Title { get; init; } = "";
     [JsonPropertyName("body")] public string? Body { get; init; }
     [JsonPropertyName("state")] public string State { get; init; } = "open";

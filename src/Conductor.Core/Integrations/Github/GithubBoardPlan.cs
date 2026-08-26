@@ -52,7 +52,8 @@ public static class GithubBoardPlan
             Labels: labels,
             Stage: item.StageId,
             Closed: item.Status is "done" or "skipped" or "archived",
-            Retired: item.Status == "archived");
+            Retired: item.Status == "archived",
+            Status: item.Status ?? "");
     }
 
     private static string BodyFor(TaskItem item)
