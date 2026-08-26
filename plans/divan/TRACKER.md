@@ -4,20 +4,18 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: DV7.2 DONE (claimed, evidence .conductor/evidence/DV7/dv7-2-payesh-harvest.md). The payesh
-  harvest re-run: PR https://github.com/shaahink/payesh/pull/3, base ks12/harvest-era-close, main
-  never pushed. The plain re-harvest moved nothing - which exposed that the corpus stopped in early
-  August, so the two closed eras joined it (18->20 runs, 340->387 sessions, $3,016->$3,488,
-  648/677 -> 781/813 gates, all recomputed). `needs_human` was a status the pages paint in no role:
-  fixed, plus a harvest-side refusal for ANY unpaintable status, both proven red. 128/128 tests.
-find: the live run is deliberately NOT published (21/23 would freeze wrong) - it earns its
-  anonymise.json entry from the harvest AFTER its last checkpoint closes. Bug #83 filed: a second
-  anonymity false positive, from a source #47/#41 do not cover.
-next: DV7.3 - pre-flight each precondition and PARK with the runbook, the KS12.3 pattern at
-  .conductor/evidence/KS12/ks12-3-owner-runbook.md. Two things it must say: "merge the payesh PR"
-  is now TWO merges, #2 then #3; and feat/divan stacks on feat/karvansara-edge.
-red: #83, #82, #81, #80, #79, #76, #75 (a note keeps only its first line - write one long line).
-
+last: DV7.3 DONE (claimed, evidence .conductor/evidence/DV7/dv7-3-owner-runbook.md). Pre-flighted,
+  not performed - the checkpoint is owner-only by construction. Three RED, four GREEN, every one
+  with a file:line or a command output behind it.
+find: KS12.3 is only one-seventh done. master is ALREADY at the feat/karvansara-edge tip, but no
+  tag exists (latest v0.4.1), CHANGELOG.md:21 is still `## [Unreleased]` at 204 lines carrying BOTH
+  eras, the karvansara doc move never happened, and the edge run 9491891fe700 is still needs_human
+  so its backfill never ran. So Divan's release is both eras' release and the doc move is FIVE
+  files. payesh PR #2 now CONFLICTS: main moved 3 commits (PR #1) under it and both sides touch the
+  generated src/data/corpus.json - rebase and re-run the harvest, never hand-merge it.
+next: nothing is left for a session. Every remaining action in the runbook is the owner's, in the
+  order section "The order to do it in" gives. This is the era's last checkpoint.
+red: #83, #82, #81, #80, #79, #76, #75, #60 - all carried, all named in the runbook's closing list.
 
 ## Baseline numbers (from run.db)
 
