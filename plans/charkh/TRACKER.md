@@ -4,17 +4,18 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: CH5.1 DONE. ARCHITECTURE.md now says what Charkh added and what it did NOT - still thirteen
-  seams; ADR-0005 gets a third addendum for `github ci`, the first GitHub read that is not about a
-  write. Two doc numbers were repeated rather than measured and both were wrong (maxPragmas is 31
-  and green, bug #44 is fixed). The closure ledger is in .conductor/followups.md: 43 bug rows each
-  with a living owner, a followup census read by LAST row per id, and FU-OWNER-14 closed at last -
-  the reinstall is an owner act the engine prints every run, not a row re-homed a fifth time.
-  TOKEN-BUDGET-TUNING section 14 prescribes 45M / 0.95, pinned to the committed budget JSON.
-next: CH5.2 - close the era THROUGH CH4's verbs, all driven from the fresh build, never the PATH
-  copy. Order: regenerate ch4-4-charkh-runbook.md, then `release preflight`, then `release perform`.
-  Bug #88 IS THE FIRST ACT and it blocks the tag BY DESIGN - the changelog act refuses over the
-  'Nothing yet' body. Park what it refuses; anything the machinery gets wrong is the finding.
+last: CH5.2 DONE - the last checkpoint of the plan. Bug #88 fixed in 35043fe: CHANGELOG [Unreleased]
+  now carries what Charkh landed, written from `master..feat/charkh` (32 commits), 108 non-blank
+  lines where there were 2. Proven by A/B in a scratch rig, not inference - same plan, same
+  `--tag 0.6.0` dry run, CHANGELOG.md the only difference: the changelog act moves from "a
+  placeholder (2 non-blank line(s))" to "rename [Unreleased] to [0.6.0]", and here all four
+  mechanical acts read "will run", acts verdict OWNER / exit 2. Nothing was merged, tagged, moved,
+  installed, pushed or backfilled: `release perform` refuses before it plans anything while this run
+  is live, so the mechanical acts are parked by the ENGINE, and version/split/corpus/reinstall/
+  publish are parked because they are the owner's. Four findings filed: #93 high (the real courier
+  died with exit 1, restart-on-failure did not fire, no log anywhere - it is DOWN right now and
+  Telegram drops undelivered notes after 24h), #94, #95, #96.
+next: nothing is owed to a session. The close is `.conductor/evidence/CH5/ch5-2-era-close.md`.
 
 
 ## Baseline numbers (from run.db)
