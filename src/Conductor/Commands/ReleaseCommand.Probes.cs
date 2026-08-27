@@ -402,7 +402,8 @@ public sealed partial class ReleaseCommand
                 r.PlanName,
                 RunLiveness.Reconcile(r.Status, storeLooksLive),
                 mirrored.TryGetValue(r.RunId, out var n) ? n : 0,
-                InFlight: RunLiveness.IsStillGoing(r.Status, storeLooksLive))
+                // Bug #91: a parked run is owed its record; only work in flight defers it.
+                InFlight: RunLiveness.IsWorking(r.Status, storeLooksLive))
             { StoredStatus = r.Status })
             .ToList();
 

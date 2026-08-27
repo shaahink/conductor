@@ -82,7 +82,21 @@ public sealed class AgentConfig
             Temperature = o.Temperature ?? Temperature,
             InheritMcpServers = o.InheritMcpServers ?? InheritMcpServers,
             Permissions = Permissions == null ? o.Permissions : Permissions.Merge(o.Permissions),
+            // Bug #70: the merged instance never assigned Env, so a stage-level agent override wiped
+            // the plan-level agent.env — OPENCODE_CONFIG and friends vanished on exactly the stages
+            // that customised the agent. Per key: the override's entries win, the base's survive.
+            Env = MergeEnv(Env, o.Env),
         };
         return m;
+    }
+
+    private static Dictionary<string, string>? MergeEnv(
+        Dictionary<string, string>? baseEnv, Dictionary<string, string>? overrideEnv)
+    {
+        if (baseEnv is null or { Count: 0 }) return overrideEnv ?? baseEnv;
+        if (overrideEnv is null or { Count: 0 }) return baseEnv;
+        var merged = new Dictionary<string, string>(baseEnv, baseEnv.Comparer);
+        foreach (var (key, value) in overrideEnv) merged[key] = value;
+        return merged;
     }
 }

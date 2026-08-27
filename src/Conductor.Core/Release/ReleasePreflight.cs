@@ -146,10 +146,17 @@ public static class ReleasePreflight
 
         if (f.ScriptExit != 0)
         {
+            // Bug #96: the remedy used to hand the owner a hand edit that `release perform` makes
+            // mechanically and idempotently — two halves of one verb pair disagreeing about who does
+            // it. When the [Unreleased] heading is there, the act that renames it is named; only when
+            // there is nothing to rename is the hand edit the honest answer.
             var refused = new List<string>
             {
                 $"exit {f.ScriptExit} - release.yml runs this as the first job of a tag build, so the tag would be refused",
-                $"rename the heading to '## [{version}] - <date>' and re-run",
+                HasUnreleasedHeading(f)
+                    ? $"`conductor release perform --tag {version}` renames '## [Unreleased]' to '## [{version}] - <date>' " +
+                      "(and refuses if the body is a placeholder); re-run this preflight after it"
+                    : $"there is no '## [Unreleased]' heading to rename - write the '## [{version}] - <date>' section by hand and re-run",
             };
             if (f.Headings.Count > 0)
                 refused.Add("sections found: " + string.Join(", ", f.Headings.Take(6)));
@@ -171,6 +178,9 @@ public static class ReleasePreflight
             ["that body is the release notes verbatim - re-read it before tagging",
              "if it quotes a run total or a dollar figure, re-run `conductor budget` and `conductor money`: it is a dated measurement"]);
     }
+
+    private static bool HasUnreleasedHeading(ChangelogFacts f) =>
+        f.Headings.Any(h => h.StartsWith("## [Unreleased]", StringComparison.Ordinal));
 
     /// <summary>A section is a placeholder when it has almost nothing in it, or when what it has is
     /// the scaffold's own apology.</summary>

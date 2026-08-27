@@ -44,13 +44,24 @@ public sealed partial class ReleaseCommand
         var dryRun = !settings.Yes;
         var tag = settings.Tag?.Trim();
 
+        // Bug #94: the refusal is about WRITING under a live session, and a dry run writes nothing.
+        // Refusing the rehearsal too made the runbook's own instruction — "drop --yes to rehearse
+        // it" — impossible in exactly the situation the runbook is generated in: the era-close
+        // happens while the run is live, which is CH5's whole premise. The rehearsal proceeds and
+        // says what the real run would be refused for; the real run is still refused.
         if (LiveHolder(repo) is { } holder)
         {
-            AnsiConsole.MarkupLine(
-                $"[red]refusing:[/] a conductor run is live in {Markup.Escape(Path.Combine(repo, StateHome.ScratchDirName))} (engine pid {holder.Pid}).");
-            AnsiConsole.MarkupLine("[grey]this verb rewrites the CHANGELOG, moves the plan's tracker and repoints the plan itself —[/]");
-            AnsiConsole.MarkupLine("[grey]doing that under a live session pulls the ground out from under it. Let the run end first.[/]");
-            return 1;
+            var where = Markup.Escape(Path.Combine(repo, StateHome.ScratchDirName));
+            if (ReleasePerform.LiveRunRefuses(dryRun))
+            {
+                AnsiConsole.MarkupLine($"[red]refusing:[/] a conductor run is live in {where} (engine pid {holder.Pid}).");
+                AnsiConsole.MarkupLine("[grey]this verb rewrites the CHANGELOG, moves the plan's tracker and repoints the plan itself —[/]");
+                AnsiConsole.MarkupLine("[grey]doing that under a live session pulls the ground out from under it. Let the run end first,[/]");
+                AnsiConsole.MarkupLine("[grey]or drop --yes to rehearse it now: a dry run writes nothing and is not refused.[/]");
+                return 1;
+            }
+            AnsiConsole.MarkupLine($"[yellow]note:[/] a conductor run is live in {where} (engine pid {holder.Pid}) — " +
+                "this rehearsal writes nothing; the real run (--yes) is refused until that run ends.");
         }
 
         AnsiConsole.MarkupLine($"[bold aqua]conductor release perform[/] — {Markup.Escape(plan.Name)}");

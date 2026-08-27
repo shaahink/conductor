@@ -213,7 +213,12 @@ public static class HookToolLog
         var entries = ReadEntries(path);
         if (entries.Count == 0) return null;
         var digest = new SessionDigest { Source = SessionDigest.HookSource };
-        foreach (var entry in entries) digest.Add(entry.Call, repoRoot);
+        // Bug #52: a claim is counted only when the call that made it came back. The outcome channel
+        // is proven live by ANY outcome line in the file; without one, every call reads as unfinished
+        // (a killed session, a hook that never fired PostToolUse) and the counter keeps the
+        // transcript's semantics — attempts — rather than reporting a session that claimed nothing.
+        var outcomesArrived = entries.Any(e => e.Succeeded);
+        foreach (var entry in entries) digest.Add(entry.Call, repoRoot, claimLanded: !outcomesArrived || entry.Succeeded);
         // The one number the transcript could never supply. It counts every call that did not come
         // back — refused by the posture, exited nonzero, or cut off by a kill — because from the hook
         // surface those are the same absence, and reporting them as three would be inventing detail.

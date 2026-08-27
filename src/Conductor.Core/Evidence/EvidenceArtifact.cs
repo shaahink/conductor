@@ -97,8 +97,12 @@ public static class EvidenceReader
     /// <para>NAMED group, and it has to be: <see cref="RegexOptions.ExplicitCapture"/> switches
     /// unnamed groups off, so the original numbered form matched every file name and then handed back
     /// an empty string for all of them — the id was silently never recovered.</para>
+    /// <para>Bug #43: four digits on either side, not three. The import bridges mint ids from a
+    /// document's own phase/task numbering, and a spec-kit board past task 999 (or a Phase 1000)
+    /// produced ids the progress provider accepted and this reader silently refused — a fourth id
+    /// shape, stricter than the intersection KS3.5 measured.</para>
     private static readonly Regex LeadingCheckpointId = new(
-        @"^(?<id>[A-Za-z]{1,4}\d{1,3}[._]\d{1,3})",
+        @"^(?<id>[A-Za-z]{1,4}\d{1,4}[._]\d{1,4})",
         RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
 
     public static async Task<EvidenceArtifact?> ReadAsync(string fullPath, string repoRoot,

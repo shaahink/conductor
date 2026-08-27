@@ -32,16 +32,25 @@ public sealed class KS7_2HookGroundTruthTests
     public void HookDerivedDigest_MatchesTranscriptDerived_OnTheReplayCorpus()
     {
         var transcript = TranscriptDigest();
-        var hook = HookDigest(out _);
+        var hook = HookDigest(out var entries);
 
         Assert.Equal(SessionDigest.TranscriptSource, transcript.Source);
         Assert.Equal(SessionDigest.HookSource, hook.Source);
         Assert.Equal(transcript.ToolCalls, hook.ToolCalls);
         Assert.Equal(transcript.Mix, hook.Mix);
         Assert.Equal(transcript.FilesTouched, hook.FilesTouched);
-        Assert.Equal(transcript.Claims, hook.Claims);
         Assert.Equal(transcript.BackgroundJobs, hook.BackgroundJobs);
         Assert.Equal(transcript.Commands, hook.Commands);
+
+        // Bug #52: the ONE field the two channels are meant to disagree on. The corpus's only claim,
+        // `conductor task --done R9.9`, was refused by the posture — no PostToolUse ever fired for it.
+        // The transcript can only count the attempt; the hook knows it did not land. So parity on
+        // claims is parity of ATTEMPTS: the transcript's list is what the hook would have counted had
+        // every call come back, and the hook's list is what actually landed — nothing.
+        Assert.Equal(["R9.9 -> done"], transcript.Claims);
+        Assert.Empty(hook.Claims);
+        Assert.Contains(entries, e => !e.Succeeded
+            && e.Call.Field("command") is { } cmd && cmd.Contains("task --done R9.9", StringComparison.Ordinal));
     }
 
     /// <summary>The corpus is only worth something if it actually holds a range of calls. Seven tool

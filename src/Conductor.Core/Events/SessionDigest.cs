@@ -85,7 +85,11 @@ public sealed class SessionDigest
     /// <summary>Folds one captured call in. <paramref name="repoRoot"/>, when given, is what a written
     /// path is made relative to; a path outside it stays absolute, which is exactly the read a
     /// reviewer wants (and the same signal SC7.1's out-of-repo note reports as a count).</summary>
-    public void Add(ToolCall call, string? repoRoot = null)
+    /// <param name="claimLanded">Bug #52: false when the outcome channel proved this call did not come
+    /// back — a refused or failed <c>task_update</c> / <c>conductor task --done</c> is an attempt, not a
+    /// claim, and counting it is the mirror of the bug #19 defect. Everything else the call says
+    /// (tool mix, files, commands) is still recorded: the attempt happened.</param>
+    public void Add(ToolCall call, string? repoRoot = null, bool claimLanded = true)
     {
         ArgumentNullException.ThrowIfNull(call);
         ToolCalls++;
@@ -101,7 +105,7 @@ public sealed class SessionDigest
                 FilesTouched[key] = FilesTouched.TryGetValue(key, out var f) ? f + 1 : 1;
         }
 
-        if (call.Field("taskId") is { Length: > 0 } id && call.Field("status") is { Length: > 0 } status)
+        if (claimLanded && call.Field("taskId") is { Length: > 0 } id && call.Field("status") is { Length: > 0 } status)
             AddClaim(id, status);
 
         var normalized = ToolEventExtractor.Normalize(call.Name);
@@ -116,7 +120,7 @@ public sealed class SessionDigest
             // through the shell, because that is what their own prompt tells them to do and the MCP
             // tools arrive deferred in some harnesses. So the digest reported "0 claims" for sessions
             // that had claimed, and the number was read as evidence that nothing was delivered.
-            if (TryReadCliClaim(command, out var cliId, out var cliStatus)) AddClaim(cliId, cliStatus);
+            if (claimLanded && TryReadCliClaim(command, out var cliId, out var cliStatus)) AddClaim(cliId, cliStatus);
             if (IsNotable(command))
             {
                 var clipped = Clip(command);

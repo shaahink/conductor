@@ -39,6 +39,11 @@ public static class ReleasePerform
     /// <summary>The acts that are the owner's whatever the facts say.</summary>
     public static IReadOnlyList<string> OwnerOrder => [VersionAct, SplitAct, CorpusAct, ReinstallAct, PublishAct];
 
+    /// <summary>Bug #94: does a live engine in the repo stop this invocation? Only when it would
+    /// write. A dry run performs nothing, so there is nothing for a live session to lose the ground
+    /// under — and the era-close is rehearsed, by design, while the run that reaches it is live.</summary>
+    public static bool LiveRunRefuses(bool dryRun) => !dryRun;
+
     /// <summary>1 when an act failed or was refused, 2 when the only thing left is the owner's, 0
     /// when every mechanical act is done or was already done. Note that a complete run is normally
     /// <b>2</b>, not 0: the era-close is not finished until a person does their part, and a script

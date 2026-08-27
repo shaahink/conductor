@@ -197,13 +197,28 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
         if (stale is { Length: > 0 } skew)
             AnsiConsole.MarkupLine("[red]stale courier:[/] " + Markup.Escape(skew));
 
-        if (Blocker(courier, token) is { Length: > 0 } why)
-            AnsiConsole.MarkupLine("[yellow]not ready:[/] " + Markup.Escape(why));
-        else
-            AnsiConsole.MarkupLine("[green]ready[/] [dim]— `conductor courier run` starts polling.[/]");
+        AnsiConsole.MarkupLine(VerdictLine(Blocker(courier, token), state.Running));
 
         AnsiConsole.MarkupLine("[dim]" + Markup.Escape(RetentionNotice) + "[/]");
         return 0;
+    }
+
+    /// <summary>Bug #87: the last line of <c>courier status</c> was decided from the blocker alone, so
+    /// a status that had just printed <c>running: yes pid N</c> ended with "`conductor courier run`
+    /// starts polling" — naming the command that would start a SECOND instance. The presence the same
+    /// verb read a moment earlier is the branch it was missing, and it is consulted first: a live
+    /// instance is polling whatever this shell's environment says, and a blocker seen from here is
+    /// then a note about starting another, not a verdict on the one that is up.</summary>
+    internal static string VerdictLine(string? blocker, CourierPresence? running)
+    {
+        if (running is { } live)
+            return "[green]polling[/] [dim]— pid " + live.Pid.ToString(CultureInfo.InvariantCulture)
+                 + " is already polling for this machine; `conductor courier restart` replaces it, "
+                 + "`conductor courier stop` ends it.[/]"
+                 + (blocker is { Length: > 0 } ? " [yellow](this shell could not start another: " + Markup.Escape(blocker) + ")[/]" : "");
+        if (blocker is { Length: > 0 })
+            return "[yellow]not ready:[/] " + Markup.Escape(blocker);
+        return "[green]ready[/] [dim]— `conductor courier run` starts polling.[/]";
     }
 
     /// <summary>Findings §6.3, in the words a person reads at the terminal. It is a limit of the Bot

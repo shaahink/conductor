@@ -48,6 +48,16 @@ public static class RunRecord
             || status.Equals("aborted", StringComparison.OrdinalIgnoreCase)
             || status.Equals(Closed, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>Bug #91: a park is not work in flight. <c>paused</c>, <c>needs_human</c> and
+    /// <c>awaiting_owner</c> survive an engine's exit precisely because nothing is being DONE from
+    /// them until a person acts — so a run in one of them is owed its record now, whether or not an
+    /// engine happens to be holding the store open at the prompt.</summary>
+    public static bool IsParked(string? status) =>
+        status is not null
+        && (status.Equals("paused", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("needs_human", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("awaiting_owner", StringComparison.OrdinalIgnoreCase));
+
     /// <summary>The statuses <c>conductor run close</c> will write. A record can be closed as
     /// <c>closed</c> (the honest default: it stopped, and nobody is claiming it finished its work),
     /// or as <c>completed</c>/<c>aborted</c> when the operator knows which it was.</summary>

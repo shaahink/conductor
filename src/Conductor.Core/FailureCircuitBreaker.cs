@@ -72,9 +72,22 @@ public static class FailureCircuitBreaker
             if (colon < 0) continue;
             var name = part[..colon].Trim();
             var glyph = part[(colon + 1)..].Trim();
-            if (glyph is "✗" or "✘" or "x" or "X")
+            if (IsFailingGlyph(glyph))
                 failing.Add(name);
         }
         return failing;
     }
+
+    /// <summary>Bug #58: the glyphs <see cref="GateResult.Glyph"/> actually emits. The parse used to
+    /// match only check-marks a summary has never carried, so a fingerprint rebuilt from the record
+    /// was always empty and two sessions failing identically compared as two empty sets — equal, for
+    /// the wrong reason. Optional gates are counted the way <see cref="FailingGates"/> counts the live
+    /// battery (<c>!Passed &amp;&amp; !Skipped</c>, or a class failure): <c>warn</c> is a failed
+    /// optional gate, <c>REGRESSION-warn</c> a regressing one. The legacy marks stay readable.</summary>
+    internal static bool IsFailingGlyph(string glyph) =>
+        glyph is "✗" or "✘" or "x" or "X"
+        || glyph.StartsWith("FAIL", StringComparison.Ordinal)
+        || glyph.Equals("warn", StringComparison.Ordinal)
+        || glyph.StartsWith(GateClass.Glyph, StringComparison.Ordinal)
+        || glyph.StartsWith(GateClass.MutationGlyph, StringComparison.Ordinal);
 }

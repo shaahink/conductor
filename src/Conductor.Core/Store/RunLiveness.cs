@@ -73,6 +73,15 @@ public static class RunLiveness
     public static bool IsStillGoing(string? storedStatus, bool storeLooksLive) =>
         storeLooksLive && !RunRecord.IsTerminal(storedStatus);
 
+    /// <summary>Bug #91: the narrower question — is work being DONE from this run right now? A parked
+    /// run (<see cref="RunRecord.IsParked"/>) is still going in <see cref="IsStillGoing"/>'s sense:
+    /// unfinished, and an engine may be holding the store at the prompt, which is what the doctor's
+    /// plan-drift line needs to know. It is not working, and that is what the era-close's corpus act
+    /// needs to know: the Karvansara edge run sat at <c>needs_human</c> for a whole era and was reported
+    /// as "not something owed yet" because the store it shares with the live run looked live.</summary>
+    public static bool IsWorking(string? storedStatus, bool storeLooksLive) =>
+        IsStillGoing(storedStatus, storeLooksLive) && !RunRecord.IsParked(storedStatus);
+
     /// <summary>Does this store hold a run that is not over? KS0.2 widened it from
     /// <c>status = 'running'</c>, and the widening is load-bearing rather than tidy: once parks are
     /// written to the column (<see cref="RunRecord.StatusText"/>), a run an engine is holding open at
