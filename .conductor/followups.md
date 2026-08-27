@@ -853,3 +853,85 @@ entire alternate state home, so a `sqlite3 .backup` copy plus a `catalogue.json`
 rewritten measures the live run without opening the live file at all. Bug #61 stays open — the
 environment variable still does not work — but no future session needs to fight it. The figures are in
 `docs/dev/TOKEN-BUDGET-TUNING.md` §13 and the raw output in `.conductor/evidence/DV7/`.
+
+## Charkh closure ledger — 2026-08-27 (CH5.1)
+
+**How this was derived, so it can be re-derived.** Every bug row below comes from `run.db` — the
+consolidated store under `%LOCALAPPDATA%/conductor/runs/`, read through the MCP `run_query` surface,
+not from any document. Every followup row comes from `.conductor/followups.md` itself, resolved by
+**the last row each id carries** rather than the first: this file is append-per-triage-pass, so 91
+rows describe 57 distinct ids and only the newest row for an id is that id's current verdict. That
+duplication is bug **#81** and it is still open; reading the file by last-row is the workaround, not
+the fix.
+
+### Bugs — the nine this era filed, and the forty it leaves open
+
+Charkh filed nine (#84–#92) and fixed three of them. Bugs outlive the run that filed them (SF0.4), so
+this table is a **completeness record, not the source** — `conductor bug list` is. A bug listed with
+an empty owner is the homeless row this ledger exists to prevent.
+
+| # | what it is | owner |
+|---|---|---|
+| #84 | the repo-wide retire sweep that closed another run's checkpoints on every era transition | **FIXED** at CH4.3 (`f4022f6`) — scoped to `GithubIdentity.OwnerMarker` and this run's `GithubMap`; the residue it already caused is #90 |
+| #85 | `SqliteRunStore.FlushEvents` could return before the drain loop's in-flight batch committed | **FIXED** at CH1.3 (`349a3a5`) — with a per-instance perturbation seam and a negative control |
+| #89 | `DV4_3CourierSeamTests` secret mutation was a 1-in-16 flake | **FIXED** at CH4 — appending `0` is not a mutation when the secret already ends in `0` |
+| #86 | a gate that passes on retry discards the failed attempt output, so a recurring flake is undiagnosable | the gates lane, next era. Observed twice one era apart on `engine-full`; the fix is to spill the failed attempt, not to retry less |
+| #87 | `courier status` says "ready — `conductor courier run` starts polling" after printing "running: yes pid N" | the courier lane, next era. One verdict line, one branch |
+| #88 | `CHANGELOG [Unreleased]` still says "Nothing yet" after CH1–CH4 shipped | **CH5.2, and it is the first act.** `release perform`'s changelog act *refuses over a placeholder body*, so this bug blocks the tag by design — the era cannot close until the notes exist |
+| #90 | the residue on `shaahink/conductor`: 23 Divan and every Karvansara checkpoint issue wear `conductor:retired` | **CH5.2, after the reinstall.** The fixed engine repairs it; the installed `0.5.0` would re-cause it |
+| #91 | the corpus act never hands over the backfill for a PARKED run — `RunLiveness.IsStillGoing` counts `needs_human` as in flight | **CH5.2 / the owner.** It is why the karvansara-edge run reads as "not something owed yet" and its record is still unwritten |
+| #92 | a `TimedOut` session records **no cost rows at all** — session 6 ran 5h36m over 140 turns and is invisible to `conductor budget` | the budget lane, next era. It caveats section 14 of `TOKEN-BUDGET-TUNING.md`, which is computed from 6 of this era's 7 sessions |
+| #18 | the bottom bar hard-clips a pane's contextual help with no ellipsis | the face lane, next era |
+| #19 | SC7.2 session digest never records a claim | the digest lane, next era — the same subject as #52 |
+| #23 | CI windows gate battery flakes on `SF0_3PidsAndBackgroundWorkTests` | the CI lane. **Re-measure with `github ci` before re-filing**: CH1.3 shipped the verb that reads each active workflow's own latest run, which is what this bug lacked |
+| #37 | `history --json` does not list every catalogued run — three non-terminal runs are dropped | the history lane, next era |
+| #39 | an interrupted session leaves a non-terminal `running` session row | the engine lane, next era — session 6 of this era is a live specimen, and #92 is its cost-side twin |
+| #40 | verdict counts satellite-repo commits made by anyone as the session's own | the verdict lane, next era |
+| #41 | payesh anonymity fails closed on the generic word "website" | **the payesh repo** (`shaahink/payesh`), not this one. No stage here touches it |
+| #42 | catalogue repair can never collapse a duplicate that lands in the LIVE catalogue | the history lane, next era |
+| #43 | import bridges: a 4-digit phase/task count mints ids that pass the probe and collide | the import lane, next era |
+| #45 | any verb from a newer build silently migrates the live `run.db` and locks the installed engine out | the engine lane — **and it already has a partial answer**: `release preflight`'s `migration` probe names the skew before a reinstall, which is what turned this from a surprise into a checked precondition |
+| #46 | bugs do not survive a state-home split — karvan's #24/#27/#31/#35 reach no prompt | the store lane, next era; the four orphans are pinned by `TheKarvansaraLedgerAccountsForTheBugsThatLiveInAnotherStore` |
+| #47 | payesh anonymity: a private repo whose whole name is an ordinary noun | **the payesh repo**, not this one |
+| #48 | `conductor face` with no live run in this directory silently attaches to another run | the face lane, next era |
+| #49 | `KS1_2StagesFromFoldTests` flake | the test lane, next era |
+| #51 | a restricted permission posture silently breaks the run's own claim channel | the engine lane, next era — the highest-severity carry-forward this ledger holds |
+| #52 | digest `Claims` counts a claim attempt that FAILED | the digest lane, next era — pair with #19 |
+| #53 | `cache_creation` TTL split (5m vs 1h) is dropped, so a rate-based cost model is wrong | the cost lane, next era. With #92 it is the second reason section 14's dollars are a floor, not a total |
+| #54 | MSBuild node reuse serves a stale analyzer config | the build lane, next era — same subject as #57 and #59 |
+| #56 | `ControlPlaneServer` coupling 240 is the largest single tightening available | the architecture lane, next era |
+| #57 | `dotnet build` flaps red on reused MSBuild nodes — case-sensitive `.editorconfig` | the build lane, next era |
+| #58 | `FailureCircuitBreaker.ParseFailingGates` matches glyphs the summary never emits | the gates lane, next era — pair with #86 |
+| #59 | `dotnet run --project src/Conductor` inside a bg child fails with MA0016 | the build lane, next era |
+| #60 | "analyzer-debt ratchet is RED: pragma-src 33 against a bar of 31" | **measured green at CH5.1 and left open on purpose.** `tools/gates/ratchet-baseline.json` reads `maxPragmas: 31` and the live count under `src/` is **31** — at the ceiling, not above it. The row stays until a session closes it with the commit that took 33 to 31, because closing it from a measurement alone names no fix |
+| #61 | `CONDUCTOR_RUN_DB` does not redirect the measuring verbs | the measuring-verbs lane, next era. **CH5.1 depended on the workaround**: `conductor budget <path-to-db>` positionally does what the env var is documented to do |
+| #70 | `AgentConfig.Merge` silently drops `Env` | the config lane, next era |
+| #72 | face: `bubbles/textarea` cannot replace `widgets.TextArea` until key dispatch moves | the face lane, next era |
+| #73 | `tools/w3/window-close.ps1` and `tools/sf1/sf1-2-live-proof.ps1` read `run.db` directly | the tooling lane, next era |
+| #75 | `conductor note` stores only the FIRST LINE of a multi-line note | the engine lane, next era. Every note in this era's ledger is written as one long line *because of* this bug — it shapes the record it is filed in |
+| #76 | the courier does not upload files, so a push with an evidence artifact arrives without it | the courier lane, next era |
+| #79 | `github sync --backfill` duplicates the whole board when run twice inside the API's replica lag | **CH5.2 / the owner** — it is the hazard sitting on top of #91's owed backfill, and it is a DIFFERENT bug from #84 |
+| #80 | the Projects v2 board is built but unproven live: the machine token carries no `project` scope | **the owner** — `gh auth refresh -s project` is the one-command unblock |
+| #81 | `.conductor/followups.md` carries 91 rows for 57 distinct ids | **this file's next triage pass.** CH5.1 read it by last-row rather than repairing it, and says so above |
+| #82 | the SARIF upload has never had a 202: every repo a proof may touch is private and the account has no Advanced Security | **the owner** — it needs a public repo or GHAS, not a code change |
+| #83 | payesh anonymity: a run's PLAN TITLE is matched as wording | **the payesh repo**, not this one |
+
+Three payesh rows (#41, #47, #83) name a repository this plan does not touch: `C:/code/conductor-site`
+is `shaahink/payesh`, its `main` auto-deploys to the world, and its era-close landed before Charkh
+launched. They are listed so they are not lost, and owned there.
+
+### Followups — the census by last row, and the one that stopped being re-homed
+
+Fifty-seven distinct ids, of which **fifty-three read closed or retired** on their newest row. Four
+were living when this era opened. Nothing in this file was touched between DV7.3 and CH5.1.
+
+| id | disposition | owner |
+|---|---|---|
+| FU-B2-3 | **PARTIAL**, unchanged by CH1–CH5: the decision is implemented (`RunLoop.Control.cs:125-131`), the live gate still wants a recovery lane | the owner |
+| FU-B11-2 | **PARTIAL is the final answer**, unchanged — running the engine on Linux needs a Linux host | the owner |
+| FU-B11-3 | **OPEN, owner-gated**, unchanged — real cTrader credentials and real money | the owner |
+| FU-OWNER-14 (the reinstall) | **CLOSED as a ledger row at CH5.1 (`c0dcad5`), with a stated remainder — and re-homed to the machinery rather than to another stage.** The row was moved four times (SF7.2, then K7.2, then KS10.3, then KS12.3) and its owner is now a closed stage, which is precisely the failure this file's 2026-07-28 triage described: a row pointing at a stage that will never open again is a row nobody will ever clear. CH4.2 made `reinstall` one of five named owner acts in `ReleasePerform.OwnerOrder` (`:40`), printed with its command on **every** `release perform` and rendered by `release runbook`, so the engine now asks each era instead of a document remembering to. **The remainder:** the reinstall itself is owed at CH5.2 and is the owner's act, exactly as before | the owner, prompted by the verb |
+
+**What this row is the proof of.** Charkh's thesis is that what the owner still does by hand becomes
+machinery. FU-OWNER-14 is the ledger's own instance of it: the answer was not to re-home the row a
+fifth time, it was to make the act unforgettable by a machine and let the row close.

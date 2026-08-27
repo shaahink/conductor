@@ -81,6 +81,47 @@ public sealed partial class SF7_1DocsMatchRealityTests
         }
     }
 
+    /// <summary>CH5.1's closure ledger, held to the same contract as SF7.1's - and to one more the
+    /// older pin could not express. Every bug row must name an owner, because a bug listed with an
+    /// empty owner cell is the homeless row the ledger exists to prevent.
+    /// <para>The addition is <b>each id appears exactly once</b>. That is bug #81's defect applied to
+    /// the bug half of the file: <c>.conductor/followups.md</c> is append-per-triage-pass and already
+    /// carries 91 rows for 57 distinct followup ids, so a reader who scans rather than resolves gets
+    /// whichever verdict they meet first. A ledger that can say two things about one id is not a
+    /// ledger. The count is deliberately NOT pinned to a number - the era's bug set grows, and a
+    /// literal here would rot exactly the way the "No era is open" pin did.</para></summary>
+    [Fact]
+    public void EveryBugInTheCharkhClosureLedgerNamesAnOwnerExactlyOnce()
+    {
+        var doc = Followups();
+        var start = doc.IndexOf("## Charkh closure ledger", StringComparison.Ordinal);
+        Assert.True(start > 0, ".conductor/followups.md has lost the CH5.1 closure ledger");
+
+        var section = doc[start..];
+        var followupsHeading = section.IndexOf("### Followups", StringComparison.Ordinal);
+        Assert.True(followupsHeading > 0, "the CH5.1 closure ledger has lost its followup census");
+        var bugs = section[..followupsHeading];
+
+        var rows = bugs.Split('\n')
+            .Where(l => Regex.IsMatch(l, @"^\|\s*#\d+\s*\|", RegexOptions.None, TimeSpan.FromSeconds(5)))
+            .ToList();
+
+        Assert.True(rows.Count > 0, "the CH5.1 closure ledger lists no bugs at all");
+
+        var seen = new List<string>();
+        foreach (var row in rows)
+        {
+            var cells = row.Split('|', StringSplitOptions.None);
+            var id = cells.Length >= 2 ? cells[1].Trim() : "";
+            var owner = cells.Length >= 4 ? cells[3].Trim() : "";
+
+            Assert.False(owner.Length == 0,
+                $"a bug row in the CH5.1 closure ledger has no owner: {row.Trim()}");
+            Assert.DoesNotContain(id, seen, StringComparer.Ordinal);
+            seen.Add(id);
+        }
+    }
+
     /// <summary>
     /// FU-F1-06 was the one row the SF7.1 era could not close, and this test was its converse pin: a
     /// claim that something was MISSING, checked against the tree. It said that no status-only writer
