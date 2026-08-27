@@ -33,7 +33,7 @@ public class KS7_3OtelExportTests
     {
         var deltas = new List<(long Input, long Output, long Reasoning, long CacheRead, long CacheWrite)>();
         var state = new AgentStreamState((_, _) => { },
-            (i, o, r, c, cw, _) => deltas.Add((i, o, r, c, cw)));
+            (i, o, r, c, cw, _, _) => deltas.Add((i, o, r, c, cw)));
 
         new ClaudeProvider().ParseLine(LiveShapedTurn, state);
 
@@ -52,7 +52,7 @@ public class KS7_3OtelExportTests
     public void AProviderThatReportsNoCacheWriteEmitsZeroRatherThanGuessing()
     {
         var deltas = new List<long>();
-        var state = new AgentStreamState((_, _) => { }, (_, _, _, _, cw, _) => deltas.Add(cw));
+        var state = new AgentStreamState((_, _) => { }, (_, _, _, _, cw, _, _) => deltas.Add(cw));
 
         new OpencodeProvider().ParseLine(
             """{"type":"step_finish","part":{"tokens":{"input":800,"output":200,"cache":{"read":1500}},"cost":0.005}}""",

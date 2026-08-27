@@ -26,7 +26,7 @@ public sealed class NoteCommand : Command<NoteCommand.Settings>
         public string? Stage { get; init; }
 
         [CommandArgument(0, "<TEXT>")]
-        [Description("The note content.")]
+        [Description("The note content, or '-' to read a multi-line body from stdin (bug #75: a .cmd shim keeps only the first line of an argument).")]
         public string Text { get; init; } = "";
     }
 
@@ -41,6 +41,19 @@ public sealed class NoteCommand : Command<NoteCommand.Settings>
         }
 
         var kind = string.IsNullOrWhiteSpace(settings.Kind) ? "note" : settings.Kind;
+
+        // Bug #75: '-' reads the body from stdin, the one channel a .cmd shim cannot cut at a newline.
+        string text;
+        try
+        {
+            text = LedgerBody.Resolve(settings.Text, Console.In, Console.IsInputRedirected);
+        }
+        catch (InvalidOperationException ex)
+        {
+            AnsiConsole.MarkupLine($"[red]note refused:[/] {Markup.Escape(ex.Message)}");
+            return 1;
+        }
+        if (LedgerBody.LooksCut(text)) Console.Error.WriteLine("warning: " + LedgerBody.CutHint);
 
         try
         {
@@ -57,14 +70,16 @@ public sealed class NoteCommand : Command<NoteCommand.Settings>
                 ? new RunState { PlanName = plan.Name, RunId = runId }
                 : System.Text.Json.JsonSerializer.Deserialize<RunState>(stateJson, PlanConfig.JsonOpts) ?? new RunState { PlanName = plan.Name, RunId = runId };
             store.WriteLedger(state.RunId, state.SessionCounter > 0 ? state.SessionCounter : null,
-                settings.Stage ?? state.CurrentStage, kind, settings.Text);
+                settings.Stage ?? state.CurrentStage, kind, text);
         }
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine($"[red]Note write failed:[/] {Markup.Escape(ex.Message)}");
             return 1;
         }
-        AnsiConsole.MarkupLine($"[green]note written[/] ({Markup.Escape(kind)}): {Markup.Escape(settings.Text)}");
+        var shown = text.Split('\n')[0];
+        var more = text.Contains('\n', StringComparison.Ordinal) ? $" [grey](+{text.Count(c => c == '\n')} more line(s))[/]" : "";
+        AnsiConsole.MarkupLine($"[green]note written[/] ({Markup.Escape(kind)}): {Markup.Escape(shown)}{more}");
         return 0;
     }
 }

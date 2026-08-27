@@ -22,6 +22,8 @@ namespace Conductor.Core.Release;
 public static class ReleasePerform
 {
     public const string ChangelogAct = "changelog";
+    /// <summary>Bug #95: the docs rows the tag makes false, rewritten before the tag names them.</summary>
+    public const string DocsAct = "docs";
     public const string MergeAct = "merge";
     public const string TagAct = "tag";
     public const string DocMoveAct = "docmove";
@@ -32,9 +34,35 @@ public static class ReleasePerform
     public const string PublishAct = "publish";
 
     /// <summary>The mechanical acts, in the order they must happen. The CHANGELOG is renamed before
-    /// the tag because the tag build reads the section; the merge is before the tag because the tag
-    /// names the merged tip; the doc move is last because it rewrites the plan the run is reading.</summary>
-    public static IReadOnlyList<string> MechanicalOrder => [ChangelogAct, MergeAct, TagAct, DocMoveAct];
+    /// the tag because the tag build reads the section; the docs rows are rewritten before the merge
+    /// so the tag's tip carries them (bug #95); the merge is before the tag because the tag names the
+    /// merged tip; the doc move is last because it rewrites the plan the run is reading.</summary>
+    public static IReadOnlyList<string> MechanicalOrder => [ChangelogAct, DocsAct, MergeAct, TagAct, DocMoveAct];
+
+    /// <summary>Bug #95: the docs act. Mechanical because the phrase is fixed and the version it names
+    /// is the tag — nothing here reads a document and agrees with it. Refused with no version, for the
+    /// same reason the CHANGELOG rename is: the number is the owner's input.</summary>
+    public static ReleaseAct Docs(string? tag, DocsFacts f)
+    {
+        ArgumentNullException.ThrowIfNull(f);
+
+        if (f.Rows.Count == 0)
+            return new ReleaseAct(DocsAct, ReleaseAct.Mechanical, ReleaseAct.Nothing,
+                $"no docs row says '{DocsFacts.Caveat}'", ["nothing to rewrite - this act is idempotent"]);
+
+        if (string.IsNullOrWhiteSpace(tag))
+            return Refuse(DocsAct,
+                $"{f.Rows.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)} docs row(s) carry '{DocsFacts.Caveat}' and no version is named to rewrite them to",
+                ["the version number is the owner's - pass --tag <x.y.z>"]);
+
+        var version = tag.TrimStart('v', 'V');
+        var files = f.Rows.Select(r => r.File).Distinct(StringComparer.Ordinal).ToList();
+        var detail = f.Rows.Take(8).Select(r => $"{r.File}:{r.Line.ToString(System.Globalization.CultureInfo.InvariantCulture)}").ToList();
+        detail.Add($"each 'New since `v<prev>`; {DocsFacts.Caveat}' becomes 'New in `v{version}`'; the rest of the row is untouched");
+        return new ReleaseAct(DocsAct, ReleaseAct.Mechanical, ReleaseAct.Ready,
+            $"rewrite {f.Rows.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)} row(s) in {files.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)} file(s) to name v{version}",
+            detail);
+    }
 
     /// <summary>The acts that are the owner's whatever the facts say.</summary>
     public static IReadOnlyList<string> OwnerOrder => [VersionAct, SplitAct, CorpusAct, ReinstallAct, PublishAct];

@@ -96,9 +96,10 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("  [yellow]conductor release preflight[/] [grey][[--tag 0.6.0]] [[--base master]] [[--branch feat/x]] [[--repo owner/name]][/]");
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("  [grey]Six preconditions, one verdict each, and a non-zero exit when any is red:[/]");
+        AnsiConsole.MarkupLine("  [grey]Seven preconditions, one verdict each, and a non-zero exit when any is red:[/]");
         AnsiConsole.MarkupLine("  [grey]merge (is it a fast-forward), changelog (does the tag build have a section),[/]");
-        AnsiConsole.MarkupLine("  [grey]processes (is a binary swap safe), migration (schema skew, trap 18),[/]");
+        AnsiConsole.MarkupLine("  [grey]docs (rows the tag makes false, bug #95), processes (is a binary swap safe),[/]");
+        AnsiConsole.MarkupLine("  [grey]migration (schema skew, trap 18),[/]");
         AnsiConsole.MarkupLine("  [grey]courier (would it survive the reinstall), backfill (which run is owed a record).[/]");
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("  [grey]Exit 0 all green · 1 something is red · 2 nothing red, something is yours to decide.[/]");
@@ -106,7 +107,8 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("  [yellow]conductor release perform[/] [grey][[--tag 0.6.0]] [[--yes]] [[--history docs/history]][/]");
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("  [grey]Four mechanical acts, each its own commit: the CHANGELOG rename, the ff-only merge,[/]");
+        AnsiConsole.MarkupLine("  [grey]Five mechanical acts, each its own commit: the CHANGELOG rename, the docs rows the tag[/]");
+        AnsiConsole.MarkupLine("  [grey]makes true (bug #95), the ff-only merge,[/]");
         AnsiConsole.MarkupLine("  [grey]the tag, and the doc move WITH the plan repointed at it. Five owner acts named and[/]");
         AnsiConsole.MarkupLine("  [grey]stopped at: the version number, single-vs-split, the corpus, the reinstall, the push.[/]");
         AnsiConsole.MarkupLine("  [grey]Dry run unless --yes. Refuses outright while a run is live in the plan.[/]");
@@ -114,7 +116,7 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
         AnsiConsole.MarkupLine("  [yellow]conductor release runbook[/] [grey][[--tag 0.6.0]] [[--out docs/RUNBOOK.md]][/]");
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("  [grey]The owner runbook as markdown, generated from the two verbs above rather than[/]");
-        AnsiConsole.MarkupLine("  [grey]written by hand: the six measured preconditions, the four mechanical acts and[/]");
+        AnsiConsole.MarkupLine("  [grey]written by hand: the seven measured preconditions, the five mechanical acts and[/]");
         AnsiConsole.MarkupLine("  [grey]the five that are yours, each with its command. Performs nothing. stdout by[/]");
         AnsiConsole.MarkupLine("  [grey]default; --out writes the file. Exits with the preflight's code.[/]");
         return 1;
@@ -176,7 +178,7 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
         return exit;
     }
 
-    /// <summary>The six lines, in order. Each probe is independent: one that cannot measure returns a
+    /// <summary>The seven lines, in order. Each probe is independent: one that cannot measure returns a
     /// red line saying so rather than throwing, because a preflight that dies on its third check has
     /// told the operator less than one that reports three reds.</summary>
     internal static async Task<IReadOnlyList<ReleaseCheck>> MeasureAsync(
@@ -196,6 +198,7 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
         [
             ReleasePreflight.Merge(ProbeMerge(repo, settings.Base, settings.Branch)),
             ReleasePreflight.Changelog(ProbeChangelog(repo, settings.Tag)),
+            ReleasePreflight.Docs(ProbeDocs(repo), settings.Tag),
             ReleasePreflight.Processes(ProbeProcesses(plan, planPath, installed)),
             ReleasePreflight.Migration(ProbeMigration(repo, store, installed)),
             ReleasePreflight.Courier(await ProbeCourierAsync(plan).ConfigureAwait(false)),

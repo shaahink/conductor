@@ -32,6 +32,11 @@ public static class OtelTrace
     /// <summary>Anthropic's own name in the convention's <c>gen_ai.system</c> enumeration.</summary>
     private const string System = "anthropic";
 
+    /// <summary>Bug #53 — the one-hour-TTL part of <c>gen_ai.usage.cache_creation_input_tokens</c>.
+    /// Not a convention attribute (the convention has no TTL notion); a conductor-prefixed name, so a
+    /// backend does not read it as a fifth bucket. Emitted beside the write total at every level.</summary>
+    public const string CacheWrite1hAttribute = "conductor.usage.cache_creation_1h_input_tokens";
+
     /// <summary>Build the spans for one run. Events may arrive in any order; they are sorted by
     /// <see cref="ConductorEvent.Seq"/>, which is the log's own ground truth.</summary>
     public static IReadOnlyList<OtelSpan> Build(IEnumerable<ConductorEvent> events)
@@ -68,6 +73,8 @@ public static class OtelTrace
             new("gen_ai.usage.output_tokens", totals.Output),
             new("gen_ai.usage.cache_read_input_tokens", totals.CacheRead),
             new("gen_ai.usage.cache_creation_input_tokens", ctx.Log.OfType<TokenDelta>().Sum(t => t.CacheWrite)),
+            // Bug #53: the one-hour part of the line above, so a backend pricing writes by TTL has both.
+            new(CacheWrite1hAttribute, ctx.Log.OfType<TokenDelta>().Sum(t => t.CacheWrite1h)),
         };
         if (started is not null)
         {
@@ -139,8 +146,10 @@ public static class OtelTrace
 
             var totals = LiveMetrics.ForSession(ctx.Log, s.Number);
             var context = LiveMetrics.ContextForSession(ctx.Log, s.Number);
-            var cacheWrite = ctx.Log.OfType<TokenDelta>()
-                .Where(t => string.Equals(t.SessionId, sid, StringComparison.Ordinal)).Sum(t => t.CacheWrite);
+            var sessionDeltas = ctx.Log.OfType<TokenDelta>()
+                .Where(t => string.Equals(t.SessionId, sid, StringComparison.Ordinal)).ToList();
+            var cacheWrite = sessionDeltas.Sum(t => t.CacheWrite);
+            var cacheWrite1h = sessionDeltas.Sum(t => t.CacheWrite1h);
 
             var attrs = new List<KeyValuePair<string, object>>
             {
@@ -152,6 +161,7 @@ public static class OtelTrace
                 new("gen_ai.usage.output_tokens", totals.Output),
                 new("gen_ai.usage.cache_read_input_tokens", totals.CacheRead),
                 new("gen_ai.usage.cache_creation_input_tokens", cacheWrite),
+                new(CacheWrite1hAttribute, cacheWrite1h),
                 new("gen_ai.conversation.id", s.AgentSessionId ?? sid),
                 new("conductor.session.number", (long)s.Number),
                 new("conductor.session.kind", s.Kind),
@@ -205,6 +215,7 @@ public static class OtelTrace
                 new("gen_ai.usage.output_tokens", td.Output),
                 new("gen_ai.usage.cache_read_input_tokens", td.CacheRead),
                 new("gen_ai.usage.cache_creation_input_tokens", td.CacheWrite),
+                new(CacheWrite1hAttribute, td.CacheWrite1h),
                 new("conductor.context.prompt_tokens", td.Input + td.CacheRead),
             ]));
         }

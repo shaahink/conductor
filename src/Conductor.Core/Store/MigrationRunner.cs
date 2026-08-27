@@ -47,6 +47,10 @@ internal static class MigrationRunner
 
     // ---------------------------------------------------------------- internals
 
+    /// <summary>The version row as the file carries it, or null for a fresh database. Bug #45's guard
+    /// reads it BEFORE <see cref="Run"/> so the decision to migrate can be refused.</summary>
+    internal static int? StoredVersion(SqliteConnection conn) => GetStoredVersion(conn);
+
     private static int? GetStoredVersion(SqliteConnection conn)
     {
         try

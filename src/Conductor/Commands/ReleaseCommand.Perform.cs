@@ -148,6 +148,7 @@ public sealed partial class ReleaseCommand
         => name switch
         {
             ReleasePerform.ChangelogAct => ReleasePerform.Changelog(settings.Tag?.Trim(), ProbeChangelogRename(repo, settings.Tag)),
+            ReleasePerform.DocsAct => ReleasePerform.Docs(settings.Tag?.Trim(), ProbeDocs(repo)),
             ReleasePerform.MergeAct => MergeAct(repo, settings),
             ReleasePerform.TagAct => TagAct(repo, settings, changelogSectionProjected),
             _ => ReleasePerform.DocMove(ProbeDocMove(plan, planPath, repo, settings)),
@@ -183,6 +184,7 @@ public sealed partial class ReleaseCommand
             return name switch
             {
                 ReleasePerform.ChangelogAct => await DoChangelogAsync(act, repo, settings).ConfigureAwait(false),
+                ReleasePerform.DocsAct => await DoDocsAsync(act, repo, settings).ConfigureAwait(false),
                 ReleasePerform.MergeAct => DoMerge(act, repo, settings),
                 ReleasePerform.TagAct => DoTag(act, repo, settings),
                 _ => await DoDocMoveAsync(act, plan, planPath, repo, settings).ConfigureAwait(false),
@@ -210,6 +212,36 @@ public sealed partial class ReleaseCommand
         {
             State = ReleaseAct.Done,
             Headline = $"renamed '## [Unreleased]' to '{heading}' and committed it",
+        });
+    }
+
+    /// <summary>Bug #95: rewrite every docs row that carries the pre-release caveat to name the
+    /// release it ships in, and commit the files as one act. Re-probed here rather than trusting the
+    /// plan, for the same reason the CHANGELOG act re-reads the file: what is on disk at the moment of
+    /// writing is the only fact that matters.</summary>
+    private static async Task<ReleaseAct> DoDocsAsync(ReleaseAct act, string repo, Settings settings)
+    {
+        var version = settings.Tag!.Trim().TrimStart('v', 'V');
+        var facts = ProbeDocs(repo);
+        if (facts.Rows.Count == 0)
+            return act with { State = ReleaseAct.Nothing, Headline = "the docs rows were already rewritten between planning and writing" };
+
+        var files = facts.Rows.Select(r => r.File).Distinct(StringComparer.Ordinal).ToList();
+        var rewritten = 0;
+        foreach (var file in files)
+        {
+            var full = Path.Combine(repo, file.Replace('/', Path.DirectorySeparatorChar));
+            var text = await File.ReadAllTextAsync(full).ConfigureAwait(false);
+            var after = DocsFacts.Clause.Replace(text, m => { rewritten++; return DocsFacts.Rewrite(m.Value, version); });
+            if (!ReferenceEquals(after, text) && !string.Equals(after, text, StringComparison.Ordinal))
+                await File.WriteAllTextAsync(full, after).ConfigureAwait(false);
+        }
+
+        var commit = Commit(repo, files, $"docs(release): {rewritten} row(s) stop saying 'not in the released binary yet' - v{version} ships them");
+        return commit ?? (act with
+        {
+            State = ReleaseAct.Done,
+            Headline = $"rewrote {rewritten} row(s) in {files.Count} file(s) to 'New in `v{version}`' and committed them",
         });
     }
 

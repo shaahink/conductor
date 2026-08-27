@@ -334,10 +334,23 @@ func (m Model) renderBottomBar(width int, paneHelp string) string {
 	// Normal hints: global keys + the active pane's contextual help.
 	globals := subtleStyle.Render(key(":") + " cmd  " + key("i") + " inject  " + key("/") + " search  " + key("\\") + " sidebar  " + key("?") + " help  " + key("q") + " quit")
 	if paneHelp != "" && width >= 90 {
-		return bar.Render(globals + subtleStyle.Render("   │   ") + subtleStyle.Render(paneHelp))
+		// Bug #18: the help used to be clipped by the frame's MaxWidth alone, from the right, with no
+		// marker — the Agent tab advertised a nonexistent "end l" key for a whole era because its help
+		// had outgrown the bar and the golden pinned the clipped frame as correct. The help is now
+		// given the columns that are actually left after the globals, the divider and the padding,
+		// and cut by truncate() so a cut says it was cut; below a readable minimum it is dropped
+		// whole, the way the top bar tiers its segments, rather than shown as three characters.
+		avail := width - 2 - lipgloss.Width(globals) - lipgloss.Width("   │   ")
+		if avail >= paneHelpMinCols {
+			return bar.Render(globals + subtleStyle.Render("   │   ") + subtleStyle.Render(truncate(paneHelp, avail)))
+		}
 	}
 	return bar.Render(globals)
 }
+
+// paneHelpMinCols is the narrowest contextual help worth showing. Under this the bar shows the
+// globals alone: a help cut to "↑↓ s…" advertises nothing and looks like a rendering fault.
+const paneHelpMinCols = 12
 
 func (m Model) renderInjectBar() string {
 	stage := m.injectStageId

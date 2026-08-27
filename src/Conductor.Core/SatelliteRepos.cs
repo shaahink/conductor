@@ -92,6 +92,77 @@ public static class SatelliteRepos
         return list.Count == 0 ? null : string.Join(", ", list.Select(s => s.Label));
     }
 
+    /// <summary>Bug #40: the label of the declared satellite this tool call TOUCHED, or null. A write
+    /// tool whose path resolves inside the satellite touches it; so does a shell command whose text
+    /// names the satellite's directory — absolute or relative to the primary repo, either separator —
+    /// because <c>git -C ../site commit</c> is how a session lands a commit there without a write
+    /// tool ever seeing a path. Reading, listing and grepping a satellite through a write-less tool
+    /// touch nothing, which is exactly the KS0 session's whole history with the field guide.</summary>
+    public static string? Touched(PlanConfig plan, Events.ToolCall call)
+    {
+        ArgumentNullException.ThrowIfNull(call);
+        var satellites = Resolve(plan);
+        if (satellites.Count == 0) return null;
+
+        if (Providers.ToolEventExtractor.IsWrite(call.Name) && call.Field("path") is { Length: > 0 } path)
+        {
+            var cleaned = path.Trim().Trim('"', '\'');
+            var full = cleaned.Length > 0 && !Path.IsPathRooted(cleaned) && !string.IsNullOrWhiteSpace(plan.Repo)
+                ? Path.Combine(plan.Repo, cleaned)
+                : cleaned;
+            foreach (var (label, satPath) in satellites)
+                if (!RepoScope.IsOutside(satPath, full, out _)) return label;
+        }
+
+        if (call.Field("command") is { Length: > 0 } command)
+        {
+            var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            var primary = SafeFullPath(plan.Repo);
+            foreach (var (label, satPath) in satellites)
+            {
+                foreach (var spelling in Spellings(satPath, primary))
+                    if (command.Contains(spelling, comparison)) return label;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Splits satellite commits into this session's own and the foreign ones, by the label
+    /// suffix <see cref="CommitsSince"/> writes: own when the satellite is on <paramref name="touched"/>,
+    /// foreign otherwise. Order is preserved on both sides.</summary>
+    public static (List<string> Own, List<string> Foreign) Attribute(
+        IReadOnlyList<string> satelliteCommits, IReadOnlyCollection<string> touched)
+    {
+        ArgumentNullException.ThrowIfNull(satelliteCommits);
+        ArgumentNullException.ThrowIfNull(touched);
+        var own = new List<string>();
+        var foreign = new List<string>();
+        foreach (var row in satelliteCommits)
+        {
+            var open = row.LastIndexOf('[');
+            var label = open >= 0 && row.EndsWith(']') ? row[(open + 1)..^1] : "";
+            (touched.Contains(label, StringComparer.OrdinalIgnoreCase) ? own : foreign).Add(row);
+        }
+        return (own, foreign);
+    }
+
+    /// <summary>The ways a command line can name a satellite: its absolute path and its path relative
+    /// to the primary repo, each with both separators. Never the bare label — a word like "site" in a
+    /// command is not a directory.</summary>
+    private static IEnumerable<string> Spellings(string satPath, string primary)
+    {
+        var abs = satPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        yield return abs.Replace('\\', '/');
+        yield return abs.Replace('/', '\\');
+        if (primary.Length == 0) yield break;
+        string rel;
+        try { rel = Path.GetRelativePath(primary, abs); }
+        catch (ArgumentException) { yield break; }
+        if (rel.Length == 0 || rel == "." || Path.IsPathRooted(rel)) yield break;
+        yield return rel.Replace('\\', '/');
+        yield return rel.Replace('/', '\\');
+    }
+
     private static string LabelFor(string absPath)
     {
         var name = Path.GetFileName(absPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));

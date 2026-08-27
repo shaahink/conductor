@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Globalization;
 
+using Conductor.Core;
 using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
@@ -26,7 +27,7 @@ public sealed class BugCommand : Command<BugCommand.Settings>
         public string? TitleOrId { get; init; }
 
         [CommandOption("-d|--detail <TEXT>")]
-        [Description("Longer description / repro (new only).")]
+        [Description("Longer description / repro (new only), or '-' to read it from stdin (bug #75: a .cmd shim keeps only the first line of an argument).")]
         public string? Detail { get; init; }
 
         [CommandOption("-s|--severity <SEVERITY>")]
@@ -104,9 +105,23 @@ public sealed class BugCommand : Command<BugCommand.Settings>
             AnsiConsole.MarkupLine("[red]bug new needs a title:[/] conductor bug new \"<title>\" [[--detail <text>]] [[--severity high]]");
             return 1;
         }
+        // Bug #75: '-' reads the detail from stdin, the one channel a .cmd shim cannot cut at a newline.
+        string? detail;
+        try
+        {
+            detail = settings.Detail is null ? null : LedgerBody.Resolve(settings.Detail, Console.In, Console.IsInputRedirected);
+        }
+        catch (InvalidOperationException ex)
+        {
+            AnsiConsole.MarkupLine($"[red]bug new refused:[/] {Markup.Escape(ex.Message)}");
+            return 1;
+        }
+        if (LedgerBody.LooksCut(detail))
+            Console.Error.WriteLine("warning: " + LedgerBody.CutHint.Replace("conductor note - < body.md",
+                "conductor bug new \"<title>\" --detail - < detail.md", StringComparison.Ordinal));
         var stageId = settings.Stage ?? state.CurrentStage;
         var foundSession = state.SessionCounter > 0 ? (int?)state.SessionCounter : null;
-        var id = store.WriteBug(state.RunId, title, settings.Detail, settings.Severity ?? "medium", stageId, foundSession);
+        var id = store.WriteBug(state.RunId, title, detail, settings.Severity ?? "medium", stageId, foundSession);
         if (id <= 0)
         {
             AnsiConsole.MarkupLine("[red]bug write failed[/] (see run.db error log).");

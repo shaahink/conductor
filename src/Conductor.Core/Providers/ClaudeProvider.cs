@@ -169,6 +169,10 @@ public sealed class ClaudeProvider : IAgentProvider
         state.TokensOutput = (state.TokensOutput ?? 0) + output;
         state.TokensCacheRead = (state.TokensCacheRead ?? 0) + cacheRead;
         state.TokensCacheWrite = (state.TokensCacheWrite ?? 0) + cacheWrite;
+        // Bug #53: the TTL split under `usage.cache_creation` — accrued only when the wire carries it,
+        // so a stream from a CLI that never reports the split leaves the field null, not zero.
+        var cacheWrite1h = CacheWrite1h(u);
+        if (cacheWrite1h is { } oneHour) state.TokensCacheWrite1h = (state.TokensCacheWrite1h ?? 0) + oneHour;
 
         // K4.1: the same numbers answer a second question the engine never asked. Summed, they are the
         // session's integral; for THIS call, input (which already carries cache_creation) plus cacheRead
@@ -177,7 +181,17 @@ public sealed class ClaudeProvider : IAgentProvider
         // a message is known to be counted exactly once.
         state.ObserveContext(input + cacheRead);
 
-        state.EmitTokenDelta(input, output, reasoning: 0, cacheRead, cacheWrite, costUsd: 0m);
+        state.EmitTokenDelta(input, output, reasoning: 0, cacheRead, cacheWrite, cacheWrite1h ?? 0, costUsd: 0m);
+    }
+
+    /// <summary>Bug #53: <c>usage.cache_creation.ephemeral_1h_input_tokens</c>, or null when the
+    /// envelope carries no <c>cache_creation</c> object at all. The five-minute half is not read: it is
+    /// <c>cache_creation_input_tokens</c> minus this, and a second number that must agree with a first
+    /// is a second number that can disagree with it.</summary>
+    private static long? CacheWrite1h(JsonElement usage)
+    {
+        if (!usage.TryGetProperty("cache_creation", out var split) || split.ValueKind != JsonValueKind.Object) return null;
+        return Num(split, "ephemeral_1h_input_tokens");
     }
 
     /// <summary>
@@ -212,6 +226,8 @@ public sealed class ClaudeProvider : IAgentProvider
         // KS7.3: the authoritative envelope names the write half too. Overwrites rather than accrues,
         // for the same reason the three above do — this is the CLI's session total, not a delta.
         if (cacheWrite > 0) state.TokensCacheWrite = cacheWrite;
+        // Bug #53: and the one-hour part of it, when the envelope splits the write by TTL.
+        if (CacheWrite1h(u) is { } oneHour && oneHour > 0) state.TokensCacheWrite1h = oneHour;
     }
 
     private static long Num(JsonElement obj, string name) =>

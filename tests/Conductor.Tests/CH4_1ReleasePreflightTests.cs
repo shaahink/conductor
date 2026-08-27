@@ -409,12 +409,13 @@ public sealed class CH4_1ReleasePreflightTests
         Assert.Contains("shaahink/conductor", check.Headline, StringComparison.Ordinal);
     }
 
-    /// <summary>The six names are the grep handles a failure line is read by, and the order is the
+    /// <summary>The seven names are the grep handles a failure line is read by, and the order is the
     /// order the runbook walks the era-close in. A line that disappears from this list disappears
-    /// from the checklist.</summary>
+    /// from the checklist. Bug #95 added <c>docs</c> after <c>changelog</c>: both are rows the tag
+    /// makes true or false, and both are measured before anything about processes.</summary>
     [Fact]
-    public void The_six_checks_are_named_and_ordered_as_the_runbook_walks_them()
+    public void The_seven_checks_are_named_and_ordered_as_the_runbook_walks_them()
         => Assert.Equal(
-            ["merge", "changelog", "processes", "migration", "courier", "backfill"],
+            ["merge", "changelog", "docs", "processes", "migration", "courier", "backfill"],
             ReleasePreflight.CheckNames);
 }

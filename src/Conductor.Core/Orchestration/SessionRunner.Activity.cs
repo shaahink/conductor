@@ -22,7 +22,7 @@ public sealed partial class SessionRunner
         // or command instead of a JSON blob cut at 150 characters.
         _ctx.Transcript.Append(rec.Number.ToString(), ev.Kind, ev.Text, ev.Tool);
         // SC7.2: the same funnel folds the per-session digest, so it survives a kill mid-session.
-        if (ev.Tool != null) { rec.Digest.Add(ev.Tool, _ctx.Plan.Repo); NoteOutsideRepoWrite(ev.Tool, rec); }
+        if (ev.Tool != null) { rec.Digest.Add(ev.Tool, _ctx.Plan.Repo); NoteOutsideRepoWrite(ev.Tool, rec); NoteSatelliteTouch(ev.Tool, rec); }
         if (ev.Kind is "stderr") return; // the activity ring buffer keeps its original vocabulary
         _ctx.Activity.Add((ev.Kind, ev.Text, ev.Utc));
         if (_ctx.Activity.Count > 60) _ctx.Activity.RemoveRange(0, 20);
@@ -45,6 +45,9 @@ public sealed partial class SessionRunner
     {
         var path = HookToolLog.PathFor(_ctx.Plan.StateDir, rec.Number);
         if (HookToolLog.BuildDigest(path, _ctx.Plan.Repo) is not { } hookDigest) return;
+        // Bug #40: the hook is the record of the calls the agent MADE, so the satellites it touched are
+        // read from the same source once it exists; the live fold above is the running estimate.
+        foreach (var call in HookToolLog.Read(path)) NoteSatelliteTouch(call, rec);
         var before = rec.Digest.ToolCalls;
         rec.Digest = hookDigest;
         if (before != hookDigest.ToolCalls)
@@ -70,5 +73,15 @@ public sealed partial class SessionRunner
         if (!RepoScope.IsOutside(_ctx.Plan.Repo, satellites, path, out var full)) return;
         if (!rec.OutsideRepoWrites.Contains(full, StringComparer.OrdinalIgnoreCase))
             rec.OutsideRepoWrites.Add(full);
+    }
+
+    /// <summary>Bug #40: the satellite half of the same capture. A satellite is TOUCHED by a write
+    /// whose path resolves inside it or by a shell command that names its directory; the verdict
+    /// credits this session with commits only in satellites on this list.</summary>
+    private void NoteSatelliteTouch(ToolCall call, SessionRecord rec)
+    {
+        if (SatelliteRepos.Touched(_ctx.Plan, call) is not { } label) return;
+        if (!rec.SatellitesTouched.Contains(label, StringComparer.OrdinalIgnoreCase))
+            rec.SatellitesTouched.Add(label);
     }
 }

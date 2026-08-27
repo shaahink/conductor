@@ -263,5 +263,5 @@ public sealed class CH4_2ReleasePerformTests
     /// release notes do not exist.</summary>
     [Fact]
     public void The_mechanical_acts_are_ordered_by_what_each_one_needs_from_the_last()
-        => Assert.Equal(["changelog", "merge", "tag", "docmove"], ReleasePerform.MechanicalOrder);
+        => Assert.Equal(["changelog", "docs", "merge", "tag", "docmove"], ReleasePerform.MechanicalOrder);
 }

@@ -25,7 +25,7 @@ public class SC23LiveSpendTests
         var deltas = new List<TokenDelta>();
         var state = new AgentStreamState(
             (_, _) => { },
-            (i, o, r, c, cw, cost) => deltas.Add(new TokenDelta { Input = i, Output = o, Reasoning = r, CacheRead = c, CacheWrite = cw, CostUsd = cost }));
+            (i, o, r, c, cw, cost, cw1h) => deltas.Add(new TokenDelta { Input = i, Output = o, Reasoning = r, CacheRead = c, CacheWrite = cw, CacheWrite1h = cw1h, CostUsd = cost }));
         return (state, deltas);
     }
 

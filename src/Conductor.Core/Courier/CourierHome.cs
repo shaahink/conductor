@@ -43,9 +43,19 @@ public static class CourierHome
     /// the note is for, and a file written into the wrong repo is a file in a public checkout.</summary>
     public const string MediaDirName = "media";
 
+    /// <summary>Bug #93 — what the running courier wrote about itself: startup, every refusal to
+    /// start, listener state, poll errors, and the exception that killed it. The scheduled task
+    /// redirects nothing and the Task Scheduler's own log is off on the machine that matters, so
+    /// until this file existed a courier that died with exit 1 left no record anywhere. Rotated by
+    /// <see cref="CourierLog"/>; the previous generation is <c>courier.log.1</c>.</summary>
+    public const string LogFileName = "courier.log";
+
     /// <param name="stateHomeRoot">The machine's state home, or null for the resolved one.</param>
     public static string DirFor(string? stateHomeRoot = null) =>
         Path.Combine(Root(stateHomeRoot), DirName);
+
+    public static string LogPathFor(string? stateHomeRoot = null) =>
+        Path.Combine(DirFor(stateHomeRoot), LogFileName);
 
     public static string SettingsPathFor(string? stateHomeRoot = null) =>
         Path.Combine(DirFor(stateHomeRoot), SettingsFileName);

@@ -94,6 +94,10 @@ public sealed partial class FaceCommand : AsyncCommand<FaceCommand.Settings>
                 // and now it can be another repo's, so the one line before the TUI takes the terminal
                 // is the only chance the user has to notice they are looking at the wrong website.
                 AnsiConsole.MarkupLine($"[grey]attaching to[/] [white]{Markup.Escape(string.IsNullOrWhiteSpace(run.RepoLabel) ? run.PlanName : run.RepoLabel)}[/] [grey]{Markup.Escape(run.StageId)} · {Markup.Escape(run.BaseUrl)}[/]");
+                // Bug #48: the same honesty `status` learned in KS2.5 when it widens to the machine
+                // board — the reason goes on stderr, where a piped stdout still leaves it readable.
+                if (decision.Widened)
+                    await Console.Error.WriteLineAsync(WidenedNotice(localPlanName, run)).ConfigureAwait(false);
                 // The write token goes via env, never argv — it must not show in a process listing.
                 // KS2.4: the whole fleet travels even though the engine could decide, because the Face
                 // can now SWITCH runs without restarting and the switcher needs a list to switch to. A
@@ -103,6 +107,8 @@ public sealed partial class FaceCommand : AsyncCommand<FaceCommand.Settings>
                     await EnvelopeAsync(decision.Fleet, localStateDir).ConfigureAwait(false)).ConfigureAwait(false);
 
             case FaceTarget.Kind.Picker:
+                if (decision.Widened)
+                    await Console.Error.WriteLineAsync(WidenedNotice(localPlanName, null)).ConfigureAwait(false);
                 psi.Environment[FaceTarget.FleetEnvVar] =
                     await EnvelopeAsync(decision.Fleet, localStateDir).ConfigureAwait(false);
                 // KS2.2: the picker can now answer with a FINISHED run, which has no url to attach to.
@@ -226,6 +232,17 @@ public sealed partial class FaceCommand : AsyncCommand<FaceCommand.Settings>
         if (proc is null) return 1;
         await proc.WaitForExitAsync().ConfigureAwait(false);
         return proc.ExitCode;
+    }
+
+    /// <summary>Bug #48: the stderr line that names a widened attach for what it is. Pure, so the
+    /// wording is pinned by a test rather than by a README transcript that happened to catch it.</summary>
+    internal static string WidenedNotice(string localPlanName, FleetRun? run)
+    {
+        var plan = string.IsNullOrWhiteSpace(localPlanName) ? "the plan in this directory" : $"the plan in this directory ('{localPlanName}')";
+        var where = run is null
+            ? "the picker lists what IS live on this machine"
+            : $"attaching to {(string.IsNullOrWhiteSpace(run.RepoLabel) ? run.PlanName : run.RepoLabel)} in {run.Repo} instead";
+        return $"notice: {plan} has no live run - {where}. This is not this directory's run; `conductor face --pick` chooses explicitly.";
     }
 
     /// <summary>The state dir of the plan in this directory, quietly. <c>face</c> now works from a

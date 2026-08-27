@@ -34,7 +34,12 @@ public static class FaceTarget
         None,
     }
 
-    public sealed record Decision(Kind Kind, FleetRun? Run, IReadOnlyList<FleetRun> Fleet);
+    /// <param name="Widened">Bug #48: true when this directory HAS a plan, that plan has no live run,
+    /// and the decision fell through to a run somewhere else on the machine. The attach is still made
+    /// — <c>face</c> is documented to work from any directory — but the caller must SAY that the run
+    /// on screen is not this directory's, because the one line before the TUI takes the terminal is
+    /// the only chance the operator has to notice they are looking at somebody else's run.</param>
+    public sealed record Decision(Kind Kind, FleetRun? Run, IReadOnlyList<FleetRun> Fleet, bool Widened = false);
 
     /// <summary>
     /// Which run should the Face attach to? Pure, so the rule is testable without sockets or a disk.
@@ -58,9 +63,15 @@ public static class FaceTarget
         var local = reachable.FirstOrDefault(r => FleetScan.SameDir(r.StateDir, localStateDir));
         if (local is not null) return new Decision(Kind.Single, local, reachable);
 
+        // Bug #48: KS10.2's README transcript ran `conductor face` in a scratch rig with its own plan
+        // and no engine, and was attached to THIS repo's live run in a different directory with one
+        // grey line that read like the expected outcome. The fall-through stays (the machine has one
+        // run, and the Face can show it) but it is named as a fall-through when this directory had a
+        // plan of its own that the run does not belong to.
+        var widened = !string.IsNullOrWhiteSpace(localStateDir);
         return reachable.Length == 1
-            ? new Decision(Kind.Single, reachable[0], reachable)
-            : new Decision(Kind.Picker, null, reachable);
+            ? new Decision(Kind.Single, reachable[0], reachable, widened)
+            : new Decision(Kind.Picker, null, reachable, widened);
     }
 
     /// <summary>Serializes the fleet for the Face. <paramref name="tokens"/> maps a run's state dir to

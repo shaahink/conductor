@@ -63,6 +63,20 @@ public sealed class SessionRecord
     /// the first few.</summary>
     public List<string> OutsideRepoWrites { get; set; } = new();
 
+    /// <summary>Bug #40: the labels of the declared satellites this session actually TOUCHED — a write
+    /// tool whose path resolves inside one, or a shell command that names its directory. A satellite
+    /// commit is counted as this session's work only when its satellite is here: on run 9647f1b8 a
+    /// second engine's four commits in the field-guide repo were dressed onto a KS0 session that had
+    /// only ever listed that directory, and commit count is the evidence the churn detector leans on.
+    /// Empty on every record written before this checkpoint, which the verdict reads as "attribute
+    /// nothing", the same answer a session that never wrote there gets.</summary>
+    public List<string> SatellitesTouched { get; set; } = new();
+
+    /// <summary>Bug #40: satellite commits that landed during this session in a satellite it never
+    /// touched — kept apart from <see cref="SatelliteCommits"/> so the record still says what moved
+    /// on disk, while the verdict counts only what this session can be credited with.</summary>
+    public List<string> ForeignSatelliteCommits { get; set; } = new();
+
     /// <summary>SC7.2 (devcontext #10): what this session did, folded live from its structured tool
     /// events — tool mix, files written with counts, board claims, bg-start purposes as a storyline,
     /// notable build/test commands. Accumulated as the session runs, so a session killed mid-flight

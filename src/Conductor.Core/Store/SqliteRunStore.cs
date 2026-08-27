@@ -28,6 +28,11 @@ public sealed partial class SqliteRunStore : IRunStore, IEventSink
             using var pragma = _conn.CreateCommand();
             pragma.CommandText = "PRAGMA journal_mode=WAL;";
             pragma.ExecuteNonQuery();
+            // Bug #45: a store that is behind AND held by a live engine can only be held by an engine
+            // older than this build, and migrating it here is the lock-out KS10.1 measured. Asked once,
+            // before the migration, with the answer as the exception's whole message.
+            if (MigrationGuard.Check(_conn, path, MigrationRunner.CurrentVersion) is { } refusal)
+                throw new InvalidOperationException(MigrationGuard.Message(path, refusal));
             EnsureSchema();
         }
         catch

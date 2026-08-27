@@ -523,6 +523,7 @@ var truncationSites = map[string]string{
 	"renderPastRow":        "run picker past-run rows — same",
 	"renderDetail":         "run picker detail — same",
 	"Render":               "run picker frame (PickerModel.Render) — same pre-attach surface",
+	"renderBottomBar":      "bug #18: the pane's key hints, cut with a marker where the bar used to clip them silently; the full set is one `?` away in the help overlay",
 }
 
 // truncators are the clipping helpers themselves; their DEFINITIONS are not sites.

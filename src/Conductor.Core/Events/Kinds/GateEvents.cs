@@ -29,6 +29,12 @@ public sealed record TokenDelta : ConductorEvent
     /// why a consumer must treat 0 as "not reported" rather than "no cache was written".</summary>
     public long CacheWrite { get; init; }
 
+    /// <summary>Bug #53 — of <see cref="CacheWrite"/>, how many were written with the one-hour TTL
+    /// (<c>usage.cache_creation.ephemeral_1h_input_tokens</c>). A subset of CacheWrite by the same
+    /// rule: never added to a total that already contains it. Zero on every event written before this
+    /// fix and on a wire that reports no TTL split, which a consumer must read as "not reported".</summary>
+    public long CacheWrite1h { get; init; }
+
     public decimal CostUsd { get; init; }
 }
 

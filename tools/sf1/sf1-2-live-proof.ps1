@@ -141,6 +141,15 @@ $plan = [ordered]@{
 
 # ---------------------------------------------------------------- run it, with a control plane
 
+# Bug #73 (karvan #35): K3.1 moved run.db to a machine-level home keyed by (repo, plan). A rig that
+# says nothing writes its throwaway run into the OPERATOR'S real store and leaves a catalogue entry
+# pointing at a temp directory this script deletes on its next start. Naming the file outright is
+# precedence rule (1) in StateHome.Resolve - the one branch that neither migrates nor catalogues - so
+# the run lives and dies inside $rig. Set before the spawn (the child inherits it) and read back by
+# every query below with -RunDb.
+$rigRunDb = Join-Path $rig 'run.db'
+$env:CONDUCTOR_RUN_DB = $rigRunDb
+
 # 4317 belongs to the OTHER conductor run on this machine. Ask for something far away, then believe
 # only the discovery file - the engine scans forward when a port is taken.
 $outFile = Join-Path $rig 'run.out.log'
@@ -262,13 +271,13 @@ Check "(3) ...and plain `conductor report` still writes a report" `
 # ---------------------------------------------------------------- (4) MCP run_query survives
 
 . (Join-Path $repoRoot 'tools\lib\run-query.ps1')
-$mcpRows = Invoke-ConductorQuery -Exe $exe -StateDir $stateDir -Sql "SELECT number, stage_id, kind FROM sessions ORDER BY number"
+$mcpRows = Invoke-ConductorQuery -Exe $exe -StateDir $stateDir -RunDb $rigRunDb -Sql "SELECT number, stage_id, kind FROM sessions ORDER BY number"
 Write-Host ""
 Write-Host "--- MCP run_query: SELECT number, stage_id, kind FROM sessions ---" -ForegroundColor Cyan
 Write-Host $mcpRows
 Check "(4) MCP run_query still reads the same run.db the deleted endpoint used to" `
     ($mcpRows -notmatch 'query failed' -and $mcpRows -notmatch 'no rows' -and $mcpRows -match 'stage_id') ''
-$mcpWrite = Invoke-ConductorQuery -Exe $exe -StateDir $stateDir -Sql "DELETE FROM sessions"
+$mcpWrite = Invoke-ConductorQuery -Exe $exe -StateDir $stateDir -RunDb $rigRunDb -Sql "DELETE FROM sessions"
 Check "(4) ...and it is still SELECT-only" ($mcpWrite -match '(?i)only SELECT') $mcpWrite
 
 # ---------------------------------------------------------------- shut the rig down

@@ -23,9 +23,39 @@ public static class ReleasePreflight
     public const string CourierCheck = "courier";
     public const string BackfillCheck = "backfill";
 
+    /// <summary>Bug #95: the docs rows the tag makes false.</summary>
+    public const string DocsCheck = "docs";
+
     /// <summary>The names, in the order they run and print.</summary>
     public static IReadOnlyList<string> CheckNames =>
-        [MergeCheck, ChangelogCheck, ProcessesCheck, MigrationCheck, CourierCheck, BackfillCheck];
+        [MergeCheck, ChangelogCheck, DocsCheck, ProcessesCheck, MigrationCheck, CourierCheck, BackfillCheck];
+
+    /// <summary>Bug #95, the seventh line. Eight rows in <c>docs/cli.md</c> and <c>docs/operating.md</c>
+    /// said "New since <c>v0.5.0</c>; not in the released binary yet", every one of them false the
+    /// instant the tag lands, and nothing in the era-close named the act that makes them true: not a
+    /// precondition, not a mechanical act, not one of the owner's five. A document cannot notice an
+    /// act it never mentioned — which is the CH4.4 failure, in CH4.4's own output. The rows are a
+    /// fixed phrase and the version they name is the tag being cut, so the act is derivable, and
+    /// <see cref="ReleasePerform.Docs"/> performs it; this line goes red while any row still carries
+    /// the caveat, and names the act.</summary>
+    public static ReleaseCheck Docs(DocsFacts f, string? version)
+    {
+        ArgumentNullException.ThrowIfNull(f);
+
+        if (f.Rows.Count == 0)
+            return new ReleaseCheck(DocsCheck, ReleaseCheck.Ok,
+                $"no docs row says '{DocsFacts.Caveat}' - nothing the tag will make false",
+                [$"measured over {f.FilesScanned.ToString(System.Globalization.CultureInfo.InvariantCulture)} file(s) under docs/"]);
+
+        var detail = f.Rows.Take(8).Select(r => $"{r.File}:{r.Line.ToString(System.Globalization.CultureInfo.InvariantCulture)}").ToList();
+        if (f.Rows.Count > 8) detail.Add($"... and {(f.Rows.Count - 8).ToString(System.Globalization.CultureInfo.InvariantCulture)} more");
+        var tag = string.IsNullOrWhiteSpace(version) ? "<x.y.z>" : version.TrimStart('v', 'V');
+        detail.Add($"`conductor release perform --tag {tag}` rewrites each to 'New in `v{tag}`' as its own commit (the docs act); " +
+                   "tools/ch3/docs-surface-diff.py exits 1 against the installed binary until then, by design");
+        return new ReleaseCheck(DocsCheck, ReleaseCheck.Fail,
+            $"{f.Rows.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)} docs row(s) say '{DocsFacts.Caveat}' and become false at the tag",
+            detail);
+    }
 
     /// <summary>1 when anything is red, 2 when nothing is red but something is the owner's, 0 only
     /// when every line is green. Non-zero on red is the checkpoint's own bar.</summary>

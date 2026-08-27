@@ -66,7 +66,7 @@ public class CH4_4ReleaseRunbookTests
             Assert.Contains("### " + act + " \u2014", document, StringComparison.Ordinal);
     }
 
-    /// <summary>The same, for the six measured lines.</summary>
+    /// <summary>The same, for the seven measured lines.</summary>
     [Fact]
     public void TheRunbookGivesEveryDeclaredPreconditionItsOwnRow()
     {

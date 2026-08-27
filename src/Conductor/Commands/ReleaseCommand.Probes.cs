@@ -123,6 +123,32 @@ public sealed partial class ReleaseCommand
         }
     }
 
+    // ---- 2b. docs (bug #95) -------------------------------------------------------------------
+
+    /// <summary>Bug #95: every row under <c>docs/*.md</c> that still says
+    /// <see cref="DocsFacts.Caveat"/>. The top level only — <c>docs/history/</c> is the record and
+    /// may quote the phrase for ever, and <c>docs/dev/</c> is where the phrase is discussed rather
+    /// than asserted. Pure over the tree; the act that rewrites the rows is the perform verb's.</summary>
+    internal static DocsFacts ProbeDocs(string repo)
+    {
+        var dir = Path.Combine(repo, "docs");
+        if (!Directory.Exists(dir)) return new DocsFacts([], 0);
+        var rows = new List<DocsRow>();
+        var files = Directory.GetFiles(dir, "*.md", SearchOption.TopDirectoryOnly).OrderBy(f => f, StringComparer.Ordinal).ToList();
+        foreach (var file in files)
+        {
+            var rel = "docs/" + Path.GetFileName(file);
+            var n = 0;
+            foreach (var line in File.ReadLines(file))
+            {
+                n++;
+                if (line.Contains(DocsFacts.Caveat, StringComparison.Ordinal))
+                    rows.Add(new DocsRow(rel, n, line.Length > 160 ? line[..160] + "…" : line));
+            }
+        }
+        return new DocsFacts(rows, files.Count);
+    }
+
     /// <summary>A POSIX shell that can run <c>tools/changelog-section.sh</c>. PATH first, then Git's
     /// bundled one — <c>&lt;git&gt;/cmd/git.exe</c> and <c>&lt;git&gt;/bin/git.exe</c> both sit one
     /// directory below the install root that carries <c>usr/bin/sh.exe</c>, and that is where a

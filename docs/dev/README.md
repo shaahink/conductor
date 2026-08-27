@@ -11,7 +11,7 @@ what a good change looks like. The material here is what sits behind that page.
 [`CHARKH-PLAN-2026-08-26.md`](CHARKH-PLAN-2026-08-26.md) **is** the design authority for current
 work until it tags. It moves to [`../history/`](../history/) at the close, per the convention below
 — and at CH4.2 that move stopped being a thing a person remembers: `conductor release perform`
-carries it as one of its four mechanical acts, **with** the plan's `tracker`, `planDoc` and
+carries it as one of its five mechanical acts, **with** the plan's `tracker`, `planDoc` and
 `readOrder` repointed in the same act, because a move without the repoint means the next session
 reads nothing.
 

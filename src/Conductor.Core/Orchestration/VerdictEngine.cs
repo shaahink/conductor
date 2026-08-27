@@ -67,7 +67,16 @@ public sealed partial class VerdictEngine
     private void CollectCommits(SessionRecord rec, string startHead)
     {
         rec.NewCommits = Git.CommitsSince(_ctx.Plan.Repo, startHead);
-        rec.SatelliteCommits = SatelliteRepos.CommitsSince(_ctx.Plan, rec.SatelliteStartHeads);
+        // Bug #40: a satellite commit is this session's work only when the session touched that
+        // satellite. The rest are recorded as foreign and named once, so "commits 5" on a session that
+        // made one is a line in the log rather than the churn detector's evidence.
+        var (own, foreign) = SatelliteRepos.Attribute(
+            SatelliteRepos.CommitsSince(_ctx.Plan, rec.SatelliteStartHeads), rec.SatellitesTouched);
+        rec.SatelliteCommits = own;
+        rec.ForeignSatelliteCommits = foreign;
+        if (foreign.Count > 0)
+            _ctx.Log($"session #{rec.Number}: {foreign.Count} commit(s) landed in satellite repo(s) this session never touched and are not counted as its work: " +
+                     string.Join("; ", foreign.Take(4).Select(c => Trunc(c, 60))));
     }
 
     /// <summary>SC4.1: every battery in this engine goes through here, so this is the one place the

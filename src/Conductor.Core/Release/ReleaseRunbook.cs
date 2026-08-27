@@ -94,7 +94,7 @@ public static class ReleaseRunbook
     private static void Mechanical(StringBuilder sb, RunbookFacts facts, string? tag)
     {
         sb.Append("## 2. What the engine performs").Append('\n').Append('\n');
-        sb.Append("One command, four acts, each landing as its own commit so the era-close is reviewable an act at\n")
+        sb.Append("One command, five acts, each landing as its own commit so the era-close is reviewable an act at\n")
           .Append("a time. Ordered, and it stops at the first refusal rather than performing the rest on a half-done\n")
           .Append("sequence. Drop `--yes` to rehearse it.").Append('\n').Append('\n');
         sb.Append("```\n").Append(PerformCommand(tag)).Append('\n').Append("```\n\n");

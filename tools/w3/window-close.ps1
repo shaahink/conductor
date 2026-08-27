@@ -164,8 +164,21 @@ Small enough to finish fast, long enough that a session can be interrupted with 
     $docPath = Join-Path $dir "TOY-PLAN.md"
     Set-Content -Path $docPath -Value $doc -Encoding ascii
 
-    & $Exe init -o $dir --name ("w33-" + $tag) --repo $dir --from-idea $docPath | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "conductor init failed (exit $LASTEXITCODE) in $dir" }
+    # Bug #73 (karvan #35): every conductor this scratch spawns - init here, the engine in
+    # Start-RunInItsOwnWindow, the queries below - is aimed at the scratch's OWN run.db by name, which
+    # is precedence rule (1) in StateHome.Resolve and neither migrates nor catalogues. Without it each
+    # scenario wrote its throwaway run into the operator's real state home under a slug pointing at a
+    # temp directory this script deletes. One directory per scenario means one value per spawn, set
+    # around the spawn rather than process-wide for the whole script.
+    $runDb = Join-Path $dir "run.db"
+    $prevRunDb = $env:CONDUCTOR_RUN_DB
+    $env:CONDUCTOR_RUN_DB = $runDb
+    try {
+        & $Exe init -o $dir --name ("w33-" + $tag) --repo $dir --from-idea $docPath | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "conductor init failed (exit $LASTEXITCODE) in $dir" }
+    } finally {
+        $env:CONDUCTOR_RUN_DB = $prevRunDb
+    }
     $planPath = Join-Path $dir "conductor.plan.json"
 
     $plan = Get-Content $planPath -Raw | ConvertFrom-Json
@@ -186,7 +199,7 @@ Small enough to finish fast, long enough that a session can be interrupted with 
         stallMinutes = 10
     }) -Force
     ($plan | ConvertTo-Json -Depth 20) | Set-Content -Path $planPath -Encoding ascii
-    return [pscustomobject]@{ Dir = $dir; Plan = $planPath }
+    return [pscustomobject]@{ Dir = $dir; Plan = $planPath; RunDb = $runDb }
 }
 
 # Start a run in its OWN real console window and hand back the conductor process.
@@ -196,7 +209,16 @@ function Start-RunInItsOwnWindow($scratch, $planPath) {
     $psi.Arguments = ('"{0}" run -p "{1}" --headless --no-face' -f $Exe, $planPath)
     $psi.WorkingDirectory = $scratch
     $psi.UseShellExecute = $true       # the whole point: a new console, not this one
-    $conhost = [System.Diagnostics.Process]::Start($psi)
+    # Bug #73: UseShellExecute cannot carry a per-process environment, so the scratch's run.db is
+    # named in THIS process's environment for exactly the duration of the spawn - the child inherits
+    # it - and restored after, so two scenarios never share a database.
+    $prevRunDb = $env:CONDUCTOR_RUN_DB
+    $env:CONDUCTOR_RUN_DB = Join-Path $scratch "run.db"
+    try {
+        $conhost = [System.Diagnostics.Process]::Start($psi)
+    } finally {
+        $env:CONDUCTOR_RUN_DB = $prevRunDb
+    }
 
     $deadline = (Get-Date).AddSeconds(30)
     $child = $null
@@ -277,7 +299,9 @@ try {
     # SF1.2: `report --query` is gone. Ad-hoc SQL against run.db survives as the MCP `run_query` tool,
     # driven out-of-process against the shipped binary exactly as the old read was.
     . (Join-Path $PSScriptRoot "..\lib\run-query.ps1")
-    $q = { param($sql, $dir) (Invoke-ConductorQuery -Exe $Exe -StateDir (Join-Path $dir ".conductor") -Sql $sql | Out-String) }
+    # Bug #73: read the scratch's OWN run.db - the file the engine above was aimed at - not the
+    # pre-K3.1 `<StateDir>/run.db` the helper falls back to.
+    $q = { param($sql, $dir) (Invoke-ConductorQuery -Exe $Exe -StateDir (Join-Path $dir ".conductor") -RunDb (Join-Path $dir "run.db") -Sql $sql | Out-String) }
     $sessions = & $q "SELECT number, kind, outcome, ended_utc FROM sessions ORDER BY number" $main.Dir
     Write-Host $sessions
     Check "the interrupted session was RECORDED, with an outcome and an end time" `
@@ -319,7 +343,7 @@ try {
         ($resumeText -match "resuming run") $resumeText
     Check "the resumed run exited cleanly" ($finished -and $resume.ExitCode -eq 0) `
         ("exit " + $(if ($finished) { $resume.ExitCode } else { "TIMEOUT" }))
-    $after = & $q "SELECT COUNT(*) AS done FROM events WHERE type = 'CheckpointConfirmed'" $main.Plan
+    $after = & $q "SELECT COUNT(*) AS done FROM events WHERE type = 'CheckpointConfirmed'" $main.Dir
     Check "the work the X interrupted was delivered and confirmed after the resume" `
         (($after -notmatch "no rows") -and ($after -notmatch '\|\s*0\s*\|')) $after
 
@@ -343,7 +367,7 @@ try {
         $kLock = Join-Path $ctl.Dir ".conductor\conductor.lock"
         Check "control: a hard kill leaves the lock behind (releasing it is the rail's work)" `
             (Test-Path $kLock) $kLock
-        $kSessions = & $q "SELECT number, kind, outcome, ended_utc FROM sessions ORDER BY number" $ctl.Plan
+        $kSessions = & $q "SELECT number, kind, outcome, ended_utc FROM sessions ORDER BY number" $ctl.Dir
         Write-Host $kSessions
         Check "control: a hard kill records NO Interrupted session (that record is the rail's work)" `
             ($kSessions -notmatch "Interrupted") $kSessions
