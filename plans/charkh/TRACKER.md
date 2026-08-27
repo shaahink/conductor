@@ -4,19 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: CH4.1 AND CH4.2 both DONE. `conductor release preflight` (six measured lines, exit 0/1/2) and
-  `conductor release perform` (four mechanical acts performed, five owner acts named and stopped at).
-  Evidence: .conductor/evidence/CH4/ch4-1-release-preflight.md and ch4-2-release-perform.md.
-  Full suite green: 3550/3550. Neither verb exists in the PATH 0.5.0 - it refuses them.
+last: CH4.1 AND CH4.2 both DONE, committed and pushed. `conductor release preflight` (six measured
+  lines; exit 0/1/2) and `conductor release perform` (four mechanical acts performed, five owner acts
+  named and stopped at). Evidence: .conductor/evidence/CH4/ch4-1-release-preflight.md and
+  ch4-2-release-perform.md. Full suite green 3550/3550. The PATH 0.5.0 has neither verb.
 shape: deciding is PURE in src/Conductor.Core/Release; measuring and acting are impure in
   ReleaseCommand.{Probes,Perform}.cs. ReleaseAct keeps Kind (whose act, ever) apart from State (what
   happened this time), so an owner act is `stopped` on EVERY run and can never read as `nothing`.
-rule: exit 2 is what a FINISHED era-close looks like - the owner's part is outstanding by definition.
-  A script reading 0 as "closed" is reading it off a document again. Plan repoints are a TARGETED
-  string replace, never PlanDocumentEditor.Save (it drops the comment header).
-next: CH4.3 - scope GithubBoardSync's retire sweep to the run (bug 84; it is repo-wide today and a
-  dry run of the edge backfill reported 23 retired = exactly Divan's card count), then write the edge
-  run's record. Prove it on a PRIVATE scratch repo with CONDUCTOR_GITHUB_TOKEN, never shaahink/conductor.
+  Exit 2 is what a FINISHED era-close looks like; 0 would be reading "closed" off a document again.
+next: CH4.3, read but NOT started - it is back at TODO. The root cause is the MARKER:
+  GithubIdentity.TaskMarker is `<!-- conductor:task ID -->` with no run id, while RunMarker and
+  SessionMarker carry one - so a card issue is not attributable to a run at all, and RetireAsync
+  (GithubBoardSync.cs:204) sweeps every task-marked issue in the repo. Smaller fix: scope the retire
+  candidates to GithubMap rows for this run+repo (local, the authority since v14) and REFUSE rather
+  than retire-nothing when the map is Transient (bug 79's read-only path). Full note in the ledger.
 
 ## Baseline numbers (from run.db)
 
