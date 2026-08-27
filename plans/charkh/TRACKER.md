@@ -4,17 +4,18 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: CH1 IS CLOSED. CH1.3 DONE - CI green on windows AND ubuntu for feat/charkh and for master,
-  both at 349a3a5f (evidence/CH1/ci-green-both-branches.txt). Stage CH1 is complete.
-how: two things stood between here and green, both real. (1) The ratchet's 35 > 31 suppressions:
-  which four to drop was MEASURED - every pragma stripped, MA0040/45 downgraded, solution built,
-  all 96 live diagnostic sites mapped to their suppressing region. One was dead; the other three
-  are real code (two async conversions, one duplicate method deleted). Ceiling untouched at 31.
-  (2) A genuine engine race, bug #85, filed and fixed: SqliteRunStore.FlushEvents could return
-  while the drain loop held a dequeued-but-uncommitted batch, so a caller was told an event was
-  durable when it was not. Both drainers now share _drainGate. Proven by perturbation, with a
-  negative control on the shipped test; DrainWindowProbe is the permanent seam.
-next: CH2.1, and its FIRST act is `docker version` verbatim - trap 20 says it had no server.
+last: CH2 IS CLOSED. CH2.1 and CH2.2 both DONE, evidence under .conductor/evidence/CH2/.
+docker: trap 20 reproduced exactly, then solved - Docker Desktop lives under
+  %LOCALAPPDATA%\Programs\DockerDesktop, NOT Program Files, so a Program Files probe reads as
+  "not installed". Started from there the daemon answers 29.5.2 and tools/demo/make-demo-gif.ps1
+  works end to end, ~100s a recording once the image is cached. Nothing was hand-assembled.
+gif: the tour now stops at the inbox (w), the Report tab, the courier (g) and the run switcher
+  (: then switch). The switcher needed a fleet to have anything to show - main.go parses
+  CONDUCTOR_FLEET before it picks a source, so docs/assets/demo-fleet.json reaches a --demo Face.
+  Geometry untouched at 1176x736. 736 KB -> 1476 KB against GitHub's 10 MB cap.
+gate: face-go/internal/tui/demo_tour_test.go, in package tui so it reads tabKey/tabNames itself.
+  Eight seeded failures, two negative controls. Re-record to fix it; never edit the manifest.
+next: CH3.1. Face suite green (build+vet+test); engine untouched this session.
 
 ## Baseline numbers (from run.db)
 
@@ -22,7 +23,7 @@ next: CH2.1, and its FIRST act is `docker version` verbatim - trap 20 says it ha
 |---|---|
 | Total checkpoints | 14 |
 | Done | 0 |
-| Claimed (unconfirmed) | 2 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -35,7 +36,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | CH1.1 | The rendered board page is one document whatever the checkout did to the source: the inline CSS constant is normalised to LF at load, and a test asserts the PROPERTY (Render output carries no carriage return) rather than the symptom, so the next raw string literal in that file cannot reintroduce it silently | DONE | 1232ea0 | .conductor/evidence/CH1/ch1-1-lf-property.md |
 | CH1.2 | A plan file in this repo is loadable on a fresh clone: the three KS1_4DoctorPlanLintsTests that load this repo's own plan and Validate it stop depending on an absolute machine path, by whichever of the two routes the checkpoint records as chosen, pinned by a test that would fail on the old form | DONE | 1232ea0 | .conductor/evidence/CH1/ch1-2-plan-repo-is-portable.md |
-| CH1.3 | The local battery and CI can no longer disagree in silence: a divergence between what a run's gates just proved and what CI says about the same commit surfaces where the run can see it - the report header, the owner queue - in the DV1.1 channel-health shape, proven on a seeded divergence. Exit is CI green on Windows and Linux for master | IN PROGRESS | - | - |
+| CH1.3 | The local battery and CI can no longer disagree in silence: a divergence between what a run's gates just proved and what CI says about the same commit surfaces where the run can see it - the report header, the owner queue - in the DV1.1 channel-health shape, proven on a seeded divergence. Exit is CI green on Windows and Linux for master | DONE | 3750f9a | .conductor/evidence/CH1/ch1-3-flushevents-race-proof.md |
 
 ### CH2 — The tour that matches the engine - and knows when it does not
 
