@@ -621,3 +621,115 @@ is most likely cache **write** churn priced above a read, which the `costs` tabl
 from reads — that is **bug #53** (the `cache_creation` TTL split is dropped), and until it is fixed
 this table can report the spread and not attribute it. Do not build a lever on the cache share: at
 98.3–98.6% across four eras it is a constant of this architecture, exactly as §12 said.
+
+## 14. The Charkh era's own numbers — 42M held, **45M / 0.95** prescribed (CH5.1, 2026-08-27)
+
+Measured today with `conductor budget` and `conductor money` run through the **fresh build**
+(`dotnet run --project src/Conductor`) against a `sqlite3 .backup` copy of the live store. Raw
+output: `.conductor/evidence/CH5/ch5-1-budget-fresh-build.txt`, `ch5-1-budget-fresh-build.json` and
+`ch5-1-money-fresh-build.txt`. Every figure below is from those runs or from a query against the same
+copy; none is typed forward from a plan.
+
+**The seam.** §13 prescribes `budget --home <dir> --repo <repo>`, which reads an entire alternate
+state home and is still the better one. This measurement used the other seam — `sqlite3 .backup`,
+then the path passed **positionally** (`conductor budget <path-to-db>`), because `CONDUCTOR_RUN_DB`
+does not redirect the measuring verbs (bug **#61**, still open). Either way the live file was never
+opened. `MigrationRunner.CurrentVersion` is **15** in this tree and the store's `schema_version`
+reads **15**, checked before any fresh-build verb touched anything — trap 18's precondition, met.
+
+### The caveat comes first, because it moves every number below
+
+**Session 6 is `TimedOut` and carries zero cost rows.** It ran 5 h 36 m across 140 turns, landed
+three commits, and `SELECT … FROM costs WHERE session_number = 6` returns nothing at all. The
+checkpoint it claimed — CH4.3 — is missing from the count too: `money` reports CH4 as **3**
+checkpoints where **4** are DONE. That is bug **#92**, filed here.
+
+So read the whole section this way: **158.9M tokens and $112.79 are floors, not totals**, and
+14.4M/checkpoint is computed from **6 of 7 sessions and 11 of 12 checkpoints** — the numerator and
+the denominator are both short, in the same direction. The prescription below is derived from that
+same window, so 45M is a floor as well. It is still the best number this era can produce, and it is
+better than the alternative this document has warned about since §6: a figure typed forward from a
+plan.
+
+### The window
+
+| | |
+|---|---|
+| window | sessions 1–7, cap **42M**, nudge **37.95M** (ratio 0.9036) |
+| costed sessions | **6** of 7 — see the caveat above |
+| tokens | **158.95M** |
+| checkpoints | **11** counted (CH1×3, CH2×2, CH3×3, CH4×3 of 4) |
+| tokens / checkpoint | **14.45M** |
+| cost | **$112.79** against a `maxRunCostUsd` of 300 — **$10.25 / checkpoint** |
+| wall clock | 4.1 h of costed agent time (session 6's 5.6 h is not in it) |
+| session floor | **7.13M** |
+| median closer | **30.34M** · largest closer **39.77M** |
+| rollover | **0 of 6 (0%)** |
+| nudged | **3**, of which **3 ended clean** |
+| wrap-up | min 0.80M · **median 1.20M** · max 1.81M (n=3) |
+| headroom after the nudge | **4.05M** = **3.4×** the measured median wrap-up |
+| cache-read share | **98.57%** |
+
+### What the verb prescribes for the next era
+
+```json
+"limits": {
+  "maxSessionTokens": 45000000,
+  "softBreakRatio":   0.95
+}
+```
+
+Nudge 42.75M, headroom 2.25M. **This is the number the next era compiles against.** It is still bound
+to `claude-opus-5` — §9, §10, §11, §12 and §13 all say a model change re-derives the pair, and
+nothing here changes that.
+
+**One caution, and it is about the ratio rather than the cap.** The verb sizes headroom against the
+*median* wrap-up: 2.25M is 1.9× the 1.20M median, which clears §4's ≥ 1.5× rule. Against the
+**largest** wrap-up this era actually observed (1.81M) the same headroom is **1.24×**, which does
+not. With n = 3 samples the median is a weak statistic. So if the next era's first session is killed
+at the ceiling rather than ending on its own, **move the ratio down before touching the cap** —
+45M / 0.90 gives a 4.5M headroom, 3.7× the median and 2.5× the max, at the cost of nudging 2.25M
+earlier.
+
+### The rail converted, and the verb had nothing to complain about
+
+`prescription.findings` is **empty**. No `!` line was printed for this window — no thin headroom, no
+nudge below the median closer, no rollover churn, and not the sentence §13 had to spend a paragraph
+correcting.
+
+That last one is the real result. **3 sessions were nudged and 3 of them ended clean; the rollover
+rate is zero.** §13 recorded the rail converting 6 of 7 in Divan while the verb's own finding text
+said it "converted zero" (it was describing the killed set, not the rail). Here there is no killed
+set to describe: at 42M/0.90 the cooperative break ended every session it fired on. The rail is not
+an experiment any more.
+
+Two smaller readings worth carrying:
+
+- **The floor rose and that is fine.** 7.13M against Divan's 0.24M. Divan's floor was a session that
+  did almost nothing; this era's is session 7 — a full checkpoint (CH4.4) delivered, claimed and
+  handed off in 7.13M. A floor that means "the cheapest real session" is a more useful number than
+  one that means "the cheapest session".
+- **Tokens per checkpoint fell 23%**, 18.84M → 14.45M, against a *rising* ceiling. §2's argument
+  holds: the tail is not more expensive per token, it is less productive per token, and this era
+  spent less of its window in that tail.
+
+### Per-checkpoint, per stage
+
+| stage | ckpts | sess | Mtok | $ | Mtok/ckpt | $/ckpt | cache % | $/Mtok |
+|---|---|---|---|---|---|---|---|---|
+| CH1 the two batteries | 3 | 2 | 61.7 | 42.63 | **20.6** | **14.21** | 98.71 | 0.691 |
+| CH2 the demo | 2 | 1 | 12.2 | 9.36 | **6.11** | **4.68** | 98.16 | 0.766 |
+| CH3 the docs | 3 | 1 | 39.1 | 26.96 | 13.0 | 8.99 | 98.73 | 0.689 |
+| CH4 the era-close | 3 of 4 | 3 | 45.8 | 33.83 | 15.3 | 11.28 | 98.34 | 0.738 |
+| **run** | **11 of 12** | **7** | **158.9** | **112.79** | **14.4** | **10.25** | **98.57** | **0.710** |
+
+CH1 is the expensive stage and it is not a surprise: two of its three checkpoints were bug fixes with
+live proofs (a flush-durability race that needed a perturbation seam and a negative control, and a
+CI-agreement verb that had to read every active workflow), and its first session was the only one to
+hit the nudge with two checkpoints still in flight. CH2 is the cheap one for the opposite reason —
+the work was a recording and a staleness gate, both of which fail loudly and immediately.
+
+CH4's row understates itself by exactly one checkpoint for the reason in the caveat. Read it as four
+checkpoints for 45.8M **plus session 6's unmeasured spend**, which on this era's median closer is
+another ~30M — meaning the true run total is nearer **190M** and the true cost nearer **$135**. That
+is an estimate and it is labelled as one; the measured numbers stay in the table.

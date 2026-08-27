@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Reflection;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Conductor.Tests;
@@ -295,5 +297,68 @@ public sealed partial class SF7_1DocsMatchRealityTests
         }
 
         return byVerb;
+    }
+
+    private const string CharkhBudgetEvidence = "ch5-1-budget-fresh-build.json";
+    private const string CharkhRunId = "858b48387e4e456babaafd97ce7065f1";
+
+    /// <summary>CH5.1 — §14's ceiling and ratio are the pair the next era compiles against, and they
+    /// are the easiest numbers in this repo to get wrong, because typing them forward from the last
+    /// era is indistinguishable from measuring them. §10 pinned karvansara's section to its committed
+    /// JSON for exactly that reason; this is the same pin for Charkh's, and it derives BOTH
+    /// expectations from the evidence rather than restating either, so a fresh re-measure that moves
+    /// one lands here rather than in a reader's memory.</summary>
+    [Fact]
+    public void TheCharkhBudgetSectionAgreesWithTheRawOutputItQuotes()
+    {
+        var doc = Doc("docs", "dev", "TOKEN-BUDGET-TUNING.md");
+        var start = doc.IndexOf("## 14.", StringComparison.Ordinal);
+        Assert.True(start > 0,
+            "TOKEN-BUDGET-TUNING.md has lost its Charkh section (§14). The era's measured ceiling and " +
+            "ratio are what the next plan compiles against - they do not live only in a commit message.");
+        var section = doc[start..];
+
+        Assert.Contains("conductor budget", section, StringComparison.Ordinal);
+        Assert.Contains("conductor money", section, StringComparison.Ordinal);
+        Assert.Contains(CharkhBudgetEvidence, section, StringComparison.Ordinal);
+
+        var evidence = Path.Combine(RepoRoot(), ".conductor", "evidence", "CH5", CharkhBudgetEvidence);
+        Assert.True(File.Exists(evidence),
+            $"§14 cites {CharkhBudgetEvidence} and it is not in the tree. A figure whose source cannot " +
+            "be opened is a typed number wearing a citation. (.conductor/evidence/ is gitignored by " +
+            "star - the artifact needs `git add -f` to reach the commit.)");
+
+        using var json = JsonDocument.Parse(File.ReadAllText(evidence));
+        var run = json.RootElement.GetProperty("runs").EnumerateArray()
+            .FirstOrDefault(r => r.GetProperty("runId").GetString() == CharkhRunId);
+        Assert.True(run.ValueKind == JsonValueKind.Object,
+            $"{CharkhBudgetEvidence} holds no window for the Charkh run - it was measured against a " +
+            "different store than the one the section describes.");
+
+        var prescription = run.GetProperty("prescription");
+        var cap = prescription.GetProperty("maxSessionTokens").GetInt64();
+        var ratio = prescription.GetProperty("softBreakRatio").GetDouble();
+
+        var capM = (cap / 1_000_000L).ToString(CultureInfo.InvariantCulture) + "M";
+        var ratioText = ratio.ToString("0.00", CultureInfo.InvariantCulture);
+        Assert.Contains(capM, section, StringComparison.Ordinal);
+        Assert.Contains(ratioText, section, StringComparison.Ordinal);
+
+        // The heading states the pair, and the heading is what a reader skims. A section whose body
+        // was re-measured while its title kept the old number is the drift this whole file is about.
+        var heading = section[..section.IndexOf('\n')];
+        Assert.Contains($"{capM} / {ratioText}", heading, StringComparison.Ordinal);
+
+        // The JSON block is what someone copies into a plan, so it has to carry the raw values.
+        Assert.Contains($"\"maxSessionTokens\": {cap.ToString(CultureInfo.InvariantCulture)}", section,
+            StringComparison.Ordinal);
+
+        // And the era's own configured pair must still be the one it actually ran under - the window
+        // is only evidence for a prescription if the cap it measured is the cap that was in force.
+        var window = run.GetProperty("windows").EnumerateArray().First();
+        var measuredCap = window.GetProperty("capTokens").GetInt64();
+        var planLimits = File.ReadAllText(Path.Combine(RepoRoot(), "plans", "charkh", "core.plan.json"));
+        Assert.Contains($"\"maxSessionTokens\": {measuredCap.ToString(CultureInfo.InvariantCulture)}",
+            planLimits, StringComparison.Ordinal);
     }
 }
