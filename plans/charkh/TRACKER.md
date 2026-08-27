@@ -2,30 +2,28 @@
 
 **Plan:** Charkh - the wheel: what the owner still does by hand becomes machinery | **Branch:** `feat/charkh` | **Design doc:** docs/dev/CHARKH-PLAN-2026-08-26.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, <=12 lines, no history)
 
-last: CH4.1 AND CH4.2 both DONE, committed and pushed. `conductor release preflight` (six measured
-  lines; exit 0/1/2) and `conductor release perform` (four mechanical acts performed, five owner acts
-  named and stopped at). Evidence: .conductor/evidence/CH4/ch4-1-release-preflight.md and
-  ch4-2-release-perform.md. Full suite green 3550/3550. The PATH 0.5.0 has neither verb.
-shape: deciding is PURE in src/Conductor.Core/Release; measuring and acting are impure in
-  ReleaseCommand.{Probes,Perform}.cs. ReleaseAct keeps Kind (whose act, ever) apart from State (what
-  happened this time), so an owner act is `stopped` on EVERY run and can never read as `nothing`.
-  Exit 2 is what a FINISHED era-close looks like; 0 would be reading "closed" off a document again.
-next: CH4.3, read but NOT started - it is back at TODO. The root cause is the MARKER:
-  GithubIdentity.TaskMarker is `<!-- conductor:task ID -->` with no run id, while RunMarker and
-  SessionMarker carry one - so a card issue is not attributable to a run at all, and RetireAsync
-  (GithubBoardSync.cs:204) sweeps every task-marked issue in the repo. Smaller fix: scope the retire
-  candidates to GithubMap rows for this run+repo (local, the authority since v14) and REFUSE rather
-  than retire-nothing when the map is Transient (bug 79's read-only path). Full note in the ledger.
+last: CH4.3 DONE and claimed. The retire sweep asks whose board it is now. GithubIdentity gains
+  OwnerMarker (`<!-- conductor:owner <runId> -->`, deliberately NOT RunMarker - the diary is found
+  by scanning bodies for that exact string) stamped into every card body; an issue is retirable only
+  if that marker is ours OR this run's GithubMap points at that number. Everything else is REFUSED
+  BY NAME on GithubSyncResult.RetireRefused, printed in full by `github sync` and logged by the live
+  mirror. Bug 84 closed, bug 90 filed. Evidence: .conductor/evidence/CH4/ch4-3-retire-scoped.md.
+measured: the vandalism had ALREADY happened - all 23 DV and every KS card on shaahink/conductor
+  wears conductor:retired. A/B dry runs there, same instant: installed 0.5.0 says "14 retired"
+  (CH1.1 #112..CH5.2 #125, Charkh's OWN board, four still open); fresh build says "0 retired, 14
+  retire refused". So the card's second clause - write the edge run's record - is ordered AFTER
+  CH5's reinstall, not skipped: the live mirror is still 0.5.0 and re-retires within one boundary.
+next: CH4.4, the runbook as the preflight's output - the edge-run write is one of its owner acts.
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 14 |
-| Done | 5 |
-| Claimed (unconfirmed) | 3 |
+| Done | 8 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -51,16 +49,16 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| CH3.1 | The published surface reconciled against the INSTALLED v0.5.0 engine rather than against intent: README first, then cli.md, operating.md, plan-config.md, quickstart.md, troubleshooting.md, tracker.md and the docs/README.md index; the courier is a real always-on process now and the docs still offer it as a possibility | DONE | ea75bda | .conductor/evidence/CH3/CH3.1-published-surface-reconciled.md |
-| CH3.2 | Every reference resolves: the rule for the plans' notes prose citing the two moved briefs decided once, applied consistently and recorded in docs/dev/README.md; every relative link in docs/, every path in a test message and every contracts reference swept. Frozen run artifacts under .conductor are a record - reported, never rewritten | DONE | ea75bda | .conductor/evidence/CH3/CH3.2-references-resolve.md |
-| CH3.3 | SF7_1DocsMatchRealityTests extended to every verb and config key this era adds, each new assertion proven RED on a seeded stale doc - the negative control is the point of the battery | DONE | ea75bda | .conductor/evidence/CH3/CH3.3-docs-battery-extended.md |
+| CH3.1 | The published surface reconciled against the INSTALLED v0.5.0 engine rather than against intent: README first, then cli.md, operating.md, plan-config.md, quickstart.md, troubleshooting.md, tracker.md and the docs/README.md index; the courier is a real always-on process now and the docs still offer it as a possibility | DONE ✓ | ea75bda | .conductor/evidence/CH3/CH3.1-published-surface-reconciled.md |
+| CH3.2 | Every reference resolves: the rule for the plans' notes prose citing the two moved briefs decided once, applied consistently and recorded in docs/dev/README.md; every relative link in docs/, every path in a test message and every contracts reference swept. Frozen run artifacts under .conductor are a record - reported, never rewritten | DONE ✓ | ea75bda | .conductor/evidence/CH3/CH3.2-references-resolve.md |
+| CH3.3 | SF7_1DocsMatchRealityTests extended to every verb and config key this era adds, each new assertion proven RED on a seeded stale doc - the negative control is the point of the battery | DONE ✓ | ea75bda | .conductor/evidence/CH3/CH3.3-docs-battery-extended.md |
 
 ### CH4 — The machinery - the era-close stops being prose
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| CH4.1 | Release preflight as a verb: every precondition DV7.3 measured by hand becomes something the engine measures - ff-only merge, a CHANGELOG section the extractor exits 0 on, no live conductor process, migration versions matching, the courier's token scope and task state, the run whose backfill is owed - as a verdict per line with a non-zero exit when any line is red | TODO | - | - |
-| CH4.2 | The mechanical acts performed and the judgement acts refused BY NAME: the CHANGELOG rename, the tag, the ff-only merge and the doc move with its tracker/planDoc/readOrder repoint are performed; the version number, single-vs-split release and corpus inclusion are stopped at and named. An act that needs the owner is never silently skipped - that failure is exactly what KS12.3 was | TODO | - | - |
+| CH4.1 | Release preflight as a verb: every precondition DV7.3 measured by hand becomes something the engine measures - ff-only merge, a CHANGELOG section the extractor exits 0 on, no live conductor process, migration versions matching, the courier's token scope and task state, the run whose backfill is owed - as a verdict per line with a non-zero exit when any line is red | DONE | cf8997f | .conductor/evidence/CH4/ch4-1-release-preflight.md |
+| CH4.2 | The mechanical acts performed and the judgement acts refused BY NAME: the CHANGELOG rename, the tag, the ff-only merge and the doc move with its tracker/planDoc/readOrder repoint are performed; the version number, single-vs-split release and corpus inclusion are stopped at and named. An act that needs the owner is never silently skipped - that failure is exactly what KS12.3 was | DONE | cf8997f | .conductor/evidence/CH4/ch4-2-release-perform.md |
 | CH4.3 | A backfill can no longer vandalise another run's board: the retire sweep is scoped to the run being synced, or a backfill that would retire another run's checkpoints is refused with what it would have closed. Measured 2026-08-26: the edge run's dry run reported 23 retired against exactly Divan's 23 checkpoints. Then the edge run's own GitHub record is written | TODO | - | - |
 | CH4.4 | The owner runbook becomes the preflight's output rather than a document written from scratch each era, generated from its own measurements and carrying the exact commands - the DV7.3 and KS12.3 artifacts are the shape being replaced | TODO | - | - |
 
