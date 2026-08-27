@@ -23,18 +23,20 @@ namespace Conductor.Core.Integrations.Github;
 public static class GithubBoardPlan
 {
     /// <summary>The desired board for a run, in the checkpoint order the graph itself keeps.</summary>
-    public static List<GithubCard> Cards(IEnumerable<ConductorEvent> events, string labelPrefix)
+    /// <param name="runId">CH4.3 - the run these cards belong to, stamped into every body so the
+    /// retire sweep can tell one run's board from another's on a repository that carries both.</param>
+    public static List<GithubCard> Cards(IEnumerable<ConductorEvent> events, string labelPrefix, string runId)
     {
         var graph = new TaskGraph();
         graph.Fold(events);
         var prefix = string.IsNullOrWhiteSpace(labelPrefix) ? "conductor" : labelPrefix.Trim();
-        return [.. graph.Checkpoints().Select(t => CardFor(t, prefix))];
+        return [.. graph.Checkpoints().Select(t => CardFor(t, prefix, runId))];
     }
 
     /// <summary>One checkpoint as an issue. The title is the human line; the BODY carries the
     /// marker, which is the identity — a checkpoint reworded in the plan must update its issue, not
     /// mint a second one.</summary>
-    public static GithubCard CardFor(TaskItem item, string prefix)
+    public static GithubCard CardFor(TaskItem item, string prefix, string runId)
     {
         ArgumentNullException.ThrowIfNull(item);
         var labels = new List<string> { $"{prefix}:status:{item.Status}" };
@@ -48,7 +50,7 @@ public static class GithubBoardPlan
         return new GithubCard(
             TaskId: item.TaskId,
             Title: $"{item.CheckpointId} — {item.Title}",
-            Body: BodyFor(item),
+            Body: BodyFor(item, runId),
             Labels: labels,
             Stage: item.StageId,
             Closed: item.Status is "done" or "skipped" or "archived",
@@ -56,10 +58,16 @@ public static class GithubBoardPlan
             Status: item.Status ?? "");
     }
 
-    private static string BodyFor(TaskItem item)
+    private static string BodyFor(TaskItem item, string runId)
     {
         var sb = new StringBuilder();
-        sb.Append(GithubIdentity.TaskMarker(item.TaskId)).Append('\n').Append('\n');
+        sb.Append(GithubIdentity.TaskMarker(item.TaskId)).Append('\n');
+        // CH4.3 - WHOSE card this is, next to WHICH card it is. An empty run id plants nothing
+        // rather than an empty marker: a marker reading "owned by nobody" would be matched by the
+        // retire sweep as attribution, and the whole point is that absence means hands off.
+        if (!string.IsNullOrWhiteSpace(runId))
+            sb.Append(GithubIdentity.OwnerMarker(runId.Trim())).Append('\n');
+        sb.Append('\n');
         sb.Append("**Stage** ").Append(Or(item.StageId)).Append("  ")
           .Append("**Status** ").Append(Or(item.Status)).Append(item.Confirmed ? " ✓ confirmed" : "").Append('\n');
         sb.Append("**Source** ").Append(Or(item.Source)).Append("  ")

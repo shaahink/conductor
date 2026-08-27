@@ -1,3 +1,4 @@
+using System.Globalization;
 using Conductor.Core.Events;
 using Conductor.Core.History;
 
@@ -39,6 +40,11 @@ public sealed partial class GithubBoardSync(
     /// (a boundary that fires while one is in flight is coalesced into a single follow-up).</summary>
     private List<GithubProjectPlacement> _placements = [];
 
+    /// <summary>CH4.3 - the run this pass is syncing, for the retire sweep's attribution question.
+    /// Set at the top of every <see cref="BackfillAsync"/> for the same reason the placements are:
+    /// it is a fact about ONE pass.</summary>
+    private string _runId = "";
+
     /// <summary>Push a whole run — board then diary. <paramref name="dryRun"/> reconciles and
     /// reports without issuing a single write, which is what makes "what would this do to a real
     /// repository" answerable before it is done to one.</summary>
@@ -51,14 +57,17 @@ public sealed partial class GithubBoardSync(
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(events);
+        ArgumentNullException.ThrowIfNull(run);
         var result = new GithubSyncResult();
         _placements = [];
+        _runId = run.RunId is { Length: > 0 } id ? id : "";
 
         var (issues, listError) = await client.ListIssuesAsync(repo, ct).ConfigureAwait(false);
         if (listError is not null) { result.Errors.Add(listError); return result; }
         var observed = issues ?? [];
 
-        await SyncCardsAsync(GithubBoardPlan.Cards(events, _prefix), observed, result, dryRun, ct).ConfigureAwait(false);
+        await SyncCardsAsync(GithubBoardPlan.Cards(events, _prefix, _runId), observed, result, dryRun, ct)
+            .ConfigureAwait(false);
         if (ledger is { Count: > 0 })
             await SyncLedgerAsync(ledger, observed, result, dryRun, ct).ConfigureAwait(false);
         if (includeDiary)
@@ -200,17 +209,32 @@ public sealed partial class GithubBoardSync(
     }
 
     /// <summary>An issue of ours whose task no longer appears in the plan. Closed with a label and a
-    /// sentence saying why — never deleted.</summary>
+    /// sentence saying why — never deleted.
+    ///
+    /// <para><b>CH4.3 — OURS is now asked, not assumed.</b> The observed listing is repository-wide,
+    /// and the task marker carries no run, so this sweep used to close every task-marked issue in
+    /// the repository that the run being synced did not declare. Measured 2026-08-27 on
+    /// <c>shaahink/conductor</c>: all 23 Divan checkpoint issues and every Karvansara one before
+    /// them carry <c>conductor:retired</c>, retired by the era that followed them. An issue is a
+    /// candidate only when this run's <see cref="GithubIdentity.OwnerMarker"/> is in its body or
+    /// this run's local map points at that exact number; everything else is NAMED and left alone.</para>
+    /// </summary>
     private async Task RetireAsync(
         List<GithubCard> desired, Dictionary<string, GithubIssue> byTask, GithubSyncResult result,
         bool dryRun, CancellationToken ct)
     {
         var live = new HashSet<string>(desired.Where(c => !c.Retired).Select(c => c.TaskId), StringComparer.Ordinal);
         var retiredLabel = _prefix + ":retired";
-        foreach (var (taskId, issue) in byTask)
+        // Ordered so the refusal list a human reads is the same list twice running.
+        foreach (var (taskId, issue) in byTask.OrderBy(p => p.Key, StringComparer.Ordinal))
         {
             if (live.Contains(taskId)) continue;
             if (!issue.IsOpen && issue.LabelNames.Contains(retiredLabel, StringComparer.Ordinal)) continue;
+            if (!IsOurs(taskId, issue))
+            {
+                result.RetireRefused.Add(string.Create(CultureInfo.InvariantCulture, $"{taskId} #{issue.Number}"));
+                continue;
+            }
             result.Retired.Add(taskId);
             if (dryRun) continue;
 
@@ -226,6 +250,15 @@ public sealed partial class GithubBoardSync(
             if (error is not null) result.Errors.Add($"{taskId}: {error}");
         }
     }
+
+    /// <summary>CH4.3 — did THIS run put that issue there? Two sources, and either is enough: the
+    /// owner marker in the body, which survives a lost database and a different machine, and the
+    /// local map, which covers every issue created before the marker existed and is the authority
+    /// v14 already settled on. Absence is the safe answer: an issue nothing attributes to this run
+    /// is somebody else's board.</summary>
+    private bool IsOurs(string taskId, GithubIssue issue) =>
+        (_runId.Length > 0 && string.Equals(GithubIdentity.OwnerIdIn(issue.Body), _runId, StringComparison.Ordinal))
+        || _map.IssueFor(taskId) == issue.Number;
 
     // ── the diary ────────────────────────────────────────────────────────────────────────────────
 

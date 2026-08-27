@@ -60,6 +60,11 @@ internal sealed partial class FakeGithub : HttpMessageHandler
 
     public IReadOnlyList<string> LabelsOf(int issueNumber) => _issues[issueNumber].Labels;
 
+    /// <summary>CH4.3 - the body the SERVER holds. "Which markers are in there" is a statement about
+    /// what a later pass can attribute, so it has to be read back off the fake rather than assumed
+    /// from the request that was sent.</summary>
+    public string BodyOf(int issueNumber) => _issues[issueNumber].Body;
+
     /// <summary>DV6.1 — the issue carrying an arbitrary marker. <see cref="NumberOfTask"/> knows the
     /// checkpoint marker's spelling; the ledger has two more of its own, and a fake that hard-coded
     /// each one would be a third place to keep the identity rule.</summary>

@@ -14,6 +14,18 @@ public sealed class GithubSyncResult
     public List<string> Unchanged { get; } = [];
     public List<string> Retired { get; } = [];
 
+    /// <summary>CH4.3 - task-marked issues the retire sweep DECLINED to close, because nothing
+    /// attributes them to the run being synced: no owner marker of ours in the body and no row in
+    /// this run's local map. Each entry is "<c>taskId #number</c>" - the sweep names what it would
+    /// have closed rather than doing it, and rather than saying nothing.
+    ///
+    /// <para>Not an error, and deliberately not counted as one: a repository that carries an
+    /// earlier era's board is the NORMAL case for this project, and a backfill that exited
+    /// non-zero because it correctly left another run alone would be unusable. It is reported
+    /// instead - loudly, with the numbers - which is the difference between a refusal and the
+    /// silent skip KS12.3 was.</para></summary>
+    public List<string> RetireRefused { get; } = [];
+
     /// <summary>Session keys whose diary comment this pass posted (or would post).</summary>
     public List<string> Comments { get; } = [];
 
@@ -37,6 +49,10 @@ public sealed class GithubSyncResult
         var issues = string.Create(CultureInfo.InvariantCulture,
             $"{Created.Count} created · {Updated.Count} updated · {Unchanged.Count} unchanged · " +
             $"{Retired.Count} retired · {Comments.Count} comments · {Errors.Count} errors");
+        // Only when there is something to say. A zero here is the ordinary case and a seventh
+        // permanent number would bury the six the idempotence bar is actually stated in.
+        if (RetireRefused.Count > 0)
+            issues += string.Create(CultureInfo.InvariantCulture, $" · {RetireRefused.Count} retire refused");
         return Project is null ? issues : issues + Environment.NewLine + Project.Summary();
     }
 }

@@ -207,6 +207,11 @@ public sealed class GithubMirror : IDisposable
             _store.WriteGithubCursor(RunId, Repo, head, null);
             _ledgerMark = ledgerMark;
             _log($"github mirror {reason}: {result.Summary()} — cursor {cursor.Seq}→{head}, {requests} requests");
+            // CH4.3 — named, on the run's own log, the moment it happens. This is the line that was
+            // missing while an era's board was being retired one stage boundary at a time.
+            if (result.RetireRefused.Count > 0)
+                _log($"github mirror left {result.RetireRefused.Count} task-marked issue(s) alone — "
+                    + $"not this run's board: {string.Join(", ", result.RetireRefused)}");
             return GithubMirrorPass.Pushed(reason, head, requests, result);
         }
         catch (OperationCanceledException)

@@ -38,6 +38,27 @@ public static class GithubIdentity
     public static string SessionMarker(string runId, int number) =>
         $"<!-- conductor:session {runId}#{number.ToString(CultureInfo.InvariantCulture)} -->";
 
+    /// <summary>CH4.3 — the run that OWNS a checkpoint's issue, planted alongside the task marker.
+    ///
+    /// <para><b>Why a second marker rather than a richer task marker.</b> <see cref="TaskMarker"/>
+    /// carries the task id and nothing else, so a card issue was not attributable to a run at all —
+    /// and the retire sweep, which indexes on it, closed every task-marked issue in the REPOSITORY
+    /// that the run being synced did not declare. Measured 2026-08-27 on <c>shaahink/conductor</c>:
+    /// every Divan and Karvansara checkpoint issue carries <c>conductor:retired</c>, closed with
+    /// "no longer declared in the plan" by the run that came after them. Widening the task marker
+    /// itself would change what <see cref="TaskIdIn"/> returns for every issue already on a
+    /// repository; a second marker is additive, and an issue without one is simply not ours to
+    /// retire — which is the safe direction to be wrong in.</para>
+    ///
+    /// <para>Deliberately NOT <see cref="RunMarker"/>: the diary issue is found by scanning bodies
+    /// for that exact string, so a card carrying it would be adopted as the run's diary.</para>
+    /// </summary>
+    public static string OwnerMarker(string runId) => $"<!-- conductor:owner {runId} -->";
+
+    /// <summary>The run id that claims a card issue, or null when the issue predates
+    /// <see cref="OwnerMarker"/> or belongs to something else entirely.</summary>
+    public static string? OwnerIdIn(string? body) => Between(body, "<!-- conductor:owner ", " -->");
+
     /// <summary>DV6.1 — the marker a BUG's issue carries. A separate marker from the checkpoint's,
     /// and that separation is the checkpoint: a bug is a different KIND of issue with a different
     /// lifetime, so the retire sweep — which reads the task marker — can never reach it when the run

@@ -297,6 +297,16 @@ public sealed partial class GithubCommand : AsyncCommand<GithubCommand.Settings>
             diary, settings.DryRun, Ledger(view, prefix)).ConfigureAwait(false);
 
         AnsiConsole.MarkupLine(Markup.Escape(result.Summary()));
+        // CH4.3 - the sweep says what it refused to close, every id, never truncated. A backfill
+        // into a repository that already carries another era's board is the ordinary case here,
+        // and the whole failure this replaces was a sweep that closed 23 of them without a word.
+        if (result.RetireRefused.Count > 0)
+        {
+            AnsiConsole.MarkupLine($"[yellow]retire refused[/] [grey]{result.RetireRefused.Count} task-marked " +
+                "issue(s) are out of this plan but not attributable to this run - left untouched[/]");
+            foreach (var refused in result.RetireRefused)
+                AnsiConsole.MarkupLine($"  [grey]{Markup.Escape(refused)}[/]");
+        }
         foreach (var note in result.Project?.Notes ?? [])
             AnsiConsole.MarkupLine($"[yellow]column[/] [grey]{Markup.Escape(note)}[/]");
         if (result.Project?.ProjectUrl is { } boardUrl)
