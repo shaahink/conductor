@@ -37,7 +37,7 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
     public sealed class Settings : PlanSettings
     {
         [CommandArgument(0, "[VERB]")]
-        [Description("Sub-command: preflight, perform. Omit to show help.")]
+        [Description("Sub-command: preflight, perform, runbook. Omit to show help.")]
         public string Verb { get; init; } = "";
 
         /// <summary>Named <c>--tag</c> and not <c>--version</c> on purpose: Spectre already owns
@@ -68,6 +68,13 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
         [CommandOption("--history <DIR>")]
         [Description("Where the era's documents join the record (default: docs/history)")]
         public string? History { get; init; }
+
+        /// <summary>CH4.4 — where the generated runbook goes. Absent, it goes to stdout, because a
+        /// document that can only be produced by writing a file cannot be piped, diffed or read in
+        /// a terminal, and those are the three ways this one is actually consumed.</summary>
+        [CommandOption("--out <PATH>")]
+        [Description("runbook only: write the document here instead of to stdout")]
+        public string? Out { get; init; }
     }
 
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
@@ -77,6 +84,7 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
         {
             "preflight" => await PreflightAsync(settings).ConfigureAwait(false),
             "perform" => await PerformAsync(settings).ConfigureAwait(false),
+            "runbook" => await RunbookAsync(settings).ConfigureAwait(false),
             "" => Help(),
             var other => Unknown(other),
         };
@@ -102,12 +110,19 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
         AnsiConsole.MarkupLine("  [grey]the tag, and the doc move WITH the plan repointed at it. Five owner acts named and[/]");
         AnsiConsole.MarkupLine("  [grey]stopped at: the version number, single-vs-split, the corpus, the reinstall, the push.[/]");
         AnsiConsole.MarkupLine("  [grey]Dry run unless --yes. Refuses outright while a run is live in the plan.[/]");
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("  [yellow]conductor release runbook[/] [grey][[--tag 0.6.0]] [[--out docs/RUNBOOK.md]][/]");
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("  [grey]The owner runbook as markdown, generated from the two verbs above rather than[/]");
+        AnsiConsole.MarkupLine("  [grey]written by hand: the six measured preconditions, the four mechanical acts and[/]");
+        AnsiConsole.MarkupLine("  [grey]the five that are yours, each with its command. Performs nothing. stdout by[/]");
+        AnsiConsole.MarkupLine("  [grey]default; --out writes the file. Exits with the preflight's code.[/]");
         return 1;
     }
 
     private static int Unknown(string verb)
     {
-        AnsiConsole.MarkupLine($"[red]unknown sub-command '{Markup.Escape(verb)}'.[/] the sub-commands are [yellow]preflight[/] and [yellow]perform[/].");
+        AnsiConsole.MarkupLine($"[red]unknown sub-command '{Markup.Escape(verb)}'.[/] the sub-commands are [yellow]preflight[/], [yellow]perform[/] and [yellow]runbook[/].");
         return 1;
     }
 
