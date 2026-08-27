@@ -11,10 +11,12 @@ session at a time, re-runs your gate battery itself after every session, and nev
 word for what got done — which is what makes it safe to leave running, watched from the laptop or
 your phone.
 
-![The conductor dashboard: home, agent transcript, work board, card detail, timeline, plan editor, command palette](docs/assets/demo.gif)
+![The conductor dashboard: home, the owner queue, the agent transcript, the work board and a card, the timeline, the report, the courier's tab, the plan editor, the command palette and the run switcher](docs/assets/demo.gif)
 
-<sub>Seven screens of the Face, recorded live from `conductor-face --demo` — a real terminal session
-against synthetic data, no engine and no credentials.</sub>
+<sub>Nine stops through the Face, recorded live from `conductor-face --demo` — a real terminal
+session against synthetic data, no engine and no credentials. What it was recorded from is
+written down in [`docs/assets/demo.manifest.json`](docs/assets/demo.manifest.json), and a test
+fails the build when the product moves past it.</sub>
 
 It mechanises the session cycle you already run by hand:
 
@@ -247,13 +249,20 @@ without being able to move it. Anything outside the list is refused by name rath
 ### Feedback that arrives when you have it, not when the run is looking
 
 Everything above is the run talking to you. The **courier** is the other direction, and it is a
-separate process on purpose:
+separate process on purpose. Once installed it is this machine's **one** Telegram consumer,
+awake whether or not a run is:
 
 ```
-conductor courier install          # a per-user scheduled task: logon trigger, restarts on failure
-conductor courier allow --repo .   # which projects it may file into
-conductor inbox                    # what the owner said, oldest unseen first
+conductor courier chat --id <CHAT_ID>  # who it answers at all - a message from anywhere else is dropped
+conductor courier allow --repo .       # which projects it may file into
+conductor courier install              # the per-user scheduled task: logon trigger, restarts on failure
+conductor courier status               # registered? running? which chats, which projects, what offset?
+conductor inbox                        # what the owner said, oldest unseen first
 ```
+
+The first two lines are not optional decoration. The courier replies to no chat it was not
+given and files into no project it was not allowed, so a courier installed without them runs
+perfectly and answers nobody.
 
 Until now the bot only listened while a run was live, so a voice note sent at 23:00 reached nobody.
 The courier owns the token, polls whether or not anything is running, and files each note into the

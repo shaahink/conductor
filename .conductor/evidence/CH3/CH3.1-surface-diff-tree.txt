@@ -1,0 +1,17 @@
+== STALE: the docs write a flag NO conductor verb declares ==
+  (none)
+
+== MISPLACED: some verb declares it, but not the one this line names ==
+  docs/plan-config.md:182  --model  [verb in scope: doctor,journey,resume]
+      way. When no model is set anywhere, a lone `{model}` token and the `--model`/`-m` flag before it are
+  docs/plan-config.md:290  --model  [verb in scope: doctor,resume]
+      renders as `GET /tasks/{id}/prompt` and `"--model", {model}`. Placeholders belong in **templates**
+  docs/plan-config.md:514  --max-sessions  [verb in scope: plan]
+      | `maxSessions` | int | null | Live session cap for the whole run: when the run's session count reaches it the
+  docs/quickstart.md:286  --once  [verb in scope: inject,kill,skip]
+      - **`--once` for the first session** of every stage — verify the agent understood
+
+== UNDOCUMENTED: binary parses a flag no doc names for that verb ==
+  (none)
+
+== counts == verbs=52 stale=0 misplaced=4 ==
