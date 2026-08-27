@@ -1,0 +1,546 @@
+== LIVE - a broken reference here is a defect == 0 broken
+
+== FROZEN - the run's own record; REPORTED, never rewritten == 431 broken
+  [contract] .conductor\contracts\KS2a.json:316 -> plans/karvansara/CORE-TRACKER.md
+  [contract] .conductor\contracts\KS2face.json:56 -> plans/karvansara/CORE-TRACKER.md
+  [contract] .conductor\contracts\KS2face.json:176 -> docs/dev/KARVANSARA-PLAN-2026-08-13.md
+  [contract] .conductor\contracts\KS5.json:216 -> src/Conductor.Core/Integrations/TelegramService.Commands.cs
+  [contract] .conductor\contracts\KS9-10.json:90 -> src/Conductor.Core/Integrations/Github/GithubReconciler.cs
+  [contract] .conductor\contracts\KS9-10.json:91 -> src/Conductor.Core/Integrations/Github/GithubCursor.cs
+  [contract] .conductor\contracts\KS9-10.json:142 -> plans/karvansara/CORE-TRACKER.md
+  [contract] .conductor\contracts\KS9-10.json:165 -> docs/dev/KARVANSARA-PLAN-2026-08-13.md
+  [contract] .conductor\contracts\KS9-10.json:191 -> docs/history/CONDUCTOR-KARVANSARA.md
+  [contract] .conductor\contracts\KS9-10.json:326 -> README/cli.md
+  [contract] .conductor\contracts\ks3-4-round4-findings.json:11 -> goldens/snapshots/architecture-baseline.json
+  [contract] .conductor\contracts\ks3-4-round6-findings.json:6 -> scratchpad/v6/rig-pa.ps1
+  [contract] .conductor\contracts\ks3-4-round6-findings.json:7 -> scratchpad/v6/rig-wf2.ps1
+  [contract] .conductor\contracts\ks3-4-round6-findings.json:8 -> scratchpad/v6/rig-wf.ps1
+  [contract] .conductor\contracts\ks3-4-round6-findings.json:9 -> scratchpad/v6/rig-pa-med.ps1
+  [contract] .conductor\contracts\ks3-4-round7-findings.json:6 -> scratchpad/v7/rig-phase-audit.ps1
+  [contract] plans\karvansara\contracts\KS9-10.json:90 -> src/Conductor.Core/Integrations/Github/GithubReconciler.cs
+  [contract] plans\karvansara\contracts\KS9-10.json:91 -> src/Conductor.Core/Integrations/Github/GithubCursor.cs
+  [contract] plans\karvansara\contracts\KS9-10.json:142 -> plans/karvansara/CORE-TRACKER.md
+  [contract] plans\karvansara\contracts\KS9-10.json:165 -> docs/dev/KARVANSARA-PLAN-2026-08-13.md
+  [contract] plans\karvansara\contracts\KS9-10.json:191 -> docs/history/CONDUCTOR-KARVANSARA.md
+  [contract] plans\karvansara\contracts\KS9-10.json:326 -> README/cli.md
+  [contract] plans\karvansara\contracts\ks3-4-round7-findings.json:6 -> scratchpad/v7/rig-phase-audit.ps1
+  [plan] plans\conductor-w52.plan.json:67 -> src/Conductor/Core/Store/SqliteRunStore.Sessions.cs
+  [plan] plans\conductor-w52.plan.json:74 -> src/Conductor/Core/Lanes/LaneCoordinator.cs
+  [plan] plans\conductor-workgraph.plan.json:92 -> docs/dev/workgraph/W5-AUDIT.md
+  [prose] .conductor\evidence\DV3\dv3-1-inbound-kinds.md:58 -> ../../../../plan.json
+  [prose] .conductor\evidence\DV5\dv5.1-cloud-flags.md:5 -> docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md
+  [prose] .conductor\evidence\DV7\dv7-3-owner-runbook.md:263 -> src/data/corpus.json
+  [prose] .conductor\evidence\DV7\dv7-3-owner-runbook.md:308 -> docs/dev/KARVANSARA-PLAN-2026-08-13.md
+  [prose] .conductor\evidence\DV7\dv7-3-owner-runbook.md:309 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\DV7\dv7-3-owner-runbook.md:310 -> plans/karvansara/EDGE-TRACKER.md
+  [prose] .conductor\evidence\DV7\dv7-3-owner-runbook.md:311 -> docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md
+  [prose] .conductor\evidence\DV7\dv7-3-owner-runbook.md:312 -> plans/divan/TRACKER.md
+  [prose] .conductor\evidence\DV7\dv7-3-owner-runbook.md:322 -> plans/divan/TRACKER.md
+  [prose] .conductor\evidence\DV7\dv7-3-owner-runbook.md:328 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\DV7\dv7-3-owner-runbook.md:331 -> docs/dev/KARVANSARA-PLAN-2026-08-13.md
+  [prose] .conductor\evidence\DV7\dv7-3-owner-runbook.md:331 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\DV7\dv7-3-owner-runbook.md:342 -> plans/divan/TRACKER.md
+  [prose] .conductor\evidence\DV7\dv7-3-owner-runbook.md:343 -> docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md
+  [prose] .conductor\evidence\K1\K1.1-rollover-records-facts.md:7 -> src/Conductor/Core/Orchestration/SessionRunner.cs
+  [prose] .conductor\evidence\K1\K1.1-rollover-records-facts.md:23 -> src/Conductor/Core/Orchestration/VerdictEngine.Claims.cs
+  [prose] .conductor\evidence\K1\K1.1-rollover-records-facts.md:24 -> src/Conductor/Core/Orchestration/VerdictEngine.Claims.cs
+  [prose] .conductor\evidence\K1\K1.1-rollover-records-facts.md:25 -> src/Conductor/Core/Orchestration/VerdictEngine.cs
+  [prose] .conductor\evidence\K1\K1.1-rollover-records-facts.md:26 -> src/Conductor/Core/Orchestration/VerdictEngine.cs
+  [prose] .conductor\evidence\K1\K1.1-rollover-records-facts.md:27 -> src/Conductor/Core/Orchestration/SessionRunner.cs
+  [prose] .conductor\evidence\K1\K1.1-rollover-records-facts.md:28 -> src/Conductor/Core/Orchestrator.cs
+  [prose] .conductor\evidence\K1\K1.2-soft-break-restated-and-measured.md:22 -> src/Conductor/Core/SoftBreak.cs
+  [prose] .conductor\evidence\K1\K1.3-three-untruths.md:21 -> src/Conductor/Core/Providers/OpencodeProvider.cs
+  [prose] .conductor\evidence\K1\K1.3-three-untruths.md:23 -> src/Conductor/Core/Providers/ClaudeProvider.cs
+  [prose] .conductor\evidence\K1\K1.4-mcp-merge.md:23 -> src/Conductor/Core/Integrations/OperatorMcpServers.cs
+  [prose] .conductor\evidence\K1\K1.4-mcp-merge.md:74 -> src/Conductor/Core/ToolContract.cs
+  [prose] .conductor\evidence\K2\K2.1-K2.2-core-extraction.md:11 -> Core/Http/ControlPlaneDto.cs
+  [prose] .conductor\evidence\K2\K2.4-front-door.md:21 -> docs/dev/CONDUCTOR-WORKGRAPH.md
+  [prose] .conductor\evidence\K5\K5.4-composition-layer.md:17 -> Messaging/TelegramLimits.cs
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:20 -> internal/tui/k61_probe_test.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:51 -> raw.githubusercontent.com/charmbracelet/glow/master/ui/pager.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:51 -> ui/pager.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:52 -> ui/keys.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:52 -> ui/ui.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:54 -> pkg/ui/common/component.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:55 -> pkg/ssh/ui.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:55 -> pkg/ui/pages/repo/repo.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:56 -> pkg/ui/keymap/keymap.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:57 -> pkg/ui/components/viewport/viewport.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:58 -> internal/tui/ui.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:58 -> keys/keys.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:59 -> components/table/table.go
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:60 -> docs/keybindings/Keybindings_en.md
+  [prose] .conductor\evidence\K6\K6.1-tui-conventions-adr.md:60 -> pkg/config/user_config.go
+  [prose] .conductor\evidence\K7\K7.2-owner-ship-gate.md:86 -> plans/karvan/.removed-face-items.json
+  [prose] .conductor\evidence\KS0\ks0-1-payesh-green-on-deduped-store.md:81 -> src/data/corpus.json
+  [prose] .conductor\evidence\KS0\ks0-1-payesh-green-on-deduped-store.md:100 -> src/data/corpus.json
+  [prose] .conductor\evidence\KS10\ks10-1-closure-ledger.md:34 -> -b4640aef/run.db
+  [prose] .conductor\evidence\KS10\ks10-3-shipped.md:23 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\KS10\ks10-3-shipped.md:131 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\KS12\ks12-1-closure-ledger.md:37 -> -b4640aef/run.db
+  [prose] .conductor\evidence\KS12\ks12-3-owner-runbook.md:60 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\KS12\ks12-3-owner-runbook.md:62 -> docs/dev/KARVANSARA-PLAN-2026-08-13.md
+  [prose] .conductor\evidence\KS12\ks12-3-owner-runbook.md:63 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\KS1\ks1-5.md:120 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\KS1\ks1-6.md:205 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\KS2\ks2-0-inject.md:128 -> repo/rig.plan.json
+  [prose] .conductor\evidence\KS2\ks2-3.md:102 -> ks23rig/home/catalogue.json
+  [prose] .conductor\evidence\KS2\ks2-7.md:236 -> docs/CONDUCTOR-VNEXT-PLAN.md
+  [prose] .conductor\evidence\KS2\ks2-7.md:236 -> src/Conductor/Core/Gating/GateCache.cs
+  [prose] .conductor\evidence\KS2\ks2-7.md:374 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\KS2\ks2-7.md:378 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\KS2\ks2-7.md:447 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\KS2\ks2-8.md:137 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\evidence\KS3\ks3-4.md:70 -> scratchpad/ks34-drill.ps1
+  [prose] .conductor\evidence\KS3\ks3-4.md:327 -> scratchpad/ks34-drill.ps1
+  [prose] .conductor\evidence\KS3\ks3-4.md:374 -> scratchpad/ks34-battery-drill.ps1
+  [prose] .conductor\evidence\KS3\ks3-4.md:467 -> scratchpad/ks34-fix3-drill.ps1
+  [prose] .conductor\evidence\KS3\ks3-4.md:660 -> scratchpad/ks34-fix4-drill.ps1
+  [prose] .conductor\evidence\KS3\ks3-4.md:662 -> v3-ks34/run4.ps1
+  [prose] .conductor\evidence\KS4\KS4.3-mutation-gates.md:120 -> src/Calc.cs
+  [prose] .conductor\evidence\KS4\KS4.3-mutation-gates.md:120 -> src/Calc.cs
+  [prose] .conductor\evidence\KS5\ks5-1.md:78 -> scratchpad/ks51/crosscheck.ps1
+  [prose] .conductor\evidence\KS5\ks5-1.md:122 -> scratchpad/ks51/dedupe-rig.ps1
+  [prose] .conductor\evidence\KS5\ks5-4-approve-raises-the-ceiling.md:86 -> out/state-park-1.json
+  [prose] .conductor\evidence\KS5\ks5-4-approve-raises-the-ceiling.md:104 -> out/state-after-approval-1.json
+  [prose] .conductor\evidence\KS5\ks5-4-approve-raises-the-ceiling.md:115 -> out/state-park-2.json
+  [prose] .conductor\evidence\KS5\ks5-4.md:209 -> src/Conductor.Core/Integrations/TelegramService.Messages.cs
+  [prose] .conductor\evidence\SC2\SC2.1-truthful-liveness.md:25 -> src/Conductor/Core/EngineLock.cs
+  [prose] .conductor\evidence\SC3\SC3.3-brace-safety.md:13 -> templatesDir/session.md
+  [prose] .conductor\evidence\SC4\SC4.1-settle-retry.md:124 -> Core/Http/ControlPlaneServer.Endpoints.cs
+  [prose] .conductor\evidence\SC4\SC4.4-injections-outrank-evidence.md:34 -> src/Conductor/Core/PromptBuilder.cs
+  [prose] .conductor\evidence\SC4\SC4.4-injections-outrank-evidence.md:35 -> src/Conductor/Core/PromptBuilder.cs
+  [prose] .conductor\evidence\SC4\SC4.4-injections-outrank-evidence.md:36 -> src/Conductor/Core/InstructionQueue.cs
+  [prose] .conductor\evidence\SC4\SC4.4-injections-outrank-evidence.md:37 -> src/Conductor/Core/Http/ControlPlaneServer.TaskPrompt.cs
+  [prose] .conductor\evidence\SC5\SC5.1-blocked-until.md:162 -> Core/Events/ConductorEvent.Session.cs
+  [prose] .conductor\evidence\SC5\SC5.1-blocked-until.md:171 -> Http/ControlPlaneDto.cs
+  [prose] .conductor\evidence\SC5\SC5.2-detach.md:103 -> src/Conductor/Core/SessionWatchdog.cs
+  [prose] .conductor\evidence\SC5\SC5.3-board-writes.md:39 -> evidence/R1.1.md
+  [prose] .conductor\evidence\SC6\SC6.1-status-transitions-and-squash-order.md:107 -> src/Conductor/Core/ReportSubstance.cs
+  [prose] .conductor\evidence\SF1\SF1-fix8-summary.md:12 -> src/Conductor/Core/Store/StoreRowTypes.cs
+  [prose] .conductor\evidence\SF1\SF1-fix8-summary.md:49 -> src/Conductor/Core/Providers/ClaudeProvider.cs
+  [prose] .conductor\evidence\SF1\SF1.1-summary.md:27 -> Core/Http/ControlPlaneDto.Scores.cs
+  [prose] .conductor\evidence\SF4\SF4-fix-session25-sc1-identity-stamp.md:34 -> src/Conductor/Core/Integrations/TelegramService.cs
+  [prose] .conductor\evidence\SF4\SF4.1-owner-queue.md:7 -> src/Conductor/Core/OwnerQueue.cs
+  [prose] .conductor\evidence\SF4\SF4.2-part2-push-identity.md:19 -> src/Conductor/Core/Integrations/TelegramService.cs
+  [prose] .conductor\evidence\SF4\SF4.2-part2-push-identity.md:20 -> src/Conductor/Core/Orchestration/RunLoop.Plumbing.cs
+  [prose] .conductor\evidence\SF4\SF4.2-part2-push-identity.md:21 -> src/Conductor/Core/Orchestration/RunLoop.cs
+  [prose] .conductor\evidence\SF4\SF4.2-part2-push-identity.md:22 -> src/Conductor/Core/Orchestration/VerdictEngine.Completion.cs
+  [prose] .conductor\evidence\SF4\SF4.2-part3-new-item-push.md:33 -> src/Conductor/Core/OwnerQueue.cs
+  [prose] .conductor\evidence\SF4\SF4.2-part3-new-item-push.md:34 -> src/Conductor/Core/Reporter.cs
+  [prose] .conductor\evidence\SF4\SF4.2-part3-new-item-push.md:35 -> src/Conductor/Core/Orchestration/RunContext.cs
+  [prose] .conductor\evidence\SF6\SF6-fix-s36-budget-and-anchors.md:61 -> src/Conductor/Core/PromptBuilder.cs
+  [prose] .conductor\evidence\SF7\SF7.1-field-notes-closure-ledger.md:54 -> src/Conductor/Core/Orchestration/SessionRunner.cs
+  [prose] .conductor\evidence\SF7\SF7.1-field-notes-closure-ledger.md:62 -> src/Conductor/Core/SessionWatchdog.cs
+  [prose] .conductor\followups.md:64 -> src/Conductor/Core/AgentSession.cs
+  [prose] .conductor\followups.md:67 -> docs/baton/audits/B0-baseline.md
+  [prose] .conductor\followups.md:88 -> Core/Http/ControlPlaneServer.State.cs
+  [prose] .conductor\followups.md:238 -> Core/Http/ControlPlaneDto.cs
+  [prose] .conductor\followups.md:240 -> Core/Http/ControlPlaneDto.Telegram.cs
+  [prose] .conductor\followups.md:471 -> src/Conductor/Models/AgentConfig.cs
+  [prose] .conductor\followups.md:511 -> -b4640aef/run.db
+  [prose] .conductor\followups.md:612 -> -b4640aef/run.db
+  [prose] .conductor\handovers\B0.md:32 -> docs/baton/adr/0001-tooling-and-ruleset.md
+  [prose] .conductor\handovers\B0.md:40 -> docs/baton/audits/B0-baseline.md
+  [prose] .conductor\handovers\B0.md:89 -> docs/baton/stages/B1.md
+  [prose] .conductor\handovers\B1.md:124 -> docs/baton/stages/B2.md
+  [prose] .conductor\handovers\B11.md:15 -> src/Conductor/Core/GateRunner.cs
+  [prose] .conductor\handovers\B11.md:15 -> src/Conductor/Core/ProcessRunner.cs
+  [prose] .conductor\handovers\B11.md:25 -> src/Conductor/Commands/Commands.cs
+  [prose] .conductor\handovers\B11.md:31 -> docs/baton/adr/0001-tooling-and-ruleset.md
+  [prose] .conductor\handovers\B11.md:32 -> docs/baton/adr/0002-event-sourcing.md
+  [prose] .conductor\handovers\B11.md:32 -> docs/baton/adr/0003-cross-platform-packaging-closeout.md
+  [prose] .conductor\handovers\B11.md:40 -> docs/baton/audits/B11-shamshir-p2.2.md
+  [prose] .conductor\handovers\B2.md:7 -> Core/Hosting/ConductorHost.cs
+  [prose] .conductor\handovers\B3.md:8 -> Commands/Commands.cs
+  [prose] .conductor\handovers\B3.md:59 -> src/Conductor/Core/OwnerApproval.cs
+  [prose] .conductor\handovers\B3.md:71 -> src/Conductor/Core/ControlFile.cs
+  [prose] .conductor\handovers\B4.md:74 -> src/Conductor/Ui/LiveDashboard.cs
+  [prose] .conductor\handovers\B4.md:90 -> src/Conductor/Ui/AltScreen.cs
+  [prose] .conductor\handovers\B4.md:120 -> src/Conductor/Core/TrackerParser.cs
+  [prose] .conductor\handovers\B5.md:8 -> src/Conductor/Core/Events/Timeline.cs
+  [prose] .conductor\handovers\B5.md:11 -> src/Conductor/Core/Events/Replay.cs
+  [prose] .conductor\handovers\B5.md:15 -> src/Conductor/Core/Events/HealthMetrics.cs
+  [prose] .conductor\handovers\B5.md:19 -> src/Conductor/Core/Events/Confidence.cs
+  [prose] .conductor\handovers\B5.md:21 -> src/Conductor/Core/Events/McpMetrics.cs
+  [prose] .conductor\handovers\B5.md:24 -> src/Conductor/Core/Events/RepoStrip.cs
+  [prose] .conductor\handovers\B6.md:8 -> src/Conductor/Core/Integrations/TelegramService.cs
+  [prose] .conductor\handovers\B6.md:17 -> src/Conductor/Core/Reporter.cs
+  [prose] .conductor\handovers\B6.md:24 -> src/Conductor/Core/Integrations/WebhookNotifier.cs
+  [prose] .conductor\handovers\B6.md:31 -> docs/baton/audits/B6-shamshir-acceptance.md
+  [prose] .conductor\handovers\B7.md:46 -> ../../secrets.md
+  [prose] .conductor\handovers\B8.md:9 -> src/Conductor/Core/LessonsManager.cs
+  [prose] .conductor\handovers\B8.md:10 -> src/Conductor/Core/PromptBattery.cs
+  [prose] .conductor\handovers\B9.md:9 -> src/Conductor/Models/TaskItem.cs
+  [prose] .conductor\handovers\B9.md:10 -> src/Conductor/Core/Events/TaskGraph.cs
+  [prose] .conductor\handovers\B9.md:11 -> src/Conductor/Core/Events/ConductorEvent.cs
+  [prose] .conductor\handovers\B9.md:12 -> src/Conductor/Core/CheckpointPlanner.cs
+  [prose] .conductor\handovers\B9.md:12 -> src/Conductor/Core/IPlanner.cs
+  [prose] .conductor\handovers\B9.md:13 -> src/Conductor/Core/Integrations/McpTaskServer.cs
+  [prose] .conductor\handovers\F1.md:8 -> src/Conductor/Core/RunDb.cs
+  [prose] .conductor\handovers\F1.md:15 -> src/Conductor/Core/TrackerGenerator.cs
+  [prose] .conductor\handovers\F1.md:286 -> src/Conductor/Core/RunDb.cs
+  [prose] .conductor\handovers\F1.md:287 -> src/Conductor/Core/Orchestrator.cs
+  [prose] .conductor\handovers\F1.md:287 -> src/Conductor/Core/TrackerGenerator.cs
+  [prose] .conductor\handovers\F1.md:288 -> src/Conductor/Commands/Commands.cs
+  [prose] .conductor\handovers\F1.md:289 -> src/Conductor/Commands/Commands.cs
+  [prose] .conductor\handovers\F1.md:289 -> src/Conductor/Core/Integrations/McpTaskServer.cs
+  [prose] .conductor\handovers\F1.md:290 -> src/Conductor/Commands/Commands.cs
+  [prose] .conductor\handovers\F1.md:291 -> src/Conductor/Core/Hosting/ConductorHost.cs
+  [prose] .conductor\handovers\F1.md:292 -> src/Conductor/Core/Orchestrator.cs
+  [prose] .conductor\handovers\F1.md:388 -> src/Conductor/Core/RunDb.cs
+  [prose] .conductor\handovers\F1.md:389 -> src/Conductor/Core/RunDb.cs
+  [prose] .conductor\handovers\F1.md:390 -> src/Conductor/Core/TrackerGenerator.cs
+  [prose] .conductor\handovers\F1.md:391 -> src/Conductor/Core/Orchestrator.cs
+  [prose] .conductor\handovers\F1.md:392 -> src/Conductor/Commands/Commands.cs
+  [prose] .conductor\handovers\F1.md:485 -> src/Conductor/Core/RunDb.cs
+  [prose] .conductor\handovers\F1.md:485 -> src/Conductor/Core/TrackerGenerator.cs
+  [prose] .conductor\handovers\F1.md:488 -> src/Conductor/Core/RunDb.cs
+  [prose] .conductor\handovers\F1.md:579 -> src/Conductor/Core/Orchestrator.cs
+  [prose] .conductor\handovers\F1.md:580 -> src/Conductor/Core/Orchestrator.cs
+  [prose] .conductor\handovers\F1.md:581 -> src/Conductor/Core/RunDb.cs
+  [prose] .conductor\handovers\F1.md:582 -> src/Conductor/Core/TrackerGenerator.cs
+  [prose] .conductor\handovers\F1.md:681 -> src/Conductor/Commands/Commands.cs
+  [prose] .conductor\handovers\F1.md:683 -> src/Conductor/Core/RunDb.cs
+  [prose] .conductor\handovers\F1.md:684 -> src/Conductor/Core/TrackerGenerator.cs
+  [prose] .conductor\handovers\F1.md:685 -> src/Conductor/Core/Orchestrator.cs
+  [prose] .conductor\handovers\F1.md:686 -> src/Conductor/Commands/Commands.cs
+  [prose] .conductor\handovers\F1.md:687 -> src/Conductor/Core/Integrations/McpTaskServer.cs
+  [prose] .conductor\handovers\F4.md:11 -> src/Conductor/Models/RunState.cs
+  [prose] .conductor\handovers\F4.md:12 -> src/Conductor/Models/PlanConfig.cs
+  [prose] .conductor\handovers\F4.md:13 -> src/Conductor/Core/Verifier.cs
+  [prose] .conductor\handovers\F4.md:14 -> src/Conductor/Core/PromptBuilder.cs
+  [prose] .conductor\handovers\F4.md:15 -> src/Conductor/Core/RunDb.cs
+  [prose] .conductor\handovers\F4.md:16 -> src/Conductor/Core/Orchestrator.cs
+  [prose] .conductor\logs\session-005.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-006.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-007.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-008.prompt.md:130 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-009.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-010.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-011.prompt.md:33 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-011.prompt.md:33 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-011.prompt.md:77 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-012.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-013.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-014.prompt.md:132 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-015.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-016.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-017.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-018.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-019.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-020.prompt.md:129 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-021.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-022.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-023.prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\logs\session-024.prompt.md:174 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\logs\session-025.prompt.md:174 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\sessions\004\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\005\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\006\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\007\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\008\prompt.md:130 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\009\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\010\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\011\prompt.md:33 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\011\prompt.md:33 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\011\prompt.md:77 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\012\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\013\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\014\prompt.md:132 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\015\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\016\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\017\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\018\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\019\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\020\prompt.md:129 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\021\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\022\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\023\prompt.md:171 -> plans/divan/TRACKER.md
+  [prose] .conductor\sessions\024\prompt.md:174 -> plans/karvansara/CORE-TRACKER.md
+  [prose] .conductor\sessions\025\prompt.md:174 -> plans/karvansara/CORE-TRACKER.md
+  [prose] ci-health\README.md:75 -> scripts/rebuild-ng-if-stale.ps1
+  [prose] ci-health\evidence\B1.2-lychee-root-dir.md:26 -> .github/workflows/links.yml
+  [prose] ci-health\evidence\B1.3-links-green-on-branch.md:8 -> .github/workflows/links.yml
+  [prose] ci-health\evidence\K1.1-kataflow-disabled.md:10 -> .github/dependabot.yml
+  [prose] ci-health\evidence\K1.1-kataflow-disabled.md:15 -> .github/dependabot.yml
+  [prose] ci-health\evidence\K1.1-kataflow-disabled.md:33 -> repos/shaahink/KataFlow/contents/.github/dependabot.yml
+  [prose] ci-health\evidence\K1.2-kataflow-prs-closed.md:26 -> .github/dependabot.yml
+  [prose] ci-health\evidence\K1.3-kataflow-readme-notice.md:25 -> repos/shaahink/KataFlow/contents/README.md
+  [prose] ci-health\evidence\s10-S1-shamshir-architecture-violations-fixed.md:28 -> src/TradingEngine.Domain/ValueObjects/SimTime.cs
+  [prose] ci-health\evidence\s11-S1-shamshir-release-green-end-to-end.md:49 -> src/TradingEngine.Web/TradingEngine.Web.csproj
+  [prose] ci-health\evidence\s11-S1-shamshir-release-green-end-to-end.md:156 -> scripts/gates.ps1
+  [prose] ci-health\evidence\s12-Z1.1-fleet-sweep-default-branches.md:35 -> .github/workflows/deploy.yml
+  [prose] ci-health\evidence\s12-Z1.1-fleet-sweep-default-branches.md:36 -> .github/workflows/links.yml
+  [prose] ci-health\evidence\s12-Z1.1-fleet-sweep-default-branches.md:42 -> .github/workflows/content-request.yml
+  [prose] ci-health\evidence\s12-Z1.1-fleet-sweep-default-branches.md:43 -> .github/workflows/site-ci.yml
+  [prose] ci-health\evidence\s12-Z1.1-fleet-sweep-default-branches.md:48 -> shaahink/.github/.github/workflows/site-ci.yml
+  [prose] ci-health\evidence\s12-Z1.1-fleet-sweep-default-branches.md:58 -> .github/workflows/pr.yml
+  [prose] ci-health\evidence\s12-Z1.1-fleet-sweep-default-branches.md:71 -> .github/workflows/eval.yml
+  [prose] ci-health\evidence\s12-Z1.1-fleet-sweep-default-branches.md:99 -> .github/workflows/build.yml
+  [prose] ci-health\evidence\s8-N1.3-dotgithub-already-current.md:46 -> site-template/.github/workflows/ci.yml
+  [prose] ci-health\evidence\s8-N1.3-dotgithub-already-current.md:47 -> shaahink/.github/.github/workflows/site-ci.yml
+  [prose] ci-health\evidence\s9-N1-fleet-green-except-owner-blocked-shamshir.md:77 -> shaahink/.github/.github/workflows/site-ci.yml
+  [prose] docs\dev\FIELD-NOTES-2026-07-29-devcontext.md:420 -> eval-results/2026-07-29/mcp-qa.md
+  [prose] docs\dev\FIELD-NOTES-2026-07-29-devcontext.md:442 -> eval-results/2026-07-29/mcp-qa.md
+  [prose] docs\dev\FIELD-NOTES-2026-07-29-devcontext.md:648 -> eval-results/2026-07-29/mcp-qa.md
+  [prose] docs\dev\FINDING-2026-07-31-host-logger-isolation.md:66 -> src/Conductor/Core/Hosting/ConductorHost.cs
+  [prose] docs\dev\FINDING-2026-07-31-sc21-verdict-window.md:25 -> src/Conductor/Core/EngineLock.cs
+  [prose] docs\dev\FINDING-oss-readiness.md:20 -> src/Conductor/Core/ProcessRunner.cs
+  [prose] docs\dev\FINDING-oss-readiness.md:21 -> src/Conductor/Core/ProcessRunner.cs
+  [prose] docs\dev\FINDING-oss-readiness.md:22 -> src/Conductor/Core/ConsoleCtrlRails.cs
+  [prose] docs\dev\FINDING-oss-readiness.md:23 -> src/Conductor/Core/JobObject.cs
+  [prose] docs\dev\FINDING-oss-readiness.md:24 -> src/Conductor/Core/Face/FaceLauncher.cs
+  [prose] docs\dev\FINDING-oss-readiness.md:25 -> src/Conductor/Core/RepoKindDetector.cs
+  [prose] docs\dev\NEXT-ERA-FINDINGS-2026-08-04.md:666 -> widgets/theme.go
+  [prose] docs\dev\NEXT-ERA-FINDINGS-2026-08-04.md:747 -> docs/dev/CONDUCTOR-WORKGRAPH.md
+  [prose] docs\dev\NEXT-ERA-VERIFIED-PLAN-2026-08-07.md:144 -> cv/career/token-budget-evidence.md
+  [prose] docs\dev\adr\0002-event-sourcing.md:12 -> src/Conductor/Models/RunState.cs
+  [prose] docs\dev\adr\0006-tui-conventions.md:38 -> ui/pager.go
+  [prose] docs\dev\adr\0006-tui-conventions.md:44 -> pkg/ui/common/component.go
+  [prose] docs\dev\adr\0006-tui-conventions.md:46 -> pkg/ssh/ui.go
+  [prose] docs\dev\adr\0006-tui-conventions.md:46 -> pkg/ui/pages/repo/repo.go
+  [prose] docs\dev\adr\0006-tui-conventions.md:48 -> pkg/ui/components/viewport/viewport.go
+  [prose] docs\dev\adr\0006-tui-conventions.md:50 -> internal/tui/ui.go
+  [prose] docs\dev\adr\0006-tui-conventions.md:51 -> keys/keys.go
+  [prose] docs\dev\adr\0006-tui-conventions.md:53 -> components/table/table.go
+  [prose] docs\dev\adr\0006-tui-conventions.md:57 -> pkg/config/user_config.go
+  [prose] docs\dev\adr\0006-tui-conventions.md:58 -> docs/keybindings/Keybindings_en.md
+  [prose] docs\dev\adr\0006-tui-conventions.md:107 -> keys/keys.go
+  [prose] docs\dev\adr\0006-tui-conventions.md:124 -> table/table.go
+  [prose] docs\dev\templates\start-new-iteration.md:111 -> docs/PLAN.md
+  [prose] docs\dev\workgraph\W5.2-RUNBOOK.md:82 -> docs/dev/workgraph/W5-AUDIT.md
+  [prose] docs\dev\workgraph\W5.2-TRACKER.md:8 -> docs/dev/workgraph/W5-AUDIT.md
+  [prose] docs\history\CONDUCTOR-KARVAN.md:179 -> docs/dev/CONDUCTOR-WORKGRAPH.md
+  [prose] docs\history\CONDUCTOR-KARVAN.md:452 -> widgets/theme.go
+  [prose] docs\history\CONDUCTOR-PLANNER.md:64 -> Core/Orchestration/WorkflowEngine.cs
+  [prose] docs\history\CONDUCTOR-SARBAN.md:366 -> face-go/internal/tui/tab_dev.go
+  [prose] docs\history\CONDUCTOR-UX.md:30 -> ./conductor.plan.json
+  [prose] docs\history\CONDUCTOR-WORKGRAPH.md:183 -> docs/dev/workgraph/W5-AUDIT.md
+  [prose] docs\history\MAESTRO-PLAN.md:22 -> src/Conductor/Core/RunDb.cs
+  [prose] docs\history\archive\conductor-DEBT.md:16 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\archive\conductor-DEBT.md:17 -> src/Conductor/Core/AgentSession.cs
+  [prose] docs\history\archive\conductor-DEBT.md:18 -> src/Conductor/Core/Planning/ScriptProvider.cs
+  [prose] docs\history\archive\conductor-DEBT.md:19 -> src/Conductor/Core/Planning/IProgressProvider.cs
+  [prose] docs\history\archive\conductor-DEBT.md:20 -> src/Conductor/Core/ProcessRunner.cs
+  [prose] docs\history\archive\conductor-DEBT.md:51 -> tests/Conductor.Tests/OrchestratorHarness.cs
+  [prose] docs\history\archive\conductor-DEBT.md:52 -> tests/Conductor.Tests/OrchestratorIntegrationTests.cs
+  [prose] docs\history\archive\conductor-DEBT.md:53 -> tests/Conductor.Tests/CancellationTests.cs
+  [prose] docs\history\archive\conductor-DEBT.md:54 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\archive\conductor-DEBT.md:55 -> src/Conductor/Core/Progress.cs
+  [prose] docs\history\archive\conductor-DEBT.md:84 -> src/Conductor/Core/Events/LiveMetrics.cs
+  [prose] docs\history\archive\conductor-DEBT.md:85 -> src/Conductor/Ui/LiveDashboard.cs
+  [prose] docs\history\archive\conductor-DEBT.md:86 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\archive\conductor-DEBT.md:87 -> src/Conductor/Core/Events/ConductorEvent.cs
+  [prose] docs\history\archive\conductor-DEBT.md:108 -> src/Conductor/Models/RunState.cs
+  [prose] docs\history\archive\conductor-DEBT.md:109 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\archive\conductor-DEBT.md:110 -> src/Conductor/Core/Events/EventLog.cs
+  [prose] docs\history\archive\conductor-DEBT.md:112 -> tests/Conductor.Tests/OrchestratorIntegrationTests.cs
+  [prose] docs\history\archive\conductor-DEBT.md:133 -> src/Conductor/Core/Reporter.cs
+  [prose] docs\history\archive\conductor-DEBT.md:134 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\archive\conductor-DEBT.md:158 -> src/Conductor/Core/Progress.cs
+  [prose] docs\history\archive\conductor-DEBT.md:159 -> src/Conductor/Models/PlanConfig.cs
+  [prose] docs\history\archive\conductor-DEBT.md:160 -> src/Conductor/Core/Planning/FollowupRegistry.cs
+  [prose] docs\history\archive\conductor-DEBT.md:161 -> tests/Conductor.Tests/FollowupRegistryTests.cs
+  [prose] docs\history\archive\conductor-DEBT.md:189 -> src/Conductor/Core/Progress.cs
+  [prose] docs\history\archive\conductor-DEBT.md:190 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\archive\conductor-DEBT.md:191 -> src/Conductor/Ui/LiveDashboard.cs
+  [prose] docs\history\archive\conductor-DEBT.md:192 -> src/Conductor/Commands/Commands.cs
+  [prose] docs\history\archive\conductor-DEBT.md:211 -> scripts/fake-agent.ps1
+  [prose] docs\history\archive\trackers\WORKGRAPH-TRACKER.md:235 -> docs/dev/workgraph/W5-AUDIT.md
+  [prose] docs\history\baton\audits\B0-baseline.md:18 -> src/Conductor/Core/AgentSession.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:43 -> src/Conductor/Core/TrackerParser.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:64 -> src/Conductor/Models/RunState.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:97 -> src/Conductor/Ui/DashboardRenderer.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:105 -> src/Conductor/Ui/DashboardRenderer.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:115 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:139 -> src/Conductor/Core/Reporter.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:162 -> src/Conductor/Core/Reporter.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:163 -> src/Conductor/Commands/Commands.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:164 -> src/Conductor/Core/SnapshotBuilder.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:173 -> src/Conductor/Ui/LiveDashboard.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:174 -> src/Conductor/Ui/DashboardRenderer.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:180 -> src/Conductor/Ui/PlainSink.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:181 -> src/Conductor/Ui/LiveDashboard.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:191 -> src/Conductor/Core/Progress.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:192 -> src/Conductor/Core/Progress.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:193 -> src/Conductor/Ui/DashboardRenderer.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:204 -> src/Conductor/Core/Git.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:205 -> src/Conductor/Core/ProcessRunner.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:206 -> src/Conductor/Core/Advisor.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:207 -> src/Conductor/Core/GateRunner.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:208 -> src/Conductor/Core/StatusAgent.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:234 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\baton\audits\B0-baseline.md:246 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\baton\audits\B11-shamshir-p2.2.md:34 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\baton\audits\B11-shamshir-p2.2.md:35 -> src/Conductor/Models/RunState.cs
+  [prose] docs\history\baton\audits\B11-shamshir-p2.2.md:36 -> src/Conductor/Core/OwnerApproval.cs
+  [prose] docs\history\baton\audits\B11-shamshir-p2.2.md:68 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\baton\audits\B11-shamshir-p2.2.md:70 -> src/Conductor/Core/OwnerApproval.cs
+  [prose] docs\history\baton\stages\B1.md:27 -> plans/loom.opencode.plan.json
+  [prose] docs\history\baton\stages\B1.md:27 -> plans/loom.plan.json
+  [prose] docs\history\handoffs\AGENTS-resume-log-2026-07.md:213 -> tools/ratchet.ps1
+  [prose] docs\history\handoffs\AGENTS-resume-log-2026-07.md:490 -> src/Conductor/Core/Integrations/SecretsStore.cs
+  [prose] docs\history\handoffs\AGENTS-resume-log-2026-07.md:529 -> src/Conductor/Core/PromptBattery.Knowledge.cs
+  [prose] docs\history\handoffs\AGENTS-resume-log-2026-07.md:583 -> src/Conductor/Core/Planning/MarkdownPlanParser.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:101 -> Core/RunDb.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:156 -> Core/RunDb.Pids.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:156 -> Core/RunDb.Sessions.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:156 -> Core/RunDb.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:225 -> Core/RunDb.Pids.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:225 -> Core/RunDb.Sessions.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:225 -> Core/RunDb.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:264 -> Core/RunDb.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:265 -> Core/RunDb.Sessions.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:266 -> Core/RunDb.Pids.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:274 -> Core/Hosting/ConductorHost.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:289 -> Core/Http/ControlPlaneServer.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:290 -> Core/Http/ControlPlaneServer.Endpoints.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:294 -> Core/Integrations/TelegramService.Messages.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:333 -> Core/SessionArtifacts.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:359 -> Core/SessionArtifacts.cs
+  [prose] docs\history\maestro\M2-DELIVERY-PLAN.md:367 -> Core/Hosting/ConductorHost.cs
+  [prose] docs\history\maestro\M8-PRESESSION.md:33 -> src/Conductor/Core/Face/FaceLauncher.cs
+  [prose] docs\history\qa-reports\CONDUCTOR-AUDIT-R1.md:18 -> src/Conductor/Commands/Commands.cs
+  [prose] docs\history\qa-reports\CONDUCTOR-AUDIT-R2.md:17 -> src/Conductor/Core/Reporter.cs
+  [prose] docs\history\qa-reports\CONDUCTOR-AUDIT-R2.md:49 -> src/Conductor/Core/PromptBuilder.cs
+  [prose] docs\history\qa-reports\CONDUCTOR-FINAL.md:104 -> src/Conductor/Services/TelegramClient.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:57 -> src/Conductor/Commands/Commands.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:58 -> src/Conductor/Ui/LiveDashboard.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:59 -> src/Conductor/Models/PlanConfig.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:60 -> src/Conductor/Core/StatusAgent.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:82 -> src/Conductor/Commands/Commands.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:83 -> src/Conductor/Core/GateRunner.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:84 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:104 -> src/Conductor/Commands/Commands.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:105 -> src/Conductor/Core/Progress.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:106 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:107 -> src/Conductor/Core/Reporter.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:108 -> src/Conductor/Ui/LiveDashboard.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:109 -> src/Conductor/Models/PlanConfig.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:130 -> src/Conductor/Core/Progress.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:131 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:132 -> src/Conductor/Ui/LiveDashboard.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:153 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:154 -> src/Conductor/Core/Hosting/ConductorHost.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:155 -> src/Conductor/Commands/Commands.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:175 -> src/Conductor/Core/Orchestrator.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:176 -> src/Conductor/Models/PlanConfig.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:177 -> src/Conductor/Core/AgentSession.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:178 -> tests/Conductor.Tests/OrchestratorIntegrationTests.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:197 -> src/Conductor/Core/GateRunner.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:198 -> src/Conductor/Ui/DashboardRenderer.cs
+  [prose] docs\history\workflows\conductor-era3-workflow.md:199 -> src/Conductor/Core/Reporter.cs
+  [prose] plans\README.md:61 -> personas/deliver.md
+
+== WHERE IT WENT - derived, not hand-kept ==
+  -b4640aef/run.db -> .conductor/contracts/v6/med/home/runs/repo-ks34-med-f1f19118/run.db, .conductor/contracts/v6/pa/home/runs/repo-ks34-pa-24371105/run.db, .conductor/contracts/v6/wf/home/runs/repo-ks34-wf-64b7e555/run.db, .conductor/contracts/v6/wf2/home/runs/repo-ks34-wf2-cdde4543/run.db, .conductor/contracts/v7/compred/home/runs/repo-ks34-compred-d889ee4d/run.db, .conductor/contracts/v7/compred2/home/runs/repo-ks34-compred-4117790c/run.db, .conductor/contracts/v7/phaseaudit/home/runs/repo-ks34-phase-99e83b31/run.db, .conductor/contracts/v7/qgate/home/runs/repo-ks34-qgate-8cd09394/run.db, .conductor/contracts/v7/wfdiff/home/runs/repo-ks34-wf-de59496e/run.db, .conductor/run.db
+  ../../../../plan.json -> ci-health/plan.json
+  Core/Hosting/ConductorHost.cs -> src/Conductor/Hosting/ConductorHost.cs
+  Core/Http/ControlPlaneServer.Endpoints.cs -> src/Conductor/Http/ControlPlaneServer.Endpoints.cs
+  Core/Http/ControlPlaneServer.State.cs -> src/Conductor/Http/ControlPlaneServer.State.cs
+  Core/Http/ControlPlaneServer.cs -> src/Conductor/Http/ControlPlaneServer.cs
+  Core/Orchestration/WorkflowEngine.cs -> src/Conductor.Planning/WorkflowEngine.cs
+  Messaging/TelegramLimits.cs -> src/Conductor.Core/Integrations/TelegramLimits.cs
+  README/cli.md -> docs/cli.md
+  docs/CONDUCTOR-VNEXT-PLAN.md -> docs/history/CONDUCTOR-VNEXT-PLAN.md, docs/history/archive/trackers/CONDUCTOR-VNEXT-PLAN.md
+  docs/baton/adr/0001-tooling-and-ruleset.md -> docs/dev/adr/0001-tooling-and-ruleset.md
+  docs/baton/adr/0002-event-sourcing.md -> docs/dev/adr/0002-event-sourcing.md
+  docs/baton/adr/0003-cross-platform-packaging-closeout.md -> docs/dev/adr/0003-cross-platform-packaging-closeout.md
+  docs/baton/audits/B0-baseline.md -> docs/history/baton/audits/B0-baseline.md
+  docs/baton/audits/B11-shamshir-p2.2.md -> docs/history/baton/audits/B11-shamshir-p2.2.md
+  docs/baton/audits/B6-shamshir-acceptance.md -> docs/history/baton/audits/B6-shamshir-acceptance.md
+  docs/baton/stages/B1.md -> .conductor/handovers/B1.md, docs/history/baton/stages/B1.md
+  docs/baton/stages/B2.md -> .conductor/handovers/B2.md, docs/history/baton/stages/B2.md
+  docs/dev/CONDUCTOR-WORKGRAPH.md -> docs/history/CONDUCTOR-WORKGRAPH.md
+  docs/dev/KARVANSARA-PLAN-2026-08-13.md -> docs/history/KARVANSARA-PLAN-2026-08-13.md
+  docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md -> docs/history/NEXT-ERA-FINDINGS-2026-08-23.md
+  goldens/snapshots/architecture-baseline.json -> tests/Conductor.Tests/architecture-baseline.json
+  ks23rig/home/catalogue.json -> .conductor/contracts/v6/med/home/catalogue.json, .conductor/contracts/v6/pa/home/catalogue.json, .conductor/contracts/v6/ro/home/catalogue.json, .conductor/contracts/v6/wf/home/catalogue.json, .conductor/contracts/v6/wf2/home/catalogue.json, .conductor/contracts/v7/compred/home/catalogue.json, .conductor/contracts/v7/compred2/home/catalogue.json, .conductor/contracts/v7/phaseaudit/home/catalogue.json, .conductor/contracts/v7/qgate/home/catalogue.json, .conductor/contracts/v7/wfdiff/home/catalogue.json
+  plans/divan/TRACKER.md -> .conductor/contracts/v6/med/repo/TRACKER.md, .conductor/contracts/v6/pa/repo/TRACKER.md, .conductor/contracts/v6/ro/repo/TRACKER.md, .conductor/contracts/v6/wf/repo/TRACKER.md, .conductor/contracts/v6/wf2/repo/TRACKER.md, .conductor/contracts/v7/compred/repo/TRACKER.md, .conductor/contracts/v7/compred2/repo/TRACKER.md, .conductor/contracts/v7/phaseaudit/repo/TRACKER.md, .conductor/contracts/v7/qgate/repo/TRACKER.md, .conductor/contracts/v7/wfdiff/repo/TRACKER.md, ci-health/TRACKER.md, plans/charkh/TRACKER.md
+  plans/karvansara/CORE-TRACKER.md -> plans/karvan/CORE-TRACKER.md
+  plans/loom.opencode.plan.json -> examples/loom/loom.opencode.plan.json
+  plans/loom.plan.json -> examples/loom/loom.plan.json
+  repos/shaahink/KataFlow/contents/README.md -> .conductor/contracts/v6/med/repo/README.md, .conductor/contracts/v6/pa/repo/README.md, .conductor/contracts/v6/ro/repo/README.md, .conductor/contracts/v6/wf/repo/README.md, .conductor/contracts/v6/wf2/repo/README.md, .conductor/contracts/v7/compred/repo/README.md, .conductor/contracts/v7/compred2/repo/README.md, .conductor/contracts/v7/phaseaudit/repo/README.md, .conductor/contracts/v7/qgate/repo/README.md, .conductor/contracts/v7/wfdiff/repo/README.md, README.md, ci-health/README.md, docs/README.md, docs/dev/README.md, docs/history/README.md, docs/history/archive/README.md, docs/history/baton/tooling/README.md, examples/README.md, plans/README.md, plans/karvan/README.md
+  scratchpad/v6/rig-pa-med.ps1 -> .conductor/contracts/v6/rig-pa-med.ps1
+  scratchpad/v6/rig-pa.ps1 -> .conductor/contracts/v6/rig-pa.ps1
+  scratchpad/v6/rig-wf.ps1 -> .conductor/contracts/v6/rig-wf.ps1
+  scratchpad/v6/rig-wf2.ps1 -> .conductor/contracts/v6/rig-wf2.ps1
+  scratchpad/v7/rig-phase-audit.ps1 -> .conductor/contracts/v7/rig-phase-audit.ps1, plans/karvansara/contracts/ks3-4-v7-rigs/rig-phase-audit.ps1
+  scripts/fake-agent.ps1 -> tools/fake-agent.ps1
+  site-template/.github/workflows/ci.yml -> .github/workflows/ci.yml
+  src/Conductor/Core/Advisor.cs -> src/Conductor.Core/Advisor.cs
+  src/Conductor/Core/AgentSession.cs -> src/Conductor.Core/AgentSession.cs
+  src/Conductor/Core/CheckpointPlanner.cs -> src/Conductor.Core/CheckpointPlanner.cs
+  src/Conductor/Core/ConsoleCtrlRails.cs -> src/Conductor.Core/ConsoleCtrlRails.cs
+  src/Conductor/Core/ControlFile.cs -> src/Conductor.Core/ControlFile.cs
+  src/Conductor/Core/EngineLock.cs -> src/Conductor.Core/EngineLock.cs
+  src/Conductor/Core/Events/ConductorEvent.cs -> src/Conductor.Core/Events/ConductorEvent.cs
+  src/Conductor/Core/Events/EventLog.cs -> src/Conductor.Core/Events/EventLog.cs
+  src/Conductor/Core/Events/HealthMetrics.cs -> src/Conductor.Core/Events/HealthMetrics.cs
+  src/Conductor/Core/Events/LiveMetrics.cs -> src/Conductor.Core/Events/LiveMetrics.cs
+  src/Conductor/Core/Events/McpMetrics.cs -> src/Conductor.Core/Events/McpMetrics.cs
+  src/Conductor/Core/Events/RepoStrip.cs -> src/Conductor.Core/Events/RepoStrip.cs
+  src/Conductor/Core/Events/TaskGraph.cs -> src/Conductor.Core/Events/TaskGraph.cs
+  src/Conductor/Core/Events/Timeline.cs -> src/Conductor.Core/Events/Timeline.cs
+  src/Conductor/Core/Face/FaceLauncher.cs -> src/Conductor.Core/Face/FaceLauncher.cs
+  src/Conductor/Core/GateRunner.cs -> src/Conductor.Core/GateRunner.cs
+  src/Conductor/Core/Git.cs -> src/Conductor.Core/Git.cs
+  src/Conductor/Core/Hosting/ConductorHost.cs -> src/Conductor/Hosting/ConductorHost.cs
+  src/Conductor/Core/Http/ControlPlaneServer.TaskPrompt.cs -> src/Conductor/Http/ControlPlaneServer.TaskPrompt.cs
+  src/Conductor/Core/IPlanner.cs -> src/Conductor.Core/IPlanner.cs
+  src/Conductor/Core/InstructionQueue.cs -> src/Conductor.Core/InstructionQueue.cs
+  src/Conductor/Core/Integrations/McpTaskServer.cs -> src/Conductor.Core/Integrations/McpTaskServer.cs
+  src/Conductor/Core/Integrations/OperatorMcpServers.cs -> src/Conductor.Core/Integrations/OperatorMcpServers.cs
+  src/Conductor/Core/Integrations/SecretsStore.cs -> src/Conductor.Core/Integrations/SecretsStore.cs
+  src/Conductor/Core/Integrations/TelegramService.cs -> src/Conductor.Core/Integrations/TelegramService.cs
+  src/Conductor/Core/Integrations/WebhookNotifier.cs -> src/Conductor.Core/Integrations/WebhookNotifier.cs
+  src/Conductor/Core/JobObject.cs -> src/Conductor.Core/JobObject.cs
+  src/Conductor/Core/Lanes/LaneCoordinator.cs -> src/Conductor.Core/Lanes/LaneCoordinator.cs
+  src/Conductor/Core/LessonsManager.cs -> src/Conductor.Core/LessonsManager.cs
+  src/Conductor/Core/Orchestration/RunContext.cs -> src/Conductor.Core/Orchestration/RunContext.cs
+  src/Conductor/Core/Orchestration/RunLoop.Plumbing.cs -> src/Conductor.Core/Orchestration/RunLoop.Plumbing.cs
+  src/Conductor/Core/Orchestration/RunLoop.cs -> src/Conductor.Core/Orchestration/RunLoop.cs
+  src/Conductor/Core/Orchestration/SessionRunner.cs -> src/Conductor.Core/Orchestration/SessionRunner.cs
+  src/Conductor/Core/Orchestration/VerdictEngine.Claims.cs -> src/Conductor.Core/Orchestration/VerdictEngine.Claims.cs
+  src/Conductor/Core/Orchestration/VerdictEngine.Completion.cs -> src/Conductor.Core/Orchestration/VerdictEngine.Completion.cs
+  src/Conductor/Core/Orchestration/VerdictEngine.cs -> src/Conductor.Core/Orchestration/VerdictEngine.cs
+  src/Conductor/Core/Orchestrator.cs -> src/Conductor.Core/Orchestrator.cs
+  src/Conductor/Core/OwnerApproval.cs -> src/Conductor.Core/OwnerApproval.cs
+  src/Conductor/Core/OwnerQueue.cs -> src/Conductor.Core/OwnerQueue.cs
+  src/Conductor/Core/Planning/IProgressProvider.cs -> src/Conductor.Core/Planning/IProgressProvider.cs
+  src/Conductor/Core/Planning/MarkdownPlanParser.cs -> src/Conductor.Core/Planning/MarkdownPlanParser.cs
+  src/Conductor/Core/Planning/ScriptProvider.cs -> src/Conductor.Core/Planning/ScriptProvider.cs
+  src/Conductor/Core/ProcessRunner.cs -> src/Conductor.Core/ProcessRunner.cs
+  src/Conductor/Core/Progress.cs -> src/Conductor.Core/Progress.cs
+  src/Conductor/Core/PromptBattery.Knowledge.cs -> src/Conductor.Core/PromptBattery.Knowledge.cs
+  src/Conductor/Core/PromptBattery.cs -> src/Conductor.Core/PromptBattery.cs
+  src/Conductor/Core/PromptBuilder.cs -> src/Conductor.Core/PromptBuilder.cs
+  src/Conductor/Core/Providers/ClaudeProvider.cs -> src/Conductor.Core/Providers/ClaudeProvider.cs
+  src/Conductor/Core/Providers/OpencodeProvider.cs -> src/Conductor.Core/Providers/OpencodeProvider.cs
+  src/Conductor/Core/RepoKindDetector.cs -> src/Conductor.Core/RepoKindDetector.cs
+  src/Conductor/Core/ReportSubstance.cs -> src/Conductor.Core/ReportSubstance.cs
+  src/Conductor/Core/Reporter.cs -> src/Conductor.Core/Reporter.cs
+  src/Conductor/Core/SessionWatchdog.cs -> src/Conductor.Core/SessionWatchdog.cs
+  src/Conductor/Core/SnapshotBuilder.cs -> src/Conductor.Core/SnapshotBuilder.cs
+  src/Conductor/Core/SoftBreak.cs -> src/Conductor.Core/SoftBreak.cs
+  src/Conductor/Core/StatusAgent.cs -> src/Conductor.Core/StatusAgent.cs
+  src/Conductor/Core/Store/SqliteRunStore.Sessions.cs -> src/Conductor.Core/Store/SqliteRunStore.Sessions.cs
+  src/Conductor/Core/Store/StoreRowTypes.cs -> src/Conductor.Core/Store/StoreRowTypes.cs
+  src/Conductor/Core/ToolContract.cs -> src/Conductor.Core/ToolContract.cs
+  src/Conductor/Core/TrackerGenerator.cs -> src/Conductor.Core/TrackerGenerator.cs
+  src/Conductor/Core/TrackerParser.cs -> src/Conductor.Core/TrackerParser.cs
+  src/Conductor/Core/Verifier.cs -> src/Conductor.Core/Verifier.cs
+  src/Conductor/Models/AgentConfig.cs -> src/Conductor.Core/Models/AgentConfig.cs
+  src/Conductor/Models/PlanConfig.cs -> src/Conductor.Core/Models/PlanConfig.cs
+  src/Conductor/Models/RunState.cs -> src/Conductor.Core/Models/RunState.cs
+  src/Conductor/Models/TaskItem.cs -> src/Conductor.Core/Models/TaskItem.cs
+  src/Conductor/Ui/PlainSink.cs -> src/Conductor.Core/PlainSink.cs
+  templatesDir/session.md -> ci-health/templates/session.md, examples/loom/templates/session.md, plans/baton-templates/session.md, plans/charkh/templates/session.md, plans/divan/templates/session.md, plans/karvan/templates/session.md, plans/karvansara/templates/session.md, plans/maestro-templates/session.md, plans/sarban-templates/session.md, plans/shamshir-templates/session.md
+  tools/ratchet.ps1 -> tools/gates/ratchet.ps1
+  widgets/theme.go -> face-go/internal/tui/theme.go
+
+  excused  docs\dev\CHARKH-PLAN-2026-08-26.md -> docs/dev/KARVANSARA-PLAN-2026-08-13.md  (quoted as data: the sentence IS that this path is stale, and it names docs/history/ as the new home in the next clause)
+  excused  docs\dev\CHARKH-PLAN-2026-08-26.md -> docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md  (quoted as data: same sentence, same reason)
+  excused  docs\dev\README.md -> scripts/fake-agent.ps1  (quoted as data: the left column of the where-it-went table is old paths by construction)
+== counts == checked=3185 resolved=2751 excused=3 live-broken=0 frozen-broken=431

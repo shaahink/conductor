@@ -1,0 +1,8 @@
+# CH3.2 - references that are QUOTED, not followed. One per line:
+#     <source-path>:<target>  # why this one is data rather than a pointer
+# Everything else that does not resolve is a defect. Keep this file short; an
+# entry that cannot state a reason in one line is a bug being hidden.
+
+docs/dev/CHARKH-PLAN-2026-08-26.md:docs/dev/KARVANSARA-PLAN-2026-08-13.md  # quoted as data: the sentence IS that this path is stale, and it names docs/history/ as the new home in the next clause
+docs/dev/CHARKH-PLAN-2026-08-26.md:docs/dev/NEXT-ERA-FINDINGS-2026-08-23.md  # quoted as data: same sentence, same reason
+docs/dev/README.md:scripts/fake-agent.ps1  # quoted as data: the left column of the where-it-went table is old paths by construction

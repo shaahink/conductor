@@ -82,3 +82,36 @@ nothing. `plans/karvan/CORE-TRACKER.md` stays where it is for the reason the par
 Closed eras, their briefs, and their raw gate transcripts are in [`../history/`](../history/). That
 tree is receipts, not documentation — it exists so a past "gates green" can be audited rather than
 believed.
+
+## When a file moves — which references are rewritten, and which are not (CH3.2)
+
+**A path is rewritten if and only if something still reads it.** DV7.3 moved nine structural paths
+and left the plans' `notes` prose citing two briefs where they used to be. That was the right call
+and it is also a trap, so here is the rule, decided once:
+
+| | What it covers | What happens when a target moves |
+|---|---|---|
+| **Live** | the plan in flight with its tracker, contracts and templates; every document that plan's `readOrder` names; the published surface (`README.md`, `docs/*.md`, `ARCHITECTURE.md`, `AGENTS.md`, `CONTRIBUTING.md`); this index and [`NEXT-FEATURES.md`](NEXT-FEATURES.md); a path a test prints in a **failure message** | **Repointed, in the same checkpoint as the move.** A session reads these, and a stale path in a file a session reads costs the next session real time. |
+| **Record** | a closed era's plan, contracts and tracker; everything under [`../history/`](../history/), `ci-health/` and `.conductor/`; every ADR, finding, field note, closed-era brief, workgraph runbook and template in this directory | **Never rewritten. Reported.** An ADR states a decision as it was made and a finding states what was measured on a date; bringing either "up to date" falsifies it. |
+
+What makes leaving the record alone safe is that a reader who lands on a stale path can resolve it
+in one hop. The classes of move this repo has made:
+
+| Where a path used to be | Where it is now |
+|---|---|
+| `docs/dev/<ERA>-PLAN-<date>.md`, `docs/dev/NEXT-ERA-FINDINGS-<date>.md` | [`../history/`](../history/) |
+| `plans/<era>/*-TRACKER.md`, `docs/<era>/…-TRACKER.md` | [`../history/archive/trackers/`](../history/archive/trackers/) |
+| `docs/baton/audits/…`, `docs/baton/stages/…` | [`../history/baton/`](../history/baton/) |
+| `docs/baton/adr/…` | [`adr/`](adr/) |
+| `src/Conductor/Core/**` | `src/Conductor.Core/**` — the assembly split |
+| `Core/Http/…`, `Core/Hosting/…` | `src/Conductor/…` — the shell kept the HTTP surface and the host |
+| `plans/loom*.plan.json` | `examples/loom/` |
+| `scripts/fake-agent.ps1` | `tools/fake-agent.ps1` |
+
+The sweep behind this is `python tools/ch3/link-sweep.py` — every markdown link, every path in a
+plan's or a contract's JSON, every path a test's failure message prints, resolved against the disk
+and split into the two zones above. `--redirects` re-derives the table above from the moves
+themselves rather than from anyone's memory of them; `--all` prints what resolved too. It exits
+non-zero on a broken **live** reference and never on the record, which is the rule in executable
+form. A reference that is quoted rather than followed goes in `tools/ch3/sweep-ignore.txt` with a
+one-line reason that the sweep prints back.

@@ -292,7 +292,7 @@ it rather than adding new responsibilities back into Orchestrator:
   verb written there is automatically available from all three, no per-ingress wiring.
 - **New read/query surface?** Build it from the event log (`RunStateProjection.Fold`,
   `Core/Events/TaskGraph.cs`, `Core/SnapshotBuilder.cs`) or extend those, never by reaching into
-  `Orchestrator`'s private fields. This is what keeps `Core/Http/ControlPlaneServer.cs`'s GET
+  `Orchestrator`'s private fields. This is what keeps `src/Conductor/Http/ControlPlaneServer.cs`'s GET
   endpoints decoupled from Orchestrator internals — they only ever read `events.jsonl`.
 - **HTTP wire types are separate DTOs** (`Core/Http/Contracts/<feature>/`), not `DashboardSnapshot`
   directly — the TUI-rendering types carry `ValueTuple` fields System.Text.Json's source generator
