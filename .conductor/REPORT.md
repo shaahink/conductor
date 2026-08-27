@@ -1,11 +1,11 @@
 ﻿# Conductor — Charkh - the wheel: what the owner still does by hand becomes machinery run report
 
-_Updated 2026-08-27 08:49 UTC · branch `feat/charkh` · HEAD `11efa61`_
+_Updated 2026-08-27 09:20 UTC · branch `feat/charkh` · HEAD `8c19a1d`_
 
-**Status:** Idle
-**Stage:** CH5 — Ship Charkh with the machinery it built · attempts used 0 · working ▸ CH5.2
-**Checkpoints:** 13/14 done · **Sessions run:** 8 · **Cost:** $123.7376 (agent $123.6694 + gates $0.0682) · **Tokens:** 1,976,844 in / 804,900 out
-**Confirmed phases:** CH1, CH2, CH3, CH4
+**Status:** Completed
+**Stage:** CH5 — Ship Charkh with the machinery it built · attempts used 0
+**Checkpoints:** 14/14 done · **Sessions run:** 9 · **Cost:** $129.1987 (agent $129.1204 + gates $0.0784) · **Tokens:** 2,087,759 in / 860,853 out
+**Confirmed phases:** CH1, CH2, CH3, CH4, CH5
 **Channels:** telegram ready · github ready · courier DEAD
 **⚠ Channel DEAD — courier:** no courier is running on this machine. Start one: conductor courier restart · fix: `conductor courier restart`
 
@@ -17,7 +17,7 @@ _Updated 2026-08-27 08:49 UTC · branch `feat/charkh` · HEAD `11efa61`_
 | CH2 | The tour that matches the engine - and knows when it does not | ██████████ 2/2 | confirmed ✓ |
 | CH3 | The docs say what shipped | ██████████ 3/3 | confirmed ✓ |
 | CH4 | The machinery - the era-close stops being prose | ██████████ 4/4 | confirmed ✓ |
-| CH5 | Ship Charkh with the machinery it built | █████░░░░░ 1/2 | **← active** |
+| CH5 | Ship Charkh with the machinery it built | ██████████ 2/2 | confirmed ✓ |
 
 <details> ✅<summary>CH1 — CI green, and the reason it was not (3/3)</summary>
 
@@ -59,12 +59,12 @@ _Updated 2026-08-27 08:49 UTC · branch `feat/charkh` · HEAD `11efa61`_
 
 </details>
 
-<details><summary>CH5 — Ship Charkh with the machinery it built (1/2)</summary>
+<details> ✅<summary>CH5 — Ship Charkh with the machinery it built (2/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| CH5.1 | The internal record: ARCHITECTURE.md and docs/dev reconciled for everything Charkh changed, a closure ledger naming every bug and followup closed this era or its living owner, and this run's budget re-measured through a fresh build against a sqlite3 BACKUP COPY of the store and written into TOKEN-BUDGET-TUNING as the number the next era compiles against | ✅ DONE | - |
-| CH5.2 | The era closed USING CH4's machinery rather than by hand: the preflight run, the runbook it generated, the mechanical acts performed and the refused ones parked with the owner. Anything the machinery got wrong is recorded as a finding - that is worth more than the checkpoint | ⬜ TODO | - |
+| CH5.1 | The internal record: ARCHITECTURE.md and docs/dev reconciled for everything Charkh changed, a closure ledger naming every bug and followup closed this era or its living owner, and this run's budget re-measured through a fresh build against a sqlite3 BACKUP COPY of the store and written into TOKEN-BUDGET-TUNING as the number the next era compiles against | ✅ DONE | [`77b9547`](https://github.com/shaahink/conductor/commit/77b9547) |
+| CH5.2 | The era closed USING CH4's machinery rather than by hand: the preflight run, the runbook it generated, the mechanical acts performed and the refused ones parked with the owner. Anything the machinery got wrong is recorded as a finding - that is worth more than the checkpoint | ✅ DONE | [`35043fe`](https://github.com/shaahink/conductor/commit/35043fe) |
 
 </details>
 
@@ -80,6 +80,7 @@ _Updated 2026-08-27 08:49 UTC · branch `feat/charkh` · HEAD `11efa61`_
 | 6 | CH4 | Deliver | 1 | 08-27 02:33 | 5:36 | TimedOut |  | 3 |  |  |  | 224,343/1,325 |
 | 7 | CH4 | Resume | 2r1 | 08-27 08:10 | 0:07 | Advanced | CH4.4 | 3 | engine-fast:OK · face-fast:OK | $6.3494 | $0.0086 | 251,390/16,229 |
 | 8 | CH5 | Deliver | 1 | 08-27 08:23 | 0:23 | Advanced | CH5.1 | 4 | engine-fast:OK · face-fast:OK | $10.9359 | $0.0146 | 188,430/88,826 |
+| 9 | CH5 | Deliver | 1 | 08-27 08:49 | 0:17 | Advanced | CH5.2 | 3 | engine-fast:OK · face-fast:OK | $5.4510 | $0.0101 | 110,915/55,953 |
 
 ## Money
 
@@ -87,34 +88,21 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 7 | 158.9M | 98.6% | $112.79 | 11 | 14.4M | $10.25 |
+| **run total** | 9 | 178.9M | 98.5% | $129.20 | 13 | 13.8M | $9.94 |
 | stage CH1 | 2 | 61.7M | 98.7% | $42.63 | 3 | 20.6M | $14.21 |
 | stage CH2 | 1 | 12.2M | 98.2% | $9.36 | 2 | 6.11M | $4.68 |
 | stage CH3 | 1 | 39.1M | 98.7% | $26.96 | 3 | 13M | $8.99 |
 | stage CH4 | 3 | 45.8M | 98.3% | $33.83 | 3 | 15.3M | $11.28 |
-| 2026-08 | 7 | 158.9M | 98.6% | $112.79 | 11 | 14.4M | $10.25 |
+| stage CH5 | 2 | 20M | 97.8% | $16.41 | 2 | 9.98M | $8.21 |
+| 2026-08 | 9 | 178.9M | 98.5% | $129.20 | 13 | 13.8M | $9.94 |
 
-_Where the money goes: agent $112.73 (100%) · gate $0.05 (0%) · blended $0.71/M tokens._
+_Where the money goes: agent $129.12 (100%) · gate $0.08 (0%) · blended $0.72/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-27 01:51:44  ▪ gate face-full pass [phase]  (23.2s)
-08-27 01:51:45  ✓ checkpoint CH2.1 confirmed
-08-27 01:51:45  ✓ checkpoint CH2.2 confirmed
-08-27 01:51:45  ▸ stage CH2 confirmed  (35m42s)
-08-27 01:51:45  ▸ stage CH3 entered — The docs say what shipped
-08-27 01:51:45  • session #4 CH3 Deliver started (attempt 1/6)
-08-27 02:40:38  ▪ gate engine-fast pass [session]  (1m05s)
-08-27 02:40:38  ▪ gate face-fast pass [session]  (22.4s)
-08-27 02:40:38  • session #4 CH3 → Advanced · done CH3.1,CH3.2,CH3.3 · 4 commit(s)  (48m53s)
-08-27 02:45:19  ▪ gate engine-fast pass [phase]  (0.0s)
-08-27 02:45:19  ▪ gate face-fast pass [phase]  (0.0s)
-08-27 02:45:19  ▪ gate engine-full pass [phase]  (4m36s)
-08-27 02:45:19  ▪ gate face-full pass [phase]  (2.4s)
-08-27 02:45:20  ✓ checkpoint CH3.1 confirmed
 08-27 02:45:20  ✓ checkpoint CH3.2 confirmed
 08-27 02:45:20  ✓ checkpoint CH3.3 confirmed
 08-27 02:45:20  ▸ stage CH3 confirmed  (53m34s)
@@ -141,6 +129,20 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-27 09:23:33  • session #8 CH5 Deliver started (attempt 1/4)
 08-27 09:49:23  ▪ gate engine-fast pass [session]  (2m00s)
 08-27 09:49:23  ▪ gate face-fast pass [session]  (25.9s)
+08-27 09:49:24  • session #8 CH5 → Advanced · done CH5.1 · 4 commit(s)  (25m51s)
+08-27 09:49:24  • session #9 CH5 Deliver started (attempt 1/4)
+08-27 10:09:04  ▪ gate engine-fast pass [session]  (1m16s)
+08-27 10:09:04  ▪ gate face-fast pass [session]  (24.5s)
+08-27 10:09:04  • session #9 CH5 → Advanced · done CH5.2 · 3 commit(s)  (19m39s)
+08-27 10:15:02  ▪ gate engine-fast pass [phase]  (0.0s)
+08-27 10:15:02  ▪ gate face-fast pass [phase]  (0.0s)
+08-27 10:15:02  ▪ gate engine-full pass [phase]  (5m48s)
+08-27 10:15:02  ▪ gate face-full pass [phase]  (2.8s)
+08-27 10:15:02  § owner approval requested — CH5
+08-27 10:20:20  § owner approval granted — CH5
+08-27 10:20:20  ✓ checkpoint CH5.1 confirmed
+08-27 10:20:20  ✓ checkpoint CH5.2 confirmed
+08-27 10:20:20  ▸ stage CH5 confirmed  (56m47s)
 ```
 
 ## Health
@@ -148,7 +150,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 8 · retries 1 (12 %) · overall Warn
+sessions 9 · retries 1 (11 %) · overall Warn
 ⚠ [context-saturation] session #1: 39,286,951 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #2: 21,648,664 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 38,650,669 context tokens (≥ 20,000,000)
@@ -162,18 +164,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/charkh
-working tree: clean
+working tree: M .conductor/REPORT.md, M plans/charkh/TRACKER.md
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s1 (CH1 Deliver)** — 5 commit(s):
-  - [`151b429`](https://github.com/shaahink/conductor/commit/151b429) feat(CH1.3): what CI said about THIS commit, beside whether it ran the same battery
-  - [`69eda91`](https://github.com/shaahink/conductor/commit/69eda91) fix(CH1.2): declare the split half as the config exception its other half is
-  - [`aeea6e0`](https://github.com/shaahink/conductor/commit/aeea6e0) feat(CH1.3): the two batteries can no longer differ in silence
-  - [`bd307ee`](https://github.com/shaahink/conductor/commit/bd307ee) fix(CH1.2): a plan in this repo loads on a fresh clone, not just this machine
-  - [`1232ea0`](https://github.com/shaahink/conductor/commit/1232ea0) fix(CH1.1): the board page is one document whatever the checkout did
 - **s2 (CH1 Deliver)** — 4 commit(s):
   - [`b4a2092`](https://github.com/shaahink/conductor/commit/b4a2092) docs(CH1.3): the handoff - CH1 is closed, CI is green on master
   - [`656a06e`](https://github.com/shaahink/conductor/commit/656a06e) chore(CH1.3): the exit, captured - CI green on windows and linux for master
@@ -206,6 +202,10 @@ vs upstream: up to date
   - [`f1c7ea5`](https://github.com/shaahink/conductor/commit/f1c7ea5) docs(CH5.1): this era's own numbers, and the caveat that moves all of them
   - [`980ccfc`](https://github.com/shaahink/conductor/commit/980ccfc) docs(CH5.1): the closure ledger, and the row that stopped being re-homed
   - [`77b9547`](https://github.com/shaahink/conductor/commit/77b9547) docs(CH5.1): the record says what the engine does, measured not repeated
+- **s9 (CH5 Deliver)** — 3 commit(s):
+  - [`8c19a1d`](https://github.com/shaahink/conductor/commit/8c19a1d) docs(CH5.2): the handoff - the era is closed, the acts that are left are the owner's
+  - [`ae9678e`](https://github.com/shaahink/conductor/commit/ae9678e) docs(CH5.2): the era closed through its own machinery, and four findings
+  - [`35043fe`](https://github.com/shaahink/conductor/commit/35043fe) fix(CH5.2): the release notes exist before the tag can, bug #88
 
 ## Phase handovers (audit)
 
@@ -228,33 +228,34 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> **CH5.1 landed - record reconciled, closure ledger written, budget re-measured at 45M/0.95**
-> - ARCHITECTURE.md, ADR-0005 and docs/dev reconciled; two stale gate numbers corrected by measurement, seam count re-verified at thirteen
-> - closure ledger: 43 bugs each with a living owner, followup census by last-row, FU-OWNER-14 closed into CH4's machinery
-> - TOKEN-BUDGET-TUNING §14 prescribes 45M/0.95, pinned to committed JSON; bug #92 filed - a TimedOut session records no cost rows at all
+> **CH5.2 done — era closed through its own verbs, bug #88 fixed, four findings**
+> - bug #88 fixed, proven by scratch-rig A/B not inference: changelog act moves from "placeholder (2 non-blank line(s))" to "rename [Unreleased] to [0.6.0]"; all four mechanical acts read "will run", acts verdict OWNER / exit 2
+> - nothing merged, tagged, moved, installed, pushed or backfilled — release perform refuses before planning while this run is live, so the mechanical acts are parked by the engine and version/split/corpus/reinstall/publish by the owner
+> - four findings filed: #93 high (real courier DOWN, exit 1, restart-on-failure never fired, no log anywhere), #94 perform refuses its own dry run, #95 an era-close act nobody taught it, #96 wrong remedy text
 >
-> artefacts: 77b9547, 980ccfc, f1c7ea5, 11efa61
+> artefacts: CHANGELOG.md, .conductor/evidence/CH5/ch5-2-era-close.md, .conductor/evidence/CH5/ch5-2-bug88-ab.txt, .conductor/evidence/CH5/ch5-2-preflight.txt, .conductor/evidence/CH5/ch5-2-perform-dryrun.txt, .conductor/evidence/CH5/ch5-2-charkh-runbook.md, .conductor/evidence/CH5/ch5-2-runbook-tag-rehearsal.md, 35043fe
 >
-> evidence: .conductor/evidence/CH5/ch5-1-record-and-closure.md
+> evidence: .conductor/evidence/CH5/ch5-2-era-close.md
 >
-> gaps: CH5.2 is open and bug #88 blocks its tag by design (the changelog act refuses over "Nothing yet"); bugs #90, #91, #79 are its backfill/residue hazards; #60 measured green but left open because a measurement names no fix
+> gaps: the era-close is unperformed by design — tag/merge/docmove wait for this run to end, version/split/corpus/reinstall/publish are the owner's; bug #93 means the courier is down on this machine right now
 
 ## Tracker handoff
 
 ```
-last: CH5.1 DONE. ARCHITECTURE.md now says what Charkh added and what it did NOT - still thirteen
-  seams; ADR-0005 gets a third addendum for `github ci`, the first GitHub read that is not about a
-  write. Two doc numbers were repeated rather than measured and both were wrong (maxPragmas is 31
-  and green, bug #44 is fixed). The closure ledger is in .conductor/followups.md: 43 bug rows each
-  with a living owner, a followup census read by LAST row per id, and FU-OWNER-14 closed at last -
-  the reinstall is an owner act the engine prints every run, not a row re-homed a fifth time.
-  TOKEN-BUDGET-TUNING section 14 prescribes 45M / 0.95, pinned to the committed budget JSON.
-next: CH5.2 - close the era THROUGH CH4's verbs, all driven from the fresh build, never the PATH
-  copy. Order: regenerate ch4-4-charkh-runbook.md, then `release preflight`, then `release perform`.
-  Bug #88 IS THE FIRST ACT and it blocks the tag BY DESIGN - the changelog act refuses over the
-  'Nothing yet' body. Park what it refuses; anything the machinery gets wrong is the finding.
+last: CH5.2 DONE - the last checkpoint of the plan. Bug #88 fixed in 35043fe: CHANGELOG [Unreleased]
+  now carries what Charkh landed, written from `master..feat/charkh` (32 commits), 108 non-blank
+  lines where there were 2. Proven by A/B in a scratch rig, not inference - same plan, same
+  `--tag 0.6.0` dry run, CHANGELOG.md the only difference: the changelog act moves from "a
+  placeholder (2 non-blank line(s))" to "rename [Unreleased] to [0.6.0]", and here all four
+  mechanical acts read "will run", acts verdict OWNER / exit 2. Nothing was merged, tagged, moved,
+  installed, pushed or backfilled: `release perform` refuses before it plans anything while this run
+  is live, so the mechanical acts are parked by the ENGINE, and version/split/corpus/reinstall/
+  publish are parked because they are the owner's. Four findings filed: #93 high (the real courier
+  died with exit 1, restart-on-failure did not fire, no log anywhere - it is DOWN right now and
+  Telegram drops undelivered notes after 24h), #94, #95, #96.
+next: nothing is owed to a session. The close is `.conductor/evidence/CH5/ch5-2-era-close.md`.
 ```
