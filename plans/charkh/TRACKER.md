@@ -2,28 +2,31 @@
 
 **Plan:** Charkh - the wheel: what the owner still does by hand becomes machinery | **Branch:** `feat/charkh` | **Design doc:** docs/dev/CHARKH-PLAN-2026-08-26.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, <=12 lines, no history)
 
-last: CH2 IS CLOSED. CH2.1 and CH2.2 both DONE, evidence under .conductor/evidence/CH2/.
-docker: trap 20 reproduced exactly, then solved - Docker Desktop lives under
-  %LOCALAPPDATA%\Programs\DockerDesktop, NOT Program Files, so a Program Files probe reads as
-  "not installed". Started from there the daemon answers 29.5.2 and tools/demo/make-demo-gif.ps1
-  works end to end, ~100s a recording once the image is cached. Nothing was hand-assembled.
-gif: the tour now stops at the inbox (w), the Report tab, the courier (g) and the run switcher
-  (: then switch). The switcher needed a fleet to have anything to show - main.go parses
-  CONDUCTOR_FLEET before it picks a source, so docs/assets/demo-fleet.json reaches a --demo Face.
-  Geometry untouched at 1176x736. 736 KB -> 1476 KB against GitHub's 10 MB cap.
-gate: face-go/internal/tui/demo_tour_test.go, in package tui so it reads tabKey/tabNames itself.
-  Eight seeded failures, two negative controls. Re-record to fix it; never edit the manifest.
-next: CH3.1. Face suite green (build+vet+test); engine untouched this session.
+last: CH3 IS CLOSED. CH3.1, CH3.2 and CH3.3 all DONE, evidence under .conductor/evidence/CH3/.
+method: the docs were DIFFED against binaries, never read and agreed with. tools/ch3/ holds both
+  sweeps and both are re-runnable: dump-help.ps1 + docs-surface-diff.py (the CLI surface, per verb,
+  both directions) and link-sweep.py (3185 references, four kinds, two zones).
+rule (CH3.2, now in docs/dev/README.md): a path is rewritten iff something still READS it. The
+  record - closed eras, docs/history/, ci-health/, .conductor/, every ADR and finding - is REPORTED,
+  never rewritten; 431 broken references were found there and none was touched. The bridge is the
+  where-it-went table, derived by link-sweep.py --redirects.
+found: report --query was deleted at SF1.2 and operating.md still offered it. 13 flags named on no
+  row of the verb declaring them. SIX runtime artifacts undocumented because the scan only read
+  src/Conductor. README's GIF caption still described the pre-CH2.1 tour. All fixed and pinned.
+trap: dotnet build through the PowerShell tool resolves the repo as C:\Code\conductor and prints
+  748 phantom analyzer errors; through the Bash tool it is clean. Build in Bash, or --no-build.
+next: CH4.1. Bugs 87 (courier status contradicts itself) and 88 (CHANGELOG [Unreleased] is empty
+  after CH1+CH2; CH4.1 owns that precondition) are filed and open.
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 14 |
-| Done | 0 |
-| Claimed (unconfirmed) | 3 |
+| Done | 3 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -34,16 +37,16 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| CH1.1 | The rendered board page is one document whatever the checkout did to the source: the inline CSS constant is normalised to LF at load, and a test asserts the PROPERTY (Render output carries no carriage return) rather than the symptom, so the next raw string literal in that file cannot reintroduce it silently | DONE | 1232ea0 | .conductor/evidence/CH1/ch1-1-lf-property.md |
-| CH1.2 | A plan file in this repo is loadable on a fresh clone: the three KS1_4DoctorPlanLintsTests that load this repo's own plan and Validate it stop depending on an absolute machine path, by whichever of the two routes the checkpoint records as chosen, pinned by a test that would fail on the old form | DONE | 1232ea0 | .conductor/evidence/CH1/ch1-2-plan-repo-is-portable.md |
-| CH1.3 | The local battery and CI can no longer disagree in silence: a divergence between what a run's gates just proved and what CI says about the same commit surfaces where the run can see it - the report header, the owner queue - in the DV1.1 channel-health shape, proven on a seeded divergence. Exit is CI green on Windows and Linux for master | DONE | 3750f9a | .conductor/evidence/CH1/ch1-3-flushevents-race-proof.md |
+| CH1.1 | The rendered board page is one document whatever the checkout did to the source: the inline CSS constant is normalised to LF at load, and a test asserts the PROPERTY (Render output carries no carriage return) rather than the symptom, so the next raw string literal in that file cannot reintroduce it silently | DONE ✓ | 1232ea0 | .conductor/evidence/CH1/ch1-1-lf-property.md |
+| CH1.2 | A plan file in this repo is loadable on a fresh clone: the three KS1_4DoctorPlanLintsTests that load this repo's own plan and Validate it stop depending on an absolute machine path, by whichever of the two routes the checkpoint records as chosen, pinned by a test that would fail on the old form | DONE ✓ | 1232ea0 | .conductor/evidence/CH1/ch1-2-plan-repo-is-portable.md |
+| CH1.3 | The local battery and CI can no longer disagree in silence: a divergence between what a run's gates just proved and what CI says about the same commit surfaces where the run can see it - the report header, the owner queue - in the DV1.1 channel-health shape, proven on a seeded divergence. Exit is CI green on Windows and Linux for master | DONE ✓ | 3750f9a | .conductor/evidence/CH1/ch1-3-flushevents-race-proof.md |
 
 ### CH2 — The tour that matches the engine - and knows when it does not
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| CH2.1 | docs/assets/demo.gif re-recorded against the v0.5.0 Face through the VHS container at the covered 1176x736 geometry, with the tape extended to the surfaces the last two eras added (the courier, the inbox, the board page, the hub); Docker verified FIRST with exact output, and if it cannot be made to work that is filed with the output rather than worked around | TODO | - | - |
-| CH2.2 | Staleness becomes a gate rather than a thing somebody notices: a manifest of what the GIF was recorded from and a check that fails when the product has moved past it - payesh's social-card pattern ported, which is why payesh's cards were caught and conductor's GIF was not | TODO | - | - |
+| CH2.1 | docs/assets/demo.gif re-recorded against the v0.5.0 Face through the VHS container at the covered 1176x736 geometry, with the tape extended to the surfaces the last two eras added (the courier, the inbox, the board page, the hub); Docker verified FIRST with exact output, and if it cannot be made to work that is filed with the output rather than worked around | DONE | 13a5bfe | .conductor/evidence/CH2/CH2.1-demo-gif-rerecord.md |
+| CH2.2 | Staleness becomes a gate rather than a thing somebody notices: a manifest of what the GIF was recorded from and a check that fails when the product has moved past it - payesh's social-card pattern ported, which is why payesh's cards were caught and conductor's GIF was not | DONE | 13a5bfe | .conductor/evidence/CH2/CH2.2-staleness-is-a-gate.md |
 
 ### CH3 — The docs say what shipped
 

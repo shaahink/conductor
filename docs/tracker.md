@@ -86,6 +86,14 @@ artifact that never reached this page is a red build, not a mystery file.
   mcp-config.json        Generated MCP wiring handed to the agent. Two shapes because the CLIs
   mcp-config.claude.json  disagree: opencode reads the first, `claude --mcp-config` the second
   settings.budget.json   Generated agent settings carrying this session's budget hook
+  settings.session.json  Generated agent settings for THIS session - the permission posture the
+                          plan's `agent.permissions` block resolves to, written per session
+  secrets.local.json     Tokens this machine was given for this plan (Telegram, GitHub). Never
+                          committed; an environment variable of the same name wins over it
+  ci-status.json         The dated CI observation `conductor github ci` writes: every active
+                          workflow's latest run on this branch. The REPORT.md header, the owner
+                          queue and `doctor` derive `ci-battery` / `ci-verdict` from it, so a
+                          green cannot outlive the commit it was for
   supervisor-fires.log   The supervisor's hourly cost fuse — a file, so it survives the fresh
                           process every `watch` wake starts
   soft-break             Signal file: the run asked the live session to wrap up. `soft-break.delivered`
@@ -103,6 +111,14 @@ artifact that never reached this page is a red build, not a mystery file.
   bg-logs/               Output of commands started with `conductor bg`
   queue/                 Injected instruction chain for the next session
   lanes/                 Analysis lane artifacts
+  cloud/                 Cloud review-lane artifacts (the opt-in `cloud` block; nothing here
+                          unless a plan asked for that lane)
+  judge/                 One `<stage>-session-NNN.json` per judged session: the second model's
+                          reading of the work. Advisory by construction - no code path lets it
+                          flip a gate verdict
+  inbox/                 The owner's filed notes and their `media/` - what the courier delivered
+                          for this project. NEVER committed: `.conductor/.gitignore` is
+                          deny-by-default and gives it no allowlist entry
   audits/                Post-hoc audit replay outputs (`conductor audit --replay`)
 
   events.jsonl           LEGACY. The event-sourced backbone through M-era; nothing constructs its

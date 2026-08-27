@@ -36,20 +36,60 @@ public sealed partial class SF7_1DocsMatchRealityTests
     [GeneratedRegex("""StateDir,\s*"(?<name>[^"]+)"\s*[,)]""", RegexOptions.None, matchTimeoutMilliseconds: 5000)]
     private static partial Regex StateDirChild();
 
+    /// <summary>The other syntax: <c>Path.Combine(plan.StateDir, CiStatus.FileName)</c>. The name is
+    /// behind a const, so the literal scan cannot see it.</summary>
+    [GeneratedRegex("""StateDir,\s*(?<expr>[A-Z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)?)\s*[,)]""",
+        RegexOptions.None, matchTimeoutMilliseconds: 5000)]
+    private static partial Regex StateDirConstChild();
+
+    /// <summary>A <c>const string X = "value"</c> declaration, by name.</summary>
+    [GeneratedRegex("""const\s+string\s+(?<name>[A-Za-z0-9_]+)\s*=\s*"(?<value>[^"]+)""",
+        RegexOptions.None, matchTimeoutMilliseconds: 5000)]
+    private static partial Regex StringConst();
+
+    /// <summary>CH3.3. Scans <c>src/</c>, not <c>src/Conductor/</c>: CH1.3 put the writer of
+    /// <c>ci-status.json</c> in <c>Conductor.Core</c> (<c>Integrations/CiStatus.cs</c>) and the shell-only
+    /// scan could not see it, so the artifact shipped undocumented and this bar stayed green. It also
+    /// follows a const to its value, because that is the form that writer uses. The two names this
+    /// method used to append by hand are exactly what a hand-kept list looks like the moment before it
+    /// misses the third one.</summary>
     private static IReadOnlyList<string> RuntimeArtifactsTheEngineNames()
     {
-        var src = Path.Combine(RepoRoot(), "src", "Conductor");
+        var src = Path.Combine(RepoRoot(), "src");
+        var sources = Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)
+            .ToDictionary(f => f, File.ReadAllText, StringComparer.Ordinal);
         var names = new SortedSet<string>(StringComparer.Ordinal);
-        foreach (var file in Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories))
-            foreach (Match m in StateDirChild().Matches(File.ReadAllText(file)))
+
+        foreach (var (file, text) in sources)
+        {
+            foreach (Match m in StateDirChild().Matches(text))
             {
                 var name = m.Groups["name"].Value;
                 if (name is "..") continue;   // the repo root, not an artifact
                 names.Add(name);
             }
 
-        // Two more the engine keeps behind a public const rather than an inline literal.
-        names.Add(EngineLock.FileName);
+            foreach (Match m in StateDirConstChild().Matches(text))
+            {
+                var expr = m.Groups["expr"].Value;
+                var dot = expr.IndexOf('.', StringComparison.Ordinal);
+                // `CiStatus.FileName` is declared by the file that declares CiStatus;
+                // a bare `FileName` is declared by this one.
+                var member = dot < 0 ? expr : expr[(dot + 1)..];
+                var owner = dot < 0
+                    ? text
+                    : sources.FirstOrDefault(kv =>
+                        Path.GetFileNameWithoutExtension(kv.Key)
+                            .Split('.')[0]
+                            .Equals(expr[..dot], StringComparison.Ordinal)).Value;
+                if (owner is null) continue;
+
+                foreach (Match c in StringConst().Matches(owner))
+                    if (c.Groups["name"].Value == member) names.Add(c.Groups["value"].Value);
+            }
+        }
+
+        // Kept by hand only where no `StateDir, X` call site exists to derive it from.
         names.Add(SupervisorPolicy.FiresFile);
         return [.. names];
     }

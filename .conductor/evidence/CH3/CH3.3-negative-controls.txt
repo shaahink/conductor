@@ -1,0 +1,24 @@
+############ SEED 1: docs/tracker.md loses the ci-status.json entry ############
+seeded: ci-status.json entry removed
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.TrackerDocNamesEveryRuntimeArtifactTheEngineCanWrite [79 ms]
+   docs/tracker.md does not mention 1 artifact(s) the engine writes under plan.StateDir: ci-status.json. Add them to the runtime-files block, or stop writing them.
+
+############ SEED 2: docs/cli.md loses --home from the shared paragraph ############
+seeded: --home dropped from the 'Across runs' paragraph
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.TheCliReferenceNamesEveryOptionOnTheRowOfTheVerbThatDeclaresIt [47 ms]
+   docs/cli.md names 5 option(s) nowhere near the verb that declares them: budget --home, catalogue --home, github --home, history --home, money --home. A reader looking up one verb does not read the whole page, so an option written only on another verb's row is an option they will not find.
+
+############ SEED 3: README.md caption counts the OLD tour ############
+seeded: caption says Seven, the manifest records nine
+  Failed Conductor.Tests.SF7_1DocsMatchRealityTests.TheReadmeCaptionCountsTheStopsTheDemoManifestRecords [17 ms]
+Expected: 9
+Actual:   7
+
+############ tree restored ############
+warning: LF will be replaced by CRLF in README.md.
+The file will have its original line endings in your working directory
+warning: LF will be replaced by CRLF in docs/tracker.md.
+The file will have its original line endings in your working directory
+ docs/cli.md     | 18 ++++++++++++------
+ docs/tracker.md | 16 ++++++++++++++++
+ 2 files changed, 28 insertions(+), 6 deletions(-)
