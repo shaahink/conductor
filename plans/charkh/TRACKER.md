@@ -1,21 +1,20 @@
-# Charkh - the wheel: what the owner still does by hand becomes machinery Phase Tracker
+﻿# Charkh - the wheel: what the owner still does by hand becomes machinery Phase Tracker
 
 **Plan:** Charkh - the wheel: what the owner still does by hand becomes machinery | **Branch:** `feat/charkh` | **Design doc:** docs/dev/CHARKH-PLAN-2026-08-26.md
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: CH1.1 and CH1.2 DONE and confirmed by their own negative controls. CH1.3 is IN PROGRESS and
-  its code is landed and green locally: ci-battery (does CI run the same commands plan.gates does)
-  and ci-verdict (what CI said about THIS commit) in the DV1.1 shape, reaching the report header,
-  the owner queue, doctor, and a new `conductor github ci` verb. 28 tests, docs/cli.md +
-  docs/operating.md updated (SF7.1 demanded both). Live proof: .conductor/evidence/CH1/.
-red: CI on feat/charkh is RED at the RATCHET step - 'ANALYZER SUPPRESSIONS ABOVE CEILING (35 > 31)'.
-  Measured: 35 '#pragma warning disable' in src/, ZERO added by this branch, so it predates the era;
-  it was hidden because dotnet test failed first for all of Divan. It fails locally too. This is
-  exactly what CH1.3's own ci-battery row predicts.
-next: remove 4 suppressions from src/ (fix the analyzer complaints - NEVER raise the ceiling, the
-  gate calls that a human decision), then re-run the FULL suite: it has not run since the CH1.3 work.
-  CH1.3's exit is CI green on master, which needs feat/charkh merged after it is green here.
+last: CH1 IS CLOSED. CH1.3 DONE - CI green on windows AND ubuntu for feat/charkh and for master,
+  both at 349a3a5f (evidence/CH1/ci-green-both-branches.txt). Stage CH1 is complete.
+how: two things stood between here and green, both real. (1) The ratchet's 35 > 31 suppressions:
+  which four to drop was MEASURED - every pragma stripped, MA0040/45 downgraded, solution built,
+  all 96 live diagnostic sites mapped to their suppressing region. One was dead; the other three
+  are real code (two async conversions, one duplicate method deleted). Ceiling untouched at 31.
+  (2) A genuine engine race, bug #85, filed and fixed: SqliteRunStore.FlushEvents could return
+  while the drain loop held a dequeued-but-uncommitted batch, so a caller was told an event was
+  durable when it was not. Both drainers now share _drainGate. Proven by perturbation, with a
+  negative control on the shipped test; DrainWindowProbe is the permanent seam.
+next: CH2.1, and its FIRST act is `docker version` verbatim - trap 20 says it had no server.
 
 ## Baseline numbers (from run.db)
 
@@ -23,24 +22,20 @@ next: remove 4 suppressions from src/ (fix the analyzer complaints - NEVER raise
 |---|---|
 | Total checkpoints | 14 |
 | Done | 0 |
-| Claimed (unconfirmed) | 0 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
 Status ∈ TODO · IN PROGRESS · DONE · DONE ✓ (confirmed) · BLOCKED · SKIPPED. Evidence = artifact path produced by a run this
 phase (a code path is not evidence). Agent claims are marked DONE; engine confirms as DONE ✓.
 
-Escalation, when a checkpoint genuinely needs the owner: write the word HUMAN followed by a colon on
-its own line in the handoff block above, and only while it is true. The match is a plain substring,
-so the literal form is spelled out here, below the checkpoints, and never up there.
-
 ### CH1 — CI green, and the reason it was not
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| CH1.1 | The rendered board page is one document whatever the checkout did to the source: the inline CSS constant is normalised to LF at load, and a test asserts the PROPERTY (Render output carries no carriage return) rather than the symptom, so the next raw string literal in that file cannot reintroduce it silently | TODO | - | - |
-| CH1.2 | A plan file in this repo is loadable on a fresh clone: the three KS1_4DoctorPlanLintsTests that load this repo's own plan and Validate it stop depending on an absolute machine path, by whichever of the two routes the checkpoint records as chosen, pinned by a test that would fail on the old form | TODO | - | - |
-| CH1.3 | The local battery and CI can no longer disagree in silence: a divergence between what a run's gates just proved and what CI says about the same commit surfaces where the run can see it - the report header, the owner queue - in the DV1.1 channel-health shape, proven on a seeded divergence. Exit is CI green on Windows and Linux for master | TODO | - | - |
+| CH1.1 | The rendered board page is one document whatever the checkout did to the source: the inline CSS constant is normalised to LF at load, and a test asserts the PROPERTY (Render output carries no carriage return) rather than the symptom, so the next raw string literal in that file cannot reintroduce it silently | DONE | 1232ea0 | .conductor/evidence/CH1/ch1-1-lf-property.md |
+| CH1.2 | A plan file in this repo is loadable on a fresh clone: the three KS1_4DoctorPlanLintsTests that load this repo's own plan and Validate it stop depending on an absolute machine path, by whichever of the two routes the checkpoint records as chosen, pinned by a test that would fail on the old form | DONE | 1232ea0 | .conductor/evidence/CH1/ch1-2-plan-repo-is-portable.md |
+| CH1.3 | The local battery and CI can no longer disagree in silence: a divergence between what a run's gates just proved and what CI says about the same commit surfaces where the run can see it - the report header, the owner queue - in the DV1.1 channel-health shape, proven on a seeded divergence. Exit is CI green on Windows and Linux for master | IN PROGRESS | - | - |
 
 ### CH2 — The tour that matches the engine - and knows when it does not
 
@@ -75,6 +70,6 @@ so the literal form is spelled out here, below the checkpoints, and never up the
 
 ## Dependencies
 
-CH1.3 wants CH1.1 and CH1.2 green first, because "CI is green" is its exit and the other two are why
-it is not. CH2.2 needs CH2.1's recording to have a manifest to describe. CH4.2 and CH4.4 both build
-on CH4.1's measurements. CH5.2 is the proof of CH4 and cannot run before it.
+```
+(none — stages run sequentially by plan order)
+```
