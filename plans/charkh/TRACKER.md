@@ -4,18 +4,17 @@
 
 ## Handoff (overwrite this block, <=12 lines, no history)
 
-last: CH4.3 AND CH4.4 both DONE and claimed; CH4 is closed. CH4.3 scoped the retire sweep -
-  GithubIdentity gains OwnerMarker (NOT RunMarker; the diary is found by scanning bodies for that),
-  an issue is retirable only if that marker is ours OR this run's GithubMap points at that number,
-  and everything else is REFUSED BY NAME on GithubSyncResult.RetireRefused. CH4.4 made the runbook
-  the verb's output: `conductor release runbook` renders from the SAME probes preflight runs and the
-  SAME planner perform uses, and two tests derive the act vocabulary BY REFLECTION, so an act wired
-  to nothing fails the day it is added. Evidence: .conductor/evidence/CH4/ch4-3-retire-scoped.md,
-  ch4-4-release-runbook.md, and ch4-4-charkh-runbook.md - the generated runbook itself.
-owed to CH5: (a) CH4.3's second clause, writing the edge run's GitHub record, is ordered AFTER the
-  reinstall - today's A/B says the installed 0.5.0 would retire 14 of Charkh's OWN cards; (b) bug 91
-  - IsStillGoing counts needs_human as in flight, so the corpus act omits that very backfill.
-next: CH5.1, then CH5.2 closes the era using ch4-4-charkh-runbook.md REGENERATED at the time.
+last: CH5.1 DONE. ARCHITECTURE.md now says what Charkh added and what it did NOT - still thirteen
+  seams; ADR-0005 gets a third addendum for `github ci`, the first GitHub read that is not about a
+  write. Two doc numbers were repeated rather than measured and both were wrong (maxPragmas is 31
+  and green, bug #44 is fixed). The closure ledger is in .conductor/followups.md: 43 bug rows each
+  with a living owner, a followup census read by LAST row per id, and FU-OWNER-14 closed at last -
+  the reinstall is an owner act the engine prints every run, not a row re-homed a fifth time.
+  TOKEN-BUDGET-TUNING section 14 prescribes 45M / 0.95, pinned to the committed budget JSON.
+next: CH5.2 - close the era THROUGH CH4's verbs, all driven from the fresh build, never the PATH
+  copy. Order: regenerate ch4-4-charkh-runbook.md, then `release preflight`, then `release perform`.
+  Bug #88 IS THE FIRST ACT and it blocks the tag BY DESIGN - the changelog act refuses over the
+  'Nothing yet' body. Park what it refuses; anything the machinery gets wrong is the finding.
 
 ## Baseline numbers (from run.db)
 
@@ -23,7 +22,7 @@ next: CH5.1, then CH5.2 closes the era using ch4-4-charkh-runbook.md REGENERATED
 |---|---|
 | Total checkpoints | 14 |
 | Done | 8 |
-| Claimed (unconfirmed) | 3 |
+| Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
 
@@ -60,7 +59,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | CH4.1 | Release preflight as a verb: every precondition DV7.3 measured by hand becomes something the engine measures - ff-only merge, a CHANGELOG section the extractor exits 0 on, no live conductor process, migration versions matching, the courier's token scope and task state, the run whose backfill is owed - as a verdict per line with a non-zero exit when any line is red | DONE | cf8997f | .conductor/evidence/CH4/ch4-1-release-preflight.md |
 | CH4.2 | The mechanical acts performed and the judgement acts refused BY NAME: the CHANGELOG rename, the tag, the ff-only merge and the doc move with its tracker/planDoc/readOrder repoint are performed; the version number, single-vs-split release and corpus inclusion are stopped at and named. An act that needs the owner is never silently skipped - that failure is exactly what KS12.3 was | DONE | cf8997f | .conductor/evidence/CH4/ch4-2-release-perform.md |
 | CH4.3 | A backfill can no longer vandalise another run's board: the retire sweep is scoped to the run being synced, or a backfill that would retire another run's checkpoints is refused with what it would have closed. Measured 2026-08-26: the edge run's dry run reported 23 retired against exactly Divan's 23 checkpoints. Then the edge run's own GitHub record is written | DONE | - | .conductor/evidence/CH4/ch4-3-retire-scoped.md |
-| CH4.4 | The owner runbook becomes the preflight's output rather than a document written from scratch each era, generated from its own measurements and carrying the exact commands - the DV7.3 and KS12.3 artifacts are the shape being replaced | IN PROGRESS | - | - |
+| CH4.4 | The owner runbook becomes the preflight's output rather than a document written from scratch each era, generated from its own measurements and carrying the exact commands - the DV7.3 and KS12.3 artifacts are the shape being replaced | DONE | 35a4555 | .conductor/evidence/CH4/ch4-4-release-runbook.md |
 
 ### CH5 — Ship Charkh with the machinery it built
 
