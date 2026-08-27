@@ -1,10 +1,10 @@
 ﻿# Conductor — Charkh - the wheel: what the owner still does by hand becomes machinery run report
 
-_Updated 2026-08-27 02:33 UTC · branch `feat/charkh` · HEAD `542f068`_
+_Updated 2026-08-27 08:10 UTC · branch `feat/charkh` · HEAD `5019261`_
 
 **Status:** Idle
-**Stage:** CH4 — The machinery - the era-close stops being prose · attempts used 0 · working ▸ CH4.3
-**Checkpoints:** 10/14 done · **Sessions run:** 5 · **Cost:** $106.4292 (agent $106.3841 + gates $0.0450) · **Tokens:** 1,312,681 in / 698,520 out
+**Stage:** CH4 — The machinery - the era-close stops being prose · attempts used 1 · working ▸ CH4.4
+**Checkpoints:** 11/14 done · **Sessions run:** 6 · **Cost:** $106.4292 (agent $106.3841 + gates $0.0450) · **Tokens:** 1,537,024 in / 699,845 out
 **Confirmed phases:** CH1, CH2, CH3
 **Channels:** telegram ready · github ready · courier ready
 
@@ -15,7 +15,7 @@ _Updated 2026-08-27 02:33 UTC · branch `feat/charkh` · HEAD `542f068`_
 | CH1 | CI green, and the reason it was not | ██████████ 3/3 | confirmed ✓ |
 | CH2 | The tour that matches the engine - and knows when it does not | ██████████ 2/2 | confirmed ✓ |
 | CH3 | The docs say what shipped | ██████████ 3/3 | confirmed ✓ |
-| CH4 | The machinery - the era-close stops being prose | █████░░░░░ 2/4 | **← active** |
+| CH4 | The machinery - the era-close stops being prose | ████████░░ 3/4 | **← active** |
 | CH5 | Ship Charkh with the machinery it built | ░░░░░░░░░░ 0/2 | todo |
 
 <details> ✅<summary>CH1 — CI green, and the reason it was not (3/3)</summary>
@@ -47,14 +47,14 @@ _Updated 2026-08-27 02:33 UTC · branch `feat/charkh` · HEAD `542f068`_
 
 </details>
 
-<details><summary>CH4 — The machinery - the era-close stops being prose (2/4)</summary>
+<details><summary>CH4 — The machinery - the era-close stops being prose (3/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| CH4.1 | Release preflight as a verb: every precondition DV7.3 measured by hand becomes something the engine measures - ff-only merge, a CHANGELOG section the extractor exits 0 on, no live conductor process, migration versions matching, the courier's token scope and task state, the run whose backfill is owed - as a verdict per line with a non-zero exit when any line is red | ✅ DONE | - |
-| CH4.2 | The mechanical acts performed and the judgement acts refused BY NAME: the CHANGELOG rename, the tag, the ff-only merge and the doc move with its tracker/planDoc/readOrder repoint are performed; the version number, single-vs-split release and corpus inclusion are stopped at and named. An act that needs the owner is never silently skipped - that failure is exactly what KS12.3 was | ✅ DONE | - |
-| CH4.3 | A backfill can no longer vandalise another run's board: the retire sweep is scoped to the run being synced, or a backfill that would retire another run's checkpoints is refused with what it would have closed. Measured 2026-08-26: the edge run's dry run reported 23 retired against exactly Divan's 23 checkpoints. Then the edge run's own GitHub record is written | ⬜ TODO | - |
-| CH4.4 | The owner runbook becomes the preflight's output rather than a document written from scratch each era, generated from its own measurements and carrying the exact commands - the DV7.3 and KS12.3 artifacts are the shape being replaced | ⬜ TODO | - |
+| CH4.1 | Release preflight as a verb: every precondition DV7.3 measured by hand becomes something the engine measures - ff-only merge, a CHANGELOG section the extractor exits 0 on, no live conductor process, migration versions matching, the courier's token scope and task state, the run whose backfill is owed - as a verdict per line with a non-zero exit when any line is red | ✅ DONE | [`cf8997f`](https://github.com/shaahink/conductor/commit/cf8997f) |
+| CH4.2 | The mechanical acts performed and the judgement acts refused BY NAME: the CHANGELOG rename, the tag, the ff-only merge and the doc move with its tracker/planDoc/readOrder repoint are performed; the version number, single-vs-split release and corpus inclusion are stopped at and named. An act that needs the owner is never silently skipped - that failure is exactly what KS12.3 was | ✅ DONE | [`cf8997f`](https://github.com/shaahink/conductor/commit/cf8997f) |
+| CH4.3 | A backfill can no longer vandalise another run's board: the retire sweep is scoped to the run being synced, or a backfill that would retire another run's checkpoints is refused with what it would have closed. Measured 2026-08-26: the edge run's dry run reported 23 retired against exactly Divan's 23 checkpoints. Then the edge run's own GitHub record is written | ✅ DONE | - |
+| CH4.4 | The owner runbook becomes the preflight's output rather than a document written from scratch each era, generated from its own measurements and carrying the exact commands - the DV7.3 and KS12.3 artifacts are the shape being replaced | 🔄 IN PROGRESS | - |
 
 </details>
 
@@ -76,6 +76,7 @@ _Updated 2026-08-27 02:33 UTC · branch `feat/charkh` · HEAD `542f068`_
 | 3 | CH2 | Deliver | 1 | 08-27 00:16 | 0:24 | Advanced | CH2.1 CH2.2 | 3 | engine-fast:OK · face-fast:OK | $9.3501 | $0.0070 | 151,249/73,219 |
 | 4 | CH3 | Deliver | 1 | 08-27 00:51 | 0:47 | Advanced | CH3.1 CH3.2 CH3.3 | 4 | engine-fast:OK · face-fast:OK | $26.9553 | $0.0088 | 321,102/176,471 |
 | 5 | CH4 | Deliver | 1 | 08-27 01:45 | 0:47 | Advanced | CH4.1 CH4.2 | 4 | engine-fast:OK · face-fast:OK | $27.4686 | $0.0082 | 323,895/170,309 |
+| 6 | CH4 | Deliver | 1 | 08-27 02:33 | 5:36 | TimedOut |  | 3 |  |  |  | 224,343/1,325 |
 
 ## Money
 
@@ -83,21 +84,20 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 4 | 113.1M | 98.7% | $78.95 | 8 | 14.1M | $9.87 |
+| **run total** | 5 | 151.8M | 98.7% | $106.43 | 10 | 15.2M | $10.64 |
 | stage CH1 | 2 | 61.7M | 98.7% | $42.63 | 3 | 20.6M | $14.21 |
 | stage CH2 | 1 | 12.2M | 98.2% | $9.36 | 2 | 6.11M | $4.68 |
 | stage CH3 | 1 | 39.1M | 98.7% | $26.96 | 3 | 13M | $8.99 |
-| 2026-08 | 4 | 113.1M | 98.7% | $78.95 | 8 | 14.1M | $9.87 |
+| stage CH4 | 1 | 38.7M | 98.7% | $27.48 | 2 | 19.4M | $13.74 |
+| 2026-08 | 5 | 151.8M | 98.7% | $106.43 | 10 | 15.2M | $10.64 |
 
-_Where the money goes: agent $78.92 (100%) · gate $0.04 (0%) · blended $0.70/M tokens._
+_Where the money goes: agent $106.38 (100%) · gate $0.05 (0%) · blended $0.70/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-27 01:11:01  ▪ gate engine-fast pass [session]  (1m08s)
-08-27 01:11:01  ▪ gate face-fast pass [session]  (22.3s)
 08-27 01:11:01  • session #2 CH1 → Advanced · done CH1.3 · 4 commit(s)  (1h01m17s)
 08-27 01:16:01  ▪ gate engine-fast pass [phase]  (0.0s)
 08-27 01:16:01  ▪ gate face-fast pass [phase]  (0.0s)
@@ -136,6 +136,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-27 02:45:20  • session #5 CH4 Deliver started (attempt 1/10)
 08-27 03:33:49  ▪ gate engine-fast pass [session]  (1m04s)
 08-27 03:33:49  ▪ gate face-fast pass [session]  (18.0s)
+08-27 03:33:50  • session #5 CH4 → Advanced · done CH4.1,CH4.2 · 4 commit(s)  (48m29s)
+08-27 03:33:51  • session #6 CH4 Deliver started (attempt 1/10)
 ```
 
 ## Health
@@ -143,10 +145,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 5 · retries 0 (0 %) · overall Warn
+sessions 6 · retries 0 (0 %) · overall Warn
 ⚠ [context-saturation] session #1: 39,286,951 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #2: 21,648,664 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 38,650,669 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #5: 38,222,976 context tokens (≥ 20,000,000)
 ```
 
 ## Repo
@@ -155,7 +158,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/charkh
-working tree: clean
+working tree: M src/Conductor/Commands/ReleaseCommand.cs, ?? src/Conductor.Core/Release/ReleaseRunbook.cs, ?? src/Conductor/Commands/ReleaseCommand.Runbook.cs, ?? tests/Conductor.Tests/CH4_4ReleaseRunbookTests.cs
 vs upstream: up to date
 ```
 
@@ -186,6 +189,10 @@ vs upstream: up to date
   - [`c0dcad5`](https://github.com/shaahink/conductor/commit/c0dcad5) feat(CH4.2): perform what is mechanical, name what is judgement
   - [`a660c3a`](https://github.com/shaahink/conductor/commit/a660c3a) docs(CH4.1): the handoff block for CH4.2
   - [`cf8997f`](https://github.com/shaahink/conductor/commit/cf8997f) feat(CH4.1): the era-close checklist gets a failure mode
+- **s6 (CH4 Deliver)** — 3 commit(s):
+  - [`5019261`](https://github.com/shaahink/conductor/commit/5019261) docs(CH4.3): the handoff - the sweep is scoped, the write is ordered
+  - [`74cfe3c`](https://github.com/shaahink/conductor/commit/74cfe3c) docs(CH4.3): the evidence - the A/B that names 23, then 14
+  - [`f4022f6`](https://github.com/shaahink/conductor/commit/f4022f6) feat(CH4.3): the retire sweep asks whose board it is
 
 ## Phase handovers (audit)
 
@@ -226,18 +233,16 @@ engine-fast:OK · face-fast:OK
 ## Tracker handoff
 
 ```
-last: CH4.1 AND CH4.2 both DONE, committed and pushed. `conductor release preflight` (six measured
-  lines; exit 0/1/2) and `conductor release perform` (four mechanical acts performed, five owner acts
-  named and stopped at). Evidence: .conductor/evidence/CH4/ch4-1-release-preflight.md and
-  ch4-2-release-perform.md. Full suite green 3550/3550. The PATH 0.5.0 has neither verb.
-shape: deciding is PURE in src/Conductor.Core/Release; measuring and acting are impure in
-  ReleaseCommand.{Probes,Perform}.cs. ReleaseAct keeps Kind (whose act, ever) apart from State (what
-  happened this time), so an owner act is `stopped` on EVERY run and can never read as `nothing`.
-  Exit 2 is what a FINISHED era-close looks like; 0 would be reading "closed" off a document again.
-next: CH4.3, read but NOT started - it is back at TODO. The root cause is the MARKER:
-  GithubIdentity.TaskMarker is `<!-- conductor:task ID -->` with no run id, while RunMarker and
-  SessionMarker carry one - so a card issue is not attributable to a run at all, and RetireAsync
-  (GithubBoardSync.cs:204) sweeps every task-marked issue in the repo. Smaller fix: scope the retire
-  candidates to GithubMap rows for this run+repo (local, the authority since v14) and REFUSE rather
-  than retire-nothing when the map is Transient (bug 79's read-only path). Full note in the ledger.
+last: CH4.3 DONE and claimed. The retire sweep asks whose board it is now. GithubIdentity gains
+  OwnerMarker (`<!-- conductor:owner <runId> -->`, deliberately NOT RunMarker - the diary is found
+  by scanning bodies for that exact string) stamped into every card body; an issue is retirable only
+  if that marker is ours OR this run's GithubMap points at that number. Everything else is REFUSED
+  BY NAME on GithubSyncResult.RetireRefused, printed in full by `github sync` and logged by the live
+  mirror. Bug 84 closed, bug 90 filed. Evidence: .conductor/evidence/CH4/ch4-3-retire-scoped.md.
+measured: the vandalism had ALREADY happened - all 23 DV and every KS card on shaahink/conductor
+  wears conductor:retired. A/B dry runs there, same instant: installed 0.5.0 says "14 retired"
+  (CH1.1 #112..CH5.2 #125, Charkh's OWN board, four still open); fresh build says "0 retired, 14
+  retire refused". So the card's second clause - write the edge run's record - is ordered AFTER
+  CH5's reinstall, not skipped: the live mirror is still 0.5.0 and re-retires within one boundary.
+next: CH4.4, the runbook as the preflight's output - the edge-run write is one of its owner acts.
 ```
