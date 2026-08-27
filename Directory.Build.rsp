@@ -1,0 +1,8 @@
+# Bugs #54 / #57 / #59 - MSBuild node reuse serves a stale analyzer config. A reused node that first
+# built this tree under one path casing (C:\code\conductor) keeps answering for the other
+# (C:\Code\conductor); the .editorconfig section match is case-sensitive, the severity overrides are
+# dropped, and Conductor.Planning goes red with MA00xx errors the tree does not have. Measured in
+# .conductor/evidence/KS4/KS4.1-holdout-gates.md: three identical invocations, two RED and one GREEN,
+# and `-nr:false` green every time. MSBuild reads this file for every build under this directory
+# (dotnet build, dotnet test, dotnet run), so the fix travels with the tree instead of with a habit.
+-nodeReuse:false
