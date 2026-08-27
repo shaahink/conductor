@@ -1,0 +1,8 @@
+# ch5-2 release perform, NO --yes (dry run), no --tag - fresh build, exit 1
+refusing: a conductor run is live in C:/code/conductor\.conductor (engine pid 
+5248).
+this verb rewrites the CHANGELOG, moves the plan's tracker and repoints the plan
+itself —
+doing that under a live session pulls the ground out from under it. Let the run 
+end first.
+
