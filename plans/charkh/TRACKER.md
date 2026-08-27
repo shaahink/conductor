@@ -2,32 +2,29 @@
 
 **Plan:** Charkh - the wheel: what the owner still does by hand becomes machinery | **Branch:** `feat/charkh` | **Design doc:** docs/dev/CHARKH-PLAN-2026-08-26.md
 
-## Handoff (overwrite this block, <=12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: CH3 IS CLOSED. CH3.1, CH3.2 and CH3.3 all DONE, evidence under .conductor/evidence/CH3/.
-method: the docs were DIFFED against binaries, never read and agreed with. tools/ch3/ holds both
-  sweeps and both are re-runnable: dump-help.ps1 + docs-surface-diff.py (the CLI surface, per verb,
-  both directions) and link-sweep.py (3185 references, four kinds, two zones).
-rule (CH3.2, now in docs/dev/README.md): a path is rewritten iff something still READS it. The
-  record - closed eras, docs/history/, ci-health/, .conductor/, every ADR and finding - is REPORTED,
-  never rewritten; 431 broken references were found there and none was touched. The bridge is the
-  where-it-went table, derived by link-sweep.py --redirects.
-found: report --query was deleted at SF1.2 and operating.md still offered it. 13 flags named on no
-  row of the verb declaring them. SIX runtime artifacts undocumented because the scan only read
-  src/Conductor. README's GIF caption still described the pre-CH2.1 tour. All fixed and pinned.
-trap: dotnet build through the PowerShell tool resolves the repo as C:\Code\conductor and prints
-  748 phantom analyzer errors; through the Bash tool it is clean. Build in Bash, or --no-build.
-suite: full battery green - dotnet test Conductor.slnx, Passed 3513 / 3513, 3m59s.
-next: CH4.1. Bugs 87 (courier status contradicts itself) and 88 (CHANGELOG [Unreleased] is empty
-  after CH1+CH2; CH4.1 owns that precondition) are filed and open.
-
+last: CH4.1 DONE. `conductor release preflight` exists in the tree (NOT in the PATH 0.5.0 - it
+  refuses the verb, which is the control). Six named lines, exit 0 all-green / 1 red / 2 owner.
+  Evidence: .conductor/evidence/CH4/ch4-1-release-preflight.md + three live captures.
+shape: deciding is PURE in src/Conductor.Core/Release (five files, verdicts over Facts records);
+  measuring is impure in src/Conductor/Commands/ReleaseCommand.Probes.cs. That split is what lets a
+  test seed one red fact and prove the exit code moves. 21 tests, every one a negative control.
+found: local master is 9 BEHIND origin/master while feat/charkh contains all 9 - the merge line needs
+  three counts, not two. `conductor` on PATH is a scoop .CMD SHIM, so UpdateSafety's process-image
+  half goes blind unless you feed it `version --json`.binary. `sh` is not on the Windows PATH and
+  ProcessRunner reports a failed START as exit -1 on STDOUT - that printed as "no CHANGELOG section".
+next: CH4.2 - perform the mechanical acts, REFUSE the judgement ones. The preflight already draws
+  that line (state "owner"); CH4.2 acts on the green ones. Four runs are owed a github record, ids in
+  the evidence. Bug 88 (empty [Unreleased]) is what CH4.2/CH5 must write before any tag.
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
+
 |---|---|
 | Total checkpoints | 14 |
-| Done | 3 |
-| Claimed (unconfirmed) | 2 |
+| Done | 5 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -46,16 +43,16 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| CH2.1 | docs/assets/demo.gif re-recorded against the v0.5.0 Face through the VHS container at the covered 1176x736 geometry, with the tape extended to the surfaces the last two eras added (the courier, the inbox, the board page, the hub); Docker verified FIRST with exact output, and if it cannot be made to work that is filed with the output rather than worked around | DONE | 13a5bfe | .conductor/evidence/CH2/CH2.1-demo-gif-rerecord.md |
-| CH2.2 | Staleness becomes a gate rather than a thing somebody notices: a manifest of what the GIF was recorded from and a check that fails when the product has moved past it - payesh's social-card pattern ported, which is why payesh's cards were caught and conductor's GIF was not | DONE | 13a5bfe | .conductor/evidence/CH2/CH2.2-staleness-is-a-gate.md |
+| CH2.1 | docs/assets/demo.gif re-recorded against the v0.5.0 Face through the VHS container at the covered 1176x736 geometry, with the tape extended to the surfaces the last two eras added (the courier, the inbox, the board page, the hub); Docker verified FIRST with exact output, and if it cannot be made to work that is filed with the output rather than worked around | DONE ✓ | 13a5bfe | .conductor/evidence/CH2/CH2.1-demo-gif-rerecord.md |
+| CH2.2 | Staleness becomes a gate rather than a thing somebody notices: a manifest of what the GIF was recorded from and a check that fails when the product has moved past it - payesh's social-card pattern ported, which is why payesh's cards were caught and conductor's GIF was not | DONE ✓ | 13a5bfe | .conductor/evidence/CH2/CH2.2-staleness-is-a-gate.md |
 
 ### CH3 — The docs say what shipped
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| CH3.1 | The published surface reconciled against the INSTALLED v0.5.0 engine rather than against intent: README first, then cli.md, operating.md, plan-config.md, quickstart.md, troubleshooting.md, tracker.md and the docs/README.md index; the courier is a real always-on process now and the docs still offer it as a possibility | TODO | - | - |
-| CH3.2 | Every reference resolves: the rule for the plans' notes prose citing the two moved briefs decided once, applied consistently and recorded in docs/dev/README.md; every relative link in docs/, every path in a test message and every contracts reference swept. Frozen run artifacts under .conductor are a record - reported, never rewritten | TODO | - | - |
-| CH3.3 | SF7_1DocsMatchRealityTests extended to every verb and config key this era adds, each new assertion proven RED on a seeded stale doc - the negative control is the point of the battery | TODO | - | - |
+| CH3.1 | The published surface reconciled against the INSTALLED v0.5.0 engine rather than against intent: README first, then cli.md, operating.md, plan-config.md, quickstart.md, troubleshooting.md, tracker.md and the docs/README.md index; the courier is a real always-on process now and the docs still offer it as a possibility | DONE | ea75bda | .conductor/evidence/CH3/CH3.1-published-surface-reconciled.md |
+| CH3.2 | Every reference resolves: the rule for the plans' notes prose citing the two moved briefs decided once, applied consistently and recorded in docs/dev/README.md; every relative link in docs/, every path in a test message and every contracts reference swept. Frozen run artifacts under .conductor are a record - reported, never rewritten | DONE | ea75bda | .conductor/evidence/CH3/CH3.2-references-resolve.md |
+| CH3.3 | SF7_1DocsMatchRealityTests extended to every verb and config key this era adds, each new assertion proven RED on a seeded stale doc - the negative control is the point of the battery | DONE | ea75bda | .conductor/evidence/CH3/CH3.3-docs-battery-extended.md |
 
 ### CH4 — The machinery - the era-close stops being prose
 

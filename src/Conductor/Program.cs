@@ -148,6 +148,8 @@ app.Configure(c =>
     c.AddCommand<HubCommand>("hub").IsHidden();
     c.AddCommand<GithubCommand>("github")
         .WithDescription("KS9.1: push a finished run's board and diary to GitHub issues — one issue per checkpoint, one run issue with a comment per session. One way, off by default, nothing ever read back. `github sync --backfill <run> [[--repo owner/name]] [[--dry-run]]`.");
+    c.AddCommand<ReleaseCommand>("release")
+        .WithDescription("CH4.1: the era-close, measured instead of written. `release preflight [[--tag 0.6.0]] [[--base master]] [[--branch feat/x]]` measures every precondition the owner runbook used to measure by hand — the merge is a fast-forward, the CHANGELOG has a section a tag build accepts, no conductor is live, no schema skew, the courier survives the reinstall, which run is owed a GitHub record. Writes nothing; exits non-zero when any line is red.");
     c.AddCommand<CompletionCommand>("completion")
         .WithDescription("Generate shell completion scripts (powershell or bash).");
     c.AddCommand<BgCommand>("bg")

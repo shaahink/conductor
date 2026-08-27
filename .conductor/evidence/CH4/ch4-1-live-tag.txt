@@ -1,0 +1,93 @@
+conductor release preflight — Charkh - the wheel: what the owner still does by 
+hand becomes machinery
+repo: C:/code/conductor  ·  release: 0.6.0
+
+✗ merge      feat/charkh is 18 ahead of master and would fast-forward, but the 
+working tree is not clean
+           the working tree has uncommitted changes - commit or stash first, or 
+the merge takes them along
+           local master is 9 behind origin/master, and feat/charkh already 
+contains all 9 - the fast-forward carries them; `git pull` first so you see what
+you merge into
+           origin/master is read as of your last fetch - this verb does not 
+fetch, and a stale remote ref is a stale verdict
+✗ changelog  no CHANGELOG section for 0.6.0
+           exit 1 - release.yml runs this as the first job of a tag build, so 
+the tag would be refused
+           rename the heading to '## [0.6.0] - <date>' and re-run
+           sections found: ## [Unreleased], ## [0.5.0] - 2026-08-26, ## [0.4.1] 
+- 2026-08-15, ## [0.4.0] - 2026-08-05, ## [0.3.0] - 2026-08-01, ## [0.2.2] - 
+2026-08-01
+           changelog-section: no section for 0.6.0 in CHANGELOG.md.
+  Expected a heading '## [0.6.0] - <date>' with at least one line under it.
+  Sections found:
+## [Unreleased]
+## [0.5.0] - 2026-08-26
+## [0.4.1] - 2026-08-15
+## [0.4.0] - 2026-08-05
+## [0.3.0] - 2026-08-01
+## [0.2.2] - 2026-08-01
+## [0.2.1] - 2026-08-01
+## [0.2.0] - 2026-07-31
+## [0.1.0] - 2026-07-28
+✗ processes  4 reason(s) a binary swap is unsafe right now
+           pid 3392 
+C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe
+           pid 5248 
+C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe <- CONDUCTOR_PID, 
+the run asking this question
+           pid 33884 
+C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe
+           a run is live in C:\Code\conductor\.conductor (engine pid 5248) — 
+stop it with `conductor pause` or `conductor kill`, then update
+           another conductor is running from 
+C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe (pid 33884) — exit
+it, then update
+           another conductor is running from 
+C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe (pid 5248) — exit 
+it, then update
+           another conductor is running from 
+C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe (pid 3392) — exit 
+it, then update
+           the reinstall belongs AFTER the run has ended - a live engine holding
+an old image is exactly trap 18's shape
+✓ migration  no schema skew: tree v15, installed engine 0.5.0 carries the same 
+migrations
+           store: 
+C:\Users\shahi\AppData\Local\conductor\runs\conductor-karvansara-core---the-open
+-door-308cfb9b\run.db at schema 15
+✓ courier    the courier is installed, running and reachable, and its token is 
+persisted where the task can see it
+           token set, persisted at User scope - 1 chat(s), 4 project(s) allowed
+           task registered, running pid 33884
+           tools/install.ps1 stops the courier at step 0 and puts it back on the
+new engine - re-check `conductor courier status` after the reinstall
+? backfill   3 finished run(s) have no GitHub record - whether they join the 
+published corpus is yours
+           858b48387e4e Charkh - the wheel: what the owner still does by hand 
+becomes machinery - still running; its own backfill is the closing act, not 
+something owed yet
+           9491891fe700 Karvansara edge - gates that can't be gamed, and the 
+courier - still needs_human; its own backfill is the closing act, not something 
+owed yet
+           9647f1b80d1841e9997a801562a267c7 - Karvansara core - the open door 
+(Aborted) has 0 issues on shaahink/conductor
+             conductor github sync --backfill 9647f1b80d1841e9997a801562a267c7 
+--dry-run   # then once, for real, without --dry-run
+           8cefa5de8f164848bd42b275e14ba9cf - Sarban face - the watcher and the 
+surfaces (Completed) has 0 issues on shaahink/conductor
+             conductor github sync --backfill 8cefa5de8f164848bd42b275e14ba9cf 
+--dry-run   # then once, for real, without --dry-run
+           e9e21d10aedf4390a1580ac6930bac3e - Sarban core - the engine says what
+it knows (Completed) has 0 issues on shaahink/conductor
+             conductor github sync --backfill e9e21d10aedf4390a1580ac6930bac3e 
+--dry-run   # then once, for real, without --dry-run
+           pass the FULL run id: several eras share one store directory and a 
+slug cannot pick between them
+           run it ONCE - a second pass inside GitHub's replica lag mints the 
+board again (bug #79)
+
+NOT READY - 3 of 6 red: merge, changelog, processes; 1 waiting on the owner: 
+backfill (5936ms)
+nothing was merged, tagged, installed or pushed — this verb only measures.
+

@@ -44,7 +44,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
         "bug init doctor audit mcp-serve mcp-observe completion chat bg ps history catalogue budget money otel spend " +
         "inbox courier " +
         "worktree " +
-        "version update demo github";
+        "version update demo github release";
 
     internal static string GeneratePowerShell()
     {

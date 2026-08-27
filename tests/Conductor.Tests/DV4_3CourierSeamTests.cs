@@ -185,7 +185,11 @@ public sealed class DV4_3CourierSeamTests : IDisposable
         Assert.True(CourierSecret.Matches(secret, secret));
         Assert.False(CourierSecret.Matches(null, secret));
         Assert.False(CourierSecret.Matches("", secret));
-        Assert.False(CourierSecret.Matches(secret[..^1] + "0", secret));
+        // CH4.1: appending a LITERAL "0" is not a mutation when the secret already ends in one, and
+        // CourierSecret.Resolve mints a fresh value per state home - so this line was a 1-in-16 flake
+        // that asserted the opposite of its intent whenever it fired. Flip to a character that cannot
+        // be the one that is there.
+        Assert.False(CourierSecret.Matches(secret[..^1] + (secret[^1] == '0' ? '1' : '0'), secret));
         Assert.False(CourierSecret.Matches(secret, null));
     }
 

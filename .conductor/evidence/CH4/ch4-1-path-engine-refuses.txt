@@ -1,0 +1,8 @@
+CH4.1 negative control - the PATH engine (published 0.5.0+e60ae79c92dc) does not have the verb.
+
+$ conductor release preflight
+error: Unknown command 'release'.
+exit=1
+
+Everything in ch4-1-live-tag.txt and ch4-1-live-unreleased.txt was produced by the FRESH BUILD:
+  dotnet run --project src/Conductor --no-build -- release preflight -p plans/charkh/core.plan.json --tag <v>
