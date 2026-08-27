@@ -20,8 +20,118 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ## [Unreleased]
 
-_Nothing yet — entries for the next era go here, and this heading is renamed to the version when it
-is tagged._
+**Charkh — the wheel: what the owner still does by hand becomes machinery.** 0.5.0 shipped two eras
+and, in shipping them, showed that the weakest thing left in this project was the era-close itself.
+KS12.3 was recorded as performed and was **one-seventh performed**: master was moved; the tag, the
+CHANGELOG rename, the doc move and the backfill were not, and the edge era sat shipped-but-untagged
+for a week while nothing anywhere said so. The next era's runbook — hand-written in the same shape a
+fortnight later — discovered that by accident. The failure is structural, not careless: in prose,
+*"this one is yours to do"* and *"nobody did this one"* are the same sentence, and a document cannot
+notice an act it never mentioned. This era turns the derivable half of the close into verbs that
+measure, perform and **refuse by name**, and leaves the judgement — which number an era is, whether a
+run joins the published corpus — exactly where it was. It went after the two other places this
+project was quiet about being wrong: a phase gate that passed 23 checkpoints while CI's windows leg
+was red on every commit of the era with *nothing comparing them*, and the demo GIF at the top of the
+README, recorded against a Face that predated two eras, which no gate could see had gone stale.
+
+### Added
+
+- **`conductor release preflight` — the era-close checklist gets a failure mode.** Six preconditions,
+  one named verdict each, none of them read off a document: **merge** (is `--ff-only` a fast-forward
+  of the local base *and* of `origin/<base>` — different questions — plus a clean tree),
+  **changelog** (`tools/changelog-section.sh` run for real, the same script `release.yml` runs as the
+  first job of a tag build; a section that exists but says "nothing yet" is **red**, because that
+  body *is* the release notes), **processes** (the same `UpdateSafety` detector `update` refuses on,
+  with `CONDUCTOR_PID` named among the live engines), **migration** (schema skew between the tree and
+  the *installed* engine — the skew that kills `task`, `note` and `bug` mid-era), **courier** (would
+  it survive the reinstall: token **persisted** where a logon-triggered task can see it, chats,
+  allowlist, scheduler state — never dialling Telegram, because one `getUpdates` consumer owns the
+  token), and **backfill** (which finished run has no GitHub record, by full run id). It writes
+  nothing, merges nothing, tags nothing, installs nothing. Exit **0** all green · **1** red · **2**
+  nothing red but something is a judgement only the owner makes.
+- **`conductor release perform` — perform what is mechanical, name what is judgement.** Four
+  mechanical acts, each landing as its own commit so the close is reviewable an act at a time and
+  each safe to ask twice: the CHANGELOG rename (**refused over a placeholder body**), the `--ff-only`
+  merge (gated on `preflight`'s own merge verdict rather than a second opinion), the annotated tag
+  (refused until the section it will publish exists; an existing tag is never moved), and the doc
+  move **with** the plan's `tracker`, `planDoc` and `readOrder` repointed *in the same act* — a move
+  without the repoint means the next session reads nothing. It stops at the first refusal instead of
+  performing the rest onto a half-done sequence. Five **owner** acts are printed on every run,
+  whatever the state, each with the command to type: the version number, single-vs-split, the
+  published corpus, the reinstall and the push. Dry run is the default; `--yes` performs; everything
+  is local, and it refuses outright while a run is live in the plan's own state directory.
+- **`conductor release runbook` — the runbook is generated, not written.** The document two eras
+  wrote by hand, produced instead from the **same two entry points** the other verbs use: the six
+  probes `preflight` runs and the act planner `perform` uses in dry run. Preconditions with their
+  verdicts and detail, the mechanical acts with what each would do *right now*, the owner acts each
+  with its command, and the order. Rendering is pure and the timestamp is an input, so the same facts
+  render byte-identical output and a regenerated runbook diffs to exactly what moved. It performs
+  nothing and — unlike `perform` — does not refuse a live run: mid-era is when the close is most
+  worth reading.
+- **`conductor github ci` — what CI said about *this* commit.** Every **active** workflow the
+  repository has, then that workflow's latest run **on this branch**, compared to `HEAD` — *not* the
+  commit's check-runs, which list only the workflows that commit triggered, so a schedule-only or
+  dispatch-only workflow is invisible there and a branch reads CLEAN while a broken one sits red.
+  Measured on this repository: `gh pr checks` listed only the Vercel checks on a PR whose gates
+  workflow had never run on the new head, and `mergeStateStatus` said CLEAN.
+- **The two batteries can no longer differ in silence.** `github ci` writes a dated observation
+  carrying the sha it was about to `<stateDir>/ci-status.json`; the `REPORT.md` header, the owner
+  queue and `doctor` derive **`ci-battery`** (does CI run the same commands `plan.gates` does) and
+  **`ci-verdict`** from it and from `.github/workflows`, so a green cannot outlive the commit it was
+  for.
+- **The demo GIF now fails the build when the product moves past it.** `docs/assets/demo.manifest.json`
+  records what the GIF was recorded *from* — its bytes and sha, the tape's `COMMAND` hash, the fleet
+  fixture's hash, the pixel geometry — and a gate refuses the merge when the recording no longer
+  matches the thing it was taken of. The pattern is ported from payesh's social-card check.
+- **A re-recorded tour.** `docs/assets/demo.gif` is the first thing under the README's H1 and it
+  predated Divan and Karvansara. The tape now visits the courier, the inbox and the run switcher,
+  recorded end to end by the shipped recorder against the live binary — container pull, linux
+  cross-compile, render — not assembled from stills.
+- **The published CLI surface is diffed against a binary, not read and agreed with.**
+  `tools/ch3/dump-help.ps1` dumps a binary's whole verb and sub-verb surface and
+  `tools/ch3/docs-surface-diff.py` diffs it against `README.md` and the `docs/` pages in **both**
+  directions — undocumented verbs *and* documented ones the binary does not have.
+
+### Fixed
+
+- **The board page is one document whatever the checkout did.** `BoardSnapshotHtml`'s inline CSS is a
+  C# raw string literal, and a raw string literal inherits the line endings of *its source file*.
+  Every other line of that renderer appends an explicit `LF`, so on a CRLF checkout — every Windows
+  clone, CI included — the CSS block alone carried CRLF and `Render()` emitted a mixed document.
+- **A plan in this repo loads on a fresh clone, not just on one machine.** `PlanConfig.Load`
+  validates before it returns and refuses a repo that does not exist; every plan under `plans/`
+  carried an absolute machine path, eleven of them naming a directory that had since been renamed,
+  so they loaded on exactly one machine on earth.
+- **A flush that says an event is durable now means it.** A narrow event-flush race that CI caught
+  twice on one branch and this machine never reproduced, chased with a per-instance perturbation seam
+  and a negative control rather than retried away.
+- **The analyzer suppression ceiling was made, not moved.** CI reported 35 suppressions against a
+  ceiling of 31. None of the 35 came from this era — they had been hidden behind a `dotnet test` that
+  failed first for the whole of the previous era. Four pragmas were measured out; the ceiling stays
+  at 31.
+- **A backfill can no longer vandalise another run's board.** `GithubBoardSync` listed a repository's
+  issues *whole* and closed every task-marked one the run being synced did not declare, so each era
+  transition retired its predecessor's checkpoints on the real board — measured: all 23 of the
+  previous era's checkpoint issues, plus every one before them, wearing `conductor:retired`. The
+  retire sweep is now scoped to the run being synced, and a backfill that would retire another run's
+  checkpoints is refused with what it would have closed.
+
+### Changed
+
+- **A path is rewritten only when something still reads it.** The rule for moved documents, decided
+  once and applied: what is *live* — the plan in flight, the docs its `readOrder` names, the
+  published surface, the index, a path a test prints in a failure message — is repointed in the same
+  checkpoint as the move; what is *record* — a closed era's plan, contracts and tracker,
+  `docs/history/` — is reported and left alone. `docs/dev/README.md` carries the derived
+  where-it-went table.
+- **`ARCHITECTURE.md` says what this era added and what it did not.** Recounted rather than asserted:
+  `src/Conductor.Core` still declares exactly thirteen public seams — the ten `Release/` files and
+  the four `Ci*` files introduced none, because every type in both takes its facts as a parameter.
+- **`docs/dev/TOKEN-BUDGET-TUNING.md` §14** carries this era's own measurement and the caveat that
+  moves it: a session that times out records no cost rows at all, so an era total computed from
+  `conductor budget` is a **floor**, not a total. Re-run `conductor budget` and `conductor money`
+  when this heading is renamed — the numbers in a release section are a measurement with a date on
+  it, and the section is what the world reads.
 
 ## [0.5.0] - 2026-08-26
 

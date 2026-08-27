@@ -2,7 +2,7 @@
 
 **Plan:** Charkh - the wheel: what the owner still does by hand becomes machinery | **Branch:** `feat/charkh` | **Design doc:** docs/dev/CHARKH-PLAN-2026-08-26.md
 
-## Handoff (overwrite this block, <=12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
 last: CH5.1 DONE. ARCHITECTURE.md now says what Charkh added and what it did NOT - still thirteen
   seams; ADR-0005 gets a third addendum for `github ci`, the first GitHub read that is not about a
@@ -16,13 +16,14 @@ next: CH5.2 - close the era THROUGH CH4's verbs, all driven from the fresh build
   Bug #88 IS THE FIRST ACT and it blocks the tag BY DESIGN - the changelog act refuses over the
   'Nothing yet' body. Park what it refuses; anything the machinery gets wrong is the finding.
 
+
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 14 |
-| Done | 8 |
-| Claimed (unconfirmed) | 4 |
+| Done | 11 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -56,16 +57,16 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| CH4.1 | Release preflight as a verb: every precondition DV7.3 measured by hand becomes something the engine measures - ff-only merge, a CHANGELOG section the extractor exits 0 on, no live conductor process, migration versions matching, the courier's token scope and task state, the run whose backfill is owed - as a verdict per line with a non-zero exit when any line is red | DONE | cf8997f | .conductor/evidence/CH4/ch4-1-release-preflight.md |
-| CH4.2 | The mechanical acts performed and the judgement acts refused BY NAME: the CHANGELOG rename, the tag, the ff-only merge and the doc move with its tracker/planDoc/readOrder repoint are performed; the version number, single-vs-split release and corpus inclusion are stopped at and named. An act that needs the owner is never silently skipped - that failure is exactly what KS12.3 was | DONE | cf8997f | .conductor/evidence/CH4/ch4-2-release-perform.md |
+| CH4.1 | Release preflight as a verb: every precondition DV7.3 measured by hand becomes something the engine measures - ff-only merge, a CHANGELOG section the extractor exits 0 on, no live conductor process, migration versions matching, the courier's token scope and task state, the run whose backfill is owed - as a verdict per line with a non-zero exit when any line is red | DONE ✓ | cf8997f | .conductor/evidence/CH4/ch4-1-release-preflight.md |
+| CH4.2 | The mechanical acts performed and the judgement acts refused BY NAME: the CHANGELOG rename, the tag, the ff-only merge and the doc move with its tracker/planDoc/readOrder repoint are performed; the version number, single-vs-split release and corpus inclusion are stopped at and named. An act that needs the owner is never silently skipped - that failure is exactly what KS12.3 was | DONE ✓ | cf8997f | .conductor/evidence/CH4/ch4-2-release-perform.md |
 | CH4.3 | A backfill can no longer vandalise another run's board: the retire sweep is scoped to the run being synced, or a backfill that would retire another run's checkpoints is refused with what it would have closed. Measured 2026-08-26: the edge run's dry run reported 23 retired against exactly Divan's 23 checkpoints. Then the edge run's own GitHub record is written | DONE | - | .conductor/evidence/CH4/ch4-3-retire-scoped.md |
-| CH4.4 | The owner runbook becomes the preflight's output rather than a document written from scratch each era, generated from its own measurements and carrying the exact commands - the DV7.3 and KS12.3 artifacts are the shape being replaced | DONE | 35a4555 | .conductor/evidence/CH4/ch4-4-release-runbook.md |
+| CH4.4 | The owner runbook becomes the preflight's output rather than a document written from scratch each era, generated from its own measurements and carrying the exact commands - the DV7.3 and KS12.3 artifacts are the shape being replaced | DONE ✓ | 35a4555 | .conductor/evidence/CH4/ch4-4-release-runbook.md |
 
 ### CH5 — Ship Charkh with the machinery it built
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| CH5.1 | The internal record: ARCHITECTURE.md and docs/dev reconciled for everything Charkh changed, a closure ledger naming every bug and followup closed this era or its living owner, and this run's budget re-measured through a fresh build against a sqlite3 BACKUP COPY of the store and written into TOKEN-BUDGET-TUNING as the number the next era compiles against | TODO | - | - |
+| CH5.1 | The internal record: ARCHITECTURE.md and docs/dev reconciled for everything Charkh changed, a closure ledger naming every bug and followup closed this era or its living owner, and this run's budget re-measured through a fresh build against a sqlite3 BACKUP COPY of the store and written into TOKEN-BUDGET-TUNING as the number the next era compiles against | DONE | 77b9547 | .conductor/evidence/CH5/ch5-1-record-and-closure.md |
 | CH5.2 | The era closed USING CH4's machinery rather than by hand: the preflight run, the runbook it generated, the mechanical acts performed and the refused ones parked with the owner. Anything the machinery got wrong is recorded as a finding - that is worth more than the checkpoint | TODO | - | - |
 
 ## Dependencies

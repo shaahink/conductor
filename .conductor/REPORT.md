@@ -1,10 +1,10 @@
 ﻿# Conductor — Charkh - the wheel: what the owner still does by hand becomes machinery run report
 
-_Updated 2026-08-27 08:23 UTC · branch `feat/charkh` · HEAD `d170504`_
+_Updated 2026-08-27 08:49 UTC · branch `feat/charkh` · HEAD `11efa61`_
 
 **Status:** Idle
-**Stage:** CH4 — The machinery - the era-close stops being prose · attempts used 0
-**Checkpoints:** 12/14 done · **Sessions run:** 7 · **Cost:** $112.7872 (agent $112.7336 + gates $0.0536) · **Tokens:** 1,788,414 in / 716,074 out
+**Stage:** CH5 — Ship Charkh with the machinery it built · attempts used 0 · working ▸ CH5.2
+**Checkpoints:** 13/14 done · **Sessions run:** 8 · **Cost:** $123.7376 (agent $123.6694 + gates $0.0682) · **Tokens:** 1,976,844 in / 804,900 out
 **Confirmed phases:** CH1, CH2, CH3, CH4
 **Channels:** telegram ready · github ready · courier DEAD
 **⚠ Channel DEAD — courier:** no courier is running on this machine. Start one: conductor courier restart · fix: `conductor courier restart`
@@ -17,7 +17,7 @@ _Updated 2026-08-27 08:23 UTC · branch `feat/charkh` · HEAD `d170504`_
 | CH2 | The tour that matches the engine - and knows when it does not | ██████████ 2/2 | confirmed ✓ |
 | CH3 | The docs say what shipped | ██████████ 3/3 | confirmed ✓ |
 | CH4 | The machinery - the era-close stops being prose | ██████████ 4/4 | confirmed ✓ |
-| CH5 | Ship Charkh with the machinery it built | ░░░░░░░░░░ 0/2 | todo |
+| CH5 | Ship Charkh with the machinery it built | █████░░░░░ 1/2 | **← active** |
 
 <details> ✅<summary>CH1 — CI green, and the reason it was not (3/3)</summary>
 
@@ -59,11 +59,11 @@ _Updated 2026-08-27 08:23 UTC · branch `feat/charkh` · HEAD `d170504`_
 
 </details>
 
-<details><summary>CH5 — Ship Charkh with the machinery it built (0/2)</summary>
+<details><summary>CH5 — Ship Charkh with the machinery it built (1/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| CH5.1 | The internal record: ARCHITECTURE.md and docs/dev reconciled for everything Charkh changed, a closure ledger naming every bug and followup closed this era or its living owner, and this run's budget re-measured through a fresh build against a sqlite3 BACKUP COPY of the store and written into TOKEN-BUDGET-TUNING as the number the next era compiles against | ⬜ TODO | - |
+| CH5.1 | The internal record: ARCHITECTURE.md and docs/dev reconciled for everything Charkh changed, a closure ledger naming every bug and followup closed this era or its living owner, and this run's budget re-measured through a fresh build against a sqlite3 BACKUP COPY of the store and written into TOKEN-BUDGET-TUNING as the number the next era compiles against | ✅ DONE | - |
 | CH5.2 | The era closed USING CH4's machinery rather than by hand: the preflight run, the runbook it generated, the mechanical acts performed and the refused ones parked with the owner. Anything the machinery got wrong is recorded as a finding - that is worth more than the checkpoint | ⬜ TODO | - |
 
 </details>
@@ -79,6 +79,7 @@ _Updated 2026-08-27 08:23 UTC · branch `feat/charkh` · HEAD `d170504`_
 | 5 | CH4 | Deliver | 1 | 08-27 01:45 | 0:47 | Advanced | CH4.1 CH4.2 | 4 | engine-fast:OK · face-fast:OK | $27.4686 | $0.0082 | 323,895/170,309 |
 | 6 | CH4 | Deliver | 1 | 08-27 02:33 | 5:36 | TimedOut |  | 3 |  |  |  | 224,343/1,325 |
 | 7 | CH4 | Resume | 2r1 | 08-27 08:10 | 0:07 | Advanced | CH4.4 | 3 | engine-fast:OK · face-fast:OK | $6.3494 | $0.0086 | 251,390/16,229 |
+| 8 | CH5 | Deliver | 1 | 08-27 08:23 | 0:23 | Advanced | CH5.1 | 4 | engine-fast:OK · face-fast:OK | $10.9359 | $0.0146 | 188,430/88,826 |
 
 ## Money
 
@@ -100,11 +101,6 @@ _Where the money goes: agent $112.73 (100%) · gate $0.05 (0%) · blended $0.71/
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-27 01:41:23  ▪ gate face-fast pass [session]  (3.1s)
-08-27 01:41:24  • session #3 CH2 → Advanced · done CH2.1,CH2.2 · 3 commit(s)  (25m21s)
-08-27 01:51:44  ▪ gate engine-fast pass [phase]  (0.0s)
-08-27 01:51:44  ▪ gate face-fast pass [phase]  (0.0s)
-08-27 01:51:44  ▪ gate engine-full pass [phase]  (5m01s)
 08-27 01:51:44  ▪ gate face-full pass [phase]  (23.2s)
 08-27 01:51:45  ✓ checkpoint CH2.1 confirmed
 08-27 01:51:45  ✓ checkpoint CH2.2 confirmed
@@ -140,6 +136,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-27 09:23:32  ✓ checkpoint CH4.1 confirmed
 08-27 09:23:32  ✓ checkpoint CH4.2 confirmed
 08-27 09:23:32  ✓ checkpoint CH4.4 confirmed
+08-27 09:23:32  ▸ stage CH4 confirmed  (6h38m11s)
+08-27 09:23:33  ▸ stage CH5 entered — Ship Charkh with the machinery it built
+08-27 09:23:33  • session #8 CH5 Deliver started (attempt 1/4)
+08-27 09:49:23  ▪ gate engine-fast pass [session]  (2m00s)
+08-27 09:49:23  ▪ gate face-fast pass [session]  (25.9s)
 ```
 
 ## Health
@@ -147,7 +148,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 7 · retries 1 (14 %) · overall Warn
+sessions 8 · retries 1 (12 %) · overall Warn
 ⚠ [context-saturation] session #1: 39,286,951 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #2: 21,648,664 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 38,650,669 context tokens (≥ 20,000,000)
@@ -161,7 +162,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/charkh
-working tree: M .conductor/REPORT.md, M plans/charkh/TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
@@ -200,6 +201,11 @@ vs upstream: up to date
   - [`d170504`](https://github.com/shaahink/conductor/commit/d170504) docs(CH4.4): the handoff - CH4 is closed, two acts are owed to CH5
   - [`d1c9b81`](https://github.com/shaahink/conductor/commit/d1c9b81) docs(CH4.4): the evidence, the two generated runbooks, and the verb's row
   - [`35a4555`](https://github.com/shaahink/conductor/commit/35a4555) feat(CH4.4): the runbook is generated, not written
+- **s8 (CH5 Deliver)** — 4 commit(s):
+  - [`11efa61`](https://github.com/shaahink/conductor/commit/11efa61) docs(CH5.1): the handoff - the record is reconciled, CH5.2 closes the era
+  - [`f1c7ea5`](https://github.com/shaahink/conductor/commit/f1c7ea5) docs(CH5.1): this era's own numbers, and the caveat that moves all of them
+  - [`980ccfc`](https://github.com/shaahink/conductor/commit/980ccfc) docs(CH5.1): the closure ledger, and the row that stopped being re-homed
+  - [`77b9547`](https://github.com/shaahink/conductor/commit/77b9547) docs(CH5.1): the record says what the engine does, measured not repeated
 
 ## Phase handovers (audit)
 
@@ -222,34 +228,33 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> **CH4.3 and CH4.4 landed with live proof; CH4 closed, two acts owed to CH5**
-> - CH4.3: retire sweep scoped by owner marker + local map; A/B proves 23→0 and 14→0 retired, bug 84 closed
-> - CH4.4: `release runbook` renders from the same probes and planner; reflection-derived property test, negative control red
-> - edge run's GitHub record deferred to after CH5's reinstall — installed 0.5.0 would retire 14 of Charkh's own cards
+> **CH5.1 landed - record reconciled, closure ledger written, budget re-measured at 45M/0.95**
+> - ARCHITECTURE.md, ADR-0005 and docs/dev reconciled; two stale gate numbers corrected by measurement, seam count re-verified at thirteen
+> - closure ledger: 43 bugs each with a living owner, followup census by last-row, FU-OWNER-14 closed into CH4's machinery
+> - TOKEN-BUDGET-TUNING §14 prescribes 45M/0.95, pinned to committed JSON; bug #92 filed - a TimedOut session records no cost rows at all
 >
-> artefacts: f4022f6, 74cfe3c, 5019261, 35a4555, d1c9b81, d170504
+> artefacts: 77b9547, 980ccfc, f1c7ea5, 11efa61
 >
-> evidence: .conductor/evidence/CH4/ch4-3-retire-scoped.md, .conductor/evidence/CH4/ch4-4-release-runbook.md
+> evidence: .conductor/evidence/CH5/ch5-1-record-and-closure.md
 >
-> gaps: CH4.3's second clause (edge run record) ordered after CH5 reinstall; bugs 90 and 91 open; full suite 3564/3564 green
+> gaps: CH5.2 is open and bug #88 blocks its tag by design (the changelog act refuses over "Nothing yet"); bugs #90, #91, #79 are its backfill/residue hazards; #60 measured green but left open because a measurement names no fix
 
 ## Tracker handoff
 
 ```
-last: CH4.3 AND CH4.4 both DONE and claimed; CH4 is closed. CH4.3 scoped the retire sweep -
-  GithubIdentity gains OwnerMarker (NOT RunMarker; the diary is found by scanning bodies for that),
-  an issue is retirable only if that marker is ours OR this run's GithubMap points at that number,
-  and everything else is REFUSED BY NAME on GithubSyncResult.RetireRefused. CH4.4 made the runbook
-  the verb's output: `conductor release runbook` renders from the SAME probes preflight runs and the
-  SAME planner perform uses, and two tests derive the act vocabulary BY REFLECTION, so an act wired
-  to nothing fails the day it is added. Evidence: .conductor/evidence/CH4/ch4-3-retire-scoped.md,
-  ch4-4-release-runbook.md, and ch4-4-charkh-runbook.md - the generated runbook itself.
-owed to CH5: (a) CH4.3's second clause, writing the edge run's GitHub record, is ordered AFTER the
-  reinstall - today's A/B says the installed 0.5.0 would retire 14 of Charkh's OWN cards; (b) bug 91
-  - IsStillGoing counts needs_human as in flight, so the corpus act omits that very backfill.
-next: CH5.1, then CH5.2 closes the era using ch4-4-charkh-runbook.md REGENERATED at the time.
+last: CH5.1 DONE. ARCHITECTURE.md now says what Charkh added and what it did NOT - still thirteen
+  seams; ADR-0005 gets a third addendum for `github ci`, the first GitHub read that is not about a
+  write. Two doc numbers were repeated rather than measured and both were wrong (maxPragmas is 31
+  and green, bug #44 is fixed). The closure ledger is in .conductor/followups.md: 43 bug rows each
+  with a living owner, a followup census read by LAST row per id, and FU-OWNER-14 closed at last -
+  the reinstall is an owner act the engine prints every run, not a row re-homed a fifth time.
+  TOKEN-BUDGET-TUNING section 14 prescribes 45M / 0.95, pinned to the committed budget JSON.
+next: CH5.2 - close the era THROUGH CH4's verbs, all driven from the fresh build, never the PATH
+  copy. Order: regenerate ch4-4-charkh-runbook.md, then `release preflight`, then `release perform`.
+  Bug #88 IS THE FIRST ACT and it blocks the tag BY DESIGN - the changelog act refuses over the
+  'Nothing yet' body. Park what it refuses; anything the machinery gets wrong is the finding.
 ```
