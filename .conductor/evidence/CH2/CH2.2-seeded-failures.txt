@@ -1,0 +1,112 @@
+==============================================================
+SEED 0 - untouched (the negative control)
+==============================================================
+ok  	conductor-face-go/internal/tui	1.078s
+
+==============================================================
+SEED 1 - the Face grew a tab the GIF predates (drop Telegram from
+         the manifest's inventory: exactly the state this repo was
+         in before CH2.1, when the courier shipped and the GIF did not)
+==============================================================
+--- FAIL: TestDemoGifStillShowsTheFaceItWasRecordedFrom (0.00s)
+    demo_tour_test.go:412: the Face's surfaces have moved since the GIF was recorded:
+    demo_tour_test.go:421: the tour has 10 stops now and 9 when the GIF was recorded.
+FAIL
+FAIL	conductor-face-go/internal/tui	1.121s
+FAIL
+
+==============================================================
+SEED 2 - a mnemonic rebound (Kanban was recorded on 'z')
+==============================================================
+--- FAIL: TestDemoGifStillShowsTheFaceItWasRecordedFrom (0.00s)
+    demo_tour_test.go:412: the Face's surfaces have moved since the GIF was recorded:
+FAIL
+FAIL	conductor-face-go/internal/tui	1.142s
+FAIL
+
+==============================================================
+SEED 3 - a key that was not a tab has been claimed by one
+         ('b' recorded as a non-tab key, now the Kanban mnemonic)
+==============================================================
+--- FAIL: TestDemoGifStillShowsTheFaceItWasRecordedFrom (0.00s)
+    demo_tour_test.go:426: stop 4 of the tour: the GIF shows "some pane" pressing "b", and "b" now opens "Kanban".
+    demo_tour_test.go:433: stop 4: "b" opened some pane when the GIF was recorded, and is now the mnemonic for the Kanban tab.
+FAIL
+FAIL	conductor-face-go/internal/tui	1.080s
+FAIL
+
+==============================================================
+SEED 4 - the tour changed and nobody re-recorded (one more Sleep)
+==============================================================
+--- FAIL: TestDemoGifStillShowsTheFaceItWasRecordedFrom (0.00s)
+    demo_tour_test.go:385: docs/assets/demo.tape has changed since the GIF was recorded (48 command lines then, 49 now). The GIF still shows the old tour.
+FAIL
+FAIL	conductor-face-go/internal/tui	1.178s
+FAIL
+
+==============================================================
+SEED 4b - a COMMENT-ONLY edit to the tape (must stay GREEN:
+          prose is not a re-record)
+==============================================================
+ok  	conductor-face-go/internal/tui	1.145s
+
+==============================================================
+SEED 5 - the geometry moved off the size the goldens cover
+==============================================================
+--- FAIL: TestDemoGifStillShowsTheFaceItWasRecordedFrom (0.00s)
+    demo_tour_test.go:385: docs/assets/demo.tape has changed since the GIF was recorded (48 command lines then, 48 now). The GIF still shows the old tour.
+    demo_tour_test.go:397: the tape's geometry moved (1176x736 recorded, 1400x736 now).
+FAIL
+FAIL	conductor-face-go/internal/tui	1.274s
+FAIL
+
+==============================================================
+SEED 6 - the committed GIF is not the one the manifest describes
+==============================================================
+--- FAIL: TestDemoGifStillShowsTheFaceItWasRecordedFrom (0.00s)
+    demo_tour_test.go:378: docs/assets/demo.gif is not the GIF docs/assets/demo.manifest.json describes.
+FAIL
+FAIL	conductor-face-go/internal/tui	1.155s
+FAIL
+
+==============================================================
+SEED 7 - a tab neither toured nor excused (drop Knowledge's reason)
+==============================================================
+--- FAIL: TestDemoGifStillShowsTheFaceItWasRecordedFrom (0.00s)
+    demo_tour_test.go:453: the Knowledge tab ("k") is not on the tour and docs/assets/demo.manifest.json does not say why. Either add it to docs/assets/demo.tape and re-record, or record the reason in notVisited.
+FAIL
+FAIL	conductor-face-go/internal/tui	1.180s
+FAIL
+
+==============================================================
+SEED 8 - the fleet the switcher renders from changed
+==============================================================
+--- FAIL: TestDemoGifStillShowsTheFaceItWasRecordedFrom (0.00s)
+    demo_tour_test.go:391: docs/assets/demo-fleet.json has changed since the GIF was recorded, so the run switcher in the GIF shows runs that are no longer the demo's.
+FAIL
+FAIL	conductor-face-go/internal/tui	1.119s
+FAIL
+
+==============================================================
+AFTER RESTORE - green again (the second negative control)
+==============================================================
+ok  	conductor-face-go/internal/tui	1.068s
+=== SEED 1, in full: the message a reviewer reads ===
+--- FAIL: TestDemoGifStillShowsTheFaceItWasRecordedFrom (0.00s)
+    demo_tour_test.go:412: the Face's surfaces have moved since the GIF was recorded:
+          + Telegram ("g") is new since the recording
+          The GIF under the README's H1 shows a product that no longer exists.
+            Re-record, which refreshes the manifest:  powershell -File tools/demo/make-demo-gif.ps1
+    demo_tour_test.go:421: the tour has 10 stops now and 9 when the GIF was recorded.
+            Re-record, which refreshes the manifest:  powershell -File tools/demo/make-demo-gif.ps1
+FAIL
+FAIL	conductor-face-go/internal/tui	1.111s
+
+=== SEED 2, in full ===
+--- FAIL: TestDemoGifStillShowsTheFaceItWasRecordedFrom (0.00s)
+    demo_tour_test.go:412: the Face's surfaces have moved since the GIF was recorded:
+          ~ Kanban moved from "z" to "b"
+          The GIF under the README's H1 shows a product that no longer exists.
+            Re-record, which refreshes the manifest:  powershell -File tools/demo/make-demo-gif.ps1
+FAIL
+FAIL	conductor-face-go/internal/tui	1.171s

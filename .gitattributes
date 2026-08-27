@@ -14,3 +14,10 @@ face-go/internal/tui/testdata/golden/*.golden text eol=lf
 # which makes gofmt useless locally and trains people to ignore it. The blobs are already LF, so this
 # changes nothing in git history; it only fixes what lands on disk.
 *.go text eol=lf
+
+# The demo tour's inputs are hashed by face-go/internal/tui/demo_tour_test.go. The hashes are
+# CR-stripped so a CRLF checkout cannot fake staleness, but keep these LF anyway: the tape and the
+# fleet envelope are read INSIDE the VHS linux container, off this same working tree.
+docs/assets/*.tape text eol=lf
+docs/assets/demo-fleet.json text eol=lf
+docs/assets/demo.manifest.json text eol=lf

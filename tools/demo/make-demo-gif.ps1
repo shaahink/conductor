@@ -106,3 +106,30 @@ $kb = [Math]::Round((Get-Item $outPath).Length / 1KB, 1)
 Write-Host ""
 Write-Host ("wrote {0}  ({1} KB)" -f $outLine, $kb) -ForegroundColor Green
 Write-Host "GitHub caps inline README images at 10 MB; keep an eye on that if you lengthen the tape." -ForegroundColor DarkGray
+
+# --- the manifest (CH2.2) ---------------------------------------------------------------------------
+# docs/assets/demo.manifest.json records what this GIF was recorded FROM, and
+# face-go/internal/tui/demo_tour_test.go fails the build when the Face has moved past it. It is
+# refreshed HERE, as the recording's last step, and nowhere else: a manifest that can be refreshed
+# without re-recording is a check that can be silenced by editing the thing it checks.
+#
+# The default tape is the only one whose recording the manifest describes. A -Tape run (the CH2.1
+# verification tape, say) leaves it alone rather than telling it the README's GIF is something it
+# is not.
+if ($Tape -ne "docs/assets/demo.tape") {
+    Write-Host ("manifest not refreshed: this was a -Tape run ({0}), not the README recording." -f $Tape) -ForegroundColor DarkGray
+    return
+}
+Step "manifest"
+if (-not (Get-Command go -ErrorAction SilentlyContinue)) {
+    Die "go is not on PATH, so docs/assets/demo.manifest.json cannot be refreshed. The GIF is written but the staleness check will now fail - re-run this script with go available."
+}
+Push-Location (Join-Path $repoRoot "face-go")
+try {
+    & go test ./internal/tui -run TestDemoGifStillShowsTheFaceItWasRecordedFrom -write-demo-manifest -count=1
+    $code = $LASTEXITCODE
+} finally {
+    Pop-Location
+}
+if ($code -ne 0) { Die "the manifest could not be written (see the go test output above)." }
+Write-Host "refreshed docs/assets/demo.manifest.json - commit it WITH the GIF." -ForegroundColor Green
