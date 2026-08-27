@@ -23,6 +23,11 @@ public sealed class SessionRecord
     public List<string> NewlyDone { get; set; } = new();
     public string GateSummary { get; set; } = "";
     public decimal? CostUsd { get; set; }
+    /// <summary>Bug #92: true when <see cref="CostUsd"/> was set by the engine rather than by the CLI's
+    /// cost envelope, because the session ended without one (timed out, stalled, killed): priced from
+    /// live token counts at the run's observed rate, or $0 when no rate was observable yet. Every
+    /// other session carries the CLI's own figure.</summary>
+    public bool CostEstimated { get; set; }
     public decimal? OverheadCostUsd { get; set; }
     public int? NumTurns { get; set; }
     public long? TokensInput { get; set; }

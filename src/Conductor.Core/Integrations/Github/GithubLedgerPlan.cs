@@ -63,10 +63,19 @@ public static class GithubLedgerPlan
         ArgumentNullException.ThrowIfNull(bugs);
         ArgumentNullException.ThrowIfNull(followups);
         var prefix = Prefix(labelPrefix);
-        var cards = new List<GithubLedgerCard>();
-        foreach (var b in bugs) cards.Add(CardFor(b.Bug, b.PlanName, prefix));
-        foreach (var f in followups) cards.Add(CardFor(f, prefix));
-        return cards;
+        // Bug #81: one card per KEY. FollowupLedger already folds the file to one entry per id, and
+        // this keeps the promise structurally — two rows with one key would be two writes to one
+        // issue, counted as an update to a repository that had nothing on it. Last entry wins.
+        var byKey = new Dictionary<string, GithubLedgerCard>(StringComparer.Ordinal);
+        var order = new List<string>();
+        void Put(GithubLedgerCard card)
+        {
+            if (!byKey.ContainsKey(card.Key)) order.Add(card.Key);
+            byKey[card.Key] = card;
+        }
+        foreach (var b in bugs) Put(CardFor(b.Bug, b.PlanName, prefix));
+        foreach (var f in followups) Put(CardFor(f, prefix));
+        return order.Select(k => byKey[k]).ToList();
     }
 
     /// <summary>One tracked bug as an issue.</summary>

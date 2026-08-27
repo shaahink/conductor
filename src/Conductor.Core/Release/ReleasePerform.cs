@@ -229,7 +229,7 @@ public static class ReleasePerform
                     : $"{f.RunsOwedARecord.Count} run(s) have no GitHub record",
                 [.. f.RunsOwedARecord.Select(r => $"conductor github sync --backfill {r} --dry-run   # then once, for real"),
                  "whether a run joins the published corpus is a decision about what the world sees, so this engine will not take it",
-                 "run each backfill ONCE - a second pass inside GitHub's replica lag mints the board again (bug #79)"]),
+                 "a second pass is safe: the backfill remembers what it created under the state home's github-maps/ (bug #79)"]),
 
             new ReleaseAct(ReinstallAct, ReleaseAct.Owner, ReleaseAct.Stopped,
                 f.AnyConductorLive

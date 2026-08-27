@@ -46,6 +46,15 @@ public sealed class GithubMap
 
     public bool CommentPosted(string key) => _comments.Contains(key);
 
+    /// <summary>How many issues this map remembers — what a backfill prints before it starts, so an
+    /// operator can see the second pass is not starting from nothing.</summary>
+    public int IssueCount => _issues.Count;
+
+    /// <summary>Everything remembered, issues then comments — what a file-backed map writes out.</summary>
+    public IEnumerable<(string Key, string Kind, int Issue)> Entries =>
+        _issues.Select(kv => (kv.Key, IssueKind, kv.Value))
+            .Concat(_comments.Select(k => (k, CommentKind, 0)));
+
     public void RecordIssue(string key, int issueNumber)
     {
         _issues[key] = issueNumber;

@@ -82,6 +82,13 @@ public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
                 state = resumed;
                 AnsiConsole.MarkupLine(
                     $"[grey]resuming run {Markup.Escape(Short(state.RunId))} — {state.SessionCounter} session(s) so far, status {state.Status}[/]");
+                // Bug #39: this is a new process, so any session record still waiting for an outcome
+                // was left by an engine that died mid-session. Closed here, as Interrupted, so the
+                // record stops reading as a live session that has been dead for hours.
+                var dangling = Core.Orchestration.SessionReconcile.CloseDangling(state, DateTime.UtcNow);
+                if (dangling.Count > 0)
+                    AnsiConsole.MarkupLine(
+                        $"[yellow]session(s) #{string.Join(", #", dangling)} were left open by the previous engine — closed as Interrupted[/]");
             }
         }
         if (string.IsNullOrEmpty(state.RunId)) state.RunId = Guid.NewGuid().ToString("N");

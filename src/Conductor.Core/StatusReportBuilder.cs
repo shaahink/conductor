@@ -53,12 +53,17 @@ public static class StatusReportBuilder
             .Select(s => new StatusStageLine(s.Id, s.Title, s.Done, s.Total, s.State))
             .ToList();
 
+        // Bug #39: an open record is "running" only while it is the latest session AND an engine holds
+        // the store. Every other open record is one a dead engine left behind, and printing "running"
+        // for it is the lie this closes.
+        var latestNumber = state.History.Count > 0 ? state.History.Max(h => h.Number) : 0;
+        var engineLive = EngineLock.IsHeldByLiveEngine(plan.StateDir);
         var sessions = state.History
             .OrderBy(h => h.Number)
             .TakeLast(8)
             .Select(h => new StatusSessionLine(
                 h.Number, h.Stage, h.Kind.ToString(),
-                h.Outcome?.ToString() ?? "running", h.CostUsd ?? 0m))
+                Orchestration.SessionReconcile.OutcomeWord(h, h.Number == latestNumber, engineLive), h.CostUsd ?? 0m))
             .ToList();
 
         return new StatusReport(

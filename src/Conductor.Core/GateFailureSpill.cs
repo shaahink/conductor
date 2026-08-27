@@ -90,6 +90,31 @@ public static class GateFailureSpill
         catch (UnauthorizedAccessException) { return null; }
     }
 
+    /// <summary>Bug #86: keep a failed attempt's output even though a later attempt passed. Named by
+    /// stage, gate, time and attempt so successive flakes of one gate line up beside each other and a
+    /// flake rate becomes something a person can count from a directory listing.</summary>
+    public static async Task<string?> SpillAttemptAsync(string? stateDir, string? stageId, GateResult first, int attempt, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        var dir = Prepare(stateDir);
+        if (dir is null) return null;
+        try
+        {
+            var safeGate = string.Concat(first.Name.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '-'));
+            var safeStage = string.IsNullOrWhiteSpace(stageId) ? "run"
+                : string.Concat(stageId.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '-'));
+            var stamp = DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture);
+            var path = Path.Combine(dir, $"{safeStage}-{safeGate}-{stamp}-attempt{attempt.ToString(CultureInfo.InvariantCulture)}.log");
+            var head = $"[conductor] {first.Name} attempt {attempt.ToString(CultureInfo.InvariantCulture)} - exit " +
+                       $"{first.ExitCode.ToString(CultureInfo.InvariantCulture)} after " +
+                       $"{first.Duration.TotalSeconds.ToString("0", CultureInfo.InvariantCulture)}s - kept because a later attempt passed (bug #86)\n";
+            await File.WriteAllTextAsync(path, head + first.Tail, ct).ConfigureAwait(false);
+            return path;
+        }
+        catch (IOException) { return null; }
+        catch (UnauthorizedAccessException) { return null; }
+    }
+
     private static string? Spill(string dir, GateResult r, int sessionNumber)
     {
         try

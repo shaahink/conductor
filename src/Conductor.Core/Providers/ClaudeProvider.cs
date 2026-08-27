@@ -111,6 +111,7 @@ public sealed class ClaudeProvider : IAgentProvider
                 }
                 break;
             case "result":
+                state.ResultReceived = true;
                 if (root.TryGetProperty("is_error", out var ie) && ie.ValueKind == JsonValueKind.True) state.ResultIsError = true;
                 if (root.TryGetProperty("subtype", out var sub) && (sub.GetString() ?? "").StartsWith("error", StringComparison.Ordinal)) state.ResultIsError = true;
                 if (root.TryGetProperty("result", out var res) && res.ValueKind == JsonValueKind.String) state.ResultText = res.GetString();

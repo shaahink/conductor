@@ -118,15 +118,23 @@ public static partial class GateRunner
                 Mark(i, new GateProgress(Label(gates[i]), first.Optional ? "warn" : "fail", first.Duration));
                 continue;
             }
+            // Bug #86: the first attempt's output is kept whatever the second one does. On a
+            // retry-PASS it is the only evidence the flake ever existed.
+            var kept = gates[i].IsHoldout ? null
+                : await GateFailureSpill.SpillAttemptAsync(plan.StateDir, currentStage, first, attempt: 1, ct).ConfigureAwait(false);
+            var keptNote = kept is null ? "" : $" Its full output is kept at {kept}.";
+            if (kept is not null && second.Passed)
+                onProgress?.Invoke($"gate {gates[i].Name}: the failed first attempt's output is kept at {kept} (bug #86: a flake you can read, not folklore)");
             results[i] = second with
             {
                 Retried = true,
                 FirstAttemptDuration = first.Duration,
+                FirstAttemptOutputPath = kept,
                 // KS4.1: the retry preamble quotes the first attempt's exit code, so for a holdout it
                 // would put back exactly what RunOneAsync just took out. The notice stands alone.
                 Tail = gates[i].IsHoldout ? second.Tail
                     : $"[conductor] retried once (SC4.1): the first attempt exited {first.ExitCode} after " +
-                      $"{first.Duration.TotalSeconds:0}s. Below is the SECOND run.\n{second.Tail}",
+                      $"{first.Duration.TotalSeconds:0}s.{keptNote} Below is the SECOND run.\n{second.Tail}",
             };
             Mark(i, new GateProgress(Label(gates[i]), second.Passed ? "pass" : second.Optional ? "warn" : "fail", second.Duration));
         }

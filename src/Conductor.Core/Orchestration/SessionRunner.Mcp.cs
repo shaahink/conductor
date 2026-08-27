@@ -104,15 +104,39 @@ public sealed partial class SessionRunner
         return true;
     }
 
-    /// <summary>B13.2: what a budget-killed session cost. A killed session never emits the result
-    /// envelope carrying <c>total_cost_usd</c>, so the one session the rail acts on would otherwise be
-    /// the one session reporting $0 — and the ledger would read as though stopping early were free.
-    /// Priced at what THIS run has actually been billed per token; null when no finished session has
-    /// set a rate yet, because inventing one is worse than admitting the gap.</summary>
-    private decimal? PriceBudgetKill(AgentSession agent) =>
-        LiveCostEstimator.ObservedRatePerToken(_ctx.State.History) is { } rate
-            ? decimal.Round(LiveTokens(agent) * rate, 4, MidpointRounding.AwayFromZero)
-            : null;
+    /// <summary>B13.2, widened by bug #92: what a session that never sent its result envelope cost. A
+    /// killed session — by the token ceiling, the watchdog, or a death mid-turn — never emits the
+    /// envelope carrying <c>total_cost_usd</c>, so it would otherwise be the one session with no cost
+    /// row, and `conductor budget` would prescribe from every session but the longest one. Priced at
+    /// what THIS run has actually been billed per token; recorded at $0 (still flagged an estimate,
+    /// tokens intact) when no finished session has set a rate yet — a row that says 0 can be re-priced,
+    /// a row that is absent cannot. An envelope WITH no figure is the CLI's answer and is left alone:
+    /// KS5.2 pins that no row is written for it.</summary>
+    private void PriceEnvelopelessExit(AgentSession agent, SessionRecord rec)
+    {
+        var rate = LiveCostEstimator.ObservedRatePerToken(_ctx.State.History);
+        var (cost, estimated) = PriceExit(rec.CostUsd, agent.ResultReceived, LiveTokens(agent), rate);
+        if (!estimated) return;
+        rec.CostUsd = cost;
+        rec.CostEstimated = true;
+        _ctx.Log(rate is not null
+            ? $"session #{rec.Number} ended without a cost envelope - {LiveTokens(agent):N0} live tokens priced at the run's observed rate, ${cost:0.00} (estimate)"
+            : $"session #{rec.Number} ended without a cost envelope - {LiveTokens(agent):N0} live tokens recorded at $0.00 (no observed rate yet to price them)", "warn");
+    }
+
+    /// <summary>The rule of <see cref="PriceEnvelopelessExit"/>, pure so it can be pinned: the CLI's own
+    /// figure is never second-guessed; an envelope is the CLI's answer even when it carries no figure;
+    /// only a session that spent tokens AND never sent the envelope is estimated — at the observed
+    /// rate, or at $0 when there is none yet.</summary>
+    internal static (decimal? CostUsd, bool Estimated) PriceExit(
+        decimal? cliCost, bool resultReceived, long liveTokens, decimal? observedRatePerToken)
+    {
+        if (cliCost is not null || resultReceived || liveTokens <= 0) return (cliCost, false);
+        var cost = observedRatePerToken is { } rate
+            ? decimal.Round(liveTokens * rate, 4, MidpointRounding.AwayFromZero)
+            : 0m;
+        return (cost, true);
+    }
 
     private long? ComputeSoftThreshold() =>
         SoftBreak.Threshold(_ctx.EffectiveMaxSessionTokens, _ctx.Plan.Limits.SoftBreakRatio);

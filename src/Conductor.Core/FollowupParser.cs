@@ -68,6 +68,44 @@ public static class FollowupParser
         return entries;
     }
 
+    /// <summary>Bug #81 — one table row as the file holds it, for <see cref="FollowupLedger"/> to fold.
+    /// <paramref name="IdCell"/> is the raw id cell (it may name several ids); <paramref name="StatusCell"/>
+    /// is null when the row's table has no status column, which is every scoreboard table.</summary>
+    public sealed record Row(string IdCell, string Item, string? Detail, string Stage, string? StatusCell,
+        IReadOnlyList<string> CellsAfterId);
+
+    /// <summary>Bug #81 — every row carrying an <c>FU-</c> id, in file order, with the columns its own
+    /// section declared. Unlike <see cref="Read"/> it recognises the scoreboard header the closing
+    /// passes write (<c>| row | disposition | why |</c>) as a header, so a disposition cell is read
+    /// as the row's second column rather than through the previous section's mapping.</summary>
+    public static List<Row> ReadRows(IEnumerable<string> lines)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+        var rows = new List<Row>();
+        int? idIdx = null, itemIdx = null, detailIdx = null, stageIdx = null, statusIdx = null;
+        foreach (var raw in lines)
+        {
+            var line = raw.Trim();
+            if (!line.StartsWith('|') || !line.EndsWith('|')) continue;
+            var cells = SplitPipeRow(line);
+            if (cellEq(cells, 0, "id") || cellEq(cells, 0, "row"))
+            {
+                (idIdx, itemIdx, detailIdx, stageIdx, statusIdx) = MapHeader(cells);
+                idIdx ??= 0;
+                continue;
+            }
+            if (idIdx is not { } i || i >= cells.Length) continue;
+            var idCell = cells[i];
+            if (!idCell.Contains("FU-", StringComparison.Ordinal)) continue;
+            var item = itemIdx is { } ii && ii < cells.Length && ii != i ? cells[ii] : string.Join(" ", cells.Where((_, k) => k != i));
+            var detail = detailIdx is { } di && di < cells.Length ? NullIfEmpty(cells[di]) : null;
+            var stage = stageIdx is { } si && si < cells.Length ? cells[si] : "";
+            var status = statusIdx is { } st && st < cells.Length ? cells[st] : null;
+            rows.Add(new Row(idCell, item, detail, stage, status, [.. cells.Where((_, k) => k != i)]));
+        }
+        return rows;
+    }
+
     /// <summary>
     /// Read only OPEN entries whose <see cref="FollowupEntry.OwningStage"/> matches the given
     /// stage id. Matching is case-insensitive substring — "B12 fix-lane" matches "B12".

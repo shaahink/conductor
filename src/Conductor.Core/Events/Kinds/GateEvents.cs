@@ -9,6 +9,11 @@ public sealed record GateFinished : ConductorEvent
     public int ExitCode { get; init; }
     public long DurationMs { get; init; }
     public string? Scope { get; init; }
+    /// <summary>Bug #86: this result is the SECOND attempt; the first failed. Counting these over a
+    /// run is the flake rate.</summary>
+    public bool Retried { get; init; }
+    /// <summary>Bug #86: where the failed first attempt's output was kept, when it was.</summary>
+    public string? FirstAttemptOutputPath { get; init; }
 }
 
 public sealed record TokenDelta : ConductorEvent

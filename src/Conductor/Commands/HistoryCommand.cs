@@ -40,7 +40,7 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
 
         [CommandOption("-n|--limit <COUNT>")]
         [Description("How many runs to list. Default 20; 0 lists all.")]
-        public int Limit { get; init; } = 20;
+        public int? Limit { get; init; }
 
         [CommandOption("--home <PATH>")]
         [Description("Read a state home other than this machine's.")]
@@ -76,16 +76,24 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
 
     // ------------------------------------------------------------------ the listing
 
+    /// <summary>Rows the TABLE shows without <c>--limit</c>. Never applied to <c>--json</c> (bug #37).</summary>
+    internal const int DefaultTableLimit = 20;
+
     private static int ShowList(string root, RunHistoryFilter filter, Settings settings)
     {
         var rows = RunHistory.List(root, filter);
-        var shown = settings.Limit > 0 ? rows.Take(settings.Limit).ToList() : rows.ToList();
+        // Bug #37: the table's default of 20 rows was applied to --json too, silently — a parser asked
+        // for "every catalogued run" and got the twenty most recent, with the older non-terminal rows
+        // (the ones a reconciler most wants) cut off the bottom and nothing in the document saying so.
+        // A machine consumer gets everything unless it typed a limit; the payload names the cut.
+        var limit = settings.Limit ?? (settings.Json ? 0 : DefaultTableLimit);
+        var shown = limit > 0 ? rows.Take(limit).ToList() : rows.ToList();
 
         if (settings.Json)
         {
             // KS1.3: the shaping lives in Core so the promise made to a parser can be tested without a
             // console — and so `runs[]` can never again carry a run-shaped object with no run id.
-            var payload = RunHistoryPayload.List(shown);
+            var payload = RunHistoryPayload.List(shown, rows.Count);
             Console.WriteLine(JsonSerializer.Serialize(payload, RunHistoryJsonContext.Default.RunHistoryListJson));
             return 0;
         }
@@ -157,7 +165,7 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
                 $"[grey]{Markup.Escape(c[7])}[/]"));
         }
 
-        if (settings.Limit > 0 && rows.Count > shown.Count)
+        if (limit > 0 && rows.Count > shown.Count)
             AnsiConsole.MarkupLine($"[grey]{rows.Count - shown.Count} older runs not shown — raise --limit or pass 0.[/]");
         AnsiConsole.MarkupLine("[grey]open one:[/] conductor history <run-id|repo|slug>");
         return 0;

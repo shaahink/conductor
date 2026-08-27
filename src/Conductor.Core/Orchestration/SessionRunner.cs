@@ -320,7 +320,9 @@ public sealed partial class SessionRunner
 
             rec.EndedUtc = DateTime.UtcNow;
             rec.CostUsd = agent.CostUsd;
-            if (budgetKilled) rec.CostUsd ??= PriceBudgetKill(agent);
+            // Bug #92: a session the watchdog killed never sends the cost envelope; without this its
+            // spend was invisible to `conductor budget`. The helper says what it did.
+            PriceEnvelopelessExit(agent, rec);
             rec.NumTurns = agent.NumTurns;
             rec.TokensInput = agent.TokensInput;
             rec.TokensOutput = agent.TokensOutput;

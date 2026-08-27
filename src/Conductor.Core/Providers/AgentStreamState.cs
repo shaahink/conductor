@@ -91,6 +91,11 @@ public sealed class AgentStreamState(
     public string? ResultText { get; set; }
     public bool ResultIsError { get; set; }
 
+    /// <summary>Bug #92: true once the wire delivered its terminal result envelope — the CLI ended the
+    /// session itself. False on a session the watchdog killed or that died mid-turn, which is the one
+    /// whose spend the engine must price for itself.</summary>
+    public bool ResultReceived { get; set; }
+
     /// <summary>W3.2: set by the provider the moment the wire says the credential is dead (an HTTP
     /// 401 / <c>authentication_failed</c> envelope), so the run can park on the FIRST retry instead
     /// of inferring it from the result text ten retries later — if a result envelope arrives at all.

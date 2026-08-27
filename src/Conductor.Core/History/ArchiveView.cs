@@ -68,6 +68,29 @@ public sealed partial class ArchiveView
     /// liveness, the same rule <see cref="RunHistoryRow.Status"/> obeys.</summary>
     public string Status => RunLiveness.Reconcile(Run.Status, StoreLooksLive);
 
+    /// <summary>Bug #79 — what the LIVE mirror recorded creating on <paramref name="repo"/> for this
+    /// run, read from the archive's <c>github_map</c>. Empty for a store older than schema v14 or a
+    /// run that was never mirrored; a backfill seeds its own map from it so it starts knowing what
+    /// the mirror already made.</summary>
+    public IReadOnlyList<Integrations.Github.GithubMapFileEntry> GithubMapRows(string repo)
+    {
+        try
+        {
+            return _archive.Query(
+                    "SELECT key, kind, issue_number FROM github_map WHERE run_id = @runId AND repo = @repo",
+                    ("@runId", Run.RunId), ("@repo", repo))
+                .Select(r => new Integrations.Github.GithubMapFileEntry(
+                    (string)(r["key"] ?? "")!, (string)(r["kind"] ?? "")!,
+                    (int)Convert.ToInt64(r["issue_number"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture)))
+                .Where(e => e.Key.Length > 0 && e.Kind.Length > 0)
+                .ToList();
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException)
+        {
+            return [];
+        }
+    }
+
     /// <summary>
     /// Opens one run out of a state home by the selector a person types: a run id, a run-id prefix, a
     /// catalogue slug, or a repo leaf name — <see cref="RunHistory.Find"/>'s vocabulary.

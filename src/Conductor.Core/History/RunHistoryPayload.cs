@@ -28,17 +28,24 @@ public static class RunHistoryPayload
     /// <summary>The whole listing payload: the runs, and separately the catalogue entries that are not
     /// runs. Both arrays are always present, so a consumer never has to tell "no bad entries" from
     /// "this engine does not report them".</summary>
-    public static RunHistoryListJson List(IEnumerable<RunHistoryRow> rows)
+    /// <param name="rows">The rows being shown.</param>
+    /// <param name="totalRows">Bug #37: how many rows the listing had BEFORE any limit was applied.
+    /// Null means "as many as <paramref name="rows"/>". When it is larger, the payload says so:
+    /// a parser reading a cut listing as the whole catalogue is the defect this closes.</param>
+    public static RunHistoryListJson List(IEnumerable<RunHistoryRow> rows, int? totalRows = null)
     {
         ArgumentNullException.ThrowIfNull(rows);
         var runs = new List<RunHistoryItemJson>();
         var unreadable = new List<UnreadableEntryJson>();
+        var shown = 0;
         foreach (var row in rows)
         {
+            shown++;
             if (row.Run is null) unreadable.Add(Unreadable(row));
             else runs.Add(Item(row));
         }
-        return new RunHistoryListJson(runs, unreadable);
+        var total = totalRows ?? shown;
+        return new RunHistoryListJson(runs, unreadable) { Total = total, Truncated = total > shown };
     }
 
     /// <summary>One readable run. Throws on an unreadable row rather than inventing a blank id for

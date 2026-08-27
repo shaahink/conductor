@@ -54,6 +54,11 @@ public sealed record GateResult(string Name, bool Passed, bool Skipped, bool Opt
     /// <summary>SC4.1: wall time the discarded first attempt burned. Counted in the cost estimate,
     /// kept OUT of <see cref="Duration"/> so a duration-vs-last-pass comparison stays like-for-like.</summary>
     public TimeSpan FirstAttemptDuration { get; init; }
+    /// <summary>Bug #86: where the discarded first attempt's full output was written, or null when it
+    /// could not be. A gate that fails and then passes on retry used to keep NOTHING of the failure —
+    /// no test name, no assertion — so a recurring flake was structurally undiagnosable: the better
+    /// the retry rail worked, the less anyone could learn.</summary>
+    public string? FirstAttemptOutputPath { get; init; }
     // KS4.2/KS4.3: the class failures are checked FIRST because they are the case the other glyphs
     // get wrong. A regressing or under-mutation-score gate exited 0, so every branch below would
     // spell it OK. They keep separate words: a reader sent to look for a deleted test when what

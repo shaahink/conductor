@@ -66,7 +66,8 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
                 $"(bar {m.Threshold:0.##}%); {m.Survivors.Count} survived: " + GateRunner.Names(m.Survivors, 5));
         if (g.Passed)
             return g.Retried
-                ? $"gate {g.Name}: PASS on retry ({secs}; the first attempt failed after {g.FirstAttemptDuration.TotalSeconds:0}s)"
+                ? $"gate {g.Name}: PASS on retry ({secs}; the first attempt failed after {g.FirstAttemptDuration.TotalSeconds:0}s" +
+                  (g.FirstAttemptOutputPath is { } kept ? $"; its output is kept at {kept})" : ")")
                 : $"gate {g.Name}: PASS ({secs})";
         return $"gate {g.Name}: {(g.Optional ? "WARN" : "FAIL")}{(g.Retried ? " after retry" : "")} ({secs} {VersusLastPass(g)})";
     }
@@ -97,6 +98,10 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
                 ExitCode = g.ExitCode,
                 DurationMs = (long)g.Duration.TotalMilliseconds,
                 Scope = scope,
+                // Bug #86: a retry is a fact of the record, so a flake RATE is something the event log
+                // can answer instead of something remembered from run logs.
+                Retried = g.Retried,
+                FirstAttemptOutputPath = g.FirstAttemptOutputPath,
             });
             var cfg = _plan.Gates.FirstOrDefault(gc => gc.Name == g.Name);
             var tier = cfg?.Tier ?? "full";

@@ -37,4 +37,5 @@ public sealed record GithubMilestoneRef
 [JsonSerializable(typeof(GithubWorkflowList))]
 [JsonSerializable(typeof(GithubWorkflowRun))]
 [JsonSerializable(typeof(GithubWorkflowRunList))]
+[JsonSerializable(typeof(GithubMapFileEntry))]
 public sealed partial class GithubJsonContext : JsonSerializerContext;

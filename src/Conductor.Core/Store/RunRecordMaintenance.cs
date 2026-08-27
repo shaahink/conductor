@@ -100,8 +100,14 @@ public static class RunRecordMaintenance
 
         var note = $"closed: {match.Status} -> {status}, ended {endedUtc.ToString("O", CultureInfo.InvariantCulture)}"
                    + Because(reason);
-        return Write(match, by, note, clock,
-                     store => store.CloseRunRecord(match.RunId, status, endedUtc) > 0);
+        return Write(match, by, note, clock, store =>
+        {
+            if (store.CloseRunRecord(match.RunId, status, endedUtc) == 0) return false;
+            // Bug #39: the run's open session records go with it. A closed run whose last session
+            // still reads "running" is the same lie one table down.
+            store.CloseDanglingSessions(match.RunId, match.PlanName, endedUtc.UtcDateTime);
+            return true;
+        });
     }
 
     /// <summary>Annotate a record without touching its lifecycle: the run is someone's again, and the

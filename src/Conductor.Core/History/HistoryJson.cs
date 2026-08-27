@@ -12,7 +12,16 @@ namespace Conductor.Core.History;
 /// <paramref name="Runs"/> now has a real id.</param>
 public sealed record RunHistoryListJson(
     IReadOnlyList<RunHistoryItemJson> Runs,
-    IReadOnlyList<UnreadableEntryJson>? Unreadable = null);
+    IReadOnlyList<UnreadableEntryJson>? Unreadable = null)
+{
+    /// <summary>Bug #37: rows in the listing before any <c>--limit</c>. Equal to the arrays' combined
+    /// length unless <see cref="Truncated"/>.</summary>
+    public int Total { get; init; }
+
+    /// <summary>Bug #37: true when a <c>--limit</c> cut rows off this document. Never true for a plain
+    /// <c>history --json</c>, which lists everything; only when the caller asked for less.</summary>
+    public bool Truncated { get; init; }
+}
 
 /// <summary>One run in the listing. <paramref name="Readable"/> false means the catalogue names a
 /// database that is no longer there; every other field but the provenance ones is then empty.</summary>

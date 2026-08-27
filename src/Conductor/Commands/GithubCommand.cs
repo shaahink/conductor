@@ -291,10 +291,29 @@ public sealed partial class GithubCommand : AsyncCommand<GithubCommand.Settings>
             AnsiConsole.MarkupLine($"[grey]project board[/] #{board.ProjectNumber} " +
                 $"[grey]under[/] {Markup.Escape(repo.Split('/', 2)[0])}");
 
-        var sync = new GithubBoardSync(client, repo, prefix, map: null, project);
-        var result = await sync.BackfillAsync(
-            view.Log(), view.Run, view.Run.EngineStampText ?? Core.BuildInfo.Current.Full,
-            diary, settings.DryRun, Ledger(view, prefix)).ConfigureAwait(false);
+        // Bug #79: the backfill remembers what it created, in a file beside the state home and seeded
+        // from the archive's own github_map rows — so a second pass inside GitHub's replica lag finds
+        // the first pass's issues in the map instead of minting the board again. A dry run reads the
+        // map and writes nothing to it.
+        var root = string.IsNullOrWhiteSpace(settings.Home) ? StateHome.Root : Path.GetFullPath(settings.Home);
+        var mapPath = GithubMapFile.PathFor(root, view.Run.RunId, repo);
+        var map = GithubMapFile.Load(mapPath, seed: view.GithubMapRows(repo));
+        AnsiConsole.MarkupLine($"[grey]map[/] {Markup.Escape(mapPath)} [grey]({map.IssueCount} issue(s) remembered)[/]");
+        var sync = new GithubBoardSync(client, repo, prefix, map, project);
+        GithubSyncResult result;
+        try
+        {
+            result = await sync.BackfillAsync(
+                view.Log(), view.Run, view.Run.EngineStampText ?? Core.BuildInfo.Current.Full,
+                diary, settings.DryRun, Ledger(view, prefix)).ConfigureAwait(false);
+        }
+        finally
+        {
+            // Written even when the pass threw: the issues it did create are the ones a rerun must
+            // not create again. A dry run created nothing and leaves the state home as it found it.
+            if (!settings.DryRun && !await GithubMapFile.SaveAsync(mapPath, map).ConfigureAwait(false))
+                AnsiConsole.MarkupLine($"[yellow]the map could not be written to {Markup.Escape(mapPath)} - a rerun will rebuild it from the issue markers[/]");
+        }
 
         AnsiConsole.MarkupLine(Markup.Escape(result.Summary()));
         // CH4.3 - the sweep says what it refused to close, every id, never truncated. A backfill
@@ -329,7 +348,9 @@ public sealed partial class GithubCommand : AsyncCommand<GithubCommand.Settings>
     private static IReadOnlyList<GithubLedgerCard> Ledger(ArchiveView view, string prefix)
     {
         var followupsPath = Path.Combine(view.Repo, StateHome.ScratchDirName, "followups.md");
-        var followups = File.Exists(followupsPath) ? Core.FollowupParser.Read(followupsPath) : [];
+        // Bug #81: the LEDGER reading — one entry per id with its newest verdict — not one row per
+        // spelling. The raw rows put five open issues on the mirror for one closed followup.
+        var followups = File.Exists(followupsPath) ? Core.FollowupLedger.Read(followupsPath) : [];
         return GithubLedgerPlan.Cards(view.Bugs(), followups, prefix);
     }
 
