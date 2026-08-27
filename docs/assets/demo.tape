@@ -23,6 +23,15 @@
 # FONT: JetBrainsMono Nerd Font Mono ships inside the VHS image, so the container needs no font
 # mounting. The Face uses no Nerd Font private-use glyphs — only box-drawing and common symbols —
 # so any monospace font with box-drawing coverage substitutes cleanly.
+#
+# WHAT THE TOUR VISITS (CH2.1). Every surface below is reached by the mnemonic declared in
+# face-go/internal/tui/model.go's tabKey, so a rebound key is a one-line edit here. The order is a
+# story, not the tab strip's order: where am I, what does it want from me, what is it doing, what is
+# left, what has happened, what got out, who hears about it, what is it working from, what can I do.
+#
+# STALENESS: docs/assets/demo.manifest.json records what this tape was recorded from, and the CH2.2
+# check fails the build when the Face has moved past the GIF. Re-record (the command at the top),
+# then refresh the manifest — never the other way round.
 
 Output docs/assets/demo.gif
 
@@ -36,13 +45,25 @@ Set Theme        "Catppuccin Mocha"
 Set TypingSpeed  60ms
 Set Framerate    24
 
+# The fleet is what the run switcher offers (KS2.4) and it arrives in CONDUCTOR_FLEET, from the
+# engine, even in --demo — cmd/conductor-face/main.go reads the envelope before it picks a source.
+# docs/assets/demo-fleet.json is the synthetic one, so the tour can show the machine's other runs
+# without an engine anywhere. Assignment context, so no quoting: bash does not word-split there.
 Hide
-Type "cd face-go && ./bin/conductor-face --demo" Enter
+Type "cd face-go && export CONDUCTOR_FLEET=$(cat ../docs/assets/demo-fleet.json)" Enter
+Type "./bin/conductor-face --demo" Enter
 Sleep 3s
 Show
 
 # Home — the landing page: run, budget, gates, workspace, next steps.
 Sleep 3s
+
+# The inbox (SF4.2). Home caps the owner queue and hands off with "+N more — w"; `w` is the uncapped
+# pane: every obligation, its age, what it unblocks, and the exact command that clears it.
+Type "w"
+Sleep 4s
+Escape
+Sleep 500ms
 
 # The live agent transcript.
 Type "a"
@@ -66,6 +87,15 @@ Sleep 500ms
 Type "t"
 Sleep 3s
 
+# The report — the run's own account of itself, the file that gets published.
+Type "r"
+Sleep 3s
+
+# The courier (Divan). Telegram takes 'g': 't' is History's spine. Readiness is computed, not
+# claimed — a token without a chat id delivers nothing and the tab says so.
+Type "g"
+Sleep 4s
+
 # Editing the plan without restarting the run.
 Type "p"
 Sleep 3s
@@ -73,7 +103,15 @@ Sleep 3s
 # The ':' command palette — every control verb, destructive ones confirm first.
 Type ":"
 Sleep 3s
+
+# ...and the one Local verb that changes a screen rather than a setting: the run switcher, this
+# machine's other runs, live and finished, swapped into this same process (KS2.4).
+Type "switch"
+Sleep 1s
+Enter
+Sleep 4s
 Escape
+Sleep 500ms
 
 Hide
 Type "q"

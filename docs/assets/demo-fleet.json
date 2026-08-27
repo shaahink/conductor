@@ -1,0 +1,86 @@
+{
+  "runs": [
+    {
+      "repo": "C:/Code/conductor",
+      "planName": "conductor-foreman",
+      "runId": "demo-run-id-0001",
+      "status": "Running",
+      "port": 4317,
+      "pid": 35412,
+      "stageId": "F7",
+      "stageTitle": "Gate caching + truth gates + speed program",
+      "attentionReason": "",
+      "done": 2,
+      "total": 40,
+      "costUsd": 0.42,
+      "baseUrl": "(demo)",
+      "stateDir": "C:/Code/conductor/.conductor",
+      "token": "",
+      "self": true
+    },
+    {
+      "repo": "C:/Code/sk-studio",
+      "planName": "NINE STREETS",
+      "runId": "7951c3ca149a4c12",
+      "status": "Paused",
+      "attentionReason": "owner input wanted",
+      "port": 4318,
+      "pid": 19056,
+      "stageId": "E",
+      "stageTitle": "The three that mean it is not a game yet",
+      "done": 29,
+      "total": 46,
+      "costUsd": 280.81,
+      "baseUrl": "http://127.0.0.1:4318",
+      "stateDir": "C:/Code/sk-studio/.conductor",
+      "token": "",
+      "self": false
+    },
+    {
+      "repo": "C:/Code/payesh",
+      "planName": "payesh - the record that gets out",
+      "runId": "1a2b3c4d5e6f7a8b",
+      "status": "Running",
+      "port": 4319,
+      "pid": 22104,
+      "stageId": "P3",
+      "stageTitle": "Every figure is keyed, never typed",
+      "done": 11,
+      "total": 17,
+      "costUsd": 41.06,
+      "baseUrl": "http://127.0.0.1:4319",
+      "stateDir": "C:/Code/payesh/.conductor",
+      "token": "",
+      "self": false
+    }
+  ],
+  "past": [
+    {
+      "repo": "C:/Code/conductor",
+      "planName": "Divan - the chancellery: inbox, courier, and the record that gets out",
+      "runId": "e9e21d10aedf4390",
+      "status": "Completed",
+      "done": 26,
+      "total": 26,
+      "costUsd": 360.14,
+      "lastActivityUtc": "2026-08-26T17:20:11Z",
+      "runDb": "C:/Users/demo/AppData/Local/conductor/runs/conductor-divan-a13f0b28/run.db",
+      "selector": "",
+      "problem": ""
+    },
+    {
+      "repo": "C:/Code/conductor",
+      "planName": "Karvansara - the house the run lives in",
+      "runId": "8cefa5de8f164848",
+      "status": "Completed",
+      "done": 24,
+      "total": 24,
+      "costUsd": 297.24,
+      "lastActivityUtc": "2026-08-19T09:11:04Z",
+      "runDb": "C:/Users/demo/AppData/Local/conductor/runs/conductor-karvansara-e0536519/run.db",
+      "selector": "",
+      "problem": ""
+    }
+  ],
+  "pastTotal": 18
+}
