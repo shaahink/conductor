@@ -17,6 +17,7 @@ found: report --query was deleted at SF1.2 and operating.md still offered it. 13
   src/Conductor. README's GIF caption still described the pre-CH2.1 tour. All fixed and pinned.
 trap: dotnet build through the PowerShell tool resolves the repo as C:\Code\conductor and prints
   748 phantom analyzer errors; through the Bash tool it is clean. Build in Bash, or --no-build.
+suite: full battery green - dotnet test Conductor.slnx, Passed 3513 / 3513, 3m59s.
 next: CH4.1. Bugs 87 (courier status contradicts itself) and 88 (CHANGELOG [Unreleased] is empty
   after CH1+CH2; CH4.1 owns that precondition) are filed and open.
 
