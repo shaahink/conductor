@@ -17,10 +17,10 @@ found: local master is 9 BEHIND origin/master while feat/charkh contains all 9 -
 next: CH4.2 - perform the mechanical acts, REFUSE the judgement ones. The preflight already draws
   that line (state "owner"); CH4.2 acts on the green ones. Four runs are owed a github record, ids in
   the evidence. Bug 88 (empty [Unreleased]) is what CH4.2/CH5 must write before any tag.
+
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
-
 |---|---|
 | Total checkpoints | 14 |
 | Done | 5 |
