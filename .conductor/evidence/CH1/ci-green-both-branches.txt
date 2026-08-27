@@ -1,0 +1,19 @@
+CH1.3 EXIT - CI green on Windows and Linux, read the CH1.3 way: each ACTIVE workflow's latest run on the branch, not the commit's check-runs.
+captured 2026-08-27
+
+feat/charkh  ci.yml  head=349a3a5f  completed/success  https://github.com/shaahink/conductor/actions/runs/33024625391
+      windows - full gate battery      success
+      ubuntu - cross-platform build    success
+feat/charkh  release.yml : no run on this branch (tag-triggered)
+
+master  ci.yml  head=349a3a5f  completed/success  https://github.com/shaahink/conductor/actions/runs/33025144486
+      ubuntu - cross-platform build    success
+      windows - full gate battery      success
+master  release.yml  head=5cf77f1f  completed/success  https://github.com/shaahink/conductor/actions/runs/30385802454
+      linux-x64                        success
+      macos-arm64                      success
+      windows-x64                      success
+      linux-arm64                      success
+      macos-x64                        success
+      attach to release                skipped
+

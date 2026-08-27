@@ -82,3 +82,16 @@ The gate removed from `FlushEvents` alone — probe, drain loop and test byte-id
 
 The flush returned having persisted nothing, which is the bug, stated by the test that
 now stands guard over it. With the gate restored: 7/7.
+
+## Exit
+
+    feat/charkh  349a3a5f  windows - full gate battery  SUCCESS
+                           ubuntu - cross-platform build SUCCESS
+    master       349a3a5f  windows - full gate battery  SUCCESS
+                           ubuntu - cross-platform build SUCCESS
+
+Full capture in `ci-green-both-branches.txt`, read per ACTIVE workflow rather than
+off the commit's check-runs (trap 16). `release.yml` is tag-triggered: it has no run
+on `feat/charkh`, and its latest run on `master` (v0.5.0, 5cf77f1f) is green.
+Local battery at the same tree: ratchet OK (pragmas 31/31, tests 3001/1932), full
+suite 3508/3508.
