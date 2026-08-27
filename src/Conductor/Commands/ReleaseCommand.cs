@@ -37,7 +37,7 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
     public sealed class Settings : PlanSettings
     {
         [CommandArgument(0, "[VERB]")]
-        [Description("Sub-command: preflight. Omit to show help.")]
+        [Description("Sub-command: preflight, perform. Omit to show help.")]
         public string Verb { get; init; } = "";
 
         /// <summary>Named <c>--tag</c> and not <c>--version</c> on purpose: Spectre already owns
@@ -58,6 +58,16 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
         [CommandOption("--repo <DESTINATION>")]
         [Description("GitHub destination for the backfill line, as owner then slash then name. Default: the plan's github.repo.")]
         public string? Repo { get; init; }
+
+        /// <summary>Dry run is the DEFAULT for <c>perform</c>, and this is what turns it off. An
+        /// era-close that acted by default would be a verb whose first mistake is unrecoverable.</summary>
+        [CommandOption("--yes")]
+        [Description("perform the mechanical acts. Without it, `release perform` only says what it would do.")]
+        public bool Yes { get; init; }
+
+        [CommandOption("--history <DIR>")]
+        [Description("Where the era's documents join the record (default: docs/history)")]
+        public string? History { get; init; }
     }
 
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
@@ -66,6 +76,7 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
         return settings.Verb.Trim().ToLowerInvariant() switch
         {
             "preflight" => await PreflightAsync(settings).ConfigureAwait(false),
+            "perform" => await PerformAsync(settings).ConfigureAwait(false),
             "" => Help(),
             var other => Unknown(other),
         };
@@ -83,13 +94,20 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
         AnsiConsole.MarkupLine("  [grey]courier (would it survive the reinstall), backfill (which run is owed a record).[/]");
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("  [grey]Exit 0 all green · 1 something is red · 2 nothing red, something is yours to decide.[/]");
-        AnsiConsole.MarkupLine("  [grey]It writes nothing, tags nothing and merges nothing — see docs/cli.md.[/]");
+        AnsiConsole.MarkupLine("  [grey]It writes nothing, tags nothing and merges nothing.[/]");
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("  [yellow]conductor release perform[/] [grey][[--tag 0.6.0]] [[--yes]] [[--history docs/history]][/]");
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("  [grey]Four mechanical acts, each its own commit: the CHANGELOG rename, the ff-only merge,[/]");
+        AnsiConsole.MarkupLine("  [grey]the tag, and the doc move WITH the plan repointed at it. Five owner acts named and[/]");
+        AnsiConsole.MarkupLine("  [grey]stopped at: the version number, single-vs-split, the corpus, the reinstall, the push.[/]");
+        AnsiConsole.MarkupLine("  [grey]Dry run unless --yes. Refuses outright while a run is live in the plan.[/]");
         return 1;
     }
 
     private static int Unknown(string verb)
     {
-        AnsiConsole.MarkupLine($"[red]unknown sub-command '{Markup.Escape(verb)}'.[/] the only one is [yellow]preflight[/].");
+        AnsiConsole.MarkupLine($"[red]unknown sub-command '{Markup.Escape(verb)}'.[/] the sub-commands are [yellow]preflight[/] and [yellow]perform[/].");
         return 1;
     }
 

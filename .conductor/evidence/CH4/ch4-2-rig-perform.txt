@@ -1,0 +1,58 @@
+conductor release perform — Aban - the rig era
+repo: C:/Users/shahi/AppData/Local/Temp/ch42-rig  ·  release: 0.1.0  ·  
+PERFORMING
+
+✓ changelog  mechanical renamed '## [Unreleased]' to '## [0.1.0] - 2026-08-27' 
+and committed it
+             after this, `sh tools/changelog-section.sh 0.1.0` exits 0 and 
+prints that body
+✓ merge      mechanical fast-forwarded master to feat/aban (a5f5aadfa136)
+             local only - pushing is an outward-facing act and is stopped at 
+below
+             the working tree is now on master - this verb does not put it back
+✓ tag        mechanical created annotated tag v0.1.0 at a5f5aadfa136 (local)
+             local only - pushing the tag is what starts the release build, and 
+that is stopped at below
+✓ docmove    mechanical moved 2 file(s) into the record and repointed the plan, 
+in one commit
+             docs/dev/ABAN-PLAN-2026-08-27.md -> 
+docs/history/ABAN-PLAN-2026-08-27.md  (plan repointed)
+             plans/aban/TRACKER.md -> 
+docs/history/archive/trackers/ABAN-TRACKER.md  (plan repointed)
+             the plan at 
+C:/Users/shahi/AppData/Local/Temp/ch42-rig/plans/aban/core.plan.json is 
+rewritten in the SAME act - tracker, planDoc and readOrder
+             the plan was edited by targeted replacement - its comment header 
+and every untouched field are intact
+? version    owner      the release is named 0.1.0 because you said so
+             MinVer derives a build id, not a release name; nothing in this repo
+can decide which number an era is
+             everything mechanical above takes it as input - `--tag <x.y.z>`
+? split      owner      one release or two is a call about what the world reads,
+not about the tree
+             a single section covering both eras is one rename; splitting means 
+tagging an intermediate commit
+             and cutting one section into two by hand. History usually makes one
+branch much cheaper - it does not make it right
+? corpus     owner      no run is owed a GitHub record
+             whether a run joins the published corpus is a decision about what 
+the world sees, so this engine will not take it
+             run each backfill ONCE - a second pass inside GitHub's replica lag 
+mints the board again (bug #79)
+? reinstall  owner      the reinstall cannot happen yet - a conductor is live on
+this machine
+             tools/install.ps1, then `conductor version` to confirm it matches 
+the tag
+             re-check the process table at the moment you type it: another 
+repository's run may have started since
+? publish    owner      pushing is what makes any of this public
+             git push origin master
+             git push origin v0.1.0   # this is what starts the release build 
+across five platforms
+             the merge and the tag above are LOCAL; nothing this engine did has 
+left the machine
+
+OWNER - performed: changelog, merge, tag, docmove. 5 act(s) are yours and were 
+stopped at: version, split, corpus, reinstall, publish
+nothing left this machine: every act above is local, and pushing is stopped at.
+

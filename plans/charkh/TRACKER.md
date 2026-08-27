@@ -4,19 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: CH4.1 DONE. `conductor release preflight` exists in the tree (NOT in the PATH 0.5.0 - it
-  refuses the verb, which is the control). Six named lines, exit 0 all-green / 1 red / 2 owner.
-  Evidence: .conductor/evidence/CH4/ch4-1-release-preflight.md + three live captures.
-shape: deciding is PURE in src/Conductor.Core/Release (five files, verdicts over Facts records);
-  measuring is impure in src/Conductor/Commands/ReleaseCommand.Probes.cs. That split is what lets a
-  test seed one red fact and prove the exit code moves. 21 tests, every one a negative control.
-found: local master is 9 BEHIND origin/master while feat/charkh contains all 9 - the merge line needs
-  three counts, not two. `conductor` on PATH is a scoop .CMD SHIM, so UpdateSafety's process-image
-  half goes blind unless you feed it `version --json`.binary. `sh` is not on the Windows PATH and
-  ProcessRunner reports a failed START as exit -1 on STDOUT - that printed as "no CHANGELOG section".
-next: CH4.2 - perform the mechanical acts, REFUSE the judgement ones. The preflight already draws
-  that line (state "owner"); CH4.2 acts on the green ones. Four runs are owed a github record, ids in
-  the evidence. Bug 88 (empty [Unreleased]) is what CH4.2/CH5 must write before any tag.
+last: CH4.1 AND CH4.2 both DONE. `conductor release preflight` (six measured lines, exit 0/1/2) and
+  `conductor release perform` (four mechanical acts performed, five owner acts named and stopped at).
+  Evidence: .conductor/evidence/CH4/ch4-1-release-preflight.md and ch4-2-release-perform.md.
+  Full suite green: 3550/3550. Neither verb exists in the PATH 0.5.0 - it refuses them.
+shape: deciding is PURE in src/Conductor.Core/Release; measuring and acting are impure in
+  ReleaseCommand.{Probes,Perform}.cs. ReleaseAct keeps Kind (whose act, ever) apart from State (what
+  happened this time), so an owner act is `stopped` on EVERY run and can never read as `nothing`.
+rule: exit 2 is what a FINISHED era-close looks like - the owner's part is outstanding by definition.
+  A script reading 0 as "closed" is reading it off a document again. Plan repoints are a TARGETED
+  string replace, never PlanDocumentEditor.Save (it drops the comment header).
+next: CH4.3 - scope GithubBoardSync's retire sweep to the run (bug 84; it is repo-wide today and a
+  dry run of the edge backfill reported 23 retired = exactly Divan's card count), then write the edge
+  run's record. Prove it on a PRIVATE scratch repo with CONDUCTOR_GITHUB_TOKEN, never shaahink/conductor.
 
 ## Baseline numbers (from run.db)
 

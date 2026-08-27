@@ -1,0 +1,6 @@
+CH4.2 - full suite after 'release preflight' and 'release perform' landed.
+dotnet test Conductor.slnx --no-build, run as a tracked bg child.
+
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:  3550, Skipped:     0, Total:  3550, Duration: 3 m 40 s - Conductor.Tests.dll (net10.0)

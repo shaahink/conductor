@@ -1,0 +1,58 @@
+conductor release perform — Aban - the rig era
+repo: C:/Users/shahi/AppData/Local/Temp/ch42-rig  ·  release: 0.1.0  ·  
+PERFORMING
+
+= changelog  mechanical CHANGELOG already has a [0.1.0] section
+             nothing to rename - this act is idempotent
+= merge      mechanical master already contains every commit of feat/aban
+             nothing to fast-forward - this act is idempotent, and it stays so 
+after the acts below move the base on
+= tag        mechanical v0.1.0 already exists
+             nothing to tag - this act is idempotent, and it will not move an 
+existing tag
+= docmove    mechanical nothing left to move - the plan already points into the 
+record
+             docs/history/ABAN-PLAN-2026-08-27.md  (already in the record)
+             docs/history/archive/trackers/ABAN-TRACKER.md  (already in the 
+record)
+? version    owner      the release is named 0.1.0 because you said so
+             MinVer derives a build id, not a release name; nothing in this repo
+can decide which number an era is
+             everything mechanical above takes it as input - `--tag <x.y.z>`
+? split      owner      one release or two is a call about what the world reads,
+not about the tree
+             a single section covering both eras is one rename; splitting means 
+tagging an intermediate commit
+             and cutting one section into two by hand. History usually makes one
+branch much cheaper - it does not make it right
+? corpus     owner      no run is owed a GitHub record
+             whether a run joins the published corpus is a decision about what 
+the world sees, so this engine will not take it
+             run each backfill ONCE - a second pass inside GitHub's replica lag 
+mints the board again (bug #79)
+? reinstall  owner      the reinstall cannot happen yet - a conductor is live on
+this machine
+             tools/install.ps1, then `conductor version` to confirm it matches 
+the tag
+             re-check the process table at the moment you type it: another 
+repository's run may have started since
+? publish    owner      pushing is what makes any of this public
+             git push origin master
+             git push origin v0.1.0   # this is what starts the release build 
+across five platforms
+             the merge and the tag above are LOCAL; nothing this engine did has 
+left the machine
+
+OWNER - nothing mechanical was left to do. 5 act(s) are yours and were stopped 
+at: version, split, corpus, reinstall, publish
+nothing left this machine: every act above is local, and pushing is stopped at.
+
+
+=== REFUSAL against C:/code/conductor, whose run is live (exit 1) ===
+refusing: a conductor run is live in C:/code/conductor\.conductor (engine pid 
+5248).
+this verb rewrites the CHANGELOG, moves the plan's tracker and repoints the plan
+itself —
+doing that under a live session pulls the ground out from under it. Let the run 
+end first.
+

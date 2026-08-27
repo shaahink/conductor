@@ -1,0 +1,42 @@
+298ad13 docs(release): the era's plan and tracker join the record
+a5f5aad chore(release): CHANGELOG section for 0.1.0
+496d564 chore: the rig has an agent
+c7f34c0 chore: the rig knows where it is
+38901cb feat(A1.1): more of it
+74fa0bf feat(A1.1): the work of the era
+
+--- tags ---
+v0.1.0
+v0.1.0 -> a5f5aadfa136d5957f32f615066d1c26437c4433
+master  -> 298ad13afa0d8777a9f68b5bb7b685e9b85638ef
+
+--- sh tools/changelog-section.sh 0.1.0 ---
+### Added
+
+- the wheel: what the owner still does by hand becomes machinery
+- a release preflight that measures instead of asserting
+
+### Fixed
+
+- the era-close no longer depends on somebody remembering seven acts
+exit=0
+
+--- the plan after the repoint (comment header intact) ---
+{
+  "// a comment header the plan editor would drop": "kept on purpose - CH4.2 must not rewrite this file wholesale",
+  "name": "Aban - the rig era",
+  "agent": { "cli": "echo", "args": ["{prompt}"] },
+  "repo": "C:/Users/shahi/AppData/Local/Temp/ch42-rig",
+  "branch": "feat/aban",
+  "tracker": "docs/history/archive/trackers/ABAN-TRACKER.md",
+  "planDoc": "docs/history/ABAN-PLAN-2026-08-27.md",
+  "stages": [ { "id": "A1", "name": "one", "goal": "one", "checkpoints": ["A1.1 the only one"] } ],
+  "readOrder": [ "docs/history/ABAN-PLAN-2026-08-27.md", "docs/history/archive/trackers/ABAN-TRACKER.md" ]
+}
+
+--- files ---
+docs/history/ABAN-PLAN-2026-08-27.md
+docs/history/archive/trackers/ABAN-TRACKER.md
+plans/aban/core.plan.json
+
+--- git status --porcelain (empty = clean) ---
