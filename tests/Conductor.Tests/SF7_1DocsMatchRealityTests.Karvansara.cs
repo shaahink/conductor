@@ -96,16 +96,28 @@ public sealed partial class SF7_1DocsMatchRealityTests
         }
     }
 
+    /// <summary>An era's brief: one word, then PLAN, then the date it was compiled. It lives in
+    /// <c>docs/dev/</c> while its era is open and moves to <c>docs/history/</c> at the close.</summary>
+    [GeneratedRegex(@"^[A-Z][A-Z0-9]*-PLAN-\d{4}-\d{2}-\d{2}\.md$", RegexOptions.None, matchTimeoutMilliseconds: 5000)]
+    private static partial Regex EraBrief();
+
     /// <summary>The contributor index must not leave a closed era sitting in the "design authority
-    /// for current work" row — the drift nothing looks wrong about: the link resolves, the file
+    /// for current work" row - the drift nothing looks wrong about: the link resolves, the file
     /// exists, and every word of it is about work that already shipped.
-    /// <para>DV7.3 moved BOTH eras to <c>history/</c> and left no era open, so the contract inverts.
-    /// The section may no longer name a design authority at all; it has to SAY there is none. That
-    /// sentence is what replaces the row, so it is asserted rather than left to prose drift — and
-    /// the old paths are asserted GONE, because a copy left behind at the old location is exactly
-    /// the stale-but-resolving link this test exists to catch.</para></summary>
+    /// <para>DV7.3 moved BOTH eras to <c>history/</c> and left no era open, so this was pinned to the
+    /// sentence that says so - and at CH5.1 that pin asserted the OPPOSITE of its own intent, because
+    /// Charkh had opened and the index correctly stopped saying "No era is open". A literal cannot
+    /// carry a contract whose two halves are both legitimate.</para>
+    /// <para>So it is a property now: <b>an era brief is a <c>docs/dev/</c> file named
+    /// <c>ERA-PLAN-yyyy-MM-dd.md</c></b>, and its presence IS the fact. None there - the section must
+    /// SAY there is no design authority. One or more - the section must name each of them and must
+    /// not claim there is none. The doc-move act inside <c>release perform</c> is what carries a brief
+    /// to <c>history/</c> at the close, so this test flips back on its own the moment it runs; nobody
+    /// edits an assertion to close an era.</para>
+    /// <para>Either way the old paths are asserted GONE, because a copy left behind at the old
+    /// location is exactly the stale-but-resolving link this test exists to catch.</para></summary>
     [Fact]
-    public void TheContributorIndexNamesNoDesignAuthorityWhileNoEraIsOpen()
+    public void TheContributorIndexClaimsTheDesignAuthorityTheTreeActuallyHas()
     {
         var readme = Doc("docs", "dev", "README.md");
         var current = readme[readme.IndexOf("## Current work", StringComparison.Ordinal)..];
@@ -114,12 +126,38 @@ public sealed partial class SF7_1DocsMatchRealityTests
         // Markdown wraps, so the claim is checked against the section flattened to one line.
         var flat = string.Join(' ', current.Split('\n', StringSplitOptions.TrimEntries));
 
-        Assert.Contains("No era is open", flat, StringComparison.Ordinal);
-        Assert.Contains("nothing in this repo is the design authority for current work", flat,
-            StringComparison.Ordinal);
+        // The tree decides which of the two claims is the true one. The prefix is deliberately one
+        // word: NEXT-ERA-VERIFIED-PLAN-2026-08-07.md is a research note, not an era's brief.
+        var briefs = Directory.GetFiles(Path.Combine(RepoRoot(), "docs", "dev"), "*.md")
+            .Select(Path.GetFileName)
+            .Where(f => f is not null && EraBrief().IsMatch(f))
+            .OrderBy(f => f, StringComparer.Ordinal)
+            .ToList();
 
-        // The affirmative row is the thing that must not come back while no era is in flight.
-        Assert.DoesNotContain("**The design authority for current work.**", flat, StringComparison.Ordinal);
+        if (briefs.Count == 0)
+        {
+            Assert.Contains("No era is open", flat, StringComparison.Ordinal);
+            Assert.Contains("nothing in this repo is the design authority for current work", flat,
+                StringComparison.Ordinal);
+
+            // The affirmative row is the thing that must not come back while no era is in flight.
+            Assert.DoesNotContain("**The design authority for current work.**", flat, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.DoesNotContain("No era is open", flat, StringComparison.Ordinal);
+            Assert.DoesNotContain("nothing in this repo is the design authority for current work", flat,
+                StringComparison.Ordinal);
+            Assert.Contains("the design authority for current work", flat, StringComparison.Ordinal);
+
+            foreach (var brief in briefs)
+            {
+                Assert.True(flat.Contains(brief!, StringComparison.Ordinal),
+                    $"docs/dev/{brief} is an open era's brief - it has not moved to history/ - and the " +
+                    "Current work section never names it. A reader arriving at the contributor index is " +
+                    "pointed at the wrong document, or at none.");
+            }
+        }
 
         Assert.Contains("../history/archive/trackers/KARVANSARA-CORE-TRACKER.md", current, StringComparison.Ordinal);
 

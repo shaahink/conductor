@@ -7,16 +7,22 @@ what a good change looks like. The material here is what sits behind that page.
 
 ## Current work
 
-**No era is open.** Divan closed on 2026-08-26 and shipped as `v0.5.0` together with
-karvansara-edge, which had been sitting on `master` untagged. Both eras' briefs and both eras'
-trackers moved to [`../history/`](../history/) at DV7.3, per the convention below, so **nothing in
-this repo is the design authority for current work**. The next era's brief takes that role when one
-is compiled; `plans/karvan/lanes.plan.json` is authored but not launch-ready and its own tracker
-says why, so it is not that document yet.
+**Charkh is open**, on `feat/charkh` since 2026-08-26, and
+[`CHARKH-PLAN-2026-08-26.md`](CHARKH-PLAN-2026-08-26.md) **is** the design authority for current
+work until it tags. It moves to [`../history/`](../history/) at the close, per the convention below
+— and at CH4.2 that move stopped being a thing a person remembers: `conductor release perform`
+carries it as one of its four mechanical acts, **with** the plan's `tracker`, `planDoc` and
+`readOrder` repointed in the same act, because a move without the repoint means the next session
+reads nothing.
+
+Divan closed on 2026-08-26 and shipped as `v0.5.0` together with karvansara-edge, which had been
+sitting on `master` untagged; both eras' briefs and trackers moved to `../history/` at DV7.3.
+`plans/karvan/lanes.plan.json` is authored but not launch-ready and its own tracker says why.
 
 | Doc | What it is |
 |---|---|
-| [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) | The map: the three assemblies and which way they point, one session's lifecycle end to end, the seams (thirteen since Divan), the surfaces (four since DV4), the courier - the one process that outlives a run - and where to add a new thing. Start here. Reconciled against the engine at DV7.1, 2026-08-26; before that at KS12.1, 2026-08-19. |
+| [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) | The map: the three assemblies and which way they point, one session's lifecycle end to end, the seams (thirteen since Divan), the surfaces (four since DV4), the courier - the one process that outlives a run - and where to add a new thing. Start here. Reconciled against the engine at CH5.1, 2026-08-27 (Charkh's three new areas, the seam count re-counted, the ratchet numbers re-measured); before that at DV7.1, 2026-08-26 and KS12.1, 2026-08-19. |
+| [`CHARKH-PLAN-2026-08-26.md`](CHARKH-PLAN-2026-08-26.md) | **The open era's brief.** The wheel: what the owner still does by hand becomes machinery — the two batteries that differed in silence for an era, the demo that stopped matching the product, the docs read-and-agreed-with instead of diffed against a binary, and the era-close itself as three verbs (`release preflight`, `perform`, `runbook`) instead of a runbook a person carries out. Its per-stage decisions are the section a session reads, not the whole document. |
 | [`DIVAN-BUG-SWEEP-2026-08-25.md`](DIVAN-BUG-SWEEP-2026-08-25.md) | The strand doc for Divan's DV2 sweep: the three defect ledgers (run.db bugs, followups OPEN rows, and field-observed engine defects that were in no repo ledger until this doc) with triage rules. |
 | [`OBSERVABILITY-AND-MARKET-2026-08-22.md`](OBSERVABILITY-AND-MARKET-2026-08-22.md) | Where conductor sits in the 2026 market and why observability hurts: the orchestrator lane is commoditised, the referee is not; the edge run's GitHub mirror died to two log lines; the owner queue is the best agent inbox here and cannot leave the machine. Its ranked backlog feeds the document above. |
 | [`CHAPAR-REMOTE-SURFACE-2026-08-18.md`](CHAPAR-REMOTE-SURFACE-2026-08-18.md) | The messenger/remote-surface spec KS11 was built from - the channel seam, chat profiles, the push grammar, evidence and metrics on demand. |

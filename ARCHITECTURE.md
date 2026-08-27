@@ -309,8 +309,10 @@ abstraction count is small on purpose. *(Counted again at DV7.1, 2026-08-26: ten
 added three at once — `ICourierSource`, `ITranscriber`, `ICloudCli`. Each one is a **process or a wire
 we do not own**, which is the only justification this repo accepts for a new seam; see the rule under
 the table. Before that it was nine until KS11.1 extracted `IMessageChannel`, and the count in this
-sentence was stale for the whole edge era. `grep -rn "public interface I" src/Conductor.Core` settles
-it in one command — do that rather than trusting this number.)*
+sentence was stale for the whole edge era. Counted **again at CH5.1, 2026-08-27: still thirteen** —
+Charkh added `Core/Release/` and four `Ci*` files and not one seam, because every type in both takes
+its facts as a parameter. `grep -rn "public interface I" src/Conductor.Core` settles it in one
+command — do that rather than trusting this number.)*
 
 | Seam | Job | Implementations |
 |---|---|---|
@@ -360,7 +362,14 @@ other implementation would be a fake, the seam belongs at the transport, not at 
   (DV6.1), Projects v2 columns over GraphQL (DV6.2), code-scanning alerts (DV6.4). Two things **are**
   fetched, and both answer "what would this write do", never "what should the run do": issue identity
   against a marker in the body, and `GithubRepoInfo` — the repository read for one fact, private or
-  not, so a refused SARIF upload can say why. ADR-0005's second addendum states this.* The mirror is
+  not, so a refused SARIF upload can say why. ADR-0005's second addendum states this.* **CH1.3 added a third read and it is a different kind**
+  (`Integrations/CiWorkflows.cs`): `github ci` lists the repository's active workflows and each
+  one's newest run on the branch. That is not "what would this write do" — it is an answer about
+  the outside world, and it does reach a surface the owner reads. The invariant survives because it
+  never reaches **run state**: it lands in `<stateDir>/ci-status.json` as a dated observation
+  carrying the sha it was about, and every consumer *derives* from it. Nothing in `run.db` and
+  nothing in `RunStateProjection.Fold` is written from a GitHub read; if a change makes one, that is
+  an ADR amendment, not a patch. The mirror is
   attached to the run rather than registered on the event path, and
   `ArchitectureBoundaryTests.TheGithubMirrorIsNeverRegisteredOnTheEventPath` holds that line by
   **file name** — only `RunContext.cs`, `RunContext.Mirror.cs` and `RunLoop.Plumbing.cs` may name it
@@ -535,6 +544,34 @@ ADR-0005's invariant true: **a note is context, never a command.**
 | Ledger issues, Projects v2 columns, SARIF | `Core/Integrations/Github/` | Three more push surfaces; see the seams table and ADR-0005's second addendum |
 | Plan config | `Models/CourierConfig.cs`, `Models/CloudLaneConfig.cs` | `plan.courier` and `plan.cloud`. Both carry a `Refusal()` so a wrong key is named at load, not at first use |
 
+### What Charkh added, and where it lives
+
+Charkh's subject is *the owner's hands*: the acts a person still performed between eras — reading a
+runbook and doing seven things by hand, agreeing with a document about what the binary does, asking
+whether CI ran — became something the engine measures or performs. Three new areas, **and no new
+seam**: recounted at CH5.1 (2026-08-27), `src/Conductor.Core` still declares exactly thirteen
+`public interface I*`, for the same reason KS9's GitHub sync added none — every one of these takes
+its facts as a parameter, so the test double is a record, not an interface.
+
+| Surface | Where | Note |
+|---|---|---|
+| The era-close, measured | `Core/Release/` (10 files) | `ReleasePreflight` turns six fact records into six `ReleaseCheck`s — merge, changelog, processes, migration, courier, backfill. **Every file here is pure**: facts in, verdict out, no `Process`, no `HttpClient`, no `Console`. The shelling lives in the CLI partials, which is exactly why three verbs can share it |
+| The era-close, performed | `Core/Release/ReleasePerform.cs` | Four mechanical acts (`MechanicalOrder`, `:37`) and five owner acts (`OwnerOrder`, `:40`) as **data**. An owner act is *refused by name*, never skipped — in prose "this one is yours" and "nobody did this one" are the same sentence, and that ambiguity lost six of KS12.3's seven acts for an era |
+| One source of truth for all three | `Commands/ReleaseCommand.cs:182` (`MeasureAsync`), `ReleaseCommand.Perform.cs:84` (`RunActsAsync`) | `preflight`, `perform` and `runbook` call **these two and nothing else** — `runbook` (`ReleaseCommand.Runbook.cs:49-50`) calls both with `dryRun: true` and renders. A generated runbook cannot disagree with the preflight that produced it, because there is no second measurement to disagree with |
+| What CI actually said | `Core/Integrations/CiStatus.cs`, `CiWorkflows.cs`, `CiAgreement.cs`, `CiBatterySignature.cs` | Every **active** workflow, then its newest run **on this branch** — not the commit's check-runs, which list only the workflows that commit triggered, so a schedule-only workflow is invisible there. `CiAgreement` is the other half: whether CI runs the same commands `plan.gates` does, so the two batteries cannot differ in silence for an era again |
+| Whose board is this | `Integrations/Github/GithubIdentity.cs:56` (`OwnerMarker`) | An issue is retirable only if that marker names **this** run, or this run's `GithubMap` points at that number. Everything else is refused by name on `GithubSyncResult.RetireRefused`. Bug #84 was a repo-wide sweep that closed another era's 23 checkpoints on every era transition |
+| The docs, diffed against a binary | `tools/ch3/` (`docs-surface-diff.py`, `link-sweep.py`, `dump-help.ps1`), `tests/Conductor.Tests/SF7_1DocsMatchRealityTests.Charkh.cs` | The battery derives its expectations from `Program.cs` and the demo manifest rather than from a hand-typed list, and each pin has a **negative control** — blank one option, remove one artifact, and the failure names that exact verb and file |
+| The demo GIF's own staleness | `docs/assets/demo.manifest.json`, `tools/demo/make-demo-gif.ps1` | The recording states what it recorded; a README caption that counts a tour the GIF no longer takes is red. Ported from payesh's `scripts/seo.mjs` — a gate that refuses a merge when a published image no longer renders what it was taken from |
+
+**`ci-status.json` is the one place DV1.1's "derived, never stored" rule is *bent on purpose*, and
+the reasoning is worth copying** (`CiStatus.cs:20-31`). What is stored is not health — a stored
+health record outlives the condition that raised it — but a **dated measurement carrying the commit
+it was about**. Health is derived from it every time a surface asks, so the moment `HEAD` moves past
+`CiStatus.HeadSha` the derived answer becomes "CI has not judged this commit". There is no clearing
+step and no way for a stale green to be reported as a current one. It is stored at all because the
+`REPORT.md` header and the owner queue must render on a machine with no network and no token,
+exactly as `conductor report` does after the run is over.
+
 ## The file-organisation convention
 
 One rule, four cases. It exists because "no file over 500 lines" was already true when
@@ -548,8 +585,15 @@ it records debt that *exists*, may only shrink, and stage M1's definition of don
 `{}`. It got there, so a file that crosses 500 lines has **no legal home** in this file — the only
 move left is to split it, which is what KS9's `RunContext` (514 lines) did into
 `RunContext.Mirror.cs`. `tools/gates/ratchet.ps1:173` fails the gate if either ceiling is raised, and
-`ratchet-baseline.json` carries the other two floors: `minTests` **1932** (only ever rises),
-`maxPragmas` **38** (only ever falls, and is red at 43 today — bug #44, an owner decision).
+`ratchet-baseline.json` carries the other two floors, **re-measured at CH5.1 (2026-08-27) rather
+than repeated**: `minTests` **1932** (only ever rises — the suite actually carries **3044**
+`[Fact]`/`[Theory]` attributes today, so the floor is 1112 below the real count and is drifting
+back toward the formality KS1.6 fixed), `maxPragmas` **31** (only ever falls; the live count under
+`src/` is **31** — exactly at the ceiling, green). *The two sentences this file carried until CH5.1
+said 38 and "red at 43 today — bug #44". Both were two eras stale: KS6.2 ratcheted the ceiling
+38 → 31 by proving 14 of the 45 disables dead, and bug #44 is fixed. A doc that reports a green
+gate as red is worse than one that says nothing — it teaches the next session to expect a failure
+and to explain it away when it does not come.*
 
 ### 1. A file is named after what it declares - always
 
@@ -624,6 +668,8 @@ The second column is where the thing lives. The third is what silently lies if y
 | **an inbox note kind, or anything the courier files** | `Core/Inbox/` for the note, `Core/Courier/` for the daemon side — one type per file, no partials | the note reaches a session **only** through `InboxBattery` (`PromptBuilder.cs:366`); if you add a path that promotes without a human, you have changed ADR-0005 and ADR-0008, so amend them |
 | **a courier subverb** | the `switch` in `CourierCommand.cs:97`ff | `docs/cli.md`, and `courier status` — a verb the status line never mentions is a verb the owner never finds |
 | **a published artefact** (a page, a report, a document pushed out) | `Core/Publishing/`, rendered from `Http/Contracts` | it must state its own staleness and go out as a **push**; a fetchable surface is a different ADR |
+| **an era-close precondition or act** | a fact record in `Core/Release/ReleaseFacts.*.cs` and a pure `ReleaseCheck`/`ReleaseAct` builder beside it; the shelling that gathers the facts goes in `Commands/ReleaseCommand.Probes.cs` / `.Perform.cs` | `ReleasePreflight.CheckNames` (`:27`) or `ReleasePerform.MechanicalOrder`/`OwnerOrder` (`:37`,`:40`) — `CH4_4ReleaseRunbookTests` derives the vocabulary **by reflection**, so an act wired to nothing fails the day it is added, and `release runbook` renders it with no further work |
+| **an observation about the outside world** (CI, a remote's state) | a dated record in `Core/Integrations/`, written to `<stateDir>/` and **derived** at every read — `CiStatus.cs:20` is the pattern | store health instead of the observation and it outlives the condition that raised it (DV1.1). Carry the sha or the timestamp it was about, or a stale green reads as a current one |
 | **an architecture rule** | `tests/Conductor.Tests/ArchitectureBoundaryTests.cs` (**13** `[Fact]` rules today, counted at DV7.1) | make the failure message name the offending type; a rule that says only "boundary violated" costs the next session an hour |
 | **anything in Core needing Spectre, `HttpListener` or `Console`** | it does not go in Core | `CoreDoesNotLinkTheCliOrAnyUiAssembly`, `CoreDoesNotHostHttp`, `CoreSourceNeverNamesTheShell` and `TheStoreDoesNotWriteToTheConsole` will each say so by name |
 

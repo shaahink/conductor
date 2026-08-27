@@ -90,3 +90,28 @@ Tests.TheGithubMirrorNeverWritesRunState` still holds the line by file name for 
 The board snapshot (DV6.3) is not a GitHub surface at all: `board.html` is rendered locally and
 **pushed** as a Telegram document, which is this ADR's original prescription — a richer push — rather
 than an exception to it.
+
+## Addendum — the first read that is not about a write (CH1.3, 2026-08-27)
+
+`conductor github ci` reads the repository's **active workflows** and each one's newest run on the
+branch (`Core/Integrations/CiWorkflows.cs`). Every read licensed above answers *"what would this
+write do"*; this one does not. It is an answer about the outside world, and it reaches a surface the
+owner reads — the `REPORT.md` header, the owner queue and `doctor` all show a CI verdict derived
+from it.
+
+**The decision is unchanged, and here is the line it does not cross.** The observation never becomes
+run state. It lands in `<stateDir>/ci-status.json` as a **dated measurement carrying the commit sha
+it was about** (`Core/Integrations/CiStatus.cs:20-31`), and every consumer derives health from it at
+read time. That is deliberate and it is DV1.1's rule kept rather than broken: a stored *health
+record* outlives the condition that raised it, so what is stored is the observation, not the health.
+The moment `HEAD` moves past `CiStatus.HeadSha` the derived answer becomes "CI has not judged this
+commit" — with no clearing step, and no way for a stale green to be reported as a current one. It is
+stored at all because the surfaces that must show it are built synchronously and have to render on a
+machine with no network and no token, exactly as `conductor report` does after a run is over.
+
+Nothing in `run.db` and nothing in `RunStateProjection.Fold` is written from this read;
+`ArchitectureBoundaryTests.TheGithubMirrorNeverWritesRunState` (`:425`) and
+`TheGithubMirrorIsNeverRegisteredOnTheEventPath` (`:458`) both still hold. **The rule this addendum
+states for the next one:** an inbound read may inform a *derived* surface, never the fold. A read
+that would change what the run does is ingress, and ingress needs this ADR superseded, not extended.
+
