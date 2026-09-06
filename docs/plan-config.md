@@ -330,6 +330,7 @@ typo costs a startup message instead of a stage.
 | `optional` | bool | Report but never block. |
 | `skipIfMissing` | string | Skip gate while this file path doesn't exist. |
 | `skipIfFresh` | string | Repo-relative output artifact. Skip the gate while it is newer than every change to the source — see below. |
+| `retry` | bool | SC4.1 retries a failed required gate once before the battery is called red. `false` declares the battery deterministic (a scoreboard against committed baselines, bytes equal run to run): the first failure is the verdict and the gate's whole duration is not paid twice. Default `true`. |
 | `watchPaths` | string[] | Extra inputs whose newest write time joins this gate's result-cache key. For inputs no git HEAD covers. |
 | `tier` | string | `"fast"` (per-session under perPhase), `"full"` (phase end, and every session under perSession), or `"truth"` (phase confirmation only). Default `"full"`. |
 | `parallel` | bool | Run concurrently with other parallel gates in the same batch. |
