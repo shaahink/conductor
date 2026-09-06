@@ -130,6 +130,56 @@ public sealed class SC4_1SettleAndRetryTests : IDisposable
 
     // ────────────────────────────────────────────────────────── retry: real gates, real exit codes
 
+    /// <summary>A plan may declare a gate's battery deterministic (<c>retry: false</c>): the first
+    /// failure is the verdict and the gate is not run again. pdf2ooxml's scoreboard battery paid nine
+    /// 30-minute retries that flipped nothing before this knob existed (2026-09-06).</summary>
+    [Fact]
+    public async Task RequiredGate_WithRetryFalse_RunsOnce_AndTheFirstFailureIsTheVerdict()
+    {
+        var gate = FlakyGate("noretry");
+        gate.Retry = false;
+        var lines = new List<string>();
+
+        var results = await GateRunner.RunAllAsync(GatePlan(gate), lines.Add);
+
+        Assert.Equal(1, RunCount("noretry"));
+        var r = Assert.Single(results);
+        Assert.False(r.Passed);
+        Assert.False(r.Retried);
+        Assert.Contains(lines, l => l.Contains("not retried, the plan sets retry: false", StringComparison.Ordinal));
+    }
+
+    /// <summary>The verdict's <c>dirty</c> input reads the tree minus what conductor itself writes at
+    /// the boundary - the tracker and the state directory - so a run that does not commit its own
+    /// bookkeeping is not read as a session that left work uncommitted.</summary>
+    [Fact]
+    public async Task IsDirty_IgnoresTheTrackerAndTheStateDir_ButNotTheSessionsOwnLeftovers()
+    {
+        var repo = Path.Combine(_dir, "dirty-repo");
+        Directory.CreateDirectory(repo);
+        Git("init -b main", repo);
+        Git("config user.email sc41@test", repo);
+        Git("config user.name sc41", repo);
+        await File.WriteAllTextAsync(Path.Combine(repo, "README.md"), "# rig");
+        await File.WriteAllTextAsync(Path.Combine(repo, "TRACKER.md"), "# tracker\n");
+        Git("add README.md TRACKER.md", repo);
+        Git("commit -m initial --no-gpg-sign", repo);
+        Assert.False(Conductor.Core.Git.IsDirty(repo, "TRACKER.md", ".conductor"));
+
+        await File.WriteAllTextAsync(Path.Combine(repo, "TRACKER.md"), "# tracker regenerated\n");
+        Directory.CreateDirectory(Path.Combine(repo, ".conductor"));
+        await File.WriteAllTextAsync(Path.Combine(repo, ".conductor", "REPORT.md"), "report");
+
+        Assert.True(Conductor.Core.Git.IsDirty(repo));
+        Assert.False(Conductor.Core.Git.IsDirty(repo, "TRACKER.md", ".conductor"));
+        Assert.Equal("clean", Conductor.Core.Git.DirtySummary(repo, "TRACKER.md", ".conductor"));
+
+        await File.WriteAllTextAsync(Path.Combine(repo, "leftover.txt"), "the session forgot this");
+
+        Assert.True(Conductor.Core.Git.IsDirty(repo, "TRACKER.md", ".conductor"));
+        Assert.Contains("leftover.txt", Conductor.Core.Git.DirtySummary(repo, "TRACKER.md", ".conductor"), StringComparison.Ordinal);
+    }
+
     private PlanConfig GatePlan(params GateConfig[] gates) => new() { Repo = _dir, Gates = gates.ToList() };
 
     /// <summary>A gate that fails its first invocation and passes every one after it — the flake

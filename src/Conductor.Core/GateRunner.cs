@@ -106,6 +106,13 @@ public static partial class GateRunner
         for (var i = 0; i < gates.Count && !ct.IsCancellationRequested; i++)
         {
             if (results[i] is not { } first || first.IsGreen) continue;
+            if (!gates[i].Retry)
+            {
+                // The plan declared this battery deterministic: the first failure IS the verdict.
+                onProgress?.Invoke($"gate {Label(gates[i])}: failed (exit {first.ExitCode} in "
+                                   + $"{first.Duration.TotalSeconds:0}s) - not retried, the plan sets retry: false");
+                continue;
+            }
             onProgress?.Invoke(gates[i].IsHoldout
                 ? $"gate {Label(gates[i])}: failed in {first.Duration.TotalSeconds:0}s — retrying once before the battery is called red"
                 : $"gate {gates[i].Name}: failed (exit {first.ExitCode} in {first.Duration.TotalSeconds:0}s) — retrying once before the battery is called red");

@@ -55,6 +55,13 @@ public sealed class GateConfig
     /// repo-relative or absolute. Empty/null = HEAD alone, unchanged.</summary>
     public List<string>? WatchPaths { get; set; }
     public int TimeoutMinutes { get; set; } = 20;
+    /// <summary>SC4.1 retries every failed required gate once before the battery is called red,
+    /// because a re-run is the only cheap test that tells a broken tree from a flaky one. A gate
+    /// whose battery is DETERMINISTIC (a scoreboard against committed baselines, bytes proven
+    /// equal run to run) learns nothing from the retry and pays its whole duration again on every
+    /// red - pdf2ooxml paid nine 30-minute retries that flipped nothing. <c>retry: false</c> keeps
+    /// the first failure as the verdict. Default true: the retry stays the rule.</summary>
+    public bool Retry { get; set; } = true;
 
     /// <summary>KS4.1: engine-only. The predicate every gate-enumerating surface outside
     /// <see cref="Conductor.Core.GateRunner"/> must respect — use

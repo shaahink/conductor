@@ -246,7 +246,9 @@ public sealed partial class VerdictEngine
             // W1.3: stage completeness consults the graph too — a stage whose last item was claimed
             // only via the graph is complete NOW, not one tracker regeneration later.
             StageComplete = postTrack.StageDone(stage.Id) || GraphStageDone(stage.Id),
-            WorkingTreeDirty = Git.IsDirty(_ctx.Plan.Repo),
+            // The tracker and the state dir are conductor's own writes at this boundary, not the
+            // session's: a dirty reading for them said nothing about the session (pdf2ooxml, 2026-09-06).
+            WorkingTreeDirty = Git.IsDirty(_ctx.Plan.Repo, _ctx.Plan.Tracker, StateHome.ScratchDirName),
             SameFailurePattern = _ctx.Plan.Limits.SameFailureCircuitBreaker
                 && FailureCircuitBreaker.ShouldBreak(PreviousSession(), rec, gates),
         };
@@ -445,7 +447,7 @@ public sealed partial class VerdictEngine
         if (d.Disposition == VerdictDisposition.Deliver)
         {
             _ctx.State.PendingFix = null;
-            if (e.WorkingTreeDirty) _ctx.Log($"note: working tree left dirty after green session: {Git.DirtySummary(_ctx.Plan.Repo)}");
+            if (e.WorkingTreeDirty) _ctx.Log($"note: working tree left dirty after green session: {Git.DirtySummary(_ctx.Plan.Repo, _ctx.Plan.Tracker, StateHome.ScratchDirName)}");
 
             // M4.1: queue checkpoints for confirmation after verifier passes (or skip).
             // K1.1: UNION, not replace. A claim can now be queued by a session that never reaches
@@ -482,7 +484,7 @@ public sealed partial class VerdictEngine
                                   (w.WorkCommits.Count > 0 ? $" ({string.Join("; ", w.WorkCommits.Take(5))})" : "") +
                                   (w.Bookkeeping > 0 ? $" · {w.Bookkeeping} conductor bookkeeping commit(s) excluded" : "") +
                                   $" · newly DONE: {(rec.NewlyDone.Count > 0 ? string.Join(", ", rec.NewlyDone) : "none")}" +
-                                  $" · working tree: {(e.WorkingTreeDirty ? "DIRTY — " + Git.DirtySummary(_ctx.Plan.Repo) : "clean")}" +
+                                  $" · working tree: {(e.WorkingTreeDirty ? "DIRTY — " + Git.DirtySummary(_ctx.Plan.Repo, _ctx.Plan.Tracker, StateHome.ScratchDirName) : "clean")}" +
                                   (e.AgentErrored ? " · agent process reported an error result" : ""),
             };
             // SC2.2: NextAttemptNumber — the number the queued session will announce itself with.

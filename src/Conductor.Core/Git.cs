@@ -86,6 +86,33 @@ public static partial class Git
     public static bool IsDirty(string repo)
         => Exec(repo, "status", "--porcelain").Output.Trim().Length > 0;
 
+    /// <summary>The working tree minus the paths conductor itself writes between a session's exit
+    /// and its verdict - the tracker and the state directory. A run that does not commit its own
+    /// bookkeeping (<c>report.commit: false</c>) used to read <c>dirty YES</c> on five verdicts in
+    /// nine for files the session never touched, which camouflaged the one file it had left
+    /// uncommitted. Paths are repo-relative pathspecs; <c>:(exclude)</c> is git's own syntax.</summary>
+    public static bool IsDirty(string repo, params string[] excludeRepoRelative)
+        => StatusLines(repo, excludeRepoRelative).Length > 0;
+
+    public static string DirtySummary(string repo, params string[] excludeRepoRelative)
+    {
+        var lines = StatusLines(repo, excludeRepoRelative);
+        if (lines.Length == 0) return "clean";
+        var shown = lines.Take(8).Select(l => l.Trim());
+        return string.Join(", ", shown) + (lines.Length > 8 ? $" (+{lines.Length - 8} more)" : "");
+    }
+
+    private static string[] StatusLines(string repo, string[] excludeRepoRelative)
+    {
+        var args = new List<string> { "status", "--porcelain", "--", "." };
+        foreach (var p in excludeRepoRelative)
+        {
+            var rel = p.Replace('\\', '/').TrimEnd('/');
+            if (rel.Length > 0) args.Add($":(exclude){rel}");
+        }
+        return Exec(repo, args.ToArray()).Output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+    }
+
     public static string DirtySummary(string repo)
     {
         var lines = Exec(repo, "status", "--porcelain").Output
