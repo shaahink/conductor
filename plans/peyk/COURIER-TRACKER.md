@@ -4,7 +4,8 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s6 CLAIMED all of PK3 - PK3.1 (0d43747, evidence .conductor/evidence/PK3/pk3.1.md, rig 23/23, real send 3820 deleted), PK3.2 (965a6dd, pk3.2.md, rig 20/20, real send 3821 deleted), PK3.3 (9f63a5f, pk3.3.md, rig 12/12). Bugs #76 and #98 closed. Guard runs green: scoped 303/303, run-loop/harness/report 216/216, docs 83/83.
+last: s7 FIX - the battery was red on one test: B11_2 Completion_ContainsAllRegisteredVerbs_Exhaustive, "say" missing. PK3.2 registered the verb in Program.cs but not in CompletionCommand.Verbs (a new verb is TWO edits). Fixed in 2dc1985, narrow rerun 8/8, PK3.2 reopened and re-claimed with .conductor/evidence/PK3/pk3.2-fix-completion.log. Test unchanged.
+  s6 claimed all of PK3 - PK3.1 (0d43747, pk3.1.md, rig 23/23, real send 3820 deleted), PK3.2 (965a6dd, pk3.2.md, rig 20/20, real send 3821 deleted), PK3.3 (9f63a5f, pk3.3.md, rig 12/12). Bugs #76 and #98 closed.
   Built: CourierProtocol.Version=3; loopback POST /send|/react|/delete|/hello, GET /chats|/hello via ICourierDesk/CourierDesk; ids on CourierAck.MessageIds; <home>/courier/messages.jsonl. TelegramSender (Integrations, KS11.1 adapter list) is the one send transport: ceilings refused by name (static Refusal). `conductor say` (SayCommand.RunAsync has test seams). CourierChannel `direct:` = the run's TelegramService.SendAsync when no courier takes a push (CourierAck.Unanswered = connection refused only, never a timeout), logs `courier unreachable - sent directly`; health line `last push went directly|through the courier at T`. CourierIntroduction: at each boundary until answered the run POSTs /hello; the courier re-reads courier.json, adds (plan, repo, by: "run <id>") beside the owner's entry, and the router reads the allowlist live (ProjectDirectory allowed provider).
   Rigs: tools/peyk/pk3-rig-lib.ps1 (stub with an inbound queue, send-only relay for a real send, scratch courier, Invoke-Engine, scratch run + fake agent). A run's log is .conductor/logs/conductor-<date>.log. A real send never contends the real courier: env token behind the relay (getUpdates answered locally).
   Docs touched only where tests demand: cli.md (say section, protocol 3, run-registered entries), operating.md section 2 (say row). PK6.1 still owes the full rewrite, ARCHITECTURE and ADR-0009 (D3/D4/D5).
@@ -12,12 +13,13 @@ last: s6 CLAIMED all of PK3 - PK3.1 (0d43747, evidence .conductor/evidence/PK3/p
   Traps: a backslash-u escape typed into a Write/Edit tool parameter is decoded to the real character - build escapes in .ps1 from char codes and grep rigs for non-ASCII. RunLoop sits at its CA1506 ceiling (boundary logic behind RunContext). `conductor bg start` has --purpose, not --name; a test filter with | needs a script file.
 next: the stage after PK3 per the plan (read its row in docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md). Do not restart, stop or reinstall the armed courier.
 
+
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 17 |
-| Done | 2 |
+| Done | 5 |
 | Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
@@ -36,17 +38,17 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| PK2.1 | Heartbeat in the presence record; courier status prints alive / stale (last poll N min ago) / dead (last seen T); a presence file found at startup produces a journaled death record carrying the scheduler's last-run result. A scratch courier killed with Stop-Process reads dead with a time by the next status, and the next start logs the record | DONE | 4affb95 | .conductor/evidence/PK2/pk2.1-live-proof.log |
-| PK2.2 | ProcessExit and unhandled-exception journaling; the keep-alive calendar trigger (every five minutes, IgnoreNew) in the task XML, proven by registering a scratch task and measuring the restart of a courier that exited 0; a run restarts a stale courier at the session boundary and says so in the log and the owner queue | DONE | 4affb95 | .conductor/evidence/PK2/pk2.2-live-proof.log |
-| PK2.3 | The instruments armed on the real courier: install.ps1 -CourierOnly publishes conductor-courier.exe alone and re-registers the task with the keep-alive trigger (conductor.exe untouched); alive with a heartbeat, the task XML read back, one protocol-2 push landed; the arming time recorded for PK6.1's read-out | DONE | 4affb95 | .conductor/evidence/PK2/pk2.3-arming.log |
+| PK2.1 | Heartbeat in the presence record; courier status prints alive / stale (last poll N min ago) / dead (last seen T); a presence file found at startup produces a journaled death record carrying the scheduler's last-run result. A scratch courier killed with Stop-Process reads dead with a time by the next status, and the next start logs the record | DONE ✓ | 4affb95 | .conductor/evidence/PK2/pk2.1-live-proof.log |
+| PK2.2 | ProcessExit and unhandled-exception journaling; the keep-alive calendar trigger (every five minutes, IgnoreNew) in the task XML, proven by registering a scratch task and measuring the restart of a courier that exited 0; a run restarts a stale courier at the session boundary and says so in the log and the owner queue | DONE ✓ | 4affb95 | .conductor/evidence/PK2/pk2.2-live-proof.log |
+| PK2.3 | The instruments armed on the real courier: install.ps1 -CourierOnly publishes conductor-courier.exe alone and re-registers the task with the keep-alive trigger (conductor.exe untouched); alive with a heartbeat, the task XML read back, one protocol-2 push landed; the arming time recorded for PK6.1's read-out | DONE ✓ | 4affb95 | .conductor/evidence/PK2/pk2.3-arming.log |
 
 ### PK3 — One transport
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| PK3.1 | Protocol 3: POST /send (text or file, replyTo, chat by id or room profile, parse mode, media group), POST /react, POST /delete, GET /chats; every send returns the Telegram message id; messages.jsonl in the courier home; /push (protocol 2) still accepted. One real send to the admin DM, then deleted, both ids in the evidence | TODO | - | - |
-| PK3.2 | conductor say with every switch in D5; the direct fallback when the courier is unreachable (environment token, log line, channel-health line naming the path); Telegram's ceilings refused by name. say --dry-run prints the exact bytes and the resolved chat; with the scratch courier stopped a send lands and the log reads sent directly | TODO | - | - |
-| PK3.3 | A live run names its own project to the courier: /hello carries repo path and plan name and the allowlist entry is added marked by run; courier allow unchanged. On a rig a fresh plan name files an inbound note on the first boundary without courier allow | TODO | - | - |
+| PK3.1 | Protocol 3: POST /send (text or file, replyTo, chat by id or room profile, parse mode, media group), POST /react, POST /delete, GET /chats; every send returns the Telegram message id; messages.jsonl in the courier home; /push (protocol 2) still accepted. One real send to the admin DM, then deleted, both ids in the evidence | DONE | 0d43747 | .conductor/evidence/PK3/pk3.1.md |
+| PK3.2 | conductor say with every switch in D5; the direct fallback when the courier is unreachable (environment token, log line, channel-health line naming the path); Telegram's ceilings refused by name. say --dry-run prints the exact bytes and the resolved chat; with the scratch courier stopped a send lands and the log reads sent directly | DONE | 0d43747 | .conductor/evidence/PK3/pk3.2.md |
+| PK3.3 | A live run names its own project to the courier: /hello carries repo path and plan name and the allowlist entry is added marked by run; courier allow unchanged. On a rig a fresh plan name files an inbound note on the first boundary without courier allow | DONE | 0d43747 | .conductor/evidence/PK3/pk3.3.md |
 
 ### PK4 — Rooms and the card
 
