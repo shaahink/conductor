@@ -102,7 +102,7 @@ try {
     if ($lastExit -eq 0) { throw "a task named '$TaskName' already exists - remove it before running the rig" }
 
     Section "0. the repo's fresh build (for release preflight)"
-    $o = Native dotnet build Conductor.slnx -clp:ErrorsOnly
+    $o = Native dotnet build Conductor.slnx "-clp:ErrorsOnly"   # quoted: through $args, 5.1 splits -clp:ErrorsOnly in two
     if ($lastExit -ne 0) { $o | Select-Object -Last 15 | ForEach-Object { "  | $_" } }
     Check "fresh build" ($lastExit -eq 0) ("exit=" + $lastExit)
     $fresh = Join-Path $RepoRoot "src\Conductor\bin\Debug\net10.0\conductor.exe"
