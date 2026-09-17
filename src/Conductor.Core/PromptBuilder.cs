@@ -25,6 +25,10 @@ public sealed partial class PromptBuilder
         _lessons = lessons ?? new LessonsManager(plan.StateDir);
         _qa = qa ?? new DefaultQaPolicy();
     }
+
+    /// <summary>The state home whose courier directory holds the rooms; null is the machine's (a test seam).</summary>
+    public string? CourierStateHome { get; init; }
+
     public string Deliver(StageConfig stage, int sessionNumber, int attempt, int maxAttempts, string? personaOverride = null)
         => Render("session.md", Vars(stage, sessionNumber, attempt, maxAttempts, personaOverride));
 
@@ -342,6 +346,17 @@ public sealed partial class PromptBuilder
         {
             var held = new HeldWordsBattery(checkpoints);
             if (!held.IsEmpty) list.Add(held);
+        }
+
+        // PK4.3 / D8: the room's voice, where a card can go - a plan that names chats (a card rides
+        // that block, the same condition the transport starts on) and a room with an observer chat.
+        // Gated on the plan first, so the courier's machine-wide chats never voice a chatless repo.
+        var chats = _plan.ChatPairs().ToList();
+        if (chats.Count > 0 && _plan.Repo is { Length: > 0 } repo
+            && Courier.Rooms.Resolve(repo, chats, Courier.CourierSettings.Load(CourierStateHome), CourierStateHome) is { } room)
+        {
+            var voice = new RoomVoiceBattery(room);
+            if (!voice.IsEmpty) list.Add(voice);
         }
 
         // KS7.5: the two context-economics batteries. Both are gated on the caller having supplied

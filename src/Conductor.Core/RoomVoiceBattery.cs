@@ -15,9 +15,10 @@ namespace Conductor.Core;
 ///
 /// <para>Bounded in bytes like every other battery. The two parts get a max-min fair split of this
 /// battery's cap, so a long voice cannot starve the character or the other way round, and the
-/// battery group then applies the plan's <c>batteries.maxBytes</c> on top. A part that is cut says
-/// so.</para></summary>
-public sealed class RoomVoiceBattery : IPromptBattery
+/// battery group then applies the plan's <c>batteries.maxBytes</c> on top - by asking this battery to
+/// recompose inside its share (<see cref="IFittingBattery"/>), so the group's cut is the same fair
+/// split and never a tail cut that would lose the room's own voice. A part that is cut says so.</para></summary>
+public sealed class RoomVoiceBattery : IFittingBattery
 {
     /// <summary>The manifest name <c>docs/rooms/character.md</c> is embedded under.</summary>
     public const string CharacterResource = "Conductor.Core.Rooms.character.md";
@@ -25,37 +26,52 @@ public sealed class RoomVoiceBattery : IPromptBattery
     /// <summary>This battery's own ceiling, before the group's.</summary>
     public const int DefaultMaxBytes = 4096;
 
-    private readonly string? _section;
+    private const string Cut = "\n… (cut to fit the battery)";
+
+    private readonly int _maxBytes;
+    private readonly string? _header;
+    private readonly string _shared = "";
+    private readonly string _voice = "";
 
     /// <param name="character">The shared character, or null for the embedded one (a test seam).</param>
     public RoomVoiceBattery(Room? room, int maxBytes = DefaultMaxBytes, string? character = null)
     {
+        _maxBytes = maxBytes;
         if (room?.Chats.Observer is not { Length: > 0 }) return;
 
-        var header = $"The room {room.Project} hears from the engine. When the verdict confirms a claim made with "
+        _header = $"The room {room.Project} hears from the engine. When the verdict confirms a claim made with "
             + "`conductor task --done <id> --evidence <path> --tell \"<title> | <two to four sentences>\"`, the engine posts the card; "
             + "write those words in this voice. A finding mid-way goes out with `conductor say --to observer`. Never post a card yourself.";
-        var shared = (character ?? EmbeddedCharacter()).Trim();
+        _shared = (character ?? EmbeddedCharacter()).Trim();
         var (voice, why) = ReadVoice(room.Voice);
-
-        var budget = Math.Max(0, maxBytes - header.Length - 80);
-        var wantShared = shared.Length;
-        var wantVoice = voice?.Length ?? why!.Length;
-        var shareShared = wantShared + wantVoice <= budget ? wantShared : Math.Max(budget / 2, budget - wantVoice);
-        var shareVoice = Math.Max(0, budget - Math.Min(wantShared, shareShared));
-
-        var sb = new StringBuilder(header).AppendLine().AppendLine()
-            .AppendLine("#### the character (every room)")
-            .AppendLine(Clip(shared, shareShared))
-            .AppendLine()
-            .AppendLine("#### the voice (this room)")
-            .Append(voice is null ? why : Clip(voice.Trim(), shareVoice));
-        _section = sb.ToString();
+        _voice = voice?.Trim() ?? why!;
     }
 
     public string Name => "room-voice";
-    public string Section => _section ?? "";
-    public bool IsEmpty => _section is null;
+    public string Section => _header is null ? "" : Compose(_maxBytes);
+    public bool IsEmpty => _header is null;
+
+    public string SectionWithin(int maxChars) => _header is null ? "" : Compose(Math.Min(maxChars, _maxBytes));
+
+    /// <summary>The header whole, then the two parts in a max-min fair split of what is left of
+    /// <paramref name="max"/>: a part that wants less than half keeps all of it and hands the rest over.</summary>
+    private string Compose(int max)
+    {
+        var budget = max - Frame("", "").Length;
+        if (budget < 4 * Cut.Length) return Clip(_header!, max);
+
+        var shareShared = _shared.Length + _voice.Length <= budget ? _shared.Length : Math.Max(budget / 2, budget - _voice.Length);
+        var shareVoice = budget - Math.Min(_shared.Length, shareShared);
+        return Frame(Clip(_shared, shareShared), Clip(_voice, shareVoice));
+    }
+
+    private string Frame(string shared, string voice) => new StringBuilder(_header).AppendLine().AppendLine()
+        .AppendLine("#### the character (every room)")
+        .AppendLine(shared)
+        .AppendLine()
+        .AppendLine("#### the voice (this room)")
+        .Append(voice)
+        .ToString();
 
     /// <summary>The character every room shares, as shipped in this build.</summary>
     public static string EmbeddedCharacter()
@@ -85,11 +101,10 @@ public sealed class RoomVoiceBattery : IPromptBattery
     /// <summary>Cut at a line boundary inside <paramref name="max"/> characters, and say it was cut.</summary>
     private static string Clip(string text, int max)
     {
-        const string cut = "\n… (cut to fit the battery)";
         if (text.Length <= max) return text;
-        if (max <= cut.Length) return cut.TrimStart('\n');
-        var room = max - cut.Length;
+        if (max <= Cut.Length) return "";
+        var room = max - Cut.Length;
         var end = text.LastIndexOf('\n', Math.Max(0, room - 1));
-        return text[..(end > room / 2 ? end : room)].TrimEnd() + cut;
+        return text[..(end > room / 2 ? end : room)].TrimEnd() + Cut;
     }
 }

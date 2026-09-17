@@ -161,13 +161,25 @@ public sealed partial class HarnessTests
             "exit /b 0",
             ""));
 
+        // PK4.3: this rig's room has an observer, so its prompt carries the room's voice (D8) and is past
+        // the 8191 characters cmd.exe takes on a command line - which cmd refuses silently, and the argv
+        // guard allows because cmd.exe is an .exe (bug filed). The prompt goes to PowerShell instead,
+        // where -File hands it over as an argument, and the claiming script runs under it without it.
+        var launcher = Path.Combine(_repo, "card-agent.ps1");
+        File.WriteAllText(launcher, $"& cmd.exe /d /c '{script}'\r\nexit $LASTEXITCODE\r\n");
+
         var plan = new PlanConfig
         {
             Name = "CardRigPlan",
             Repo = _repo,
             Tracker = "TRACKER.md",
             Stages = { new StageConfig { Id = "H0", Title = "Cards", Sessions = 2 } },
-            Agent = new AgentConfig { Command = "cmd.exe", Args = { "/c", script, "{prompt}" }, Provider = "opencode" },
+            Agent = new AgentConfig
+            {
+                Command = "powershell.exe",
+                Args = { "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", launcher, "{prompt}" },
+                Provider = "opencode",
+            },
             // perPhase is what a field plan runs, and the only policy under which a stage is CONFIRMED.
             GatePolicy = gatePolicy,
             VerifyEachDelivery = false,

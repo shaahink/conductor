@@ -20,6 +20,15 @@ public interface IPromptBattery
     bool IsEmpty { get; }
 }
 
+/// <summary>PK4.3 — a battery made of parts that must share a cut. The group's own trim keeps a section's
+/// head and loses its tail, which is right for a list in priority order and wrong for a section whose
+/// tail is the part that matters; such a battery re-composes itself inside the allowance it is granted.</summary>
+public interface IFittingBattery : IPromptBattery
+{
+    /// <summary>The section recomposed to at most <paramref name="maxChars"/> characters.</summary>
+    string SectionWithin(int maxChars);
+}
+
 /// <summary>
 /// Composes multiple batteries in order, rendering each non-empty section with its
 /// name as a header, inside a total budget of <see cref="_maxBytes"/>.
@@ -66,7 +75,7 @@ public sealed class BatteryGroup
     public string Render()
     {
         var blocks = _batteries.Where(b => !b.IsEmpty)
-            .Select(b => (b.Name, Text: Block(b.Name, b.Section)))
+            .Select(b => (b.Name, Text: Block(b.Name, b.Section), Battery: b))
             .ToList();
         if (blocks.Count == 0) return "";
 
@@ -81,7 +90,9 @@ public sealed class BatteryGroup
         var dropped = new List<string>();
         for (var i = 0; i < blocks.Count; i++)
         {
-            var fitted = Fit(blocks[i].Text, shares[i]);
+            var fitted = blocks[i].Battery is IFittingBattery parts
+                ? Refit(parts, blocks[i].Text, shares[i])
+                : Fit(blocks[i].Text, shares[i]);
             if (fitted is null) { dropped.Add(blocks[i].Name); continue; }
             if (fitted.Length < blocks[i].Text.Length) trimmed.Add(blocks[i].Name);
             sb.Append(fitted);
@@ -145,6 +156,15 @@ public sealed class BatteryGroup
         var cut = block.LastIndexOf('\n', Math.Min(room, block.Length - 1));
         if (cut < head) cut = room;
         return block[..cut].TrimEnd() + tail;
+    }
+
+    /// <summary>A block that fits whole stays whole; otherwise the battery recomposes its section inside
+    /// what the allowance leaves after the heading, or the block is dropped like any other.</summary>
+    private static string? Refit(IFittingBattery battery, string block, int allowance)
+    {
+        if (block.Length <= allowance) return block;
+        var body = allowance - Block(battery.Name, "").Length;
+        return body < MinBody ? null : Block(battery.Name, battery.SectionWithin(body));
     }
 
     /// <summary>The line that makes the cut visible. Names what was trimmed and what was dropped,
