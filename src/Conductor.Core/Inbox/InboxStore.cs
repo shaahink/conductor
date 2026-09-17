@@ -121,6 +121,11 @@ public sealed class InboxStore
         return File.Exists(path) ? ReadNote(path) : null;
     }
 
+    /// <summary>PK5.1 - the note a chat message became, found by the message's own id, or null. A
+    /// note filed before PK5.1 carries no message id and is never found this way.</summary>
+    public InboxNote? FindByMessage(string chatId, long messageId) =>
+        All().LastOrDefault(n => n.MessageId == messageId && string.Equals(n.ChatId, chatId, StringComparison.Ordinal));
+
     public IReadOnlyList<InboxNote> All()
     {
         if (!Directory.Exists(NotesDir)) return [];

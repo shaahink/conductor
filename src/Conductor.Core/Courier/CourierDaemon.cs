@@ -34,7 +34,7 @@ public sealed record CourierTick(int Received, int Filed, int Duplicates, int Pa
 /// the process between receive and acknowledge and the offset still points AT the update in flight,
 /// so the restart re-receives it — and the file it would write is already there. One note.</para>
 /// </summary>
-public sealed class CourierDaemon
+public sealed partial class CourierDaemon
 {
     private readonly ICourierSource _source;
     private readonly CourierSettings _settings;
@@ -211,14 +211,14 @@ public sealed class CourierDaemon
         }
 
         var route = _router.Route(note.ChatId, note.MessageThreadId, note.ReplyToText);
-        var ack = InboundAck.For(note);
-        if (ack.Length == 0) ack = TextNoteAck(note);
 
         if (route.Project is not { } project)
         {
+            // Not an acknowledgement - a refusal the sender has to act on, so it stays a message.
             var path = _parked.Park(Record(note, note.Media?.LocalPath),
                 route.Refusal ?? "no project could be resolved for this chat", note.Media?.LocalPath);
-            await ReplyAsync(note, ack + "\n" + InboundAck.Parked(route.Refusal, path), ct)
+            var what = InboundAck.For(note);
+            await ReplyAsync(note, (what.Length > 0 ? what + "\n" : "") + InboundAck.Parked(route.Refusal, path), ct)
                 .ConfigureAwait(false);
             return DeliveryOutcome.Parked;
         }
@@ -260,9 +260,7 @@ public sealed class CourierDaemon
             return DeliveryOutcome.Duplicate;
         }
 
-        await ReplyAsync(note, ack + "\n" + InboundAck.FiledAgainst(route.Describe()), ct,
-            [new CourierButton(NotePromoter.ButtonText, NotePromoter.Callback(project.Slug, id))])
-            .ConfigureAwait(false);
+        await AcknowledgeAsync(note, project, ct).ConfigureAwait(false);
         return DeliveryOutcome.Filed;
     }
 
@@ -308,15 +306,6 @@ public sealed class CourierDaemon
         await _source.ReplyAsync(press.ChatId, outcome.Message, press.ThreadId, ct).ConfigureAwait(false);
     }
 
-    /// <summary>The acknowledgement for a note that is words only. <see cref="InboundAck.For"/>
-    /// answers with an empty string for one — inside a run, typed text is a command and never a note
-    /// — but to a courier a typed sentence is the same kind of thing as a spoken one, and silence
-    /// after it would be the §1.2 gap-2 failure with the audio removed.</summary>
-    private static string TextNoteAck(InboundNote note) =>
-        "📥 Note received — <i>"
-      + MessageComposer.EscapeHtml(note.Text.Length <= 200 ? note.Text : note.Text[..199] + "…")
-      + "</i>";
-
     /// <summary>DV3.4's <c>/project</c>, at machine level. The courier has no local run, so without
     /// this a chat that has never been replied to by a push has no way to choose at all — and the
     /// selection it writes is the same <c>chat-routes.json</c> a live run reads, which is why that
@@ -327,11 +316,18 @@ public sealed class CourierDaemon
         var verb = (cut < 0 ? command : command[..cut]).Trim().ToLowerInvariant();
         var rest = cut < 0 ? "" : command[(cut + 1)..].Trim();
 
+        if (string.Equals(verb, NoteVerb, StringComparison.Ordinal))
+        {
+            await DescribeNoteAsync(note, ct).ConfigureAwait(false);
+            return;
+        }
+
         if (!string.Equals(verb, "project", StringComparison.Ordinal))
         {
             await ReplyAsync(note,
                 "The courier files notes; it does not steer runs. Send a voice note, a file or a "
-                + "sentence and it is filed against a project. <code>/project</code> chooses which.",
+                + "sentence and it is filed against a project. <code>/project</code> chooses which; "
+                + "<code>/note</code>, as a reply to a note, says where it went.",
                 ct).ConfigureAwait(false);
             return;
         }
@@ -380,15 +376,5 @@ public sealed class CourierDaemon
     /// other.</summary>
     private static long NoteId(InboundNote note) => note.UpdateId != 0 ? note.UpdateId : note.MessageId;
 
-    private static InboxNote Record(InboundNote note, string? mediaPath) => new(
-        Id: NoteId(note),
-        ReceivedUtc: DateTime.UtcNow,
-        ChatId: note.ChatId,
-        Kind: note.Media?.Kind.ToString().ToLowerInvariant() ?? InboxNote.TextKind,
-        Text: note.Text,
-        MediaPath: mediaPath,
-        TranscriptPath: null,
-        ReplyToMessageId: note.ReplyToMessageId,
-        ReplyToText: note.ReplyToText,
-        MessageThreadId: note.MessageThreadId);
+    private static InboxNote Record(InboundNote note, string? mediaPath) => note.ToInboxNote(mediaPath);
 }

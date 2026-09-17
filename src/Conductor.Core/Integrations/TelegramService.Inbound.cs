@@ -84,7 +84,18 @@ public sealed partial class TelegramService
             msg.ReplyToMessage?.MessageId,
             msg.ReplyToMessage?.Text ?? msg.ReplyToMessage?.Caption,
             msg.MessageThreadId,
-            updateId);
+            updateId,
+            msg.From?.Id,
+            NameOf(msg.From),
+            msg.From?.Username is { Length: > 0 } handle ? handle : null);
+    }
+
+    /// <summary>PK5.1 - first and last name joined, or null when the update named nobody.</summary>
+    private static string? NameOf(TgUser? from)
+    {
+        var name = string.Join(" ", new[] { from?.FirstName, from?.LastName }
+            .Where(part => !string.IsNullOrWhiteSpace(part)).Select(part => part!.Trim()));
+        return name.Length > 0 ? name : null;
     }
 
     /// <summary>A message that carries a file: fetched if this chat may file, refused by name if it

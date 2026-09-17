@@ -129,6 +129,9 @@ public sealed class InboxCommand : AsyncCommand<InboxCommand.Settings>
         table.AddColumn("id");
         table.AddColumn("received (UTC)");
         table.AddColumn("kind");
+        // PK5.1 / D9: who to answer and what to answer - for addressing, never for permission.
+        table.AddColumn("from");
+        table.AddColumn("msg");
         table.AddColumn("");
         table.AddColumn(settings.Full ? "note" : "summary");
 
@@ -138,6 +141,8 @@ public sealed class InboxCommand : AsyncCommand<InboxCommand.Settings>
                 note.Id.ToString(CultureInfo.InvariantCulture),
                 note.ReceivedUtc.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
                 Markup.Escape(note.Kind),
+                note.Sender is { } sender ? Markup.Escape(sender) : "[dim]-[/]",
+                note.MessageId?.ToString(CultureInfo.InvariantCulture) ?? "[dim]-[/]",
                 Flags(note, cursor.SeenThroughId),
                 Markup.Escape(settings.Full ? Body(note) : note.Summary));
         }
@@ -195,6 +200,13 @@ public sealed class InboxCommand : AsyncCommand<InboxCommand.Settings>
         AnsiConsole.MarkupLine($"[bold]note {id.ToString(CultureInfo.InvariantCulture)}[/] · "
             + $"{note.ReceivedUtc.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)}Z · "
             + Markup.Escape(note.Kind));
+        if (note.Sender is { } sender)
+            AnsiConsole.MarkupLine("[dim]from:[/] " + Markup.Escape(sender)
+                + (note.SenderId is { } senderId ? " [dim]id " + senderId.ToString(CultureInfo.InvariantCulture) + "[/]" : ""));
+        if (note.MessageId is { } messageId)
+            AnsiConsole.MarkupLine("[dim]message:[/] " + messageId.ToString(CultureInfo.InvariantCulture)
+                + " [dim]in chat " + Markup.Escape(note.ChatId) + " - conductor say --reply-to "
+                + id.ToString(CultureInfo.InvariantCulture) + " answers it[/]");
         if (note.MediaPath is { Length: > 0 } media)
             AnsiConsole.MarkupLine("[dim]file:[/] " + Markup.Escape(Path.Combine(store.Dir, media)));
         if (note.TranscriptPath is { Length: > 0 } transcript)

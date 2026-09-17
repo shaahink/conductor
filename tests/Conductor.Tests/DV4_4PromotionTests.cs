@@ -297,6 +297,13 @@ public sealed class DV4_4PromotionTests : IDisposable
         var filed = await courier.PollOnceAsync(CancellationToken.None);
         Assert.Equal(1, filed.Filed);
 
+        // PK5.1 / D9: filing answers with a reaction and no message; the button rides the reply to
+        // /note, which the sender asks for as a reply to the note.
+        Assert.DoesNotContain(bot.Snapshot(), c => c.Method == "sendMessage");
+        bot.QueueMessage("{\"message_id\":9,\"chat\":{\"id\":" + AdminChat + "},\"text\":\"/note\",\"reply_to_message\":"
+            + "{\"message_id\":7,\"chat\":{\"id\":" + AdminChat + "},\"text\":\"the report header double-counts the budget\"}}");
+        await courier.PollOnceAsync(CancellationToken.None);
+
         var ack = Assert.Single(bot.Snapshot(), c => c.Method == "sendMessage");
         Assert.NotNull(ack.ReplyMarkup);
         Assert.Contains(NotePromoter.CallbackPrefix, ack.ReplyMarkup, StringComparison.Ordinal);
@@ -326,6 +333,8 @@ public sealed class DV4_4PromotionTests : IDisposable
 
         new ChatRoutes(_stateHome).Set(AdminChat, null, StateHome.SlugFor(_repo, Path.GetFileName(_repo)));
         bot.QueueMessage($$"""{"message_id":8,"chat":{"id":{{AdminChat}}},"text":"a real note"}""");
+        await courier.PollOnceAsync(CancellationToken.None);
+        bot.QueueMessage($$"""{"message_id":10,"chat":{"id":{{AdminChat}}},"text":"/note"}""");
         await courier.PollOnceAsync(CancellationToken.None);
 
         var data = CallbackDataIn(Assert.Single(bot.Snapshot(), c => c.Method == "sendMessage").ReplyMarkup!);

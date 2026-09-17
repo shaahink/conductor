@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text;
 
 using Conductor.Core.Courier;
+using Conductor.Core.Inbox;
 using Conductor.Core.Integrations;
 
 using Spectre.Console.Cli;
@@ -53,7 +54,7 @@ public sealed class SayCommand : AsyncCommand<SayCommand.Settings>
         public string? Document { get; init; }
 
         [CommandOption("--reply-to <ID>")]
-        [Description("The message id this answers.")]
+        [Description("What this answers: a note id from this machine's courier inboxes (it answers that note's message, in the chat it came from), or else a message id.")]
         public long? ReplyTo { get; init; }
 
         [CommandOption("--parse-mode <MODE>")]
@@ -100,6 +101,9 @@ public sealed class SayCommand : AsyncCommand<SayCommand.Settings>
         if (Usage(s) is { } usage) return Refuse(output, usage);
 
         var courierSettings = CourierSettings.Load(stateHomeRoot);
+        var reply = ReplyTarget(s, chat, courierSettings, out var replyRefusal);
+        if (replyRefusal is not null) return Refuse(output, replyRefusal);
+        if (reply.Chat is { } noteChat) chat = noteChat;
         var resolved = courierSettings.ChatFor(chat, out var chatRefusal);
         using var client = CourierClient.TryOpen(stateHomeRoot, out var unreachable, http: http);
 
@@ -116,14 +120,16 @@ public sealed class SayCommand : AsyncCommand<SayCommand.Settings>
             return Refuse(output, $"the body file {s.File} could not be read ({ex.Message}).");
         }
 
-        var send = new CourierSend(chat, text, Paths(s.Photo), Paths(s.Document), s.ReplyTo, s.ParseMode, Origin: Origin);
+        var send = new CourierSend(chat, text, Paths(s.Photo), Paths(s.Document), reply.MessageId, s.ParseMode, Origin: Origin);
         if (TelegramSender.Refusal(send) is { } ceiling) return Refuse(output, ceiling);
 
         if (s.DryRun)
         {
-            await output.WriteAsync(DryRun(send, chat, resolved, chatRefusal, client, unreachable)).ConfigureAwait(false);
+            await output.WriteAsync(DryRun(send, chat, resolved, chatRefusal, client, unreachable, reply.Note)).ConfigureAwait(false);
             return resolved is null && client is null ? 2 : 0;
         }
+
+        if (reply.Note is { } answering) await output.WriteLineAsync("answering " + answering).ConfigureAwait(false);
 
         if (client is not null)
         {
@@ -218,8 +224,43 @@ public sealed class SayCommand : AsyncCommand<SayCommand.Settings>
             // Full paths, because the courier opens them from ITS working directory, not this one.
             : [.. list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(Path.GetFullPath)];
 
+    /// <summary>PK5.1 / D9 - what <c>--reply-to</c> names. A note id this machine's courier inboxes hold
+    /// answers that note's message in the chat it came from; any other number is a message id, as it
+    /// always was. The note wins a tie on purpose: a note id is a delivery id, far past any message id
+    /// a chat reaches, and the answer says which note it took. For addressing, never permission.</summary>
+    /// <returns>The message id to answer, the note's chat when a note was named, and the line that
+    /// says which note; <paramref name="refusal"/> set when the note cannot be answered as asked.</returns>
+    internal static (long? MessageId, string? Chat, string? Note) ReplyTarget(Settings s, string chat, CourierSettings settings,
+        out string? refusal)
+    {
+        ArgumentNullException.ThrowIfNull(s);
+        ArgumentNullException.ThrowIfNull(settings);
+        refusal = null;
+        if (s.ReplyTo is not { } asked) return (null, null, null);
+
+        var (note, project) = NoteLookup.ById(settings.Allowed(), asked);
+        if (note is null || project is null) return (asked, null, null);
+
+        var id = asked.ToString(CultureInfo.InvariantCulture);
+        if (note.MessageId is not { } message)
+        {
+            refusal = $"--reply-to {id} is a note of {project.Name} filed before notes carried a message id, so there is nothing to answer; give the message id itself.";
+            return (null, null, null);
+        }
+
+        if (!string.IsNullOrWhiteSpace(s.To) && !string.Equals(settings.ChatFor(chat, out _) ?? chat, note.ChatId, StringComparison.Ordinal))
+        {
+            refusal = $"--reply-to {id} is a note from chat {note.ChatId}, and --to {chat} is another chat; drop --to to answer it where it was said.";
+            return (null, null, null);
+        }
+
+        return (message, note.ChatId,
+            $"note {id} of {project.Name}: message {message.ToString(CultureInfo.InvariantCulture)} in chat {note.ChatId}"
+            + (note.Sender is { } sender ? ", from " + sender : ""));
+    }
+
     private static string DryRun(CourierSend send, string chat, string? resolved, string? chatRefusal,
-        CourierClient? client, string? unreachable)
+        CourierClient? client, string? unreachable, string? replyNote)
     {
         var files = send.Files;
         var kind = send.Photos is { Count: > 0 } ? "photo" : "document";
@@ -239,7 +280,8 @@ public sealed class SayCommand : AsyncCommand<SayCommand.Settings>
         output.AppendLine("  path:       " + PathLine(client, unreachable));
         output.AppendLine("  method:     " + method);
         output.AppendLine("  parse mode: " + mode);
-        if (send.ReplyTo is { } replyTo) output.AppendLine("  reply to:   " + replyTo.ToString(CultureInfo.InvariantCulture));
+        if (send.ReplyTo is { } replyTo)
+            output.AppendLine("  reply to:   " + (replyNote ?? replyTo.ToString(CultureInfo.InvariantCulture)));
         foreach (var f in files)
             output.AppendLine($"  file:       {f} ({TelegramService.FileSize(f).ToString(CultureInfo.InvariantCulture)} B)");
         output.AppendLine($"  {(files.Count > 0 ? "caption" : "text")}:    {text.Length.ToString(CultureInfo.InvariantCulture)} characters, {Encoding.UTF8.GetByteCount(text).ToString(CultureInfo.InvariantCulture)} UTF-8 bytes");

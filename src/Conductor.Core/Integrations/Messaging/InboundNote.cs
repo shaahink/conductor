@@ -61,6 +61,11 @@ public sealed record InboundMedia(
 /// courier restart replays every update the messenger still holds (findings §6.2), and without this
 /// the same voice note files twice. Distinct from <c>MessageId</c>, which identifies the message in
 /// its chat rather than the delivery.</param>
+/// <param name="SenderId">PK5.1 / D9 - the sender's own id on the channel, or null when the channel
+/// did not say (a channel post has no sender). For ADDRESSING a reply, never for permission: the
+/// chat's profile is what decides what a message may do.</param>
+/// <param name="SenderName">The sender's display name, first and last joined.</param>
+/// <param name="SenderUsername">The sender's handle without the at sign, when they have one.</param>
 public sealed record InboundNote(
     string ChatId,
     long MessageId,
@@ -69,4 +74,30 @@ public sealed record InboundNote(
     long? ReplyToMessageId,
     string? ReplyToText,
     long? MessageThreadId,
-    long UpdateId = 0);
+    long UpdateId = 0,
+    long? SenderId = null,
+    string? SenderName = null,
+    string? SenderUsername = null)
+{
+    /// <summary>The note as an inbox holds it, filed under the DELIVERY's id where there is one and
+    /// the message id otherwise. PK5.1: one construction for both producers - the courier and the
+    /// in-run surface each had their own copy, and a field added to one would have been a field one
+    /// of them silently drops, which is exactly how the message id and the sender were lost.</summary>
+    /// <param name="mediaPath">Already relative to the store that will hold it, or absolute when the
+    /// file lives outside one.</param>
+    public Conductor.Core.Inbox.InboxNote ToInboxNote(string? mediaPath) => new(
+        Id: UpdateId != 0 ? UpdateId : MessageId,
+        ReceivedUtc: DateTime.UtcNow,
+        ChatId: ChatId,
+        Kind: Media?.Kind.ToString().ToLowerInvariant() ?? Conductor.Core.Inbox.InboxNote.TextKind,
+        Text: Text,
+        MediaPath: mediaPath,
+        TranscriptPath: null,
+        ReplyToMessageId: ReplyToMessageId,
+        ReplyToText: ReplyToText,
+        MessageThreadId: MessageThreadId,
+        MessageId: MessageId,
+        SenderId: SenderId,
+        SenderName: SenderName,
+        SenderUsername: SenderUsername);
+}

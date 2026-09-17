@@ -12,7 +12,14 @@ namespace Conductor.Core.Inbox;
 ///
 /// <para>The shape is deliberately flat and deliberately JSON: a note has to be readable by a
 /// person with a text editor when something has gone wrong, and by an engine two versions newer
-/// than the one that wrote it.</para></summary>
+/// than the one that wrote it.</para>
+///
+/// <para><b>Identity is for addressing, never for permission</b> (PK5.1 / D9, findings F-OBS-4).
+/// <see cref="SenderId"/>, <see cref="SenderName"/> and <see cref="SenderUsername"/> say who to
+/// answer and <see cref="MessageId"/> says what to answer; none of them authorises anything. The
+/// room is not an identity layer: a name is whatever the sender typed into their profile, and a
+/// note is context, never a command (ADR-0005), whoever it is from. Nothing may branch on a sender
+/// to decide what a note is allowed to do - the chat's profile decided that before it was filed.</para></summary>
 /// <param name="Id">The channel's own update id. This is the DEDUP KEY (findings §6.2): a courier
 /// restart replays every update Telegram still holds, and without this the same voice note files
 /// twice, every time.</param>
@@ -33,6 +40,12 @@ namespace Conductor.Core.Inbox;
 /// <param name="ReplyToMessageId">The push this note answers — DV3.4 routes on it.</param>
 /// <param name="ReplyToText">What that push said, because its identity stamp is what names the
 /// run.</param>
+/// <param name="MessageId">PK5.1 - the message's own id in its chat, which is what a reply or a
+/// reaction names. Distinct from <paramref name="Id"/>, the delivery. Null on a note filed before
+/// PK5.1 and on one added from the terminal.</param>
+/// <param name="SenderId">PK5.1 - the sender's id on the channel, or null when it did not say.</param>
+/// <param name="SenderName">PK5.1 - the sender's display name, first and last joined.</param>
+/// <param name="SenderUsername">PK5.1 - the sender's handle without the at sign.</param>
 public sealed record InboxNote(
     long Id,
     DateTime ReceivedUtc,
@@ -44,10 +57,26 @@ public sealed record InboxNote(
     long? ReplyToMessageId = null,
     string? ReplyToText = null,
     long? MessageThreadId = null,
-    double? TranscriptConfidence = null)
+    double? TranscriptConfidence = null,
+    long? MessageId = null,
+    long? SenderId = null,
+    string? SenderName = null,
+    string? SenderUsername = null)
 {
     /// <summary>The kind string for a note that is words only.</summary>
     public const string TextKind = "text";
+
+    /// <summary>PK5.1 - who sent it, as a reader addresses them: the name, the handle, or both, and
+    /// null when the note carries neither (an old note, or one added from the terminal).</summary>
+    [JsonIgnore]
+    public string? Sender =>
+        (SenderName, SenderUsername) switch
+        {
+            ({ Length: > 0 } name, { Length: > 0 } handle) => name + " (@" + handle + ")",
+            ({ Length: > 0 } name, _) => name,
+            (_, { Length: > 0 } handle) => "@" + handle,
+            _ => SenderId?.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        };
 
     /// <summary>Audio that has words attached to it. What DV3.3 produced, as opposed to what it
     /// filed when no command was configured.</summary>

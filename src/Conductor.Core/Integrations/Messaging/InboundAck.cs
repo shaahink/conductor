@@ -14,6 +14,11 @@ namespace Conductor.Core.Integrations.Messaging;
 /// silent-drop failure (findings §1.2 gap 2) with an apology stapled to it.</para></summary>
 public static class InboundAck
 {
+    /// <summary>PK5.1 / D9 - the acknowledgement of a filed note: this reaction on the note's own
+    /// message, never a message. The writing hand, bare U+270D: the messenger takes a reaction only
+    /// from a fixed list, and the list spells it without the emoji variation selector.</summary>
+    public const string Reaction = "✍";
+
     /// <summary>The shape every refusal takes, with no idea which messenger imposed it: the file by
     /// name, then why, then the promise that the rest of the message survived. WHAT the limit is and
     /// WHOSE it is belong to the adapter (KS11.1 rule one) — see <c>TelegramLimits</c>, which is

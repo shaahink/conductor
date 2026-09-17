@@ -20,4 +20,9 @@ public sealed class TgUser
 {
     public long Id { get; set; }
     public string? Username { get; set; }
+
+    /// <summary>PK5.1 - the name a note is addressed back to. Telegram always sends a first name;
+    /// the last name is optional.</summary>
+    [JsonPropertyName("first_name")] public string? FirstName { get; set; }
+    [JsonPropertyName("last_name")] public string? LastName { get; set; }
 }

@@ -189,15 +189,5 @@ public sealed partial class RemoteSurface
 
     /// <summary>The note as the store holds it. <paramref name="mediaPath"/> is already relative to
     /// the store that will hold it, or absolute when it lives outside one.</summary>
-    private static InboxNote Record(InboundNote note, string? mediaPath) => new(
-        Id: NoteId(note),
-        ReceivedUtc: DateTime.UtcNow,
-        ChatId: note.ChatId,
-        Kind: note.Media?.Kind.ToString().ToLowerInvariant() ?? InboxNote.TextKind,
-        Text: note.Text,
-        MediaPath: mediaPath,
-        TranscriptPath: null,
-        ReplyToMessageId: note.ReplyToMessageId,
-        ReplyToText: note.ReplyToText,
-        MessageThreadId: note.MessageThreadId);
+    private static InboxNote Record(InboundNote note, string? mediaPath) => note.ToInboxNote(mediaPath);
 }

@@ -27,6 +27,10 @@ public sealed class TgMessage
 {
     [JsonPropertyName("message_id")] public long MessageId { get; set; }
     public string? Text { get; set; }
+
+    /// <summary>PK5.1 / D9 - who sent it. In the update all along and dropped until now, which is
+    /// how a note came to carry no author and a reply came to need a walk of forwarded ids.</summary>
+    public TgUser? From { get; set; }
     public TgChat? Chat { get; set; }
 
     /// <summary>DV3.1 — until now this class was <c>message_id</c>, <c>text</c>, <c>chat</c> and

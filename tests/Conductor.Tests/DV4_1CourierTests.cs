@@ -124,9 +124,13 @@ public sealed class DV4_1CourierTests : IDisposable
             note.MediaPath!.Replace('/', Path.DirectorySeparatorChar))),
             "the audio should have been adopted into the project's own inbox");
 
+        // The /project answer is a reply; the note itself is acknowledged by a reaction on message 2
+        // and by no message at all (PK5.1 / D9).
         var replies = bot.Snapshot().Where(c => c.Method == "sendMessage").ToList();
-        Assert.Contains(replies, r => r.Text!.Contains("now file against", StringComparison.Ordinal));
-        Assert.Contains(replies, r => r.Text!.Contains("Filed against", StringComparison.Ordinal));
+        var reply = Assert.Single(replies);
+        Assert.Contains("now file against", reply.Text!, StringComparison.Ordinal);
+        var reaction = Assert.Single(bot.Snapshot(), c => c.Method == "setMessageReaction");
+        Assert.Contains("\"message_id\":2", reaction.Json!, StringComparison.Ordinal);
     }
 
     // ── THE falsifiable exit ────────────────────────────────────────────────────────────────
@@ -198,9 +202,9 @@ public sealed class DV4_1CourierTests : IDisposable
         Assert.Equal(0, third.Received);
 
         // And the owner was told once, not twice: the duplicate is answered with silence.
-        var filed = bot.Snapshot()
-            .Count(c => c.Method == "sendMessage" && c.Text!.Contains("Filed against", StringComparison.Ordinal));
-        Assert.Equal(0, filed);   // the ONLY "filed" reply was the one the kill prevented
+        // PK5.1: the acknowledgement is a reaction now, and a message of any kind would be a second one.
+        var filed = bot.Snapshot().Count(c => c.Method is "setMessageReaction" or "sendMessage");
+        Assert.Equal(0, filed);   // the ONLY acknowledgement was the one the kill prevented
     }
 
     /// <summary>The other half of the same rule: on a clean poll the offset IS written, and it is
