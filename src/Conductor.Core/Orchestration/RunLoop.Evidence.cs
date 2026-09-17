@@ -24,6 +24,14 @@ public sealed partial class RunLoop
     /// that vanished between the scan and the read is logged and dropped.</para></summary>
     private async Task RegisterEvidenceAsync(SessionRecord rec, CancellationToken ct)
     {
+        await RegisterSessionEvidenceAsync(rec, ct).ConfigureAwait(false);
+        // PK4.2 / D7: a claim confirmed at this session's verdict posts its card only now that the
+        // session's evidence - the before/after pair a card carries - is registered.
+        await _verdicts.PostDueCardsAsync(ct).ConfigureAwait(false);
+    }
+
+    private async Task RegisterSessionEvidenceAsync(SessionRecord rec, CancellationToken ct)
+    {
         if (_ctx.Store is not { } db) return;
         try
         {
