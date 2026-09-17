@@ -24,19 +24,33 @@ function Native($exe, [string[]]$argv) {
 }
 
 # The stub Bot API: ids from 5001, a media group answered with one message per item, every method logged.
+# PK3.3: with $queueDir, getUpdates serves the oldest *.json there (one message object, ASCII, \u
+# escapes for anything else) as the next update and deletes the file - an inbound note on demand.
 $stubScript = {
-    param($port, $logPath)
+    param($port, $logPath, $queueDir)
     $l = New-Object System.Net.HttpListener
     $l.Prefixes.Add("http://127.0.0.1:$port/")
     $l.Start()
     $next = 5001
+    $updateId = 700001
     while ($true) {
         $ctx = $l.GetContext()
         $method = $ctx.Request.Url.AbsolutePath.Split('/')[-1]
         $reader = New-Object System.IO.StreamReader($ctx.Request.InputStream, [Text.Encoding]::GetEncoding(28591))
         $body = $reader.ReadToEnd()
         Add-Content -Path $logPath -Value $method
-        if ($method -eq "getUpdates") { Start-Sleep -Milliseconds 1500; $json = '{"ok":true,"result":[]}' }
+        if ($method -eq "getUpdates") {
+            Start-Sleep -Milliseconds 1500
+            $queued = if ($queueDir -and (Test-Path $queueDir)) { Get-ChildItem $queueDir -Filter "*.json" | Sort-Object Name | Select-Object -First 1 } else { $null }
+            if ($queued) {
+                $message = Get-Content $queued.FullName -Raw
+                Remove-Item $queued.FullName
+                $json = '{"ok":true,"result":[{"update_id":' + $updateId + ',"message":' + $message.Trim() + '}]}'
+                $updateId++
+                Add-Content -Path $logPath -Value ("served update " + $queued.Name)
+            }
+            else { $json = '{"ok":true,"result":[]}' }
+        }
         elseif ($method -eq "sendMediaGroup") {
             $n = ([regex]::Matches($body, "attach://")).Count
             $items = @()

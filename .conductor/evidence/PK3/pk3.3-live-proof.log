@@ -1,0 +1,47 @@
+﻿PK3.3 proof at 2026-09-17T13:10:36Z on commit 9f63a5f
+  engine  C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe  built 2026-09-17 13:06:37Z
+  courier C:\Code\conductor\src\Conductor.Courier\bin\Debug\net10.0\conductor-courier.exe  built 2026-09-17 13:06:34Z
+
+==== setup: an allowed repository, under its OLD plan name, and a scratch courier ====
+  scratch courier pid 23028 on port 51287, home C:\Users\shahi\AppData\Local\Temp\pk33-proof-20260917T131036\home-a; repo C:\Users\shahi\AppData\Local\Temp\pk33-proof-20260917T131036\repo allowed as PK33OldPlan
+  courier.json projects before: {"repo":"C:\\Users\\shahi\\AppData\\Local\\Temp\\pk33-proof-20260917T131036\\repo","plan":"PK33OldPlan"}
+
+==== 1. before any run: a reply to a PK33FreshPlan push is parked ====
+  PASS  the courier took the inbound note
+  PASS  it was parked in the dead-letter box - the fresh plan name is not on the allowlist
+        \dead-letter\20260917-131040-700001.json
+  PASS  parked for the right reason: the reply routed by its identity line to a plan the allowlist lacks
+         "That message is about \u0022PK33FreshPlan\u0022, which is not a project on this machine any more. It has: PK33OldPlan. Use /project to choose one.", "parkedUtc": "2026-09-17T13:10:40.4622613Z" }
+  PASS  and not filed into the repository
+
+==== 2. a scratch run of PK33FreshPlan in that repository - its first session boundary says hello ====
+  run started 2026-09-17T13:10:44Z, exit 0
+    run log: 2026-09-17 14:10:45.633 [INF] run=e385ea6c273c46e2b51efadaeb07d502 s= stage=H0 gate= courier: the courier files notes for PK33FreshPlan at C:\Users\shahi\AppData\Local\Temp\pk33-proof-20260917T131036\repo from now on - added by run e385ea6c273c46e2b51efadaeb07d502
+  PASS  the run log says the courier now files notes for the fresh plan, added by this run
+        1 line(s)
+  courier.json projects after: [{"plan":"PK33OldPlan","repo":"C:\\Users\\shahi\\AppData\\Local\\Temp\\pk33-proof-20260917T131036\\repo"},{"plan":"PK33FreshPlan","repo":"C:\\Users\\shahi\\AppData\\Local\\Temp\\pk33-proof-20260917T131036\\repo","by":"run e385ea6c273c46e2b51efadaeb07d502"}]
+  PASS  courier.json gained (PK33FreshPlan, repo) marked by: run <id>
+        {"plan":"PK33FreshPlan","repo":"C:\\Users\\shahi\\AppData\\Local\\Temp\\pk33-proof-20260917T131036\\repo","by":"run e385ea6c273c46e2b51efadaeb07d502"}
+  PASS  the owner's entry is untouched beside it
+        {"plan":"PK33OldPlan","repo":"C:\\Users\\shahi\\AppData\\Local\\Temp\\pk33-proof-20260917T131036\\repo"}
+  PASS  courier.log records the addition
+        2026-09-17 13:10:45Z [warn] courier: courier files notes for PK33FreshPlan at C:\Users\shahi\AppData\Local\Temp\pk33-proof-20260917T131036\repo from now on - added by run e385ea6c273c46e2b51efadaeb07d502
+
+==== 3. after the hello: the same kind of reply is FILED into the repository's inbox - no courier allow ====
+  PASS  the courier took the inbound note
+  PASS  it was filed into C:\Users\shahi\AppData\Local\Temp\pk33-proof-20260917T131036\repo\.conductor\inbox
+        \.conductor\inbox\index.jsonl, \.conductor\inbox\notes\700002.json
+  PASS  and not parked
+  PASS  the courier process never restarted (routing picked the entry up live)
+        pid 23028
+
+==== D4 security note, restated ====
+  The allowlist exists so a daemon holding the bot token cannot be made to write into arbitrary
+  checkouts on this disk. A run already has write access to its own checkout, and its hello carries
+  the install's shared secret like every other verb, so the entry it adds grants no reach it did not
+  have. courier allow is unchanged and stays the way to allow a project with no run live.
+
+  RUN: e385ea6c273c46e2b51efadaeb07d502 named PK33FreshPlan at C:\Users\shahi\AppData\Local\Temp\pk33-proof-20260917T131036\repo; this rig never ran courier allow.
+
+==== result ====
+  12/12 checks passed; scratch dir C:\Users\shahi\AppData\Local\Temp\pk33-proof-20260917T131036
