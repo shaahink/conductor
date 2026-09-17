@@ -251,9 +251,9 @@ therefore the *one* consumer on a machine that has one.
 
 | Verb | What it does |
 |---|---|
-| `courier status` | Whether it can run at all: is the token set, how far the poll offset has got, which projects it may file into, which chats it answers, and what is missing if anything is. `--json` for machines. Prints the path and the last lines of `courier.log` in the courier home — the record the daemon writes about itself (bug #93); `--json` carries it as `log`. |
+| `courier status` | Whether it is alive and whether it can run at all. The first line is its heartbeat (D2): `alive (last poll N s ago; pid P)`, `stale (last poll N min ago; pid P is still running)` — the pid is there but its loop has not come round for longer than a poll can take — `dead (last seen T; pid P is gone and nothing cleared its record)`, `absent` (it stopped cleanly, or never started), or `alive by pid only` for a courier built before the heartbeat. `--json` carries it as `vitals`. Then: is the token set, how far the poll offset has got, which projects it may file into, which chats it answers, and what is missing if anything is. `--json` for machines. Prints the path and the last lines of `courier.log` in the courier home — the record the daemon writes about itself (bug #93); `--json` carries it as `log`. |
 | `courier run` | Starts `conductor-courier`, the courier's own executable (D1) — from `<install>\courier\` in an install, beside the engine in a build — and waits on it: same console, same exit code, and ending this process ends the courier too. Poll until stopped. Ctrl-C is a stop, not a kill: the delivery in flight is finished and its offset written before the process exits. `--once` polls a single time and prints what happened — the shape a rig and a scheduled task both use. Every line it logs — startup, each refusal to start, listener state, poll errors, and the exception that ended it — also goes to `courier.log` beside `courier.json`, rotated at 1 MB with one previous generation, because the scheduled task captures nothing (bug #93). |
-| `courier install [--task-name <NAME>] [--exe <PATH>] [--no-start]` | Register the courier as a **per-user Scheduled Task**: starts at your logon, restarts on failure every minute, `LeastPrivilege` — no admin rights and no elevation prompt. `--exe` names the binary the task runs (by default the courier's own, `conductor-courier`, which is never the engine: a courier running the engine held it open, and the installer had to stop it to publish); `--no-start` registers without starting it now; `--task-name` is for a rig that must not touch yours. |
+| `courier install [--task-name <NAME>] [--exe <PATH>] [--no-start]` | Register the courier as a **per-user Scheduled Task**: starts at your logon, restarts on failure every minute, and a **keep-alive trigger every five minutes** with `IgnoreNew` — so a courier that exited for *any* reason, exit code 0 included (which restart-on-failure never sees), is running again within five minutes, and one already running is left alone. `LeastPrivilege` — no admin rights and no elevation prompt. `--exe` names the binary the task runs (by default the courier's own, `conductor-courier`, which is never the engine: a courier running the engine held it open, and the installer had to stop it to publish); `--no-start` registers without starting it now; `--task-name` is for a rig that must not touch yours. |
 | `courier uninstall [--task-name <NAME>]` | Stop it and remove the registration. Nothing polls for this machine afterwards. |
 | `courier restart [--task-name <NAME>]` | Stop and start it again — the fix for a courier still running the engine it was installed with. |
 | `courier stop [--task-name <NAME>]` | End the running instance. It comes back at your next logon. |
@@ -294,11 +294,26 @@ still may not file. The in-run handlers still answer on a machine with no courie
 > to a laptop that sleeps until Monday was never handed over by Telegram at all. This is the honest
 > limit of a courier that runs on your own machine, and `courier status` prints it.
 
-**It outlives a reinstall, and that is the one thing to know about upgrading it.** A running courier
-holds the published `conductor.exe` open, so `tools/install.ps1` stops it before publishing and
-starts it again afterwards — otherwise the publish fails on a file lock, and, worse, a courier that is
-never restarted keeps running yesterday's engine for as long as the machine stays up, precisely
-because it is built to survive everything else. It states the protocol it speaks in
+**Alive, or known dead.** The courier used to die without a word, and a quiet inbox looked exactly
+like a quiet room. Four instruments now say otherwise. It writes `lastPollUtc` into `courier.run.json`
+every time its loop comes round — the heartbeat `courier status` reads. A courier that ends normally
+clears that record, so a record found at startup means the previous one died: the new instance writes
+`previous courier pid N died silently; last poll T; task last-run result R` to `courier.log`, with `R`
+read from the scheduler before anything overwrites it. The process journals its own end on the way
+out — `courier process exit: …`, `courier run DIED (unhandled …)`, `courier received <signal>`. And it
+is supervised twice: the task's keep-alive trigger starts it again within five minutes, and a live run
+checks the heartbeat at every session boundary, starts the task of a courier it finds dead or stale,
+and says so in its log and on the owner queue — `courier restarted by this run, 2nd time: …`. How to
+read a death out afterwards is in [operating.md](operating.md#the-courier-died--reading-out-why).
+
+**It is its own binary, so an engine install leaves it running.** The courier runs
+`conductor-courier.exe` from `<install>\courier\`, and `tools/install.ps1` publishes the engine
+without stopping it (PK1.2). Its own directory is locked while it runs, so a plain install does not
+republish it; `tools/install.ps1 -CourierOnly` replaces the courier binary alone, re-registers the
+task on it and restarts it, never touching `conductor.exe` — safe with a run live. A courier left over
+from before, still holding the engine's files, is stopped once, moved to its own directory and started
+there. A courier that is never restarted keeps running the binary it started with for as long as the
+machine stays up, precisely because it is built to survive everything else. It states the protocol it speaks in
 `courier.run.json`; a newer run refuses a stale courier **by name**, with its pid and the engine it
 is still running, and names `conductor courier restart` as the fix. A NEWER courier than the run is
 not an error — that is the ordinary state of a machine between a reinstall and the next logon.
@@ -332,7 +347,9 @@ as they are refused every other callback.
 Its state lives at `<state home>/courier/` — `courier.json` (what you configured), `offset.json` (how
 far it has acknowledged, written *after* each delivery is handled so a crash replays rather than
 loses), `courier.run.json` (what the running daemon says about itself: pid, protocol, engine, the exe
-it holds open, the task that started it — written at startup, cleared on the way out), and `media/`
+it holds open, the task that started it, and `lastPollUtc`, rewritten every poll — written at startup,
+cleared on the way out, so a record nobody cleared is a death), `courier.log` (its own record,
+including the death records and exit journal above), `rooms/` (see [Rooms](#rooms--where-a-project-speaks-kept-off-the-repo)), and `media/`
 (where bytes land before they are adopted into a project's inbox), and `messages.jsonl` — one line
 per message the courier put in a chat or took out of one: `id`, `chat`, `origin`, `stamp`, `when`,
 `verb` (`send`, `push`, `delete`).

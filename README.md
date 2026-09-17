@@ -279,7 +279,9 @@ allowlist entry in `.conductor/.gitignore`, which is deny-by-default.
 
 The honest limit, because it is not conductor's to fix: Telegram holds an undelivered update for
 **24 hours**. The courier narrows the gap from "no run is live" to "the machine is on" and cannot do
-better from one laptop. See [ADR-0008](docs/dev/adr/0008-the-courier-outlives-the-run.md).
+better from one laptop. See [ADR-0008](docs/dev/adr/0008-the-courier-outlives-the-run.md), and
+[ADR-0009](docs/dev/adr/0009-the-courier-is-its-own-binary-and-one-wire.md) for what Peyk changed: its own binary, one wire
+for everything sent, and a run that sends directly when the courier is down.
 
 ### Getting the run's data out
 

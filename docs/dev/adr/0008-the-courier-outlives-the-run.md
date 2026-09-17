@@ -1,6 +1,6 @@
 # ADR 0008 — The courier outlives the run, and its inbound port is loopback with a secret
 
-- **Status**: Accepted
+- **Status**: Accepted; amended by [0009](0009-the-courier-is-its-own-binary-and-one-wire.md) (Peyk, 2026-09-17: its own binary, protocol 3, direct fallback, self-registration; §4's installer half and §5's push-only routing are superseded there)
 - **Date**: 2026-08-26
 - **Decided in**: Divan, DV4.1–DV4.4 (`src/Conductor.Core/Courier/`), reconciled at DV7.1
 - **Supersedes**: nothing. Sits beside [0005 — push-only remote observability](0005-push-only-remote-observability.md),

@@ -845,6 +845,14 @@ Path (relative to plan file) to custom `session.md`, `fix.md`, `resume.md`, `aud
 `judge.md`, `review.md` templates. Falls back to built-in defaults when files are missing. `conductor init` drops
 editable copies of `session.md` and `fix.md` so "templates as content" works the moment you run.
 
+**Messages too.** `<templatesDir>/notify/<event>.md` overrides the built-in text of one Telegram message:
+`run-complete`, `session-end`, `owner-queue`, `board`, `evidence`, `evidence-overflow`, and since Peyk
+the two cards a room receives — `checkpoint-card` (posted when the verdict confirms a claim made with
+`task --done --tell`) and `stage-card` (when a stage confirms). A file is optional per event. Facts are
+`{name}` placeholders, and an override that names a fact its event does not have is **refused** —
+the run log says so and the built-in text is sent — because a message with a literal `{whatever}` in
+it is worse than the default.
+
 ## `readOrder` — Session reading list
 
 Array of file paths (relative to repo) that the agent reads in order at session start. Rendered as an

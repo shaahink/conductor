@@ -13,14 +13,21 @@ rather than deleting the citation: a map with no coordinates is the thing this d
 tools/plan-lint          consumes Conductor.Planning ALONE - the standalone proof
         |
 src/Conductor            CLI (Program.cs, Commands/**) + hosting (Hosting/, Http/ControlPlaneServer*)
-        |  ProjectReference
+        |                 conductor.exe
+        |  ProjectReference ---------> src/Conductor.Courier   the courier's own process (Peyk): entry point,
+        |                                      |               listener, exit journal. conductor-courier.exe,
+        |                                      |               built and copied beside the engine
+        |  ProjectReference                    |  ProjectReference (its ONLY one)
 src/Conductor.Core       domain, orchestration, store, events, providers, integrations,  <- the engine
-                         and since Divan: Courier/ (the daemon), Inbox/, Publishing/
+                         and since Divan: Courier/ (the daemon's logic), Inbox/, Publishing/
         |  ProjectReference
 src/Conductor.Planning   pure decision logic: data in, decisions out. No IO, no clocks, no processes.
 ```
 
-Each arrow points one way and only one way. `Conductor.Core` does not reference `Conductor`, so a
+Each arrow points one way and only one way. `Conductor.Courier` references `Conductor.Core` and
+nothing else, so the courier cannot grow a dependency on a command or a hosted service; the CLI
+references the courier only so a build copies its binary beside the engine, and never hosts the daemon.
+`ArchitectureBoundaryTests` names the offending reference if one is seeded. `Conductor.Core` does not reference `Conductor`, so a
 command cannot be called from the run loop and the store cannot format console output - not by
 convention, but because it does not link. `tests/Conductor.Tests/ArchitectureBoundaryTests.cs` states
 the rest of the rules as tests that name the offending type, and they run in the `engine-full` gate.
@@ -33,8 +40,9 @@ hosted services, then awaits the orchestrator at `src/Conductor/Commands/RunComm
 looking for a `BackgroundService` that owns the run, you will not find it.
 
 *Still true after Divan, and worth stating because Divan added a daemon.* The **courier** is a separate
-**process** (`conductor courier run`), not a hosted service inside this one — the run process registers
-exactly one `IHostedService`, still `TelegramService` (`Hosting/ConductorHost.cs:121`). See
+**executable** (`conductor-courier.exe`, since Peyk; `conductor courier run` starts it), not a hosted
+service inside this one — the run process registers exactly one `IHostedService`, still
+`TelegramService` (`Hosting/ConductorHost.cs:121`). See
 [The courier](#the-courier--the-one-process-that-outlives-the-run) below.
 
 ### 1. Dispatch — which stage, which checkpoint, which session kind
@@ -304,15 +312,19 @@ events itself, to find an interrupted session.
 
 ## The seams
 
-`src/Conductor.Core` declares exactly **thirteen** `public interface I*`. That is the whole list — the
+`src/Conductor.Core` declares exactly **fifteen** `public interface I*`. That is the whole list — the
 abstraction count is small on purpose. *(Counted again at DV7.1, 2026-08-26: ten until Divan, which
 added three at once — `ICourierSource`, `ITranscriber`, `ICloudCli`. Each one is a **process or a wire
 we do not own**, which is the only justification this repo accepts for a new seam; see the rule under
 the table. Before that it was nine until KS11.1 extracted `IMessageChannel`, and the count in this
 sentence was stale for the whole edge era. Counted **again at CH5.1, 2026-08-27: still thirteen** —
 Charkh added `Core/Release/` and four `Ci*` files and not one seam, because every type in both takes
-its facts as a parameter. `grep -rn "public interface I" src/Conductor.Core` settles it in one
-command — do that rather than trusting this number.)*
+its facts as a parameter. Counted **again at PK6.2, 2026-09-17: fifteen** — Peyk added two, and
+neither is a wire we do not own, so each is justified differently below the table: `ICourierDesk` is
+the line between the courier's HTTP listener, which moved into its own project, and what each verb
+means, which stayed in Core; `IFittingBattery` extends `IPromptBattery` for a section whose tail must
+survive a cut. `grep -rn "public interface I" src/Conductor.Core` settles it in one command — do that
+rather than trusting this number, and `SF7_1DocsMatchRealityTests` does it for you.)*
 
 | Seam | Job | Implementations |
 |---|---|---|
@@ -328,6 +340,8 @@ command — do that rather than trusting this number.)*
 | `IReportsStartOutcome` `IReportsStartOutcome.cs:17` | Let a hosted service say it declined to start on purpose | `TelegramService` |
 | `ICourierSource` `Courier/ICourierSource.cs:66` | **DV4.1.** One messenger seen from the *courier's* side: poll a batch of deliveries, reply, acknowledge. Deliberately not `IMessageChannel` — that seam is a run pushing outward with a queue to flush at shutdown, and the courier has no run to flush | `TelegramCourierSource`; the tests drive the whole daemon with no wire, incl. `KilledOnReply` for the kill-between-receive-and-ack case |
 | `ITranscriber` `Inbox/Transcriber.cs:12` | **DV3.3.** Speech to text | `LocalCommandTranscriber` shells out to a configured command; tests substitute their own rather than requiring a 3 GB model on the machine, which is also what makes the untranscribed and failed paths deterministic |
+| `ICourierDesk` `Courier/CourierDesk.cs:5` | **PK3.1.** What the courier's loopback *means*: a protocol-2 push, a protocol-3 send, react, delete, the chat list, a run's hello. The listener in `src/Conductor.Courier` owns HTTP and authentication and calls this | `CourierDesk`; `DV4_3CourierSeamTests` drives the listener with a desk of its own, so the HTTP half is tested with no Bot API behind it |
+| `IFittingBattery` `PromptBattery.cs:26` | **PK4.3.** A prompt battery that recomposes itself inside the allowance it is granted, instead of being cut from the tail | `RoomVoiceBattery` — the room's voice, whose tail (the claim's `--tell` shape) is the part a cut must not lose |
 | `ICloudCli` `Integrations/Cloud/CloudCli.cs:17` | **DV5.1.** The `claude` CLI's cloud subsurface | `ClaudeCloudCli`. There is deliberately **no `CreateAsync`** on it: the create direction is refused before this interface is reached, so the seam cannot be the place someone adds it |
 
 **Divan's three are the exception that states the rule.** `ICourierSource`, `ITranscriber` and
@@ -472,57 +486,96 @@ byte-identically, which is pinned by golden replay rather than asserted in prose
 ## The courier — the one process that outlives the run
 
 *Added at DV7.1, 2026-08-26, because Divan put a daemon on the machine and this document had no
-section a long-lived process could live in. The decision and its four conditions are
-[ADR-0008](docs/dev/adr/0008-the-courier-outlives-the-run.md); this is where it sits in the map.*
+section a long-lived process could live in; rewritten at PK6.2, 2026-09-17, because Peyk gave it its
+own binary. The decision and its four conditions are
+[ADR-0008](docs/dev/adr/0008-the-courier-outlives-the-run.md); what Peyk changed about them, and the
+two conditions it added, are [ADR-0009](docs/dev/adr/0009-the-courier-is-its-own-binary-and-one-wire.md).
+This is where it sits in the map.*
 
 Every other process here is born and dies with a run. The courier is not. It owns the bot token, it
-polls when no run is live, and it files what the owner said into whichever project the note was about.
-`Core/Courier/` is its namespace (15 files, no partial fiction — one type per file); `Commands/Courier
-Command.cs` is the CLI; `Http/CourierListener.cs` is its listener and is constructed **only** by
-`conductor courier run` (`CourierCommand.cs:276`), never by the run process.
+polls when no run is live, it files what the owner said into whichever project the note was about, and
+since Peyk it is the one wire everything on the machine sends through.
+
+**It is its own executable, in its own directory (PK1 / D1).** Three places, one per job:
+
+| Where | What lives there |
+|---|---|
+| `src/Conductor.Courier/` | The process: `CourierProgram.cs` (the entry point — `--once`, `--task-name`; the exit journal is armed first thing, `:33`), `CourierListener.cs` (the loopback HTTP listener, `:124-142` routes), `CourierExitJournal.cs`. Builds `conductor-courier.exe`; references `Conductor.Core` only |
+| `src/Conductor.Core/Courier/` | Everything the process *means* (31 files): the poll loop and note filing (`CourierDaemon*.cs`), the loopback verbs (`CourierDesk.cs`, the `ICourierDesk` seam), presence and heartbeat (`CourierPresence.cs`, `CourierVitals.cs`), the scheduled task (`CourierTask.cs`, `CourierTaskRun.cs`), the run's second supervision (`CourierKeepAlive.cs`), the message ledger (`CourierMessages.cs`), rooms (`Room.cs`, `Rooms.cs`, `RoomImport.cs`), and the read-only figures (`CourierFigures.cs`) |
+| `src/Conductor/Commands/CourierCommand*.cs`, `SayCommand.cs`, `RoomCommand.cs` | The CLI that manages it and talks to it. `conductor courier run` starts the binary in a kill-on-close job (`CourierCommand.Run.cs:51`) and waits on it; the engine never hosts the daemon |
+
+An install publishes the courier to `<install>\courier\`, and that directory is the point: measured on
+a scratch install, a courier running beside the engine locked the shared `Conductor.Core` /
+`Microsoft.Extensions` dlls and the next engine publish failed, while one running from its own
+directory did not. So `tools/install.ps1` publishes the engine without stopping a courier in its own
+directory, moves one that still holds the engine's files exactly once, and `install.ps1 -CourierOnly`
+is the one path that replaces a live courier (`tools/lib/courier-guard.ps1` says which shape is live).
 
 **The lifecycle is a verb, not a flag.**
 
 | | |
 |---|---|
-| `conductor courier install` | Registers a per-user Scheduled Task from XML — logon trigger, restart-on-failure, no admin rights. XML rather than `schtasks /SC ONLOGON` because the command-line form cannot express restart-on-failure (`CourierTask.cs:37-47`). `CourierTask` takes its shell runner as a constructor argument, so the suite never registers anything on a developer's machine |
-| `run` / `status` / `restart` / `stop` / `uninstall` | `status` is the default verb. `restart` is the fix named by every staleness refusal |
-| `allow --repo` / `deny --repo` | The project allowlist — a note is only ever filed into a repo the owner allowed |
+| `conductor courier install` | Registers a per-user Scheduled Task from XML on `conductor-courier.exe`: a logon trigger, restart-on-failure, a **keep-alive trigger** repeating every `PT5M` with `IgnoreNew` (`CourierTask.cs:194`, `:221-227`) — because restart-on-failure never sees an exit code 0 — `ExecutionTimeLimit PT0S`, no admin rights. XML rather than `schtasks /SC ONLOGON` because the command-line form can express neither. `CourierTask` takes its shell runner as a constructor argument, so the suite never registers anything on a developer's machine |
+| `run` / `status` / `restart` / `stop` / `uninstall` | `status` is the default verb and leads with the heartbeat. `restart` is the fix named by every staleness refusal |
+| `allow --repo` / `deny --repo` | The project allowlist — a note is only ever filed into a repo the owner allowed, or one a live run named (D4) |
 | `chat --id` / `unchat --id` | Which chats the courier answers at all |
 
-**The state it owns** lives in the state home under `courier/` (`CourierHome.cs:21`), not in any repo:
-`courier.json` (settings + allowlist), `offset.json`, `courier.run.json` (presence), `courier.secret`,
-and `media/`. A note whose project has moved or vanished is parked in `dead-letter/` rather than
-dropped.
+**The state it owns** lives in the state home under `courier/` (`CourierHome.cs:21-56`), not in any repo:
+`courier.json` (settings + allowlist), `offset.json`, `courier.run.json` (presence, with `lastPollUtc`),
+`courier.secret`, `courier.log` (+ `.1`), `messages.jsonl` (every message id it put in a chat or took
+out), `rooms/<slug>.json` (`Rooms.cs:13`), and `media/`. A note whose project has moved or vanished is
+parked in `dead-letter/` rather than dropped.
 
-**Three invariants a change here must not break:**
+**The loopback, protocol 3.** Fixed at 47137 (`CourierEndpoint.cs:27`, override `CONDUCTOR_COURIER_PORT`
+— a *named* port, never a scan, because two conductor runs may share a machine), `127.0.0.1` only,
+`X-Conductor-Courier` matched by `CourierSecret` or `401` (`CourierListener.cs:115`):
+
+| Verb | Path | Who calls it |
+|---|---|---|
+| `GET` / `POST` | `/hello` | A run: the protocol handshake, and (POST, D4) its plan name and checkout, added to the allowlist marked `"by": "run <id>"` if absent |
+| `POST` | `/push` | A run's protocol-2 push — still accepted, so a run on the previous engine keeps working through a new courier |
+| `POST` | `/send` | `conductor say` and a protocol-3 run: text, a photo or document, a media group; the chat by id or profile; answers with the Telegram message ids |
+| `POST` | `/react`, `/delete` | `say --react`, `say --delete` |
+| `GET` | `/chats` | The chats this courier lists, with profiles — how `say --to observer` resolves |
+
+The protocol states its version (`CourierProtocol.cs:32`, `Version = 3`); a run or `say` speaking a newer
+one than the courier refuses it by name, with its pid and the engine it is still running, and names
+`conductor courier restart`.
+
+**Four invariants a change here must not break** (the first three from ADR-0008, the fourth from ADR-0009):
 
 1. **The offset is durable.** `TelegramService`'s `_offset` is an `int` field, correct for a poll loop
    that dies with its run. A restarting courier with an in-memory offset replays every update Telegram
    still holds and files each note twice. `CourierOffset` persists it; delivery dedups by id.
-2. **The handover port is loopback with a secret.** Fixed at 47137 (`CourierEndpoint.cs:27`, override
-   `CONDUCTOR_COURIER_PORT` — a *named* port, never a scan, because two conductor runs may share a
-   machine), `127.0.0.1` only, `X-Conductor-Courier` matched by `CourierSecret` or `401`
-   (`CourierListener.cs:112`). `/hello` and `/push`; nothing that arrives there writes run state.
+2. **Nothing that arrives on the loopback writes run state.** A hello can add an allowlist entry; a push
+   or a send becomes a Telegram message. The figures (`/status`, `/money`, …) open a project's `run.db`
+   **read-only** through `SqliteRunStore.OpenReadOnly`, pinned so that resolving the path does not upsert
+   the state catalogue either.
 3. **One consumer per token.** Where a courier is configured, in-run polling refuses to start and
    names it (`CourierPrecedence.cs:34,43`). A machine with no courier keeps the old behaviour
-   byte-identically. The protocol states its version (`CourierProtocol.Version = 2`) and a run
-   speaking a newer one refuses a stale courier by name, naming `conductor courier restart`.
+   byte-identically.
+4. **Sending is never the courier's monopoly.** When no courier takes a push, a run's `CourierChannel`
+   sends it directly with the environment's token and logs `courier unreachable - sent directly`
+   (`Integrations/Messaging/CourierChannel.cs:154`); `say` does the same and still ledgers the ids. Only
+   `getUpdates` is limited to one consumer, so the fallback never competes with the poller — and a
+   courier that is down no longer silences a run.
+
+**Alive, or known dead (PK2 / D2).** The courier used to die without a word. Now: the loop writes
+`lastPollUtc` into its presence every poll, and `CourierVitals` reads `alive` / `stale` / `dead` /
+`absent` from pid-liveness plus that heartbeat (stale after twice the longest a poll can take). A
+presence record found at startup means the previous instance never cleared it, so the new one journals
+`previous courier pid N died silently; last poll T; task last-run result R`, with `R` read from the
+scheduler (`CourierVitals.DeathRecord`). `CourierExitJournal` records `ProcessExit`, unhandled
+exceptions and console signals before the process goes. Two supervisors bring it back: the task's
+keep-alive trigger, and a live run, which checks the heartbeat at every session boundary
+(`Orchestration/RunContext.cs:52`) and starts the task of a dead or stale courier, saying so in the run
+log and on the owner queue. `CONDUCTOR_COURIER_FAULT` (`CourierProgram.cs:191`) lets a rig kill it on
+purpose, and is journaled when armed so a rig's death never passes for a finding. The read-out
+procedure is [operating.md § The courier died](docs/operating.md#the-courier-died--reading-out-why).
 
 **And the limit, stated rather than hidden:** the courier narrows the gap from "no run live" to
 "machine on". Telegram holds an undelivered update for 24 hours. A note sent to a sleeping laptop on
 Friday is gone by Monday — dropped by Telegram, never handed over.
-
-**The courier is its own executable, in its own directory (PK1 / D1).** `src/Conductor.Courier`
-references `Conductor.Core` only and builds `conductor-courier.exe`; the engine manages it
-(`courier install|status|restart|stop`) and `conductor courier run` is an alias that starts it in a
-kill-on-close job. An install publishes it to `<install>\courier\`, and that directory is the point:
-measured on a scratch install, a courier running beside the engine locked the shared
-`Conductor.Core`/`Microsoft.Extensions` dlls and the next engine publish failed, while one running
-from its own directory did not. So `tools/install.ps1` publishes the engine without stopping a
-courier in its own directory, moves one that still holds the engine's files exactly once, and
-`install.ps1 -CourierOnly` is the one path that replaces a live courier (`tools/lib/courier-guard.ps1`
-says which shape is live). The protocol version still refuses a stale courier; `restart` is the fix.
 
 ### The inbox — what the courier files, and what a session reads
 
