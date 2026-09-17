@@ -102,7 +102,7 @@ public sealed class DV4_3CourierSeamTests : IDisposable
     {
         port = FreePort();
         var presence = CourierPresence.Current("Conductor Courier (dv43 scratch)", port);
-        var listener = new CourierListener(() => presence, onPush,
+        var listener = new CourierListener(() => presence, new PushDesk(onPush),
             secret ?? CourierSecret.Resolve(_stateHome), NullLogger.Instance, port);
         Assert.True(listener.TryStart(out var refusal), refusal);
         _junk.Add(listener);
@@ -118,6 +118,21 @@ public sealed class DV4_3CourierSeamTests : IDisposable
         return Task.FromResult(new CourierAck(true));
     }
 #pragma warning restore RCS1163
+
+    /// <summary>The listener's desk for a suite about pushes: the push goes to the handler the test
+    /// hands over, and the protocol-3 verbs are PK3_1CourierProtocol3Tests' to exercise.</summary>
+    private sealed class PushDesk(Func<CourierPush, CancellationToken, Task<CourierAck>> onPush) : ICourierDesk
+    {
+        public Task<CourierAck> PushAsync(CourierPush push, CancellationToken ct) => onPush(push, ct);
+
+        public Task<CourierAck> SendAsync(CourierSend send, CancellationToken ct) => throw new NotSupportedException();
+
+        public Task<CourierAck> ReactAsync(CourierReact react, CancellationToken ct) => throw new NotSupportedException();
+
+        public Task<CourierAck> DeleteAsync(CourierDelete delete, CancellationToken ct) => throw new NotSupportedException();
+
+        public IReadOnlyList<CourierChat> Chats() => [];
+    }
 
     private PlanConfig Plan(string apiRoot, bool twoWay = true) => new()
     {
@@ -249,7 +264,7 @@ public sealed class DV4_3CourierSeamTests : IDisposable
         using var first = StartListener((p, c) => Accept(Nothing, p, c), out var port);
 
         var second = new CourierListener(() => CourierPresence.Current(null, port),
-            (p, c) => Accept(Nothing, p, c), CourierSecret.Resolve(_stateHome), NullLogger.Instance, port);
+            new PushDesk((p, c) => Accept(Nothing, p, c)), CourierSecret.Resolve(_stateHome), NullLogger.Instance, port);
         _junk.Add(second);
 
         Assert.False(second.TryStart(out var refusal));
@@ -500,8 +515,11 @@ public sealed class DV4_3CourierSeamTests : IDisposable
 
     // ── the wire, at the adapter ────────────────────────────────────────────────────────────
 
+    /// <summary>Bug #76, closed at PK3.1: until protocol 3 this test pinned the courier's gap - a
+    /// pushed artifact arrived as a line naming its path. The courier uploads now, by the run's own
+    /// photo-or-document rule, and the id that came back is on the ack.</summary>
     [Fact]
-    public async Task An_artifact_is_named_in_the_message_rather_than_dropped()
+    public async Task An_artifact_is_uploaded_rather_than_named()
     {
         using var bot = new RecordingBotApi();
         var settings = OperativeCourier(bot.Root);
@@ -514,13 +532,17 @@ public sealed class DV4_3CourierSeamTests : IDisposable
             Severity: nameof(PushSeverity.Alert), AttachmentPath: shot, AttachmentAsPhoto: true,
             AttachmentCaption: "a screenshot"), CancellationToken.None);
 
-        Assert.Null(why);
+        Assert.True(why.Accepted, why.Detail);
+        Assert.Equal([RecordingBotApi.AssignedMessageId], why.MessageIds);
         var call = Assert.Single(bot.Snapshot());
         _out.WriteLine(call.Describe());
-        Assert.Equal("sendMessage", call.Method);
+        Assert.Equal("sendPhoto", call.Method);
         Assert.False(call.DisableNotification);         // Alert buzzes; Quiet does not
-        Assert.Contains("not attached", call.Text!, StringComparison.Ordinal);
-        Assert.Contains(shot, call.Text!, StringComparison.Ordinal);
+        Assert.Equal("photo", call.FileField);
+        Assert.Equal("evidence.png", call.FileName);
+        Assert.Equal(3, call.FileBytes);
+        Assert.Equal("a screenshot", call.Caption);
+        Assert.DoesNotContain("not attached", call.Caption!, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -530,8 +552,8 @@ public sealed class DV4_3CourierSeamTests : IDisposable
         using var source = new TelegramCourierSource(settings, ScratchToken, NullLogger.Instance, _stateHome);
 
         var why = await source.SendAsync(new CourierPush(AdminChat, "nowhere to go"), CancellationToken.None);
-        _out.WriteLine(why!);
-        Assert.NotNull(why);
-        Assert.Contains("bot API", why!, StringComparison.Ordinal);
+        _out.WriteLine(why.Detail);
+        Assert.False(why.Accepted);
+        Assert.Contains("bot API", why.Detail, StringComparison.Ordinal);
     }
 }

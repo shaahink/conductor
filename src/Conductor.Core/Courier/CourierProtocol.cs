@@ -23,8 +23,13 @@ public static class CourierProtocol
     /// <para>2 (DV4.3): the courier serves the hello over a loopback socket and accepts a push. A
     /// protocol-1 courier has no listener at all, so a run that dials one gets a refused connection
     /// with nothing to name — which is exactly the skew this constant exists to turn into a
-    /// sentence.</para></summary>
-    public const int Version = 2;
+    /// sentence.</para>
+    ///
+    /// <para>3 (PK3.1 / D5): one local API for everything anyone sends - <c>POST /send</c>,
+    /// <c>/react</c>, <c>/delete</c> and <c>GET /chats</c>, every send answering with the message ids
+    /// it produced. A protocol-2 <c>/push</c> stays accepted for this era: the engine installed beside
+    /// a protocol-3 courier may still be one that pushes.</para></summary>
+    public const int Version = 3;
 
     /// <summary>The verb that fixes skew. Named in every refusal, because "restart the courier" with
     /// no command is how a person ends up killing a pid by hand.</summary>

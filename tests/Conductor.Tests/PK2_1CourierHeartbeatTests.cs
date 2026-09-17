@@ -306,6 +306,15 @@ public sealed class PK2_1CourierHeartbeatTests : IDisposable
         public Task ReplyAsync(string chatId, string text, long? threadId, CancellationToken ct,
             IReadOnlyList<CourierButton>? buttons = null) => Task.CompletedTask;
 
-        public Task<string?> SendAsync(CourierPush push, CancellationToken ct) => Task.FromResult<string?>(null);
+        public Task<CourierAck> SendAsync(CourierPush push, CancellationToken ct) => Task.FromResult(new CourierAck(true));
+
+        public Task<CourierAck> SendAsync(CourierSend send, string chatId, CancellationToken ct) =>
+            Task.FromResult(new CourierAck(true));
+
+        public Task<string?> ReactAsync(string chatId, long messageId, string emoji, CancellationToken ct) =>
+            Task.FromResult<string?>(null);
+
+        public Task<string?> DeleteAsync(string chatId, long messageId, CancellationToken ct) =>
+            Task.FromResult<string?>(null);
     }
 }

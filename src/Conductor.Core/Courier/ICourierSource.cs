@@ -85,7 +85,7 @@ public interface ICourierSource
         IReadOnlyList<CourierButton>? buttons = null);
 
     /// <summary>DV4.3 — delivers one push handed over by a live run across the loopback seam, and
-    /// returns null when it went out or the reason it did not.
+    /// answers with the ids it became (PK3.1) or the reason it did not go out.
     ///
     /// <para>It is on THIS interface and not <c>IMessageChannel</c>, and the distinction is the one
     /// the type remarks draw: a channel owns a queue and a shutdown flush because it belongs to a
@@ -93,5 +93,15 @@ public interface ICourierSource
     /// this message and is waiting on the answer. A reason rather than a bool because the run prints
     /// it: DV1.1's rule is that a channel which cannot deliver says why, and the new hop is exactly
     /// where that could have been lost.</para></summary>
-    Task<string?> SendAsync(CourierPush push, CancellationToken ct);
+    Task<CourierAck> SendAsync(CourierPush push, CancellationToken ct);
+
+    /// <summary>PK3.1 / D5 - one protocol-3 send to a chat already resolved to an id. Refused by name
+    /// past the messenger's own ceilings BEFORE anything is uploaded; answered with the ids otherwise.</summary>
+    Task<CourierAck> SendAsync(CourierSend send, string chatId, CancellationToken ct);
+
+    /// <summary>PK3.1 - puts <paramref name="emoji"/> on a message. Null when it landed, else why not.</summary>
+    Task<string?> ReactAsync(string chatId, long messageId, string emoji, CancellationToken ct);
+
+    /// <summary>PK3.1 - deletes a message. Null when it is gone, else why not.</summary>
+    Task<string?> DeleteAsync(string chatId, long messageId, CancellationToken ct);
 }

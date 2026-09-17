@@ -45,6 +45,19 @@ public static class CourierEndpoint
     /// <summary>A run handing a push to the daemon. POST, and it carries the secret.</summary>
     public const string PushPath = "/push";
 
+    /// <summary>PK3.1 / D5 - protocol 3's send: text, a file or a media group, to a chat named by id
+    /// or by profile. POST; answers with the message ids.</summary>
+    public const string SendPath = "/send";
+
+    /// <summary>PK3.1 - a reaction on a message named by id. POST.</summary>
+    public const string ReactPath = "/react";
+
+    /// <summary>PK3.1 - takes a message back by id. POST.</summary>
+    public const string DeletePath = "/delete";
+
+    /// <summary>PK3.1 - the chats this courier answers, each with its profile. GET.</summary>
+    public const string ChatsPath = "/chats";
+
     /// <summary>The port in force here: <see cref="PortEnvVar"/> when it names a usable port, else
     /// <see cref="DefaultPort"/>. A junk override is IGNORED rather than fatal — the courier is the
     /// process that must keep answering the phone.</summary>

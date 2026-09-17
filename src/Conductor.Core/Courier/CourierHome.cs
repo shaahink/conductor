@@ -50,6 +50,11 @@ public static class CourierHome
     /// <see cref="CourierLog"/>; the previous generation is <c>courier.log.1</c>.</summary>
     public const string LogFileName = "courier.log";
 
+    /// <summary>PK3.1 / D5 - the message-id ledger: one JSON line per message this courier put into a
+    /// chat or took out of one. What <c>observer-posts.log</c> was, kept by the process that knows the
+    /// ids.</summary>
+    public const string MessagesFileName = "messages.jsonl";
+
     /// <param name="stateHomeRoot">The machine's state home, or null for the resolved one.</param>
     public static string DirFor(string? stateHomeRoot = null) =>
         Path.Combine(Root(stateHomeRoot), DirName);
@@ -68,6 +73,9 @@ public static class CourierHome
 
     public static string SecretPathFor(string? stateHomeRoot = null) =>
         Path.Combine(DirFor(stateHomeRoot), SecretFileName);
+
+    public static string MessagesPathFor(string? stateHomeRoot = null) =>
+        Path.Combine(DirFor(stateHomeRoot), MessagesFileName);
 
     public static string MediaDirFor(string? stateHomeRoot = null) =>
         Path.Combine(DirFor(stateHomeRoot), MediaDirName);

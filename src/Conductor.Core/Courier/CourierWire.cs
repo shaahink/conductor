@@ -103,4 +103,9 @@ public sealed record CourierButton(string Text, string CallbackData);
 /// hop.</summary>
 /// <param name="Accepted">Whether the daemon took responsibility for delivering it.</param>
 /// <param name="Detail">Why not, in one sentence, or the empty string.</param>
-public sealed record CourierAck(bool Accepted, string Detail = "");
+/// <param name="MessageIds">PK3.1 / D5 - the ids the messenger assigned, in order: one per message
+/// a media group became. Null when nothing went out. Before protocol 3 nothing that crossed the
+/// courier could be replied to or taken back, because nothing came back.</param>
+/// <param name="ChatId">The chat the send resolved to - a profile name goes in, an id comes out.</param>
+public sealed record CourierAck(bool Accepted, string Detail = "",
+    IReadOnlyList<long>? MessageIds = null, string? ChatId = null);

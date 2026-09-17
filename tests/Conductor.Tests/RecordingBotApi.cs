@@ -13,6 +13,10 @@ namespace Conductor.Tests;
 /// <param name="ChatId">KS11.3: WHICH chat the call was addressed to. Deliberately absent from
 /// <see cref="BotCall.Describe"/> and therefore from every golden — a per-profile test needs the
 /// field, and the goldens do not need to move to give it one.</param>
+/// <param name="Json">PK3.1: the whole JSON body, for a call whose fields this record does not name
+/// (a reaction's emoji, a delete's message id, a parse mode). Null for multipart.</param>
+/// <param name="FileCount">PK3.1: how many file parts a multipart call carried - a media group has several.</param>
+/// <param name="Media">PK3.1: a media group's <c>media</c> field, verbatim.</param>
 public sealed record BotCall(
     string Method,
     string? Text,
@@ -25,7 +29,10 @@ public sealed record BotCall(
     string? FileName,
     long FileBytes,
     string? ChatId = null,
-    string? ReplyMarkup = null)
+    string? ReplyMarkup = null,
+    string? Json = null,
+    int FileCount = 0,
+    string? Media = null)
 {
     public string Describe()
     {
@@ -309,6 +316,27 @@ public sealed class RecordingBotApi : IDisposable
                 : ParseJson(method, body);
             if (call != null) { lock (_gate) _calls.Add(call); }
 
+            // PK3.1: a media group answers with one message per item, as the real API does - an
+            // object here would hide whether the sender reads every id or only the first.
+            if (string.Equals(method, "sendMediaGroup", StringComparison.Ordinal))
+            {
+                var items = Math.Max(1, call?.FileCount ?? 1);
+                var messages = Enumerable.Range(0, items).Select(i =>
+                    "{\"message_id\":" + (AssignedMessageId + i).ToString(CultureInfo.InvariantCulture) + "}");
+                await RespondAsync(ctx, "{\"ok\":true,\"result\":[" + string.Join(",", messages) + "]}").ConfigureAwait(false);
+                continue;
+            }
+
+            // PK3.1: a message id this stub never assigned cannot be reacted to or deleted - the real
+            // API's refusal, in its own words, so a sender's "why not" can be asserted.
+            if (method is "setMessageReaction" or "deleteMessage" && call?.Json is { } json
+                && json.Contains("\"message_id\":404", StringComparison.Ordinal))
+            {
+                await RespondAsync(ctx, """{"ok":false,"error_code":400,"description":"Bad Request: message to delete not found"}""",
+                    HttpStatusCode.BadRequest).ConfigureAwait(false);
+                continue;
+            }
+
             await RespondAsync(ctx,
                 "{\"ok\":true,\"result\":{\"message_id\":"
                 + AssignedMessageId.ToString(CultureInfo.InvariantCulture) + "}}").ConfigureAwait(false);
@@ -349,7 +377,8 @@ public sealed class RecordingBotApi : IDisposable
             Bool(root, "allow_sending_without_reply"),
             Num(root, "message_thread_id"),
             null, null, 0, Str(root, "chat_id"),
-            root.TryGetProperty("reply_markup", out var markup) ? markup.GetRawText() : null);
+            root.TryGetProperty("reply_markup", out var markup) ? markup.GetRawText() : null,
+            body);
     }
 
     /// <summary>A hand-rolled multipart reader, deliberately: the point of this stub is to see the
@@ -361,6 +390,7 @@ public sealed class RecordingBotApi : IDisposable
         var fields = new Dictionary<string, string>(StringComparer.Ordinal);
         string? fileField = null, fileName = null;
         long fileBytes = 0;
+        var fileCount = 0;
 
         foreach (var raw in body.Split(boundary, StringSplitOptions.None))
         {
@@ -376,7 +406,7 @@ public sealed class RecordingBotApi : IDisposable
             var filename = Param(headers, "filename");
             // value is Latin-1 so the file's byte count is exact; the TEXT fields have to be decoded
             // back out of it, or every "·" in the identity stamp reads as "Â·".
-            if (filename != null) { fileField = name; fileName = Utf8(filename); fileBytes = value.Length; }
+            if (filename != null) { fileField = name; fileName = Utf8(filename); fileBytes = value.Length; fileCount++; }
             else fields[name] = Utf8(value);
         }
 
@@ -388,7 +418,8 @@ public sealed class RecordingBotApi : IDisposable
             Parse(fields.GetValueOrDefault("reply_to_message_id")),
             string.Equals(fields.GetValueOrDefault("allow_sending_without_reply"), "True", StringComparison.OrdinalIgnoreCase),
             Parse(fields.GetValueOrDefault("message_thread_id")),
-            fileField, fileName, fileBytes, fields.GetValueOrDefault("chat_id"));
+            fileField, fileName, fileBytes, fields.GetValueOrDefault("chat_id"),
+            fields.GetValueOrDefault("reply_markup"), null, fileCount, fields.GetValueOrDefault("media"));
     }
 
     /// <summary>Reads <c>key=value</c> or <c>key="value"</c> out of a Content-Disposition header.

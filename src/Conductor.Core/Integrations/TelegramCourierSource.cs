@@ -61,6 +61,7 @@ public sealed class TelegramCourierSource : ICourierSource, IDisposable
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(65) };
     private readonly CourierSettings _settings;
     private readonly TelegramMediaFetcher _media;
+    private readonly TelegramSender _sender;
     private readonly string _apiBase;
     private readonly string _token;
     private readonly string _mediaDir;
@@ -82,6 +83,7 @@ public sealed class TelegramCourierSource : ICourierSource, IDisposable
         _apiBase = root.TrimEnd('/') + "/bot";
         _mediaDir = CourierHome.MediaDirFor(stateHomeRoot);
         _media = new TelegramMediaFetcher(_http, _apiBase, _token, () => _mediaDir, log);
+        _sender = new TelegramSender(_http, _apiBase, _token);
     }
 
     /// <summary>The bot, by name where it will say — never the token, which shares a string with the
@@ -210,7 +212,7 @@ public sealed class TelegramCourierSource : ICourierSource, IDisposable
     {
         var payload = Payload(chatId, text);
         if (threadId is { } thread) payload["message_thread_id"] = thread;
-        if (Keyboard(buttons) is { } keyboard) payload["reply_markup"] = keyboard;
+        if (TelegramSender.Keyboard(buttons) is { } keyboard) payload["reply_markup"] = keyboard;
 
         // A reply that does not arrive costs the receipt, never the note: the note is already on
         // disk by the time this runs, which is the ordering RemoteSurface established at DV3.1.
@@ -219,29 +221,75 @@ public sealed class TelegramCourierSource : ICourierSource, IDisposable
     }
 
     /// <inheritdoc />
-    public async Task<string?> SendAsync(CourierPush push, CancellationToken ct)
+    public Task<CourierAck> SendAsync(CourierPush push, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(push);
+        return SendAsync(AsSend(push), push.ChatId, ct);
+    }
 
-        var text = push.Stamped();
+    /// <summary>A run's push as a protocol-3 send - the same bytes TelegramService would have put on
+    /// the wire itself. Bug #76: until PK3.1 an artifact was delivered as a line naming its path,
+    /// because the courier had no upload path. Now it uploads, by the run's own rule
+    /// (<see cref="TelegramLimits.MethodFor"/>): a visual file inline when it fits the photo ceiling,
+    /// a document when it does not, and named in the text only when it is past both or unreadable.</summary>
+    internal static CourierSend AsSend(CourierPush push)
+    {
+        var silent = push.ParsedSeverity() == PushSeverity.Quiet;
+        if (push.AttachmentPath is not { Length: > 0 } artifact)
+            return new CourierSend(push.ChatId, push.Stamped(), Silent: silent, Buttons: push.Buttons,
+                Stamp: push.Stamp, Origin: push.Origin, Protocol: push.Protocol);
 
-        // DV4.3 scope, stated rather than hidden. The daemon carries text and buttons; it does not
-        // yet upload files, and the multipart path that does lives on TelegramService coupled to a
-        // composer and a message anchor the courier has neither of. A push with an artifact is
-        // therefore delivered as its text plus a line NAMING the file and where it is - the same
-        // shape TelegramService already uses for an artifact over the size limit, and the opposite
-        // of the silent drop findings 1.2 gap 2 is about. Tracked, not forgotten.
-        if (push.AttachmentPath is { Length: > 0 } artifact)
-            text += "\n<i>not attached - the courier does not carry files; it is at "
-                  + MessageComposer.EscapeHtml(artifact) + "</i>";
+        var bytes = TelegramService.FileSize(artifact);
+        var method = bytes >= 0 ? TelegramLimits.MethodFor(push.AttachmentAsPhoto, bytes) : null;
+        if (method is null)
+        {
+            var why = bytes < 0
+                ? "the file is not readable from the courier; it is at " + artifact
+                : $"{(bytes / (1024.0 * 1024.0)).ToString("0.#", CultureInfo.InvariantCulture)} MB is over Telegram's "
+                  + $"{(TelegramLimits.MaxDocumentBytes / (1024 * 1024)).ToString(CultureInfo.InvariantCulture)} MB limit; it is at {artifact}";
+            return new CourierSend(push.ChatId, push.Stamped() + "\n<i>not attached - " + MessageComposer.EscapeHtml(why) + "</i>",
+                Silent: silent, Buttons: push.Buttons, Stamp: push.Stamp, Origin: push.Origin, Protocol: push.Protocol);
+        }
 
-        var payload = Payload(push.ChatId, text);
-        payload["disable_notification"] = push.ParsedSeverity() == PushSeverity.Quiet;
-        if (Keyboard(push.Buttons) is { } keyboard) payload["reply_markup"] = keyboard;
+        // The caption carries the stamp as the run's own caption does, clipped one short of the
+        // ceiling because the clip's ellipsis is a character too.
+        var caption = string.IsNullOrWhiteSpace(push.Stamp)
+            ? push.AttachmentCaption ?? ""
+            : push.Stamp + "\n" + (push.AttachmentCaption ?? "");
+        caption = MessageComposer.Clip(caption, TelegramLimits.MaxCaptionChars - 1);
+        IReadOnlyList<string> file = [artifact];
+        return method == "sendPhoto"
+            ? new CourierSend(push.ChatId, caption, Photos: file, Silent: silent, Buttons: push.Buttons,
+                Stamp: push.Stamp, Origin: push.Origin, Protocol: push.Protocol)
+            : new CourierSend(push.ChatId, caption, Documents: file, Silent: silent, Buttons: push.Buttons,
+                Stamp: push.Stamp, Origin: push.Origin, Protocol: push.Protocol);
+    }
 
-        var why = await PostAsync(push.ChatId, payload, ct).ConfigureAwait(false);
-        if (why is { Length: > 0 })
-            _log.LogWarning("Courier push to chat {Chat} failed: {Why}", push.ChatId, why);
+    /// <inheritdoc />
+    public async Task<CourierAck> SendAsync(CourierSend send, string chatId, CancellationToken ct)
+    {
+        var ack = await _sender.SendAsync(send, chatId, ct).ConfigureAwait(false);
+        if (ack.Accepted)
+            _log.LogInformation("Courier sent to chat {Chat} for {Origin}: message ids {Ids}", chatId,
+                send.Origin ?? "an unnamed sender", string.Join(",", ack.MessageIds ?? []));
+        else
+            _log.LogWarning("Courier send to chat {Chat} failed: {Why}", chatId, ack.Detail);
+        return ack;
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> ReactAsync(string chatId, long messageId, string emoji, CancellationToken ct)
+    {
+        var why = await _sender.ReactAsync(chatId, messageId, emoji, ct).ConfigureAwait(false);
+        if (why is not null) _log.LogWarning("Courier reaction on message {Id} in chat {Chat} failed: {Why}", messageId, chatId, why);
+        return why;
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> DeleteAsync(string chatId, long messageId, CancellationToken ct)
+    {
+        var why = await _sender.DeleteAsync(chatId, messageId, ct).ConfigureAwait(false);
+        if (why is not null) _log.LogWarning("Courier delete of message {Id} in chat {Chat} failed: {Why}", messageId, chatId, why);
         return why;
     }
 
@@ -254,24 +302,6 @@ public sealed class TelegramCourierSource : ICourierSource, IDisposable
             ["disable_web_page_preview"] = true,
         };
 
-    /// <summary>KS11.1's rule at the courier's end: buttons cross the seam as themselves and only
-    /// the adapter knows what an inline keyboard looks like on the wire.</summary>
-    private static object? Keyboard(IReadOnlyList<CourierButton>? buttons) =>
-        buttons is { Count: > 0 }
-            ? new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["inline_keyboard"] = buttons
-                    .Select(b => new[]
-                    {
-                        new Dictionary<string, string>(StringComparer.Ordinal)
-                        {
-                            ["text"] = b.Text,
-                            ["callback_data"] = b.CallbackData,
-                        },
-                    })
-                    .ToArray(),
-            }
-            : null;
 
     /// <summary>One sendMessage, and why it did not go out. Never throws: both callers are on a path
     /// where an exception would cost something already on disk.</summary>

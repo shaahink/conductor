@@ -436,7 +436,16 @@ public sealed class DV4_1CourierTests : IDisposable
             IReadOnlyList<CourierButton>? buttons = null) =>
             throw new KilledException();
 
-        public Task<string?> SendAsync(CourierPush push, CancellationToken ct) =>
+        public Task<CourierAck> SendAsync(CourierPush push, CancellationToken ct) =>
+            throw new KilledException();
+
+        public Task<CourierAck> SendAsync(CourierSend send, string chatId, CancellationToken ct) =>
+            throw new KilledException();
+
+        public Task<string?> ReactAsync(string chatId, long messageId, string emoji, CancellationToken ct) =>
+            throw new KilledException();
+
+        public Task<string?> DeleteAsync(string chatId, long messageId, CancellationToken ct) =>
             throw new KilledException();
     }
 

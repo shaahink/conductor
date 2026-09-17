@@ -39,6 +39,7 @@ public sealed class KS11_1SeamBoundaryTests
         "TelegramService.TestConnection.cs",   // DV3 fix: the Test button's leg, split off the 500-line ceiling
         "TelegramReadiness.cs",
         "TelegramLimits.cs",
+        "TelegramSender.cs",             // PK3.1: protocol 3 sends, reactions and deletes with the ids that come back
         "NoOpRunNotifier.cs",
         "SecretsStore.cs",       // reads the bot token out of the state dir; named for what it stores
         "ParkNotifier.cs",       // wraps IRunNotifier to mute a channel; never touches the wire

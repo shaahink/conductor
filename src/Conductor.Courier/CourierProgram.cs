@@ -149,7 +149,9 @@ public static class CourierProgram
         var secret = CourierSecret.Resolve();
         using var listener = options.Once
             ? null
-            : new CourierListener(() => presence, (push, c) => DeliverAsync(source, push, c), secret, log);
+            : new CourierListener(() => presence,
+                new CourierDesk(source, courier, stateHomeRoot: null, log: m => log.LogWarning("{Line}", m)),
+                secret, log);
 
         if (listener is not null) presence = Listen(listener, presence, log);
 
@@ -255,20 +257,5 @@ public static class CourierProgram
         // no run alive at all, and they do not need a socket.
         log.LogWarning("Courier has no loopback listener: {Why}", refused);
         return presence;
-    }
-
-    /// <summary>What the daemon does with a push a run handed over the loopback seam.
-    ///
-    /// <para>The chat comes from the RUN, not from the courier's allowlist, and that is deliberate:
-    /// the allowlist governs what the courier will FILE against - which checkouts on this disk a
-    /// stranger's message can reach - while the chats a run pushes to are the run's own plan, and
-    /// were reachable by that run when it held the token itself. Delivering them grants no authority
-    /// that did not already exist; refusing them would silently break every plan that names a
-    /// stakeholder group this machine does not answer.</para></summary>
-    private static async Task<CourierAck> DeliverAsync(ICourierSource source, CourierPush push,
-        CancellationToken ct)
-    {
-        var why = await source.SendAsync(push, ct).ConfigureAwait(false);
-        return why is { Length: > 0 } ? new CourierAck(false, why) : new CourierAck(true);
     }
 }

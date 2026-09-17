@@ -28,7 +28,7 @@ namespace Conductor.Courier;
 public sealed class CourierListener : IDisposable
 {
     private readonly Func<CourierPresence> _presence;
-    private readonly Func<CourierPush, CancellationToken, Task<CourierAck>> _onPush;
+    private readonly ICourierDesk _desk;
     private readonly ILogger _log;
     private readonly string _secret;
     private readonly CancellationTokenSource _cts = new();
@@ -40,16 +40,17 @@ public sealed class CourierListener : IDisposable
 
     /// <param name="presence">What to answer the hello with — the daemon's own record, read fresh so
     /// the socket and the file can never disagree about what is running.</param>
-    /// <param name="onPush">What the daemon does with a push. Returns the ack the run prints.</param>
+    /// <param name="desk">What the daemon does with each verb (PK3.1): a push, a send, a reaction, a
+    /// delete, the chat list. Returns the ack the caller prints.</param>
     /// <param name="secret">This install's shared secret.</param>
     /// <param name="log">Where refusals go.</param>
     /// <param name="port">The port to bind, or null for <see cref="CourierEndpoint.Port"/>.</param>
     public CourierListener(Func<CourierPresence> presence,
-        Func<CourierPush, CancellationToken, Task<CourierAck>> onPush,
+        ICourierDesk desk,
         string secret, ILogger log, int? port = null)
     {
         _presence = presence;
-        _onPush = onPush;
+        _desk = desk;
         _secret = secret;
         _log = log;
         Port = port ?? CourierEndpoint.Port;
@@ -126,6 +127,18 @@ public sealed class CourierListener : IDisposable
                 case ("POST", CourierEndpoint.PushPath):
                     await HandlePushAsync(ctx, ct).ConfigureAwait(false);
                     break;
+                case ("POST", CourierEndpoint.SendPath):
+                    await HandleAsync<CourierSend>(ctx, "send", s => s.Protocol, _desk.SendAsync, ct).ConfigureAwait(false);
+                    break;
+                case ("POST", CourierEndpoint.ReactPath):
+                    await HandleAsync<CourierReact>(ctx, "reaction", r => r.Protocol, _desk.ReactAsync, ct).ConfigureAwait(false);
+                    break;
+                case ("POST", CourierEndpoint.DeletePath):
+                    await HandleAsync<CourierDelete>(ctx, "delete", d => d.Protocol, _desk.DeleteAsync, ct).ConfigureAwait(false);
+                    break;
+                case ("GET", CourierEndpoint.ChatsPath):
+                    await WriteAsync(ctx, HttpStatusCode.OK, _desk.Chats()).ConfigureAwait(false);
+                    break;
                 default:
                     ctx.Response.StatusCode = 404;
                     ctx.Response.Close();
@@ -141,19 +154,8 @@ public sealed class CourierListener : IDisposable
 
     private async Task HandlePushAsync(HttpListenerContext ctx, CancellationToken ct)
     {
-        CourierPush? push;
-        try
-        {
-            using var reader = new StreamReader(ctx.Request.InputStream, Encoding.UTF8);
-            var body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
-            push = JsonSerializer.Deserialize<CourierPush>(body, CourierJson.Options);
-        }
-        catch (Exception ex) when (ex is JsonException or IOException)
-        {
-            await WriteAsync(ctx, HttpStatusCode.BadRequest,
-                new CourierAck(false, "the push was not readable: " + ex.Message)).ConfigureAwait(false);
-            return;
-        }
+        var (push, unreadable) = await ReadAsync<CourierPush>(ctx, "push", ct).ConfigureAwait(false);
+        if (unreadable) return;
 
         if (push is null || string.IsNullOrWhiteSpace(push.ChatId))
         {
@@ -162,21 +164,67 @@ public sealed class CourierListener : IDisposable
             return;
         }
 
-        // The version handshake runs in BOTH directions. RefuseStale covers the run refusing an old
-        // courier; this is the other half — a run from a newer engine, whose push may mean something
-        // this build does not know, is refused by name instead of half-delivered.
-        if (push.Protocol > CourierProtocol.Version)
+        // A protocol-2 push is taken as it always was (PK3.1): the engine that pushes it may be the
+        // installed one, and it has not heard of /send.
+        if (await RefusedNewerAsync(ctx, push.Protocol).ConfigureAwait(false)) return;
+
+        var ack = await _desk.PushAsync(push, ct).ConfigureAwait(false);
+        await WriteAsync(ctx, ack.Accepted ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable, ack)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>PK3.1 - one protocol-3 verb: read the body, refuse a newer protocol by name, hand it
+    /// to the desk, answer with its ack. The status says accepted or not; the ack says why.</summary>
+    private async Task HandleAsync<T>(HttpListenerContext ctx, string what, Func<T, int> protocol,
+        Func<T, CancellationToken, Task<CourierAck>> act, CancellationToken ct) where T : class
+    {
+        var (body, unreadable) = await ReadAsync<T>(ctx, what, ct).ConfigureAwait(false);
+        if (unreadable) return;
+        if (body is null)
         {
-            await WriteAsync(ctx, HttpStatusCode.Conflict, new CourierAck(false,
-                $"this courier speaks protocol {CourierProtocol.Version.ToString(CultureInfo.InvariantCulture)}; "
-              + $"the run speaks {push.Protocol.ToString(CultureInfo.InvariantCulture)}. "
-              + "Restart it: " + CourierProtocol.RestartVerb)).ConfigureAwait(false);
+            await WriteAsync(ctx, HttpStatusCode.BadRequest,
+                new CourierAck(false, $"the {what} had no body.")).ConfigureAwait(false);
             return;
         }
 
-        var ack = await _onPush(push, ct).ConfigureAwait(false);
+        if (await RefusedNewerAsync(ctx, protocol(body)).ConfigureAwait(false)) return;
+
+        var ack = await act(body, ct).ConfigureAwait(false);
         await WriteAsync(ctx, ack.Accepted ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable, ack)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>The body as <typeparamref name="T"/>. When it cannot be read the 400 is already
+    /// written and <c>Unreadable</c> is true.</summary>
+    private static async Task<(T? Body, bool Unreadable)> ReadAsync<T>(HttpListenerContext ctx, string what,
+        CancellationToken ct) where T : class
+    {
+        try
+        {
+            using var reader = new StreamReader(ctx.Request.InputStream, Encoding.UTF8);
+            var body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+            return (JsonSerializer.Deserialize<T>(body, CourierJson.Options), false);
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or NotSupportedException)
+        {
+            await WriteAsync(ctx, HttpStatusCode.BadRequest,
+                new CourierAck(false, $"the {what} was not readable: " + ex.Message)).ConfigureAwait(false);
+            return (null, true);
+        }
+    }
+
+    /// <summary>The version handshake runs in BOTH directions. RefuseStale covers the run refusing an
+    /// old courier; this is the other half - a sender from a newer engine, whose request may mean
+    /// something this build does not know, is refused by name instead of half-delivered.</summary>
+    private static async Task<bool> RefusedNewerAsync(HttpListenerContext ctx, int protocol)
+    {
+        if (protocol <= CourierProtocol.Version) return false;
+
+        await WriteAsync(ctx, HttpStatusCode.Conflict, new CourierAck(false,
+            $"this courier speaks protocol {CourierProtocol.Version.ToString(CultureInfo.InvariantCulture)}; "
+          + $"the run speaks {protocol.ToString(CultureInfo.InvariantCulture)}. "
+          + "Restart it: " + CourierProtocol.RestartVerb)).ConfigureAwait(false);
+        return true;
     }
 
     private static async Task WriteAsync<T>(HttpListenerContext ctx, HttpStatusCode status, T payload)

@@ -150,4 +150,54 @@ public sealed class CourierSettings
         }
         return null;
     }
+
+    /// <summary>PK3.1 / D5 - the chats as <c>GET /chats</c> serves them: each id with the profile
+    /// <see cref="ProfileFor"/> resolves it to, so an unnamed profile reads as the admin it behaves as.</summary>
+    public IReadOnlyList<CourierChat> ChatList() =>
+        [.. Chats
+            .Where(c => !string.IsNullOrWhiteSpace(c.ChatId))
+            .Select(c => new CourierChat(c.ChatId, ChatProfiles.Name(ProfileFor(c.ChatId) ?? ChatProfile.Observer)))];
+
+    /// <summary>PK3.1 / D5 - the chat id a sender means. An id (or an <c>@channel</c> name) is taken
+    /// as written: whoever holds this install's secret could reach any chat with the token anyway, and
+    /// the allowlist governs what the courier FILES, not where a local sender may speak. A profile name
+    /// resolves only when exactly one listed chat has it - two admin chats is a question, and a courier
+    /// that picked one would put a message in front of the wrong people.</summary>
+    /// <param name="chat">What the sender named.</param>
+    /// <param name="refusal">Why it names nothing, or null.</param>
+    public string? ChatFor(string? chat, out string? refusal)
+    {
+        var named = chat?.Trim();
+        if (string.IsNullOrEmpty(named))
+        {
+            refusal = "a send has to name its chat - an id, or a profile: " + string.Join(", ", ChatProfiles.Names) + ".";
+            return null;
+        }
+
+        if (named[0] == '@' || long.TryParse(named, System.Globalization.NumberStyles.AllowLeadingSign,
+                System.Globalization.CultureInfo.InvariantCulture, out _))
+        {
+            refusal = null;
+            return named;
+        }
+
+        if (ChatProfiles.TryParse(named) is not { } profile)
+        {
+            refusal = $"\"{named}\" is neither a chat id nor a profile; the profiles are "
+                    + string.Join(", ", ChatProfiles.Names) + ".";
+            return null;
+        }
+
+        var matches = ChatList().Where(c => c.Profile == ChatProfiles.Name(profile)).ToList();
+        if (matches.Count == 1)
+        {
+            refusal = null;
+            return matches[0].ChatId;
+        }
+
+        refusal = matches.Count == 0
+            ? $"this courier lists no {ChatProfiles.Name(profile)} chat. Add one: conductor courier chat --id <id> --profile {ChatProfiles.Name(profile)}"
+            : $"this courier lists {matches.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)} {ChatProfiles.Name(profile)} chats; name the one you mean by id.";
+        return null;
+    }
 }

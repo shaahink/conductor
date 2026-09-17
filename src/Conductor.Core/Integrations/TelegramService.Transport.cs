@@ -143,7 +143,7 @@ public sealed partial class TelegramService
 
     /// <remarks>The null-out is not ceremony: <see cref="MultipartFormDataContent"/> takes ownership
     /// only once <c>Add</c> has returned, so a throw from <c>Add</c> leaves a part nobody owns.</remarks>
-    private static void AddField(MultipartFormDataContent form, string name, string value)
+    internal static void AddField(MultipartFormDataContent form, string name, string value)
     {
         StringContent? part = null;
         try
@@ -158,7 +158,7 @@ public sealed partial class TelegramService
     /// <summary>The bytes themselves. Read into memory rather than streamed: the caller has already
     /// refused anything over 50 MB, and a stream would have to outlive this method's scope while the
     /// form owns it — which is how a file handle gets held open on a repo the run is still writing.</summary>
-    private static async Task AddFileAsync(MultipartFormDataContent form, string field, string path,
+    internal static async Task AddFileAsync(MultipartFormDataContent form, string field, string path,
         CancellationToken ct)
     {
         ByteArrayContent? part = null;
@@ -175,7 +175,7 @@ public sealed partial class TelegramService
     /// <summary>Room for the longest "\n&lt;i&gt;(nnn/nnn)&lt;/i&gt;" a chunked message can carry.</summary>
     private const int ChunkCounterReserve = 24;
 
-    private static long FileSize(string path)
+    internal static long FileSize(string path)
     {
         try { return new FileInfo(path).Length; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return -1; }
