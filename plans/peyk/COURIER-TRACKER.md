@@ -3,13 +3,13 @@
 **Plan:** Peyk courier - the courier stands on its own | **Branch:** `feat/peyk-courier` | **Design doc:** docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: FIX s2 - PK1 battery was red on ONE test, KS11_1SeamBoundaryTests.Only_the_declared_adapter_files_name_a_telegram_type. PK1.1 had moved RetentionNotice (a string literal "Telegram keeps...") into CourierDaemon.cs and StartBlocker (naming TelegramCourierSource.TokenEnvVar) into CourierSettings.cs. The ratchet strips comments, not strings, and scans src/Conductor.Core. Fixed by MOVING both to TelegramCourierSource.cs (already on the adapter list); the list is untouched. Callers: CourierCommand.cs, CourierProgram.cs. Affected classes 64/64 in .conductor/evidence/PK1/pk1.1-fix-seam-boundary-tests.log.
-  Rule for later stages: anything courier-side that names the messenger, even inside a string, goes in the adapter file, not in Core/Courier/.
-  PK1.1 (ba634a8, rig tools/peyk/pk1-1-live-proof.ps1 13/13): src/Conductor.Courier -> Core only builds conductor-courier.exe; `conductor courier run` is an alias starting it in a kill-on-close job; ArchitectureBoundaryTests holds courier->core, a seeded violation, and a check that the engine never links the courier.
-  PK1.2 (rig tools/peyk/pk1-2-live-proof.ps1 27/27 on c50bf01): a courier BESIDE the engine still locks the shared dlls, so an install puts the courier in <install>\courier. install.ps1 leaves an own-directory courier running; -CourierOnly [-NoCourierStart] stops, republishes and re-registers it without touching conductor.exe (it registers via this tree's src/Conductor/bin engine).
-  For PK2.3: the real task still runs v0.5.0 `<install>\conductor.exe courier run`; `tools/install.ps1 -CourierOnly` is the arming act. A rig can never START a scheduled task - it runs with the machine's real env, token and courier home.
-  Findings: an orphaned courier inherits its parent's pipes; Get-FileHash is not loadable in a 5.1 child of pwsh 7; `-clp:X` through $args splits in 5.1. Bug #97: presence `engine` = Core AssemblyVersion 0.0.0.0 (CourierPresence.cs:60) - PK2.1 touches that record.
-next: PK2.1 - heartbeat in the presence record; courier status alive/stale/dead; a presence file found at startup becomes a journaled death record. Read D2 and stage PK2 of the design doc. Scratch courier home and port for every proof.
+
+last: s4 PK2.1 CLAIMED (4affb95 code, 1334051 rig, f1c1a31 evidence; rig tools/peyk/pk2-1-live-proof.ps1 18/18). courier.run.json carries lastPollUtc, beaten every loop iteration incl. failed polls (CourierDaemon `beat` hook, written by CourierProgram). CourierVitals (Core/Courier) = absent/alive/stale/dead/unmetered; stale after 2*(65s + max(60s, interval)) = 250s at 4s. `courier status` prints a `life:` line and a json `vitals` block; when dead/stale it also reads the task's last run. Startup journals `previous courier pid N died silently; last poll T; task last-run result R` (CourierProgram.DeathRecordAsync, CourierTask.LastRunAsync reads /V CSV cols 5-6 by position). Bug #97 fixed+closed (engine = EngineStamp.Current.Full).
+  MEASURED: while a task instance runs, schtasks Last Result = 267009 (0x41301). A courier restarted BY ITS OWN TASK finds its predecessor's exit code already overwritten; the text says so. PK2.2's boundary restart must read LastRunAsync BEFORE schtasks /Run and carry it in its log/owner-queue line.
+  Rig trick that works: a scratch scheduled task whose action is `cmd /c exit 3` gives a real scheduler result without ever starting a courier under the machine's env.
+  Rule from PK1: anything courier-side that names the messenger, even in a string, goes in TelegramCourierSource.cs (KS11_1 ratchet scans Core strings).
+  For PK2.3: the real task still runs v0.5.0 `<install>\conductor.exe courier run`; `tools/install.ps1 -CourierOnly` (PK1.2) is the arming act. A pre-PK2.1 courier reads `unmetered` in the new status.
+next: PK2.2 - ProcessExit + unhandled-exception journaling in CourierProgram; keep-alive trigger (5-min repeating calendar trigger, IgnoreNew) in CourierTask.BuildXml proven by registering a scratch --task-name and reading back schtasks /query /xml; the run-boundary stale check that starts the task and queues `courier restarted by this run, Nth time`. Read D2(c-e) and the PK2 row.
 
 ## Baseline numbers (from run.db)
 
@@ -28,7 +28,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| PK1.1 | src/Conductor.Courier is its own project, referencing Conductor.Core and nothing else, building conductor-courier.exe; conductor courier run execs it; ArchitectureBoundaryTests carries the rule and names a seeded violation | DONE | ba634a8 | .conductor/evidence/PK1/pk1.1-live-proof.log |
+| PK1.1 | src/Conductor.Courier is its own project, referencing Conductor.Core and nothing else, building conductor-courier.exe; conductor courier run execs it; ArchitectureBoundaryTests carries the rule and names a seeded violation | DONE | ba634a8 | .conductor/evidence/PK1/pk1.1-fix-seam-boundary-tests.log |
 | PK1.2 | tools/install.ps1 publishes both binaries and no longer stops the courier to publish the engine; proven against a scratch install path with a scratch courier live (no restart in its log); release preflight green on the courier check | DONE | ba634a8 | .conductor/evidence/PK1/pk1.2-live-proof.log |
 
 ### PK2 — Alive, or known dead
