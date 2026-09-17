@@ -49,6 +49,9 @@ function Native() {
     $script:lastExit = $LASTEXITCODE
     return $out
 }
+# Get-FileHash is not loadable when this runs as a Windows PowerShell 5.1 child of pwsh 7 (the
+# inherited PSModulePath points at 7's modules), so the hash is taken with the BCL directly.
+function Sha256($path) { [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash([IO.File]::ReadAllBytes($path))) -replace "-", "" }
 function StartLog() { @(Get-Content $logPath -ErrorAction SilentlyContinue | Where-Object { $_ -match "courier run starting" }).Count }
 function TaskXml() { (Native schtasks.exe /Query /TN $TaskName /XML) -join "`n" }
 
@@ -100,6 +103,7 @@ try {
 
     Section "0. the repo's fresh build (for release preflight)"
     $o = Native dotnet build Conductor.slnx -clp:ErrorsOnly
+    if ($lastExit -ne 0) { $o | Select-Object -Last 15 | ForEach-Object { "  | $_" } }
     Check "fresh build" ($lastExit -eq 0) ("exit=" + $lastExit)
     $fresh = Join-Path $RepoRoot "src\Conductor\bin\Debug\net10.0\conductor.exe"
 
@@ -168,7 +172,7 @@ try {
 
     # ---- 5 -------------------------------------------------------------------------------------
     Section "5. -CourierOnly replaces the courier and never touches conductor.exe"
-    $hashBefore = (Get-FileHash $engineExe -Algorithm SHA256).Hash
+    $hashBefore = Sha256 $engineExe
     $timeBefore = (Get-Item $engineExe).LastWriteTimeUtc
     Get-ChildItem (Join-Path $install "courier") -File | ForEach-Object { try { $_.LastWriteTime = [datetime]"2000-01-01" } catch { } }
     $courierBefore = (Get-Item (Join-Path $install "courier\Conductor.Core.dll")).LastWriteTimeUtc
@@ -179,7 +183,7 @@ try {
     Check "the live courier was stopped" $courier.HasExited ("pid $($courier.Id) exited=" + $courier.HasExited)
     $courierAfter = (Get-Item (Join-Path $install "courier\Conductor.Core.dll")).LastWriteTimeUtc
     Check "the courier's directory was republished" ($courierAfter -gt $courierBefore) ("{0} -> {1}" -f $courierBefore.ToString('u'), $courierAfter.ToString('u'))
-    $hashAfter = (Get-FileHash $engineExe -Algorithm SHA256).Hash
+    $hashAfter = Sha256 $engineExe
     $timeAfter = (Get-Item $engineExe).LastWriteTimeUtc
     Check "conductor.exe untouched (hash)" ($hashAfter -eq $hashBefore) $hashAfter
     Check "conductor.exe untouched (timestamp)" ($timeAfter -eq $timeBefore) $timeAfter.ToString('u')
