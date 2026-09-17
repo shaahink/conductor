@@ -123,7 +123,7 @@ public sealed class PK4_1RoomsTests : IDisposable
         var plan = new TelegramConfig { Chats = [new TelegramChatEntry { ChatId = AdminChat }] };
         var courier = new CourierSettings { Chats = [new CourierChat(GroupChat, "observer"), new CourierChat("123", "admin")] };
 
-        var room = Rooms.Resolve(repo, plan, courier, _stateHome);
+        var room = Rooms.Resolve(repo, plan.ResolvedChats(), courier, _stateHome);
         Assert.NotNull(room);
         Assert.Equal("unmigrated", room.Project);
         Assert.Equal(AdminChat, room.Chats.Admin);            // the plan's, not the courier's 123
@@ -132,9 +132,9 @@ public sealed class PK4_1RoomsTests : IDisposable
 
         // Two observer groups on the machine is a guess, and a guess is a card in the wrong room.
         courier.Chats.Add(new CourierChat("-100222", "observer"));
-        Assert.Null(Rooms.Resolve(repo, plan, courier, _stateHome)?.Chats.Observer);
+        Assert.Null(Rooms.Resolve(repo, plan.ResolvedChats(), courier, _stateHome)?.Chats.Observer);
 
-        Assert.Null(Rooms.Resolve(repo, new TelegramConfig(), new CourierSettings(), _stateHome));
+        Assert.Null(Rooms.Resolve(repo, new TelegramConfig().ResolvedChats(), new CourierSettings(), _stateHome));
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public sealed class PK4_1RoomsTests : IDisposable
         Rooms.Save(new Room { Project = "cv", Chats = { Admin = AdminChat } }, _stateHome);
         var plan = new TelegramConfig { Chats = [new TelegramChatEntry { ChatId = "555", Profile = "observer" }] };
 
-        var room = Rooms.Resolve(repo, plan, new CourierSettings(), _stateHome);
+        var room = Rooms.Resolve(repo, plan.ResolvedChats(), new CourierSettings(), _stateHome);
         Assert.NotNull(room);
         Assert.Null(room.Chats.Observer);
         Assert.EndsWith("cv.json", room.Source, StringComparison.Ordinal);

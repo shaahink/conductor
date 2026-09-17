@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 
 using Conductor.Core.Integrations.Messaging;
 using Conductor.Core.Store;
-using Conductor.Models;
 
 namespace Conductor.Core.Courier;
 
@@ -175,8 +174,13 @@ public static class Rooms
     /// from what an unmigrated repo already had, so it keeps working: the plan's
     /// <c>telegram.chats</c> first, then the machine's <c>courier chat</c> entries for a profile the plan
     /// does not name. A profile is taken from the courier only when exactly one chat carries it — a
-    /// guess between two groups is a card in the wrong room. Null when nothing names a chat.</summary>
-    public static Room? Resolve(string repo, TelegramConfig? plan, CourierSettings? courier, string? stateHomeRoot = null)
+    /// guess between two groups is a card in the wrong room. Null when nothing names a chat.
+    ///
+    /// <para>The plan's chats arrive as plain (id, profile) pairs — the caller passes
+    /// <c>ResolvedChats()</c> — so a room stays a courier-home type and never names the messenger's
+    /// config (KS11.1's seam: only the declared adapter files may).</para></summary>
+    public static Room? Resolve(string repo, IEnumerable<(string ChatId, string? Profile)>? planChats,
+        CourierSettings? courier, string? stateHomeRoot = null)
     {
         if (Find(repo, stateHomeRoot) is { } room) return room;
 
@@ -187,9 +191,9 @@ public static class Rooms
             Repo = repo,
         };
         var sources = new List<string>();
-        if (plan is not null)
+        if (planChats is not null)
         {
-            var chats = plan.ResolvedChats().Select(c => (c.ChatId, c.Profile ?? ChatProfiles.AdminName)).ToList();
+            var chats = planChats.Select(c => (c.ChatId, c.Profile ?? ChatProfiles.AdminName)).ToList();
             assembled.Chats.Admin = OnlyChat(chats, ChatProfiles.AdminName);
             assembled.Chats.Observer = OnlyChat(chats, ChatProfiles.ObserverName);
             if (assembled.Chats.Admin is not null || assembled.Chats.Observer is not null) sources.Add("the plan's telegram.chats");
