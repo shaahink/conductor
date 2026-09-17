@@ -348,7 +348,8 @@ Its state lives at `<state home>/courier/` — `courier.json` (what you configur
 far it has acknowledged, written *after* each delivery is handled so a crash replays rather than
 loses), `courier.run.json` (what the running daemon says about itself: pid, protocol, engine, the exe
 it holds open, the task that started it, and `lastPollUtc`, rewritten every poll — written at startup,
-cleared on the way out, so a record nobody cleared is a death), `courier.log` (its own record,
+cleared on the way out, so a record nobody cleared is a death), `courier.secret` (the install secret
+every loopback request must carry), `courier.log` (its own record,
 including the death records and exit journal above), `rooms/` (see [Rooms](#rooms--where-a-project-speaks-kept-off-the-repo)), and `media/`
 (where bytes land before they are adopted into a project's inbox), and `messages.jsonl` — one line
 per message the courier put in a chat or took out of one: `id`, `chat`, `origin`, `stamp`, `when`,

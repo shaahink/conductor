@@ -1,0 +1,12 @@
+== seeded 1: ARCHITECTURE.md says 'declares exactly **thirteen**' (the pre-Peyk count), 2026-09-17T16:20:42.2348861Z
+Assert.Empty() Failure: Collection was not empty
+Collection: ["says thirteen, the source declares 15"]
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 62 ms - Conductor.Tests.dll (net10.0)
+== seeded 2: ADR-0009 loses its sixth condition heading (D4), 2026-09-17T16:20:44.0503182Z
+Assert.Empty() Failure: Collection was not empty
+Collection: ["5 numbered conditions, expected 6", "no new condition names D4"]
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 20 ms - Conductor.Tests.dll (net10.0)
+== restored both; git diff of the two files follows (must be empty)
+ docs/dev/adr/0009-the-courier-is-its-own-binary-and-one-wire.md | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+== note: the ADR-0009 diff above is this session's uncommitted wording edits (condition 2 sentence, condition 4 quote of 0008), made BEFORE the mutation run and restored byte-identically from the pre-mutation copy; ARCHITECTURE.md shows no diff.

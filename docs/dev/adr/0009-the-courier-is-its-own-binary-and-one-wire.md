@@ -49,8 +49,8 @@ file and no credential lifecycle. The listener moved into the courier's own proj
 ### 2. It is ingress for *notes*, never for *run state* — unchanged, and now read-only for figures too
 
 Nothing that arrives on the socket writes run state. Every new verb turns into a Telegram message, or
-into the undoing of one. Two things read a project's store and answer from it. The figure verbs
-(`/status`, `/progress`, `/money`, `/tokens`, `/evidence`, PK5.2) open that project's `run.db` with
+into the undoing of one. Only the figure verbs read a project's store, to answer from it:
+`/status`, `/progress`, `/money`, `/tokens` and `/evidence` (PK5.2) open that project's `run.db` with
 `SqliteRunStore.OpenReadOnly`, and the plan is pinned so that resolving the path does not upsert the
 state catalogue. The hello writes exactly one thing: an allowlist entry (condition 6). The phone still
 cannot change what a run decides. A note is still context, not a command.
@@ -64,6 +64,7 @@ is ledgered too, so anything sent can be replied to, reacted to or taken back.
 
 ### 4. Version skew is refused by name — and the courier binary, not the installer, carries the restart
 
+0008 said: *Version skew is refused by name, and the installer owns the restart.* The first half stands.
 `CourierProtocol.Version` is now **3** (`CourierProtocol.cs:32`), and a protocol-2 run's `/push` is still
 accepted for one era, so a run on the previous engine keeps working through a new courier. A courier
 that speaks an older protocol than the run is still refused by name, with its pid, its engine and
