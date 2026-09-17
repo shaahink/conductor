@@ -4,13 +4,14 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s4 delivered ALL of PK2, claimed: PK2.1 (4affb95; tools/peyk/pk2-1-live-proof.ps1 18/18), PK2.2 (be76d1f; tools/peyk/pk2-2-live-proof.ps1 25/25), PK2.3 (13c7d03; real courier armed). Evidence under .conductor/evidence/PK2/.
+last: s5 (FIX) made the engine-full red green: the battery failed ONLY on the architecture ratchet (both attempts) - CourierTask.cs held 4 types (PK2.1's CourierTaskRun) and OwnerQueue.cs was 502 lines (PK2.2's CollectCourierRestarts). Split by responsibility, baseline untouched: CourierTaskRun.cs, and OwnerQueue is partial with OwnerQueue.Surfaces.cs (dead channels, courier restarts, CI divergence). Narrow run 75/75; evidence .conductor/evidence/pk2-ratchet-fix.log. PK2.2 amended. RULE: run `dotnet test --filter ArchitectureTests` before any claim that adds a type or grows a file near 500 lines.
+  s4 delivered PK2: PK2.1 (4affb95, 18/18), PK2.2 (be76d1f, 25/25), PK2.3 (13c7d03, real courier armed). Evidence under .conductor/evidence/PK2/.
   ARMED: 2026-09-17T11:37:30Z, real 'Conductor Courier' task -> <install>\courier\conductor-courier.exe --task-name "Conductor Courier", PT5M keep-alive + logon + IgnoreNew, courier pid 20052, stamp 0.5.1-alpha.0.66+24dd990f19c5.dirty (dirty = REPORT.md only); conductor.exe untouched. Old task XML backup: %TEMP%\pk23-courier-task-backup-20260917T113522Z.xml.
   PK6.1 READING: `powershell -NoProfile -ExecutionPolicy Bypass -File tools/peyk/pk2-3-arm-real-courier.ps1 -ReadOnly` (changes nothing), then courier.log after 11:37:30Z: each `courier run starting` is a (re)start; the line before it names the exit (`courier run stopped: exit N` / `courier process exit ...` / `courier run DIED (unhandled ...)` / `courier received SIGTERM|SIGHUP`), else the start's `previous courier pid N died silently; last poll T; task last-run result R`. The FIRST death record (pid 7988, 11:37:31Z) is the installer's /End of the v0.5.0 courier - not a finding.
-  What PK2 built: heartbeat lastPollUtc (every ~34 s on the real courier); CourierVitals absent/alive/stale/dead/unmetered; `courier status` life line + json vitals; CourierExitJournal (ProcessExit/Unhandled/SIGTERM-HUP-QUIT); rig-only fault seam CONDUCTOR_COURIER_FAULT=exit0:N|throw:N; RunLoop spawn path -> RunContext.CheckCourierAsync -> CourierKeepAlive (never dry run; dead -> /Run, stale -> /End then /Run) -> RunState.CourierRestarts -> owner queue `courier restarted by this run, Nth time`.
-  MEASURED: keep-alive restarted an exit-0 courier in 272 s and 280 s, landing on five-minute marks; a no-trigger control never restarted (RestartOnFailure does not fire on 0). While a task instance runs schtasks Last Result = 267009, so a task-restarted courier never sees its predecessor's exit code - the run's boundary read and `courier status` (when dead) are where R survives.
-  Traps found: RunLoop sits at its CA1506 coupling ceiling - put boundary logic behind RunContext. A real poll is a 30 s long-poll, so a heartbeat check needs a window > 35 s. PS 5.1 Invoke-WebRequest keeps a non-2xx body only in ErrorDetails. Rewriting a .cmd while cmd.exe runs it corrupts its exit code. KS2_6ParkHygieneTests.TheSameParkHeldForSeconds... is load-timing (red once under the rig, 3/3 alone).
-  Bug #97 closed. Bug #93 left OPEN on purpose: the keep-alive ships, the cause is PK6.1's read-out. Rule from PK1: courier-side text naming the messenger goes in TelegramCourierSource.cs.
+  What PK2 built: heartbeat lastPollUtc (~34 s); CourierVitals absent/alive/stale/dead/unmetered; `courier status` life line + json vitals; CourierExitJournal (ProcessExit/Unhandled/SIGTERM-HUP-QUIT); rig-only fault seam CONDUCTOR_COURIER_FAULT=exit0:N|throw:N; RunContext.CheckCourierAsync -> CourierKeepAlive (dead -> /Run, stale -> /End then /Run) -> RunState.CourierRestarts -> owner queue `courier restarted by this run, Nth time`.
+  MEASURED: keep-alive restarted an exit-0 courier in 272 s and 280 s; a no-trigger control never restarted. While a task instance runs schtasks Last Result = 267009, so a task-restarted courier never sees its predecessor's exit code.
+  Traps: RunLoop sits at its CA1506 ceiling - boundary logic goes behind RunContext. A real poll is a 30 s long-poll, so a heartbeat check needs > 35 s. Rewriting a .cmd while cmd.exe runs it corrupts its exit code. KS2_6ParkHygieneTests.TheSameParkHeldForSeconds... is load-timing.
+  Bug #97 closed. Bug #93 left OPEN on purpose: the cause is PK6.1's read-out. Courier-side text naming the messenger goes in TelegramCourierSource.cs.
 next: PK3 per the plan (read its row and decisions in docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md). Do not restart, stop or reinstall the armed courier; PK6.1 only reads it.
 
 ## Baseline numbers (from run.db)
@@ -18,8 +19,8 @@ next: PK3 per the plan (read its row and decisions in docs/dev/NEXT-ERA-FINDINGS
 | Metric | Value |
 |---|---|
 | Total checkpoints | 17 |
-| Done | 0 |
-| Claimed (unconfirmed) | 2 |
+| Done | 2 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -30,16 +31,16 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| PK1.1 | src/Conductor.Courier is its own project, referencing Conductor.Core and nothing else, building conductor-courier.exe; conductor courier run execs it; ArchitectureBoundaryTests carries the rule and names a seeded violation | DONE | ba634a8 | .conductor/evidence/PK1/pk1.1-fix-seam-boundary-tests.log |
-| PK1.2 | tools/install.ps1 publishes both binaries and no longer stops the courier to publish the engine; proven against a scratch install path with a scratch courier live (no restart in its log); release preflight green on the courier check | DONE | ba634a8 | .conductor/evidence/PK1/pk1.2-live-proof.log |
+| PK1.1 | src/Conductor.Courier is its own project, referencing Conductor.Core and nothing else, building conductor-courier.exe; conductor courier run execs it; ArchitectureBoundaryTests carries the rule and names a seeded violation | DONE ✓ | ba634a8 | .conductor/evidence/PK1/pk1.1-fix-seam-boundary-tests.log |
+| PK1.2 | tools/install.ps1 publishes both binaries and no longer stops the courier to publish the engine; proven against a scratch install path with a scratch courier live (no restart in its log); release preflight green on the courier check | DONE ✓ | ba634a8 | .conductor/evidence/PK1/pk1.2-live-proof.log |
 
 ### PK2 — Alive, or known dead
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| PK2.1 | Heartbeat in the presence record; courier status prints alive / stale (last poll N min ago) / dead (last seen T); a presence file found at startup produces a journaled death record carrying the scheduler's last-run result. A scratch courier killed with Stop-Process reads dead with a time by the next status, and the next start logs the record | TODO | - | - |
-| PK2.2 | ProcessExit and unhandled-exception journaling; the keep-alive calendar trigger (every five minutes, IgnoreNew) in the task XML, proven by registering a scratch task and measuring the restart of a courier that exited 0; a run restarts a stale courier at the session boundary and says so in the log and the owner queue | TODO | - | - |
-| PK2.3 | The instruments armed on the real courier: install.ps1 -CourierOnly publishes conductor-courier.exe alone and re-registers the task with the keep-alive trigger (conductor.exe untouched); alive with a heartbeat, the task XML read back, one protocol-2 push landed; the arming time recorded for PK6.1's read-out | TODO | - | - |
+| PK2.1 | Heartbeat in the presence record; courier status prints alive / stale (last poll N min ago) / dead (last seen T); a presence file found at startup produces a journaled death record carrying the scheduler's last-run result. A scratch courier killed with Stop-Process reads dead with a time by the next status, and the next start logs the record | DONE | 4affb95 | .conductor/evidence/PK2/pk2.1-live-proof.log |
+| PK2.2 | ProcessExit and unhandled-exception journaling; the keep-alive calendar trigger (every five minutes, IgnoreNew) in the task XML, proven by registering a scratch task and measuring the restart of a courier that exited 0; a run restarts a stale courier at the session boundary and says so in the log and the owner queue | DONE | 4affb95 | .conductor/evidence/PK2/pk2.2-live-proof.log |
+| PK2.3 | The instruments armed on the real courier: install.ps1 -CourierOnly publishes conductor-courier.exe alone and re-registers the task with the keep-alive trigger (conductor.exe untouched); alive with a heartbeat, the task XML read back, one protocol-2 push landed; the arming time recorded for PK6.1's read-out | DONE | 4affb95 | .conductor/evidence/PK2/pk2.3-arming.log |
 
 ### PK3 — One transport
 

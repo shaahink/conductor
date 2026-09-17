@@ -1,0 +1,23 @@
+PK2 fix session #5 - the engine-full battery red on the architecture ratchet, made green without touching the rule
+date (UTC): 2026-09-17T12:02:52Z   base: 195ee71
+
+The red (gate engine-full, both attempts, .conductor/gate-output/s004-engine-full.log):
+  NoFileGrowsPastItsTypeCeilingOrItsRecordedDebt  - CourierTask.cs declares 4 types (allowed 3)   <- PK2.1 added CourierTaskRun
+  NoFileGrowsPastItsLineCeilingOrItsRecordedDebt  - OwnerQueue.cs 502 lines, ceiling 500         <- PK2.2 added CollectCourierRestarts
+
+The fix (split by responsibility; architecture-baseline.json and ArchitectureTests.cs untouched):
+  CourierTaskRun record -> src/Conductor.Core/Courier/CourierTaskRun.cs (moved verbatim)
+  OwnerQueue becomes partial; its three SURFACE sources (dead channels, courier restarts, CI divergence,
+  all RankChannel) -> src/Conductor.Core/OwnerQueue.Surfaces.cs (moved verbatim; one redundant
+  System.Globalization qualifier dropped, the now-unused Integrations using removed from OwnerQueue.cs)
+
+Sizes after:
+  src/Conductor.Core/OwnerQueue.cs                  416 lines  2 types
+  src/Conductor.Core/OwnerQueue.Surfaces.cs          96 lines  1 types
+  src/Conductor.Core/Courier/CourierTask.cs         311 lines  3 types
+  src/Conductor.Core/Courier/CourierTaskRun.cs       34 lines  1 types
+Baseline diff: 0 lines changed
+
+Narrow re-run (dotnet test --filter ArchitectureTests|OwnerQueue|PK2_):
+Passed!  - Failed:     0, Passed:    75, Skipped:     0, Total:    75, Duration: 4 s - Conductor.Tests.dll (net10.0)
+The full battery is conductor's to re-run after this session exits.
