@@ -14,11 +14,14 @@ public sealed partial class CourierCommand
 {
     private static async Task<int> InstallAsync(Settings settings)
     {
-        var exe = settings.Exe is { Length: > 0 } named ? named : Environment.ProcessPath;
-        if (exe is not { Length: > 0 })
+        // PK1.2 / D1: the task runs the courier's own binary - in an install, the one in its own
+        // directory - never this engine, which a running courier would otherwise hold open.
+        var exe = settings.Exe is { Length: > 0 } named ? Path.GetFullPath(named) : CourierBinary.Resolve(AppContext.BaseDirectory);
+        if (!File.Exists(exe))
         {
-            AnsiConsole.MarkupLine("[red]error:[/] this build cannot tell where its own binary is, so "
-                + "the task would have nothing to run. Pass it: [yellow]--exe <path-to-conductor.exe>[/].");
+            AnsiConsole.MarkupLine("[red]error:[/] there is no courier binary at " + Markup.Escape(exe)
+                + ", so the task would have nothing to run. Rebuild or reinstall, or name it: "
+                + "[yellow]--exe <path-to-conductor-courier.exe>[/].");
             return 1;
         }
 
@@ -32,7 +35,8 @@ public sealed partial class CourierCommand
         }
 
         var task = new CourierTask(settings.TaskName);
-        var made = await task.InstallAsync(exe).ConfigureAwait(false);
+        var arguments = CourierTask.ArgumentsFor(exe, task.Name);
+        var made = await task.InstallAsync(exe, arguments).ConfigureAwait(false);
         if (!made.Ok)
         {
             AnsiConsole.MarkupLine("[red]error:[/] the scheduled task was not registered — "
@@ -41,7 +45,7 @@ public sealed partial class CourierCommand
         }
 
         AnsiConsole.MarkupLine("[green]installed[/] " + Markup.Escape(task.Name)
-            + " [dim]→ " + Markup.Escape(exe) + " courier run[/]");
+            + " [dim]→ " + Markup.Escape(exe) + " " + Markup.Escape(arguments) + "[/]");
         AnsiConsole.MarkupLine("[dim]starts at your logon · restarts on failure every minute · "
             + "no admin rights, no elevation[/]");
 

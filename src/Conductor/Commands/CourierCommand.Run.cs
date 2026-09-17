@@ -8,7 +8,8 @@ using Spectre.Console;
 namespace Conductor.Commands;
 
 /// <summary>PK1.1 / D1 - <c>courier run</c> is an alias. The daemon is <c>conductor-courier</c>, its own
-/// executable beside this one, so a running courier no longer holds the engine's binary open.</summary>
+/// executable - in its own directory under an install, beside this one in a build (see
+/// <see cref="CourierBinary.Resolve"/>) - so a running courier no longer holds the engine's files open.</summary>
 public sealed partial class CourierCommand
 {
     /// <summary>Starts <c>conductor-courier</c> with the flags this verb was given and becomes it: the
@@ -25,7 +26,7 @@ public sealed partial class CourierCommand
     /// in the courier's own log.</para></summary>
     private static async Task<int> RunAsync(Settings settings)
     {
-        var exe = CourierBinary.Beside(AppContext.BaseDirectory);
+        var exe = CourierBinary.Resolve(AppContext.BaseDirectory);
         if (!File.Exists(exe))
         {
             var why = exe + " is not there - the courier is its own executable now, built and published "

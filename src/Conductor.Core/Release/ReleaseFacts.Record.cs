@@ -11,7 +11,8 @@ public sealed record CourierFacts(
     int? Pid,
     int Chats,
     int Projects,
-    bool RepoAllowed);
+    bool RepoAllowed,
+    string? CourierExe = null);
 
 /// <summary>One run in the store and how much of it GitHub has been told.
 /// <para>KS1.3's rule applies here as everywhere: <paramref name="Status"/> is the RECONCILED word

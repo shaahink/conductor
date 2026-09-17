@@ -75,6 +75,13 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
         [CommandOption("--out <PATH>")]
         [Description("runbook only: write the document here instead of to stdout")]
         public string? Out { get; init; }
+
+        /// <summary>PK1.2 - the scheduled task the courier line reads. The default is the machine's own
+        /// courier; a rig names its scratch task so the probe never mixes the real scheduler entry with a
+        /// scratch courier's presence.</summary>
+        [CommandOption("--courier-task <NAME>")]
+        [Description("preflight: the courier's scheduled task, when it is not \"Conductor Courier\" (a rig's scratch courier)")]
+        public string? CourierTask { get; init; }
     }
 
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
@@ -201,7 +208,7 @@ public sealed partial class ReleaseCommand : AsyncCommand<ReleaseCommand.Setting
             ReleasePreflight.Docs(ProbeDocs(repo), settings.Tag),
             ReleasePreflight.Processes(ProbeProcesses(plan, planPath, installed)),
             ReleasePreflight.Migration(ProbeMigration(repo, store, installed)),
-            ReleasePreflight.Courier(await ProbeCourierAsync(plan).ConfigureAwait(false)),
+            ReleasePreflight.Courier(await ProbeCourierAsync(plan, settings.CourierTask).ConfigureAwait(false)),
             ReleasePreflight.Backfill(ProbeBackfill(plan, settings.Repo, store)),
         ];
     }

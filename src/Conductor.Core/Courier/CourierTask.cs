@@ -71,6 +71,14 @@ public sealed class CourierTask
             DefaultName,
             StringComparison.Ordinal);
 
+    /// <summary>PK1.2 / D1 - what the task passes the binary it runs. The courier's own binary takes
+    /// the task name, so its presence record says which task started it; an engine binary (a task
+    /// registered before D1, or an explicit <c>--exe conductor.exe</c>) takes the alias verb.</summary>
+    public static string ArgumentsFor(string exe, string taskName) =>
+        CourierBinary.IsCourier(exe)
+            ? "--task-name \"" + taskName + "\""
+            : "courier run";
+
     /// <summary>Registers (or replaces) the task. <paramref name="exe"/> is the engine binary the
     /// task will run — <c>Environment.ProcessPath</c> of whatever performed the install, so a courier
     /// installed from the published engine runs the published engine.</summary>

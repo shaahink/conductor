@@ -318,7 +318,7 @@ public static class ReleasePreflight
         var pid = f.Pid?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "?";
         detail.Add($"task {(f.TaskRegistered ? f.SchedulerState ?? "registered" : "not installed")}" +
                    (f.Running ? $", running pid {pid}" : ", not running"));
-        detail.Add("tools/install.ps1 stops the courier at step 0 and puts it back on the new engine - re-check `conductor courier status` after the reinstall");
+        detail.Add(ReinstallLine(f.CourierExe));
 
         if (red.Count > 0)
             return new ReleaseCheck(CourierCheck, ReleaseCheck.Fail,
@@ -327,6 +327,20 @@ public static class ReleasePreflight
         return new ReleaseCheck(CourierCheck, ReleaseCheck.Ok,
             "the courier is installed, running and reachable, and its token is persisted where the task can see it", detail);
     }
+
+    /// <summary>PK1.2 / D1, re-measured: what the reinstall does to the courier depends on where it runs
+    /// from. Before D1 the answer was always "stopped at step 0 and put back"; now a courier in its own
+    /// directory is left alone, and only one still holding the engine's files is moved - once.</summary>
+    internal static string ReinstallLine(string? courierExe) => Conductor.Core.Courier.CourierBinary.ShapeOf(courierExe) switch
+    {
+        Conductor.Core.Courier.CourierShape.OwnDirectory =>
+            $"the courier runs {courierExe} from its own directory - tools/install.ps1 publishes the engine without stopping it; `tools/install.ps1 -CourierOnly` replaces the courier (one restart)",
+        Conductor.Core.Courier.CourierShape.BesideEngine =>
+            $"the courier runs {courierExe} beside an engine and holds that directory's shared files - tools/install.ps1 moves it to <install>\\{Conductor.Core.Courier.CourierBinary.DirName} once (one restart), and never again",
+        Conductor.Core.Courier.CourierShape.InsideEngine =>
+            $"the courier runs inside the engine ({courierExe} courier run, from before D1) and holds it open - tools/install.ps1 moves it to <install>\\{Conductor.Core.Courier.CourierBinary.DirName} once (one restart), and never again",
+        _ => $"nothing is polling - tools/install.ps1 publishes the courier to <install>\\{Conductor.Core.Courier.CourierBinary.DirName} and points a registered task at it",
+    };
 
     /// <summary>Runbook section 5. Which run is owed a GitHub record — and it stops there. Whether a
     /// run joins the published corpus is the owner's call, which is why a run with no record is

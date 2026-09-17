@@ -1,0 +1,31 @@
+measured at 2026-09-17 10:04:51Z on d2b42e4
+== A. engine publish carries the courier?
+  publish src\Conductor\Conductor.csproj -> C:\Users\shahi\AppData\Local\Temp\pk12-lock\install : exit 0
+  conductor-courier.dll
+  conductor-courier.exe
+  conductor-courier.pdb
+  conductor-courier.runtimeconfig.json
+  Conductor.Core.dll
+  Conductor.Core.pdb
+  conductor.deps.json
+  conductor.dll
+  conductor.exe
+  conductor.pdb
+  Conductor.Planning.dll
+  Conductor.Planning.pdb
+  conductor.runtimeconfig.json
+== B. courier running from the ENGINE's directory, engine re-published over it
+  courier started: pid 18688 from C:\Users\shahi\AppData\Local\Temp\pk12-lock\install\conductor-courier.exe, presence True
+  publish src\Conductor\Conductor.csproj -> C:\Users\shahi\AppData\Local\Temp\pk12-lock\install : exit 1
+    Could not copy "C:\Users\shahi\.nuget\packages\microsoft.ext ... locked by: "conductor-courier (18688)" [C:\Code\conductor\src\Conductor\Conductor.csproj
+    Could not copy "C:\Users\shahi\.nuget\packages\microsoft.ext ... locked by: "conductor-courier (18688)" [C:\Code\conductor\src\Conductor\Conductor.csproj
+== C. courier running from its OWN directory, engine re-published beside it
+  publish src\Conductor.Courier\Conductor.Courier.csproj -> C:\Users\shahi\AppData\Local\Temp\pk12-lock\install\courier : exit 0
+  courier started: pid 6516 from C:\Users\shahi\AppData\Local\Temp\pk12-lock\install\courier\conductor-courier.exe, presence True
+  publish src\Conductor\Conductor.csproj -> C:\Users\shahi\AppData\Local\Temp\pk12-lock\install : exit 0
+  courier still alive after the engine publish: True
+== D. the same courier's own directory re-published while it runs
+  publish src\Conductor.Courier\Conductor.Courier.csproj -> C:\Users\shahi\AppData\Local\Temp\pk12-lock\install\courier : exit 1
+    Could not copy "C:\Code\conductor\src\Conductor.Core\bin\Rel ... locked by: "conductor-courier (6516)" [C:\Code\conductor\src\Conductor.Courier\Conductor.Courier.csproj
+    Could not copy "obj\Release\net10.0\conductor-courier.dll" t ... locked by: "conductor-courier (6516)" [C:\Code\conductor\src\Conductor.Courier\Conductor.Courier.csproj
+done

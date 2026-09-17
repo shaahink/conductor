@@ -335,7 +335,7 @@ public sealed partial class ReleaseCommand
     /// owns it, so a preflight that "checked the token works" would starve the live daemon and cost
     /// the owner every notification the run sends. The scheduler, the presence file and the settings
     /// file answer everything this line needs.</summary>
-    internal static async Task<CourierFacts> ProbeCourierAsync(PlanConfig plan)
+    internal static async Task<CourierFacts> ProbeCourierAsync(PlanConfig plan, string? taskName = null)
     {
         var settings = CourierSettings.Load();
         var token = Environment.GetEnvironmentVariable(TelegramCourierSource.TokenEnvVar)?.Trim();
@@ -344,11 +344,11 @@ public sealed partial class ReleaseCommand
         CourierTaskState state;
         try
         {
-            state = await new CourierTask().StateAsync().ConfigureAwait(false);
+            state = await new CourierTask(taskName).StateAsync().ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
         {
-            state = new CourierTaskState(CourierTask.DefaultName, Registered: false, SchedulerState: ex.Message, Running: null);
+            state = new CourierTaskState(taskName ?? CourierTask.DefaultName, Registered: false, SchedulerState: ex.Message, Running: null);
         }
 
         var allowed = settings.Projects.Any(p => SamePath(p.Repo, plan.Repo));
@@ -361,7 +361,8 @@ public sealed partial class ReleaseCommand
             Pid: state.Running?.Pid,
             Chats: settings.Chats.Count,
             Projects: settings.Projects.Count,
-            RepoAllowed: allowed);
+            RepoAllowed: allowed,
+            CourierExe: state.Running?.Exe);
     }
 
     /// <summary>Where a logon-triggered Scheduled Task would find the token. A task inherits
