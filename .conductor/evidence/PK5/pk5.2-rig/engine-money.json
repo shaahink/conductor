@@ -1,0 +1,211 @@
+﻿{
+  "scope": "f85c0bd7e8e1442284e1a34d747abe7f",
+  "total": {
+    "label": "project total",
+    "sessions": 9,
+    "tokens": 145395904,
+    "cacheReadTokens": 142575019,
+    "cacheReadShare": 0.9806,
+    "inputTokens": 1907162,
+    "outputTokens": 913723,
+    "costUsd": 124.4608,
+    "checkpoints": 12,
+    "tokensPerCheckpoint": 12116325,
+    "costPerCheckpoint": 10.3717,
+    "costPerMillionTokens": 0.8560
+  },
+  "months": [
+    {
+      "label": "2026-09",
+      "sessions": 9,
+      "tokens": 145395904,
+      "cacheReadTokens": 142575019,
+      "cacheReadShare": 0.9806,
+      "inputTokens": 1907162,
+      "outputTokens": 913723,
+      "costUsd": 124.4608,
+      "checkpoints": 12,
+      "tokensPerCheckpoint": 12116325,
+      "costPerCheckpoint": 10.3717,
+      "costPerMillionTokens": 0.8560
+    }
+  ],
+  "categories": [
+    {
+      "label": "agent",
+      "sessions": 9,
+      "tokens": 145395904,
+      "cacheReadTokens": 142575019,
+      "cacheReadShare": 0.9806,
+      "inputTokens": 1907162,
+      "outputTokens": 913723,
+      "costUsd": 124.3859,
+      "checkpoints": 0,
+      "costPerMillionTokens": 0.8555
+    },
+    {
+      "label": "gate",
+      "sessions": 9,
+      "tokens": 0,
+      "cacheReadTokens": 0,
+      "cacheReadShare": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "costUsd": 0.0749,
+      "checkpoints": 0
+    }
+  ],
+  "runs": [
+    {
+      "runId": "f85c0bd7e8e1442284e1a34d747abe7f",
+      "plan": "Peyk courier - the courier stands on its own",
+      "repo": "peyk-rig",
+      "startedUtc": "2026-09-17T09:31:02.3025209\u002B00:00",
+      "lastActivityUtc": "2026-09-17T15:22:36.8678330Z",
+      "total": {
+        "label": "run total",
+        "sessions": 9,
+        "tokens": 145395904,
+        "cacheReadTokens": 142575019,
+        "cacheReadShare": 0.9806,
+        "inputTokens": 1907162,
+        "outputTokens": 913723,
+        "costUsd": 124.4608,
+        "checkpoints": 12,
+        "tokensPerCheckpoint": 12116325,
+        "costPerCheckpoint": 10.3717,
+        "costPerMillionTokens": 0.8560
+      },
+      "windows": [
+        {
+          "label": "1-10 45M / nudge 40.7M",
+          "sessions": 9,
+          "tokens": 145395904,
+          "cacheReadTokens": 142575019,
+          "cacheReadShare": 0.9806,
+          "inputTokens": 1907162,
+          "outputTokens": 913723,
+          "costUsd": 124.4608,
+          "checkpoints": 12,
+          "tokensPerCheckpoint": 12116325,
+          "costPerCheckpoint": 10.3717,
+          "costPerMillionTokens": 0.8560
+        }
+      ],
+      "stages": [
+        {
+          "label": "PK1",
+          "sessions": 2,
+          "tokens": 18339995,
+          "cacheReadTokens": 17848545,
+          "cacheReadShare": 0.9732,
+          "inputTokens": 334073,
+          "outputTokens": 157377,
+          "costUsd": 16.2301,
+          "checkpoints": 2,
+          "tokensPerCheckpoint": 9169998,
+          "costPerCheckpoint": 8.1151,
+          "costPerMillionTokens": 0.8850
+        },
+        {
+          "label": "PK2",
+          "sessions": 2,
+          "tokens": 27074275,
+          "cacheReadTokens": 26507747,
+          "cacheReadShare": 0.97908,
+          "inputTokens": 388976,
+          "outputTokens": 177552,
+          "costUsd": 22.9380,
+          "checkpoints": 3,
+          "tokensPerCheckpoint": 9024758,
+          "costPerCheckpoint": 7.6460,
+          "costPerMillionTokens": 0.8472
+        },
+        {
+          "label": "PK3",
+          "sessions": 2,
+          "tokens": 42918540,
+          "cacheReadTokens": 42236810,
+          "cacheReadShare": 0.98412,
+          "inputTokens": 449902,
+          "outputTokens": 231828,
+          "costUsd": 31.4431,
+          "checkpoints": 3,
+          "tokensPerCheckpoint": 14306180,
+          "costPerCheckpoint": 10.4810,
+          "costPerMillionTokens": 0.7326
+        },
+        {
+          "label": "PK4",
+          "sessions": 2,
+          "tokens": 44719332,
+          "cacheReadTokens": 43942095,
+          "cacheReadShare": 0.98262,
+          "inputTokens": 522644,
+          "outputTokens": 254593,
+          "costUsd": 41.3331,
+          "checkpoints": 3,
+          "tokensPerCheckpoint": 14906444,
+          "costPerCheckpoint": 13.7777,
+          "costPerMillionTokens": 0.9243
+        },
+        {
+          "label": "PK5",
+          "sessions": 1,
+          "tokens": 12343762,
+          "cacheReadTokens": 12039822,
+          "cacheReadShare": 0.97538,
+          "inputTokens": 211567,
+          "outputTokens": 92373,
+          "costUsd": 12.5165,
+          "checkpoints": 1,
+          "tokensPerCheckpoint": 12343762,
+          "costPerCheckpoint": 12.5165,
+          "costPerMillionTokens": 1.0140
+        }
+      ],
+      "months": [
+        {
+          "label": "2026-09",
+          "sessions": 9,
+          "tokens": 145395904,
+          "cacheReadTokens": 142575019,
+          "cacheReadShare": 0.9806,
+          "inputTokens": 1907162,
+          "outputTokens": 913723,
+          "costUsd": 124.4608,
+          "checkpoints": 12,
+          "tokensPerCheckpoint": 12116325,
+          "costPerCheckpoint": 10.3717,
+          "costPerMillionTokens": 0.8560
+        }
+      ],
+      "categories": [
+        {
+          "label": "agent",
+          "sessions": 9,
+          "tokens": 145395904,
+          "cacheReadTokens": 142575019,
+          "cacheReadShare": 0.9806,
+          "inputTokens": 1907162,
+          "outputTokens": 913723,
+          "costUsd": 124.3859,
+          "checkpoints": 0,
+          "costPerMillionTokens": 0.8555
+        },
+        {
+          "label": "gate",
+          "sessions": 9,
+          "tokens": 0,
+          "cacheReadTokens": 0,
+          "cacheReadShare": 0,
+          "inputTokens": 0,
+          "outputTokens": 0,
+          "costUsd": 0.0749,
+          "checkpoints": 0
+        }
+      ]
+    }
+  ]
+}
+

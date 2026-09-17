@@ -1,0 +1,132 @@
+PK5.2 proof at 2026-09-17T15:52:34Z on commit e9d40a6
+  engine  C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe  built 2026-09-17 15:51:12Z
+  courier C:\Code\conductor\src\Conductor.Courier\bin\Debug\net10.0\conductor-courier.exe  built 2026-09-17 15:51:23Z
+
+==== setup: a scratch checkout carrying this era's plan name, a scratch courier home, a stub Bot API ====
+
+==== the store: the fresh engine catalogues the checkout, a sqlite3 .backup of the live store goes where it says ====
+  engine status (before the copy): exit 0: No run.db yet. Run conductor run at least once to record a run.
+  PASS  the fresh engine catalogued the checkout under this plan name
+  PASS  the backup copy exists
+        C:\Users\shahi\AppData\Local\Temp\pk52-proof-20260917T155234\home-52\runs\peyk-rig-peyk-courier---the-courier-stands-on-its-own-b61c251b\run.db
+  newest run of the plan (read from the live store, read-only): f85c0bd7e8e1442284e1a34d747abe7f
+  PASS  the store holds a run of this plan
+  PASS  no run is live on the copy (no -wal, no -shm)
+
+==== the engine's money for that run, from the same copy ====
+  PASS  money --json exits 0
+        exit 0 
+  engine: billed $124.46 over 9 sessions, 12 checkpoints, $10.37 per checkpoint
+
+==== the courier: /project, then the five figure verbs ====
+  scratch courier pid 4580 on port 52553, home C:\Users\shahi\AppData\Local\Temp\pk52-proof-20260917T155234\home-52, stub Bot API on 52518
+  PASS  /project peyk-rig is answered
+        Notes in this chat now file against <b>Peyk courier - the courier stands on its own</b> <i>(peyk-rig)</i>. It stays until you change it.
+  Notes in this chat now file against <b>Peyk courier - the courier stands on its own</b> <i>(peyk-rig)</i>. It stays until you change it.
+  PASS  /money is answered
+  PASS  /tokens is answered
+  PASS  /progress is answered
+  PASS  /status is answered
+  PASS  /evidence is answered
+  PASS  /evidence PK5.1 is answered
+
+==== what the courier said ====
+---- reply 2 (/money) ----
+<b>Peyk courier - the courier stands on its own — money</b>
+
+Billed $124.46 (no cap set) · 9 sessions
+$10.37 per delivered checkpoint (12 closed by these sessions)
+Where it goes: agent $124.39 (99.9%) · gate $0.0749 (0.1%)
+Blended $0.8560 per million tokens — billed dollars over billed tokens, not a price list.
+The run's own counter says $124.39 — spend recorded outside the run loop reaches the record first.
+
+<code>progress: 12/17 checkpoints · PK5 1/2 · cost: $124.39 (no cap set) · tokens 145.4M</code>
+
+<i>the courier, from peyk-rig's run.db (run f85c0bd7), read-only</i>
+---- reply 3 (/tokens) ----
+<b>Peyk courier - the courier stands on its own — tokens</b>
+
+145.4M tokens over 9 sessions
+Cache reads 142.6M (98.1%) — the prompt being re-sent, charged at the cache rate.
+Input 1.9M · output 913.7k
+12.1M per delivered checkpoint
+
+<code>progress: 12/17 checkpoints · PK5 1/2 · cost: $124.39 (no cap set) · tokens 145.4M</code>
+
+<i>the courier, from peyk-rig's run.db (run f85c0bd7), read-only</i>
+---- reply 4 (/progress) ----
+<b>Peyk courier - the courier stands on its own — progress</b>
+
+<code>[done] PK1    2/2</code>  Peyk stage 1
+<code>[done] PK2    3/3</code>  Peyk stage 2
+<code>[done] PK3    3/3</code>  Peyk stage 3
+<code>[done] PK4    3/3</code>  Peyk stage 4
+<code>[here] PK5    1/2</code>  Peyk stage 5
+<code>[    ] PK6    0/4</code>  Peyk stage 6
+
+<code>progress: 12/17 checkpoints · PK5 1/2 · cost: $124.39 (no cap set) · tokens 145.4M</code>
+
+<i>the courier, from peyk-rig's run.db (run f85c0bd7), read-only</i>
+---- reply 5 (/status) ----
+<b>Conductor — Peyk courier - the courier stands on its own</b>
+
+running — session #11 in PK5
+Checkpoints 12/17 · sessions 11 · billed $124.39
+
+<code>PK1    2/2 confirmed</code>
+<code>PK2    3/3 confirmed</code>
+<code>PK3    3/3 confirmed</code>
+<code>PK4    3/3 confirmed</code>
+<code>PK5    1/2 active</code> ◀
+<code>PK6    0/4 todo</code>
+
+<i>the courier, from peyk-rig's run.db (run f85c0bd7), read-only</i>
+---- reply 6 (/evidence) ----
+<b>Peyk courier - the courier stands on its own — evidence</b>
+
+<code>pk5.1</code> .conductor/evidence/PK5/pk5.1-live-proof.log · text · 6.1 KB · sha e5d466d7 · 2026-09-17 15:23Z
+<code>PK5.1</code> .conductor/evidence/PK5/pk5.1.md · text · 5 KB · sha 02f461df · 2026-09-17 15:23Z
+<code>PK4.3</code> .conductor/evidence/PK4/pk4.3.md · text · 5.8 KB · sha 38309b0e · 2026-09-17 14:48Z
+<code>PK4.2</code> .conductor/evidence/PK4/pk4.2.md · text · 4.9 KB · sha 93236b52 · 2026-09-17 14:28Z
+<code>PK4.1</code> .conductor/evidence/PK4/pk4.1.md · text · 4.2 KB · sha 6b0fddbb · 2026-09-17 14:28Z
+<code>pk3.3</code> .conductor/evidence/PK3/pk3.3-live-proof.log · text · 3.9 KB · sha 8b9db420 · 2026-09-17 13:31Z
+<code>pk3.2</code> .conductor/evidence/PK3/pk3.2-live-proof.log · text · 4.9 KB · sha 115875da · 2026-09-17 13:31Z
+<code>pk3.2</code> .conductor/evidence/PK3/pk3.2-fix-completion.log · text · 1.6 KB · sha ed06280a · 2026-09-17 13:31Z
+<code>pk3.1</code> .conductor/evidence/PK3/pk3.1-live-proof.log · text · 5.2 KB · sha 3fbdd180 · 2026-09-17 13:31Z
+<code>pk2.3</code> .conductor/evidence/PK2/pk2.3-verify.log · text · 735 B · sha 905ed40c · 2026-09-17 13:31Z
+…and 461 more registered (184 for other plans' checkpoints, 262 not tied to a checkpoint). /evidence &lt;checkpoint&gt; lists one checkpoint's.
+
+<i>the courier, from peyk-rig's run.db (run f85c0bd7), read-only</i>
+---- reply 7 (/evidence PK5.1) ----
+<b>Peyk courier - the courier stands on its own — evidence for PK5.1</b>
+
+<code>pk5.1</code> .conductor/evidence/PK5/pk5.1-live-proof.log · text · 6.1 KB · sha e5d466d7 · 2026-09-17 15:23Z
+<code>PK5.1</code> .conductor/evidence/PK5/pk5.1.md · text · 5 KB · sha 02f461df · 2026-09-17 15:23Z
+
+<i>the courier, from peyk-rig's run.db (run f85c0bd7), read-only</i>
+
+==== checks ====
+  PASS  /money carries the engine's billed total ($124.46)
+  PASS  /money carries the engine's session count (9)
+  PASS  /money carries the engine's per-checkpoint figure ($10.37)
+  PASS  /tokens counts the engine's sessions
+  PASS  /progress reads the checkout's tracker (PK5 row)
+  PASS  /status reads the run (checkpoints line)
+  PASS  /evidence lists the evidence registry
+  PASS  bare /evidence leads with this plan's checkpoints (PK), not another era's sweep
+  PASS  /evidence PK5.1 answers for that checkpoint
+  PASS  every answer says it came from run.db, read-only
+  files under the home (courier folder aside) and the checkout: 5 before, 5 after
+  PASS  no file changed, appeared or vanished while the five verbs were answered
+  PASS  the copy still has no -wal or -shm
+  PASS  no sendMessage went anywhere but the rig chat
+
+==== the engine's status for the same copy (LAST: conductor status opens its store writable) ====
+  engine: Conductor — Peyk courier - the courier stands on its own · running — session #11
+  engine: in PK5
+  PASS  /status gives the engine's verdict (running — session #11 in PK5)
+  PASS  /status gives the engine's checkpoints, sessions and cost
+        engine checkpoints 12/17 · sessions 11 · cost $124.39 / courier Checkpoints 12/17 · sessions 11 · billed $124.39
+
+out: C:\Users\shahi\AppData\Local\Temp\pk52-proof-20260917T155234
+  27/27 checks passed

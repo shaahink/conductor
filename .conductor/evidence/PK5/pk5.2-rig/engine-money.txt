@@ -1,0 +1,30 @@
+﻿what it cost · f85c0bd7e8e1442284e1a34d747abe7f
+
+RUN                                 SESS   TOKENS  CACHE       COST  CKPT  
+TOK/CKPT   $/CKPT
+f85c0bd7 Peyk courier - the courie     9   145.4M  98.1%    $124.46    12     
+12.1M   $10.37
+blended $0.86/M tokens · 142.6M of 145.4M tokens were cache reads (98.1%).
+
+where the money goes: agent $124.39 (100%, 145.4M) · gate $0.07 (0.06%, 0M)
+
+by stage · Peyk courier - the courier stands on its own f85c0bd7
+STAGE                               SESS   TOKENS  CACHE       COST  CKPT  
+TOK/CKPT   $/CKPT
+PK1                                    2    18.3M  97.3%     $16.23     2     
+9.17M    $8.12
+PK2                                    2    27.1M  97.9%     $22.94     3     
+9.02M    $7.65
+PK3                                    2    42.9M  98.4%     $31.44     3     
+14.3M   $10.48
+PK4                                    2    44.7M  98.3%     $41.33     3     
+14.9M   $13.78
+PK5                                    1    12.3M  97.5%     $12.52     1     
+12.3M   $12.52
+
+by month · Peyk courier - the courier stands on its own f85c0bd7
+MONTH                               SESS   TOKENS  CACHE       COST  CKPT  
+TOK/CKPT   $/CKPT
+2026-09                                9   145.4M  98.1%    $124.46    12     
+12.1M   $10.37
+

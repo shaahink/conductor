@@ -1,0 +1,28 @@
+﻿Conductor — Peyk courier - the courier stands on its own · running — session #11
+in PK5
+checkpoints 12/17 · sessions 11 · cost $124.39 · 128ms from run.db
+
+╭───────┬──────────────┬──────┬───────────╮
+│ Stage │ Title        │ Done │ State     │
+├───────┼──────────────┼──────┼───────────┤
+│ PK1   │ Peyk stage 1 │ 2/2  │ confirmed │
+│ PK2   │ Peyk stage 2 │ 3/3  │ confirmed │
+│ PK3   │ Peyk stage 3 │ 3/3  │ confirmed │
+│ PK4   │ Peyk stage 4 │ 3/3  │ confirmed │
+│ PK5   │ Peyk stage 5 │ 1/2  │ active ◀  │
+│ PK6   │ Peyk stage 6 │ 0/4  │ todo      │
+╰───────┴──────────────┴──────┴───────────╯
+              recent sessions               
+╭────┬───────┬─────────┬──────────┬────────╮
+│ #  │ Stage │ Kind    │ Outcome  │ Cost   │
+├────┼───────┼─────────┼──────────┼────────┤
+│ 4  │ PK2   │ Deliver │ Advanced │ $21.23 │
+│ 5  │ PK2   │ Fix     │ Progress │ $1.69  │
+│ 6  │ PK3   │ Deliver │ Advanced │ $30.57 │
+│ 7  │ PK3   │ Fix     │ Progress │ $0.85  │
+│ 8  │ PK4   │ Deliver │ Advanced │ $31.60 │
+│ 9  │ PK4   │ Deliver │ Advanced │ $9.72  │
+│ 10 │ PK5   │ Deliver │ Advanced │ $12.51 │
+│ 11 │ PK5   │ Deliver │ orphaned │ $0.00  │
+╰────┴───────┴─────────┴──────────┴────────╯
+
