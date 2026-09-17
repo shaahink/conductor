@@ -1,0 +1,7 @@
+PK2.3 post-arming verification at 2026-09-17T11:39:16Z (the arming script's two check defects, re-measured)
+  2026-09-17T11:39:16Z presence pid 20052 lastPollUtc 2026-09-17T11:39:09.8133328+00:00
+  2026-09-17T11:40:01Z presence pid 20052 lastPollUtc 2026-09-17T11:39:43.8424279+00:00
+PASS  the heartbeat advances over 45 s on the same pid
+  2026-09-17T11:40:02Z protocol-2 push to chat 0 -> HTTP 503, accepted=False, detail: the bot API refused the message to chat 0 (400 BadRequest).
+  courier.log: 2026-09-17 11:40:02Z [warn] courier: Courier push to chat 0 failed: the bot API refused the message to chat 0 (400 BadRequest).
+PASS  the push reached the messenger through the armed courier and its refusal came back to the run

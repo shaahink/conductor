@@ -1,0 +1,159 @@
+﻿PK2.3 arming at 2026-09-17T11:35:21Z on commit 24dd990
+
+==== read: before at 2026-09-17T11:35:21Z ====
+  presence: pid 7988, protocol 2, engine 0.0.0.0, port 47137, task 
+            exe C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe
+            startedUtc 2026-09-17T09:30:42.081146+00:00, lastPollUtc 
+  process:  C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe | args: courier run | parent svchost.exe
+  task:     status Running; last run 17/09/2026 10:30:42; last result 267009
+  task xml: logon trigger True; keep-alive NONE; IgnoreNew
+            exec C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe courier run
+  status:   life=unmetered  alive by pid only (pid 7988 writes no heartbeat - a courier 
+built before PK2.1)
+  conductor.exe: sha256 527E3E15276DABDE..., written 2026-09-06 15:02:40Z
+  driving engine pid 15672: C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe
+  courier.log tail:
+    2026-09-13 22:39:51Z [info] courier: courier poll error: An error occurred while sending the request.
+    2026-09-14 09:22:02Z courier run starting: pid 33144, engine 0.5.1-alpha.0.43+b12540557ade, protocol 2
+    2026-09-14 09:22:03Z [info] courier: Courier listening on http://127.0.0.1:47137 - runs on this machine push through it
+    2026-09-14 09:22:03Z [info] courier: courier polling the telegram bot; offset 83806470; 6 project(s) allowed, 3 chat(s) listed
+    2026-09-16 19:48:31Z courier run starting: pid 9048, engine 0.5.1-alpha.0.43+b12540557ade, protocol 2
+    2026-09-16 19:48:32Z [info] courier: Courier listening on http://127.0.0.1:47137 - runs on this machine push through it
+    2026-09-16 19:48:32Z [info] courier: courier polling the telegram bot; offset 83806470; 6 project(s) allowed, 3 chat(s) listed
+    2026-09-17 09:30:42Z courier run starting: pid 7988, engine 0.5.1-alpha.0.43+b12540557ade, protocol 2
+    2026-09-17 09:30:42Z [info] courier: Courier listening on http://127.0.0.1:47137 - runs on this machine push through it
+    2026-09-17 09:30:42Z [info] courier: courier polling the telegram bot; offset 83806470; 6 project(s) allowed, 3 chat(s) listed
+
+==== arm: tools/install.ps1 -CourierOnly (task backup at C:\Users\shahi\AppData\Local\Temp\pk23-courier-task-backup-20260917T113522Z.xml) ====
+  | conductor installer - courier only
+  |   install: C:\Users\shahi\AppData\Local\Programs\conductor  (conductor.exe is not touched)
+  |   task:    Conductor Courier
+  | 
+  | [1/3] building the engine that registers the task (this tree, not the install)...
+  | 
+  | Build succeeded.
+  |     0 Warning(s)
+  |     0 Error(s)
+  | 
+  | Time Elapsed 00:01:21.48
+  | [2/3] replacing the courier...
+  |   stopped the courier (pid 7988, C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe)
+  |   publishing the courier to C:\Users\shahi\AppData\Local\Programs\conductor\courier
+  | [3/3] registering the task on the courier and starting it...
+  | installed Conductor Courier ΓåÆ 
+  | C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe 
+  | --task-name "Conductor Courier"
+  | starts at your logon ┬╖ started again within five minutes of stopping, whatever 
+  | the exit ┬╖ no admin rights, no elevation
+  | not started ΓÇö it starts at your next logon, or now with conductor courier 
+  | restart
+  |   courier started (Conductor Courier) from C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe
+  | 
+  | Done.
+  install.ps1 -CourierOnly exit 0 (2026-09-17T11:35:22Z -> 2026-09-17T11:37:30Z)
+
+==== read: after arming at 2026-09-17T11:38:02Z ====
+  presence: pid 20052, protocol 2, engine 0.5.1-alpha.0.66+24dd990f19c5.dirty, port 47137, task Conductor Courier
+            exe C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe
+            startedUtc 2026-09-17T11:37:30.2422705+00:00, lastPollUtc 2026-09-17T11:38:01.7787916+00:00
+  process:  C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe | args: --task-name "Conductor Courier | parent svchost.exe
+  task:     status Running; last run 17/09/2026 12:37:30; last result 267009
+  task xml: logon trigger True; keep-alive TimeTrigger every PT5M from 2026-01-01T00:00:00; IgnoreNew
+            exec C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe --task-name "Conductor Courier"
+  status:   life=alive  alive (last poll 1 s ago; pid 20052)
+  conductor.exe: sha256 527E3E15276DABDE..., written 2026-09-06 15:02:40Z
+  conductor-courier.exe: written 2026-09-17 11:37:29Z
+  driving engine pid 15672: C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe
+  courier.log tail:
+    2026-09-16 19:48:31Z courier run starting: pid 9048, engine 0.5.1-alpha.0.43+b12540557ade, protocol 2
+    2026-09-16 19:48:32Z [info] courier: Courier listening on http://127.0.0.1:47137 - runs on this machine push through it
+    2026-09-16 19:48:32Z [info] courier: courier polling the telegram bot; offset 83806470; 6 project(s) allowed, 3 chat(s) listed
+    2026-09-17 09:30:42Z courier run starting: pid 7988, engine 0.5.1-alpha.0.43+b12540557ade, protocol 2
+    2026-09-17 09:30:42Z [info] courier: Courier listening on http://127.0.0.1:47137 - runs on this machine push through it
+    2026-09-17 09:30:42Z [info] courier: courier polling the telegram bot; offset 83806470; 6 project(s) allowed, 3 chat(s) listed
+    2026-09-17 11:37:31Z courier run starting: pid 20052, engine 0.5.1-alpha.0.66+24dd990f19c5.dirty, protocol 2
+    2026-09-17 11:37:31Z previous courier pid 7988 died silently; last poll none recorded (started 2026-09-17 09:30:42Z); task last-run result 267009 (0x00041301), running now - the task's current instance; the previous exit code is not kept at 17/09/2026 12:37:30 [task Conductor Courier]
+    2026-09-17 11:37:31Z [info] courier: Courier listening on http://127.0.0.1:47137 - runs on this machine push through it
+    2026-09-17 11:37:31Z [info] courier: courier polling the telegram bot; offset 83806470; 6 project(s) allowed, 3 chat(s) listed
+
+==== read: 12 s later at 2026-09-17T11:38:15Z ====
+  presence: pid 20052, protocol 2, engine 0.5.1-alpha.0.66+24dd990f19c5.dirty, port 47137, task Conductor Courier
+            exe C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe
+            startedUtc 2026-09-17T11:37:30.2422705+00:00, lastPollUtc 2026-09-17T11:38:01.7787916+00:00
+  process:  C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe | args: --task-name "Conductor Courier | parent svchost.exe
+  task:     status Running; last run 17/09/2026 12:37:30; last result 267009
+  task xml: logon trigger True; keep-alive TimeTrigger every PT5M from 2026-01-01T00:00:00; IgnoreNew
+            exec C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe --task-name "Conductor Courier"
+  status:   life=alive  alive (last poll 14 s ago; pid 20052)
+  conductor.exe: sha256 527E3E15276DABDE..., written 2026-09-06 15:02:40Z
+  conductor-courier.exe: written 2026-09-17 11:37:29Z
+  driving engine pid 15672: C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe
+  courier.log tail:
+    2026-09-16 19:48:31Z courier run starting: pid 9048, engine 0.5.1-alpha.0.43+b12540557ade, protocol 2
+    2026-09-16 19:48:32Z [info] courier: Courier listening on http://127.0.0.1:47137 - runs on this machine push through it
+    2026-09-16 19:48:32Z [info] courier: courier polling the telegram bot; offset 83806470; 6 project(s) allowed, 3 chat(s) listed
+    2026-09-17 09:30:42Z courier run starting: pid 7988, engine 0.5.1-alpha.0.43+b12540557ade, protocol 2
+    2026-09-17 09:30:42Z [info] courier: Courier listening on http://127.0.0.1:47137 - runs on this machine push through it
+    2026-09-17 09:30:42Z [info] courier: courier polling the telegram bot; offset 83806470; 6 project(s) allowed, 3 chat(s) listed
+    2026-09-17 11:37:31Z courier run starting: pid 20052, engine 0.5.1-alpha.0.66+24dd990f19c5.dirty, protocol 2
+    2026-09-17 11:37:31Z previous courier pid 7988 died silently; last poll none recorded (started 2026-09-17 09:30:42Z); task last-run result 267009 (0x00041301), running now - the task's current instance; the previous exit code is not kept at 17/09/2026 12:37:30 [task Conductor Courier]
+    2026-09-17 11:37:31Z [info] courier: Courier listening on http://127.0.0.1:47137 - runs on this machine push through it
+    2026-09-17 11:37:31Z [info] courier: courier polling the telegram bot; offset 83806470; 6 project(s) allowed, 3 chat(s) listed
+
+==== loopback: hello and a protocol-2 push to chat 0 ====
+  hello: protocol 2, pid 20052, engine 0.5.1-alpha.0.66+24dd990f19c5.dirty, lastPollUtc 2026-09-17T11:38:01.7787916+00:00
+  push at 2026-09-17T11:38:16Z -> accepted ; detail: 
+  courier.log: 2026-09-17 11:38:16Z [warn] courier: Courier push to chat 0 failed: the bot API refused the message to chat 0 (400 BadRequest).
+
+==== checks ====
+PASS  install.ps1 -CourierOnly exited 0  
+PASS  conductor.exe untouched (sha256 and write time)  2026-09-06 15:02:40Z / 2026-09-06 15:02:40Z
+PASS  the engine driving this run is still alive  15672
+PASS  the task runs the courier's own binary  C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe
+PASS  the task XML carries the five-minute keep-alive  PT5M from 2026-01-01T00:00:00
+PASS  the task XML keeps the logon trigger and IgnoreNew  IgnoreNew
+PASS  the presence names the courier binary and this task  C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe
+PASS  the running process is that binary  C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe
+PASS  courier status (this tree) reads alive  alive (last poll 14 s ago; pid 20052)
+FAIL  the heartbeat advances  2026-09-17T11:38:01.7787916+00:00 -> 2026-09-17T11:38:01.7787916+00:00
+PASS  the hello speaks protocol 2 with a heartbeat  
+FAIL  the protocol-2 push reached the messenger through the new courier  
+PASS  and the courier journaled it  
+
+==== ARMED ====
+  armed at (courier start, UTC): 2026-09-17T11:37:30Z
+  courier pid: 20052
+  courier engine stamp: 0.5.1-alpha.0.66+24dd990f19c5.dirty
+  task: Conductor Courier -> C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe --task-name "Conductor Courier"; keep-alive PT5M
+  reading procedure (PK6.1): powershell -NoProfile -ExecutionPolicy Bypass -File tools/peyk/pk2-3-arm-real-courier.ps1 -ReadOnly
+    then in courier.log after the arming time: every 'courier run starting' line is a (re)start; the line before
+    it says how the previous one ended - 'courier run stopped: exit N', 'courier process exit ...', 'courier run DIED
+    (unhandled ...)', 'courier received SIGTERM/SIGHUP ...' - or, when nothing was journaled, the next start's
+    'previous courier pid N died silently; last poll T; task last-run result R'. Keep-alive starts land on a
+    five-minute mark; R reads 267009 when the task itself restarted it (the exit code is then not kept).
+
+==== summary ====
+PASS  install.ps1 -CourierOnly exited 0  
+PASS  conductor.exe untouched (sha256 and write time)  2026-09-06 15:02:40Z / 2026-09-06 15:02:40Z
+PASS  the engine driving this run is still alive  15672
+PASS  the task runs the courier's own binary  C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe
+PASS  the task XML carries the five-minute keep-alive  PT5M from 2026-01-01T00:00:00
+PASS  the task XML keeps the logon trigger and IgnoreNew  IgnoreNew
+PASS  the presence names the courier binary and this task  C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe
+PASS  the running process is that binary  C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe
+PASS  courier status (this tree) reads alive  alive (last poll 14 s ago; pid 20052)
+FAIL  the heartbeat advances  2026-09-17T11:38:01.7787916+00:00 -> 2026-09-17T11:38:01.7787916+00:00
+PASS  the hello speaks protocol 2 with a heartbeat  
+FAIL  the protocol-2 push reached the messenger through the new courier  
+PASS  and the courier journaled it  
+13 checks, 2 failed, finished 2026-09-17T11:38:18Z
+
+==== RE-MEASUREMENT (appended): the two FAILs above were defects in the arming script's checks, not in the arming ====
+  heartbeat: the 12 s window was shorter than one real poll (30 s long-poll + 4 s interval); push: Windows PowerShell 5.1 drains the body of a non-2xx answer, it survives in ErrorDetails. Both fixed in tools/peyk/pk2-3-arm-real-courier.ps1 and re-measured on the armed courier:
+PK2.3 post-arming verification at 2026-09-17T11:39:16Z (the arming script's two check defects, re-measured)
+  2026-09-17T11:39:16Z presence pid 20052 lastPollUtc 2026-09-17T11:39:09.8133328+00:00
+  2026-09-17T11:40:01Z presence pid 20052 lastPollUtc 2026-09-17T11:39:43.8424279+00:00
+PASS  the heartbeat advances over 45 s on the same pid
+  2026-09-17T11:40:02Z protocol-2 push to chat 0 -> HTTP 503, accepted=False, detail: the bot API refused the message to chat 0 (400 BadRequest).
+  courier.log: 2026-09-17 11:40:02Z [warn] courier: Courier push to chat 0 failed: the bot API refused the message to chat 0 (400 BadRequest).
+PASS  the push reached the messenger through the armed courier and its refusal came back to the run

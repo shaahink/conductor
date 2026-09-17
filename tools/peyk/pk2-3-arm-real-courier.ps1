@@ -148,8 +148,9 @@ for ($i = 0; $i -lt 60; $i++) {
 $armedAt = if ($armed) { ([DateTimeOffset]::Parse($armed.startedUtc)).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") } else { Utc }
 
 Read-State "after arming"; $after = $script:last
-Start-Sleep -Seconds 12
-Read-State "12 s later"; $later = $script:last
+# MEASURED at the arming: 12 s saw no new beat - one real poll is a 30 s long-poll plus the interval.
+Start-Sleep -Seconds 45
+Read-State "45 s later"; $later = $script:last
 
 # ---- the loopback: hello and one protocol-2 push that creates no message ----------------------------
 Section "loopback: hello and a protocol-2 push to chat 0"
@@ -167,7 +168,11 @@ try {
     $ack = $resp.Content | ConvertFrom-Json
 } catch {
     $r = $_.Exception.Response
-    if ($r) { $ack = (New-Object IO.StreamReader($r.GetResponseStream())).ReadToEnd() | ConvertFrom-Json } else { "  push failed: $($_.Exception.Message)" }
+    # MEASURED at the arming: 5.1 has already drained the response stream on a non-2xx answer; the
+    # body survives in ErrorDetails.
+    if ($_.ErrorDetails.Message) { $ack = $_.ErrorDetails.Message | ConvertFrom-Json }
+    elseif ($r) { "  push answered $([int]$r.StatusCode) with no readable body" }
+    else { "  push failed: $($_.Exception.Message)" }
 }
 "  push at $pushAt -> accepted $($ack.accepted); detail: $($ack.detail)"
 Start-Sleep -Seconds 2
