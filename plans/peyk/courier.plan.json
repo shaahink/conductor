@@ -173,7 +173,7 @@
   },
   "batteries": {
     "ledgerMaxEntries": 3,
-    "maxBytes": 6144
+    "maxBytes": 3072
   },
   "report": {
     "commit": false,
