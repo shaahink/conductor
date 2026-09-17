@@ -4,13 +4,12 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s11 claimed PK5.2 (evidence .conductor/evidence/PK5/pk5.2.md, commits 6bd8150 e9d40a6 f391cb2; rig tools/peyk/pk5-2-live-proof.ps1 27/27; 7 new tests + 551 neighbours green, twice). PK5 is fully claimed; PK6 is next.
-  PK5.2 as built: CourierFigures (Core/Courier) answers /status /progress /money /tokens /evidence [id] for the note's own routed project from its newest run: plan file found by name (repo, plans/, plans/*/), db by pointer > catalogue > StateHome.Peek(honourEnvOverride:false), PlanConfig.PinState, SqliteRunStore.OpenReadOnly. Money/tokens/progress = MessageComposer (saved run_state row), status = StatusReportBuilder, evidence = EvidenceRegistry fold ordered this plan's stages > other checkpoints > unclaimed. CourierDaemon.Figures.cs routes them BEFORE the filing gate by SurfaceCommands scope (all Browse: observers may ask, still may not file).
-  Measured: PlanConfig.RunDbPath WRITES the catalogue (Resolve -> Upsert) - any read-only surface must pin first. Rig: fresh courier vs sqlite3 .backup copy of the live store: $124.46 / 9 sessions / $10.37 per checkpoint identical to fresh `money --json`; /status verdict and figures identical to fresh `status`; no file changed under home or checkout.
-  Open, stated in evidence: /evidence names files, does not send (bug #76 still open); an observer chat cannot /project (Steer), so it gets figures by replying to a push or via a selection set elsewhere. Real courier gets PK5.x only at the owner's reinstall.
-  PK6 pointers: PK6.1 is docs (cli.md already has a PK5.2 paragraph under "The courier"; operating.md courier row does not name the figure verbs yet), ARCHITECTURE seam recount, ADR-0009 amending 0008. PK6.2 is the telegram-notify skill rewrite (walk-ids.ps1 already gone since PK5.1).
-  Still true: stage CONFIRMED only under gatePolicy perPhase; RunLoop.cs AT 500 lines; KS11_1SeamBoundary forbids Telegram* in new Core Messaging files. Real 'Conductor Courier' ARMED 2026-09-17T11:37:30Z (24 h window ends 2026-09-18T11:37:30Z), protocol 2; bug #93 OPEN for PK6; bug #99 (cmd.exe 8191) open, low.
-next: PK6 (docs, skill, close). Do not restart, stop or reinstall the armed courier.
+last: s12 claimed PK6.3 (skill: .conductor/evidence/PK6/pk6.3.md, f47eab3; real say 3871 to admin DM sent directly + deleted) and PK6.2 (docs: pk6.2.md, 081fa60 + 123b95e; 9 new SF7_1 Peyk facts, 73/73 docs, 247/247 neighbours). PK6.1 set blocked-until 2026-09-18T11:40Z (window must reach 24 h); PK6.4 last.
+  PK6.1 is mostly READ already - see s12's "PK6.1 PRE-READ" ledger note: first window death 2026-09-17 12:23:18Z, pid 20052, `courier run DIED (unhandled, terminating): TaskCanceledException ... HttpClient.Timeout of 65 seconds` from GetUpdatesAsync; pid 3232 up 12:25:01Z (keep-alive). Source cause still in tree: CourierDaemon.cs:102/:113 filters let a timeout-TaskCanceledException (ct not cancelled) escape. No death record for it (Main's finally clears presence, CourierProgram.cs:183) - only the exit journal names it.
+  PK6.1 to do after 11:37:30Z: re-read courier.log (%LOCALAPPDATA%\conductor\courier) for any death after 12:25Z, schtasks /query /tn "Conductor Courier" /v, System log for sleep; write the dated finding; FOLLOW the procedure PK6.2 already wrote in docs/operating.md "The courier died - reading out why" and correct it where the reading disproves it (add the finally-clears-presence gap); close bug #93 in the same commit. Whether the 2-line catch fix + regression test lands here or as a new bug is that session's call - D2 says measure first, then fix. READ ONLY on the real courier: no restart.
+  PK6.4 (ownerGate): release preflight/perform through the fresh build only after checking MigrationRunner.CurrentVersion vs the installed engine (trap 19); money/budget against a sqlite3 .backup COPY; the plan doc is NOT moved - plan B (peyk/watch) reads docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md; pre-flight, print owner acts, park.
+  Still true: the PATH engine (0.5.1-alpha.0.43) has no say/room - the rewritten skill works from the owner's reinstall; `say --to admin` refuses on this machine (2 admin chats) - use the id. Real courier pid 3232 speaks protocol 2. Bug #99 open, low.
+next: PK6.1 at/after 2026-09-18T11:37:30Z, then PK6.4. Do not restart, stop or reinstall the real courier.
 
 
 ## Baseline numbers (from run.db)
@@ -19,7 +18,7 @@ next: PK6 (docs, skill, close). Do not restart, stop or reinstall the armed cour
 |---|---|
 | Total checkpoints | 17 |
 | Done | 11 |
-| Claimed (unconfirmed) | 1 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -62,7 +61,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | PK5.1 | InboxNote carries MessageId, SenderId, SenderName, SenderUsername; the ack is a reaction, never a message; inbox list shows sender and id; say --reply-to takes a note id or a message id; walk-ids.ps1 deleted; the no-authority rule in the note file's header. An old note without the fields still lists | DONE | 321c73b | .conductor/evidence/PK5/pk5.1.md |
-| PK5.2 | The figure verbs (/progress, /money, /tokens, /status, /evidence) answered by the courier from the project's newest run.db, read-only, whether or not a run is live; a test asserts no store write on that path; the in-run handlers stay for a courier-less machine | TODO | - | - |
+| PK5.2 | The figure verbs (/progress, /money, /tokens, /status, /evidence) answered by the courier from the project's newest run.db, read-only, whether or not a run is live; a test asserts no store write on that path; the in-run handlers stay for a courier-less machine | DONE | 6bd8150 | .conductor/evidence/PK5/pk5.2.md |
 
 ### PK6 — The docs, the skill, the close
 
