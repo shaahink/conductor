@@ -116,7 +116,12 @@ public sealed class PK1_1CourierExecutableTests : IDisposable
         Assert.NotEqual(alias.Id, courier.Id);
 
         alias.Kill(entireProcessTree: false);
-        Assert.True(await Exited(courier, 15), "the courier outlived the alias that started it");
+        var died = await Exited(courier, 15);
+
+        // A red run must not leave the orphan behind: it inherited this test host's output pipes, so a
+        // courier still polling holds `dotnet test` open forever (measured by the PK1.1 negative control).
+        if (!died) courier.Kill();
+        Assert.True(died, "the courier outlived the alias that started it");
     }
 
     private Process Start(string exe, IEnumerable<string> args, string? token, int port)
