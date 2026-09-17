@@ -161,9 +161,12 @@ public static class StateHome
     /// a resume peek over it reports exactly what <c>run</c> is about to do. (When both exist the
     /// target wins, as it does after any real resolution.)
     /// </summary>
-    public static StateResolution Peek(string repo, string? plan, string? root = null)
+    /// <param name="honourEnvOverride">False for a MACHINE-level reader (PK5.2's courier): one process
+    /// answering for every project cannot let a single <see cref="RunDbEnvVar"/> stand in for all of
+    /// them.</param>
+    public static StateResolution Peek(string repo, string? plan, string? root = null, bool honourEnvOverride = true)
     {
-        if (Environment.GetEnvironmentVariable(RunDbEnvVar) is { Length: > 0 } explicitDb)
+        if (honourEnvOverride && Environment.GetEnvironmentVariable(RunDbEnvVar) is { Length: > 0 } explicitDb)
             return new StateResolution(Path.GetFullPath(explicitDb), StateSource.EnvOverride, null);
 
         if (StatePointer.TryRead(PointerPathFor(repo)) is { Length: > 0 } pointed)

@@ -162,6 +162,12 @@ public sealed partial class PlanConfig
     /// anything) was imported. Commands that report on state (<c>doctor</c>) want all three;
     /// everything else wants <see cref="RunDbPath"/>.</summary>
     public StateResolution ResolveState() => _state ??= StateHome.Resolve(Repo, Name);
+
+    /// <summary>PK5.2 / D10 - a reader that has already found this plan's database says so, and nothing
+    /// downstream resolves it again. <see cref="ResolveState"/> is a WRITER: it upserts the state
+    /// catalogue (stamping <c>lastSeenUtc</c> every time) and may import a legacy file, and a courier
+    /// answering <c>/money</c> must do neither.</summary>
+    internal void PinState(StateResolution resolution) => _state = resolution;
     [JsonIgnore] public string TrackerPath => Path.Combine(Repo, Tracker);
     [JsonIgnore] public bool PerPhaseGates => GatePolicy.Equals("perPhase", StringComparison.OrdinalIgnoreCase);
 

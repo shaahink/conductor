@@ -43,6 +43,7 @@ public sealed partial class CourierDaemon
     private readonly DeadLetterBox _parked;
     private readonly Action<string> _log;
     private readonly Action<DateTimeOffset> _beat;
+    private readonly string _root;
 
     /// <param name="stateHomeRoot">The machine's state home, or null for the resolved one. A rig
     /// passes its own, which is what keeps a test off the operator's real inbox.</param>
@@ -60,6 +61,7 @@ public sealed partial class CourierDaemon
         _beat = beat ?? (_ => { });
 
         var root = string.IsNullOrWhiteSpace(stateHomeRoot) ? Store.StateHome.Root : stateHomeRoot;
+        _root = root;
         _offset = new CourierOffset(root);
         _parked = new DeadLetterBox(root);
 
@@ -196,6 +198,12 @@ public sealed partial class CourierDaemon
         // on every poll for the next 24 hours.
         if (delivery is not { Note: { } note, Profile: { } profile }) return DeliveryOutcome.Other;
 
+        // PK5.2 - a figure verb is a READ, so it comes before the filing gate: an observer may not file,
+        // and may ask what the run cost, which is the question F-COUR-7's observer group asked.
+        if (delivery.Command is { Length: > 0 } asked
+            && await AnswerFigureAsync(note, profile, asked, ct).ConfigureAwait(false))
+            return DeliveryOutcome.Other;
+
         if (!ChatProfiles.MayFile(profile))
         {
             // Said out loud rather than ignored: an observer who sends a voice note into silence
@@ -325,9 +333,11 @@ public sealed partial class CourierDaemon
         if (!string.Equals(verb, "project", StringComparison.Ordinal))
         {
             await ReplyAsync(note,
-                "The courier files notes; it does not steer runs. Send a voice note, a file or a "
+                "The courier files notes and reads figures; it does not steer runs. Send a voice note, a file or a "
                 + "sentence and it is filed against a project. <code>/project</code> chooses which; "
-                + "<code>/note</code>, as a reply to a note, says where it went.",
+                + "<code>/note</code>, as a reply to a note, says where it went; "
+                + string.Join(", ", CourierFigures.Verbs.Select(v => "<code>/" + v + "</code>"))
+                + " answer from the project's newest run.",
                 ct).ConfigureAwait(false);
             return;
         }
