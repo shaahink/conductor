@@ -4,12 +4,14 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s8 claimed PK4.1 (evidence pk4.1.md, rig 16/16) and PK4.2 (evidence pk4.2.md, rig 3/3 via HarnessTests.Cards.cs, neighbours 596/596). PK4.3 IN PROGRESS, half done - budget nudge.
-  PK4.3 landed (unwired, builds): src/Conductor.Core/RoomVoiceBattery.cs (character + room voice, fair split of its 4096 cap, clip says so; ReadVoice/EmbeddedCharacter public), docs/rooms/character.md embedded in Conductor.Core.csproj as Conductor.Core.Rooms.character.md, PlanConfig.ChatPairs() (neutral (id, profile) pairs so Core callers never name Telegram*).
-  PK4.3 NEXT, in order: (1) wire in PromptBuilder.BatterySection after HeldWordsBattery: `if (_plan.Repo is {Length:>0} r && Courier.Rooms.Resolve(r, _plan.ChatPairs(), Courier.CourierSettings.Load()) is {} room)` add RoomVoiceBattery when !IsEmpty - then RUN prompt/golden tests + ArchitectureTests: the courier.json fallback (one observer chat on the machine) turns the battery on for every repo, check no test state home carries one. (2) RoomVoiceBattery unit tests with a FIXTURE voice (never the owner's). (3) SF7_1 pin: the cli.md `task` row names `--tell` and the verdict; cli.md/operating.md never tell a session to run report.ps1. (4) dry-run proof: fresh build `run --dry-run -p <scratch plan>` with CONDUCTOR_STATE_HOME scratch + a room with observer + fixture voice - the prompt carries `### room-voice` within batteries.maxBytes. (5) delete ~/.claude/skills/telegram-notify/report.ps1 and drop its mentions from that SKILL.md. (6) rewrite rule 11 in C:/Code/bg/plans/conductor.plan.json AND conductor.feel.plan.json, rule 17 in C:/Code/BookToCourse/conductor.hardening.plan.json to `task --done --tell "<title> | <sentences>"` (engine posts at the verdict, red posts nothing and the words are held, before/after = <id>-before.png/<id>-after.png in the watched evidence dir, never post a card yourself, say --to observer for findings, and: if the engine refuses --tell claim without it). Raw string replace of the JSON-escaped rule, json.loads to verify, commit nothing there; `conductor ps` showed no run live in those repos at 14:25Z. BookToCourse rule 17 also cites session.md step 5 (not a plan file - name it in the handoff); bg keeps an in-repo skill copy with its own report.ps1 (leave it).
-  PK4.1/PK4.2 facts: a stage is CONFIRMED only under gatePolicy perPhase; the composer must FlushEvents before reading; ArchitectureTests = 3 types/file and RunLoop.cs AT 500 lines; KS11_1SeamBoundary forbids Telegram* in new Core files. The owner's real courier home has no rooms yet - `conductor room import` after the reinstall; bg has no room (its chats live in the repo's .claude copy) - `room add --repo C:/Code/bg --observer <id>`.
+last: s9 claimed PK4.3 (evidence .conductor/evidence/PK4/pk4.3.md, commits f83104e e5e316c 712171d, neighbours 456/456). PK4 is fully claimed; PK5.1 is next.
+  PK4.3 as built: RoomVoiceBattery is on only for a plan that names telegram chats AND whose resolved room has an observer (same condition a card needs); PromptBuilder.CourierStateHome is the test seam. The group's tail cut always lost the room's voice, so a battery may implement IFittingBattery (PromptBattery.cs) and the group asks it to recompose inside its share. Character is 7.1k chars, so at the default maxBytes 2048 it is mostly cut - the owner raises batteries.maxBytes per plan if the character should arrive whole.
+  This machine's courier.json has exactly ONE observer chat, so under the D6 fallback every plan with telegram.chats and no room of its own is voiced (and carded) toward that group. Decided by D6; worth the owner's eye at the reinstall.
+  Card rig now launches through powershell -File: its prompt passed the 8191 chars cmd.exe takes. Bug #99 (low): the argv guard grants agent.command cmd.exe the CreateProcess ceiling and cmd refuses silently.
+  Outside this repo (nothing committed there): report.ps1 deleted from ~/.claude/skills/telegram-notify (a copy of the folder is under the temp dir as pk43/skill-backup), SKILL.md and its character.md rewritten to --tell. Rules rewritten to --tell: C:/Code/bg/plans/conductor.plan.json line 205 (rule 11), conductor.feel.plan.json line 150 (rule 11), C:/Code/BookToCourse/conductor.hardening.plan.json line 133 (rule 17). Still naming report.ps1, left alone: BookToCourse templates/session.md line 86 (step 5) and bg's in-repo .claude skill copy. None of the three plans sets stages[].deploys.
+  PK4.1/PK4.2 facts: a stage is CONFIRMED only under gatePolicy perPhase; ArchitectureTests = 3 types/file, RunLoop.cs AT 500 lines; KS11_1SeamBoundary forbids Telegram* in new Core files. Real courier home has no rooms yet - `conductor room import` after the reinstall.
   PK2 (still true): real 'Conductor Courier' ARMED 2026-09-17T11:37:30Z, protocol 2; bug #93 OPEN for PK6.1 (`tools/peyk/pk2-3-arm-real-courier.ps1 -ReadOnly`).
-next: PK4.3 steps (1)-(6) above, then claim with a pk4.3.md evidence. Do not restart, stop or reinstall the armed courier.
+next: PK5.1 (D9: InboxNote sender fields, reaction ack, inbox list sender+id, say --reply-to by note or message id, walk-ids.ps1 deleted). Do not restart, stop or reinstall the armed courier.
 
 
 ## Baseline numbers (from run.db)
@@ -17,8 +19,8 @@ next: PK4.3 steps (1)-(6) above, then claim with a pk4.3.md evidence. Do not res
 | Metric | Value |
 |---|---|
 | Total checkpoints | 17 |
-| Done | 5 |
-| Claimed (unconfirmed) | 3 |
+| Done | 8 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -44,17 +46,17 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| PK3.1 | Protocol 3: POST /send (text or file, replyTo, chat by id or room profile, parse mode, media group), POST /react, POST /delete, GET /chats; every send returns the Telegram message id; messages.jsonl in the courier home; /push (protocol 2) still accepted. One real send to the admin DM, then deleted, both ids in the evidence | DONE | 0d43747 | .conductor/evidence/PK3/pk3.1.md |
-| PK3.2 | conductor say with every switch in D5; the direct fallback when the courier is unreachable (environment token, log line, channel-health line naming the path); Telegram's ceilings refused by name. say --dry-run prints the exact bytes and the resolved chat; with the scratch courier stopped a send lands and the log reads sent directly | DONE | 0d43747 | .conductor/evidence/PK3/pk3.2-fix-completion.log |
-| PK3.3 | A live run names its own project to the courier: /hello carries repo path and plan name and the allowlist entry is added marked by run; courier allow unchanged. On a rig a fresh plan name files an inbound note on the first boundary without courier allow | DONE | 0d43747 | .conductor/evidence/PK3/pk3.3.md |
+| PK3.1 | Protocol 3: POST /send (text or file, replyTo, chat by id or room profile, parse mode, media group), POST /react, POST /delete, GET /chats; every send returns the Telegram message id; messages.jsonl in the courier home; /push (protocol 2) still accepted. One real send to the admin DM, then deleted, both ids in the evidence | DONE ✓ | 0d43747 | .conductor/evidence/PK3/pk3.1.md |
+| PK3.2 | conductor say with every switch in D5; the direct fallback when the courier is unreachable (environment token, log line, channel-health line naming the path); Telegram's ceilings refused by name. say --dry-run prints the exact bytes and the resolved chat; with the scratch courier stopped a send lands and the log reads sent directly | DONE ✓ | 0d43747 | .conductor/evidence/PK3/pk3.2-fix-completion.log |
+| PK3.3 | A live run names its own project to the courier: /hello carries repo path and plan name and the allowlist entry is added marked by run; courier allow unchanged. On a rig a fresh plan name files an inbound note on the first boundary without courier allow | DONE ✓ | 0d43747 | .conductor/evidence/PK3/pk3.3.md |
 
 ### PK4 — Rooms and the card
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| PK4.1 | rooms/<slug>.json in the courier home; conductor room add / show / list; the one-time import of the private config files; docs/rooms/character.md in the tree; the voice file only ever pointed at. room list shows the two migrated rooms; an old-shape plan on a room-less machine replays byte-identically | TODO | - | - |
-| PK4.2 | conductor task --done --tell stores the session's words; the engine composes the checkpoint card at the verdict and pushes it to the room's observer chat; a red claim posts nothing and the next prompt carries the held words; the card is a NotifyTemplate; stages[].deploys; a stage confirm posts a stage card. Proven on a rig with a fake agent | TODO | - | - |
-| PK4.3 | RoomVoiceBattery under the byte cap; report.ps1 deleted from the shared skill; the three field plans' report.ps1 rule rewritten to --tell (their plan files only, nothing committed there); SF7_1DocsMatchRealityTests pins --tell in docs/cli.md | TODO | - | - |
+| PK4.1 | rooms/<slug>.json in the courier home; conductor room add / show / list; the one-time import of the private config files; docs/rooms/character.md in the tree; the voice file only ever pointed at. room list shows the two migrated rooms; an old-shape plan on a room-less machine replays byte-identically | DONE | 99cb57e | .conductor/evidence/PK4/pk4.1.md |
+| PK4.2 | conductor task --done --tell stores the session's words; the engine composes the checkpoint card at the verdict and pushes it to the room's observer chat; a red claim posts nothing and the next prompt carries the held words; the card is a NotifyTemplate; stages[].deploys; a stage confirm posts a stage card. Proven on a rig with a fake agent | DONE | 99cb57e | .conductor/evidence/PK4/pk4.2.md |
+| PK4.3 | RoomVoiceBattery under the byte cap; report.ps1 deleted from the shared skill; the three field plans' report.ps1 rule rewritten to --tell (their plan files only, nothing committed there); SF7_1DocsMatchRealityTests pins --tell in docs/cli.md | IN PROGRESS | - | - |
 
 ### PK5 — Inbound with a name
 

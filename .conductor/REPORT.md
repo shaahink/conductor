@@ -1,70 +1,83 @@
-﻿# Conductor — Charkh - the wheel: what the owner still does by hand becomes machinery run report
+﻿# Conductor — Peyk courier - the courier stands on its own run report
 
-_Updated 2026-08-27 09:20 UTC · branch `feat/charkh` · HEAD `8c19a1d`_
+_Updated 2026-09-17 14:28 UTC · branch `feat/peyk-courier` · HEAD `705f9e5`_
 
-**Status:** Completed
-**Stage:** CH5 — Ship Charkh with the machinery it built · attempts used 0
-**Checkpoints:** 14/14 done · **Sessions run:** 9 · **Cost:** $129.1987 (agent $129.1204 + gates $0.0784) · **Tokens:** 2,087,759 in / 860,853 out
-**Confirmed phases:** CH1, CH2, CH3, CH4, CH5
-**Channels:** telegram ready · github ready · courier DEAD
-**⚠ Channel DEAD — courier:** no courier is running on this machine. Start one: conductor courier restart · fix: `conductor courier restart`
+**Status:** Idle
+**Stage:** PK4 — Rooms and the card · attempts used 0 · working ▸ PK4.3
+**Checkpoints:** 10/17 done · **Sessions run:** 8 · **Cost:** $102.2190 (agent $102.1587 + gates $0.0603) · **Tokens:** 1,530,887 in / 747,763 out
+**Confirmed phases:** PK1, PK2, PK3
+**Channels:** telegram ready · github ready · courier ready
+**CI battery:** ci-battery DEGRADED · ci-verdict DEGRADED
+**⚠ CI DEGRADED — ci-battery:** CI runs 'powershell tools/gates/ratchet.ps1' that this run's gates do not - a checkpoint can pass one battery and fail the other · fix: add 'powershell tools/gates/ratchet.ps1' to plan.gates, or drop it from ci.yml. 
+**⚠ CI DEGRADED — ci-verdict:** CI has no verdict for 705f9e5, the commit this run is on: CI's newest run is for b125405 - a branch reads green when the workflow that would have failed never ran on this head · fix: push the commit, or re-ask once CI has run: conductor github ci
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| CH1 | CI green, and the reason it was not | ██████████ 3/3 | confirmed ✓ |
-| CH2 | The tour that matches the engine - and knows when it does not | ██████████ 2/2 | confirmed ✓ |
-| CH3 | The docs say what shipped | ██████████ 3/3 | confirmed ✓ |
-| CH4 | The machinery - the era-close stops being prose | ██████████ 4/4 | confirmed ✓ |
-| CH5 | Ship Charkh with the machinery it built | ██████████ 2/2 | confirmed ✓ |
+| PK1 | Its own process | ██████████ 2/2 | confirmed ✓ |
+| PK2 | Alive, or known dead | ██████████ 3/3 | confirmed ✓ |
+| PK3 | One transport | ██████████ 3/3 | confirmed ✓ |
+| PK4 | Rooms and the card | ███████░░░ 2/3 | **← active** |
+| PK5 | Inbound with a name | ░░░░░░░░░░ 0/2 | todo |
+| PK6 | The docs, the skill, the close | ░░░░░░░░░░ 0/4 | todo |
 
-<details> ✅<summary>CH1 — CI green, and the reason it was not (3/3)</summary>
+<details> ✅<summary>PK1 — Its own process (2/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| CH1.1 | The rendered board page is one document whatever the checkout did to the source: the inline CSS constant is normalised to LF at load, and a test asserts the PROPERTY (Render output carries no carriage return) rather than the symptom, so the next raw string literal in that file cannot reintroduce it silently | ✅ DONE | [`1232ea0`](https://github.com/shaahink/conductor/commit/1232ea0) |
-| CH1.2 | A plan file in this repo is loadable on a fresh clone: the three KS1_4DoctorPlanLintsTests that load this repo's own plan and Validate it stop depending on an absolute machine path, by whichever of the two routes the checkpoint records as chosen, pinned by a test that would fail on the old form | ✅ DONE | [`1232ea0`](https://github.com/shaahink/conductor/commit/1232ea0) |
-| CH1.3 | The local battery and CI can no longer disagree in silence: a divergence between what a run's gates just proved and what CI says about the same commit surfaces where the run can see it - the report header, the owner queue - in the DV1.1 channel-health shape, proven on a seeded divergence. Exit is CI green on Windows and Linux for master | ✅ DONE | [`3750f9a`](https://github.com/shaahink/conductor/commit/3750f9a) |
+| PK1.1 | src/Conductor.Courier is its own project, referencing Conductor.Core and nothing else, building conductor-courier.exe; conductor courier run execs it; ArchitectureBoundaryTests carries the rule and names a seeded violation | ✅ DONE | [`ba634a8`](https://github.com/shaahink/conductor/commit/ba634a8) |
+| PK1.2 | tools/install.ps1 publishes both binaries and no longer stops the courier to publish the engine; proven against a scratch install path with a scratch courier live (no restart in its log); release preflight green on the courier check | ✅ DONE | [`ba634a8`](https://github.com/shaahink/conductor/commit/ba634a8) |
 
 </details>
 
-<details> ✅<summary>CH2 — The tour that matches the engine - and knows when it does not (2/2)</summary>
+<details> ✅<summary>PK2 — Alive, or known dead (3/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| CH2.1 | docs/assets/demo.gif re-recorded against the v0.5.0 Face through the VHS container at the covered 1176x736 geometry, with the tape extended to the surfaces the last two eras added (the courier, the inbox, the board page, the hub); Docker verified FIRST with exact output, and if it cannot be made to work that is filed with the output rather than worked around | ✅ DONE | [`13a5bfe`](https://github.com/shaahink/conductor/commit/13a5bfe) |
-| CH2.2 | Staleness becomes a gate rather than a thing somebody notices: a manifest of what the GIF was recorded from and a check that fails when the product has moved past it - payesh's social-card pattern ported, which is why payesh's cards were caught and conductor's GIF was not | ✅ DONE | [`13a5bfe`](https://github.com/shaahink/conductor/commit/13a5bfe) |
+| PK2.1 | Heartbeat in the presence record; courier status prints alive / stale (last poll N min ago) / dead (last seen T); a presence file found at startup produces a journaled death record carrying the scheduler's last-run result. A scratch courier killed with Stop-Process reads dead with a time by the next status, and the next start logs the record | ✅ DONE | [`4affb95`](https://github.com/shaahink/conductor/commit/4affb95) |
+| PK2.2 | ProcessExit and unhandled-exception journaling; the keep-alive calendar trigger (every five minutes, IgnoreNew) in the task XML, proven by registering a scratch task and measuring the restart of a courier that exited 0; a run restarts a stale courier at the session boundary and says so in the log and the owner queue | ✅ DONE | [`4affb95`](https://github.com/shaahink/conductor/commit/4affb95) |
+| PK2.3 | The instruments armed on the real courier: install.ps1 -CourierOnly publishes conductor-courier.exe alone and re-registers the task with the keep-alive trigger (conductor.exe untouched); alive with a heartbeat, the task XML read back, one protocol-2 push landed; the arming time recorded for PK6.1's read-out | ✅ DONE | [`4affb95`](https://github.com/shaahink/conductor/commit/4affb95) |
 
 </details>
 
-<details> ✅<summary>CH3 — The docs say what shipped (3/3)</summary>
+<details> ✅<summary>PK3 — One transport (3/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| CH3.1 | The published surface reconciled against the INSTALLED v0.5.0 engine rather than against intent: README first, then cli.md, operating.md, plan-config.md, quickstart.md, troubleshooting.md, tracker.md and the docs/README.md index; the courier is a real always-on process now and the docs still offer it as a possibility | ✅ DONE | [`ea75bda`](https://github.com/shaahink/conductor/commit/ea75bda) |
-| CH3.2 | Every reference resolves: the rule for the plans' notes prose citing the two moved briefs decided once, applied consistently and recorded in docs/dev/README.md; every relative link in docs/, every path in a test message and every contracts reference swept. Frozen run artifacts under .conductor are a record - reported, never rewritten | ✅ DONE | [`ea75bda`](https://github.com/shaahink/conductor/commit/ea75bda) |
-| CH3.3 | SF7_1DocsMatchRealityTests extended to every verb and config key this era adds, each new assertion proven RED on a seeded stale doc - the negative control is the point of the battery | ✅ DONE | [`ea75bda`](https://github.com/shaahink/conductor/commit/ea75bda) |
+| PK3.1 | Protocol 3: POST /send (text or file, replyTo, chat by id or room profile, parse mode, media group), POST /react, POST /delete, GET /chats; every send returns the Telegram message id; messages.jsonl in the courier home; /push (protocol 2) still accepted. One real send to the admin DM, then deleted, both ids in the evidence | ✅ DONE | [`0d43747`](https://github.com/shaahink/conductor/commit/0d43747) |
+| PK3.2 | conductor say with every switch in D5; the direct fallback when the courier is unreachable (environment token, log line, channel-health line naming the path); Telegram's ceilings refused by name. say --dry-run prints the exact bytes and the resolved chat; with the scratch courier stopped a send lands and the log reads sent directly | ✅ DONE | [`0d43747`](https://github.com/shaahink/conductor/commit/0d43747) |
+| PK3.3 | A live run names its own project to the courier: /hello carries repo path and plan name and the allowlist entry is added marked by run; courier allow unchanged. On a rig a fresh plan name files an inbound note on the first boundary without courier allow | ✅ DONE | [`0d43747`](https://github.com/shaahink/conductor/commit/0d43747) |
 
 </details>
 
-<details> ✅<summary>CH4 — The machinery - the era-close stops being prose (4/4)</summary>
+<details><summary>PK4 — Rooms and the card (2/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| CH4.1 | Release preflight as a verb: every precondition DV7.3 measured by hand becomes something the engine measures - ff-only merge, a CHANGELOG section the extractor exits 0 on, no live conductor process, migration versions matching, the courier's token scope and task state, the run whose backfill is owed - as a verdict per line with a non-zero exit when any line is red | ✅ DONE | [`cf8997f`](https://github.com/shaahink/conductor/commit/cf8997f) |
-| CH4.2 | The mechanical acts performed and the judgement acts refused BY NAME: the CHANGELOG rename, the tag, the ff-only merge and the doc move with its tracker/planDoc/readOrder repoint are performed; the version number, single-vs-split release and corpus inclusion are stopped at and named. An act that needs the owner is never silently skipped - that failure is exactly what KS12.3 was | ✅ DONE | [`cf8997f`](https://github.com/shaahink/conductor/commit/cf8997f) |
-| CH4.3 | A backfill can no longer vandalise another run's board: the retire sweep is scoped to the run being synced, or a backfill that would retire another run's checkpoints is refused with what it would have closed. Measured 2026-08-26: the edge run's dry run reported 23 retired against exactly Divan's 23 checkpoints. Then the edge run's own GitHub record is written | ✅ DONE | - |
-| CH4.4 | The owner runbook becomes the preflight's output rather than a document written from scratch each era, generated from its own measurements and carrying the exact commands - the DV7.3 and KS12.3 artifacts are the shape being replaced | ✅ DONE | [`35a4555`](https://github.com/shaahink/conductor/commit/35a4555) |
+| PK4.1 | rooms/<slug>.json in the courier home; conductor room add / show / list; the one-time import of the private config files; docs/rooms/character.md in the tree; the voice file only ever pointed at. room list shows the two migrated rooms; an old-shape plan on a room-less machine replays byte-identically | ✅ DONE | - |
+| PK4.2 | conductor task --done --tell stores the session's words; the engine composes the checkpoint card at the verdict and pushes it to the room's observer chat; a red claim posts nothing and the next prompt carries the held words; the card is a NotifyTemplate; stages[].deploys; a stage confirm posts a stage card. Proven on a rig with a fake agent | ✅ DONE | - |
+| PK4.3 | RoomVoiceBattery under the byte cap; report.ps1 deleted from the shared skill; the three field plans' report.ps1 rule rewritten to --tell (their plan files only, nothing committed there); SF7_1DocsMatchRealityTests pins --tell in docs/cli.md | 🔄 IN PROGRESS | - |
 
 </details>
 
-<details> ✅<summary>CH5 — Ship Charkh with the machinery it built (2/2)</summary>
+<details><summary>PK5 — Inbound with a name (0/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| CH5.1 | The internal record: ARCHITECTURE.md and docs/dev reconciled for everything Charkh changed, a closure ledger naming every bug and followup closed this era or its living owner, and this run's budget re-measured through a fresh build against a sqlite3 BACKUP COPY of the store and written into TOKEN-BUDGET-TUNING as the number the next era compiles against | ✅ DONE | [`77b9547`](https://github.com/shaahink/conductor/commit/77b9547) |
-| CH5.2 | The era closed USING CH4's machinery rather than by hand: the preflight run, the runbook it generated, the mechanical acts performed and the refused ones parked with the owner. Anything the machinery got wrong is recorded as a finding - that is worth more than the checkpoint | ✅ DONE | [`35043fe`](https://github.com/shaahink/conductor/commit/35043fe) |
+| PK5.1 | InboxNote carries MessageId, SenderId, SenderName, SenderUsername; the ack is a reaction, never a message; inbox list shows sender and id; say --reply-to takes a note id or a message id; walk-ids.ps1 deleted; the no-authority rule in the note file's header. An old note without the fields still lists | ⬜ TODO | - |
+| PK5.2 | The figure verbs (/progress, /money, /tokens, /status, /evidence) answered by the courier from the project's newest run.db, read-only, whether or not a run is live; a test asserts no store write on that path; the in-run handlers stay for a courier-less machine | ⬜ TODO | - |
+
+</details>
+
+<details><summary>PK6 — The docs, the skill, the close (0/4)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| PK6.1 | The cause: the read-out of PK2.3's window (at least 24 hours, both timestamps) - a dated finding naming the first recorded exit path, or a dated statement that none occurred with the instruments listed; the reading procedure in docs/operating.md so a later death is read the same way; bug #93 closed on it | ⬜ TODO | - |
+| PK6.2 | docs/cli.md, operating.md, plan-config.md and ARCHITECTURE.md reconciled (the courier section rewritten for a separate binary, seams re-counted); ADR-0009 amending ADR-0008 for D3, D4 and D5; the docs battery green with a negative control per new verb and key | ⬜ TODO | - |
+| PK6.3 | The telegram-notify skill rewritten to two pages around conductor say and --tell; send.ps1, walk-ids.ps1 and lib/ deleted; watch-live re-pointed; a grep of the skill folder finds no Bot API URL; one real post through say from outside any run, then deleted | ⬜ TODO | - |
+| PK6.4 | The close through the machinery: release preflight, the mechanical acts performed, the CHANGELOG section written, the era's numbers measured against a backup copy of the store; the owner's acts printed and parked; the plan doc left in place for plan B | ⬜ TODO | - |
 
 </details>
 
@@ -72,15 +85,14 @@ _Updated 2026-08-27 09:20 UTC · branch `feat/charkh` · HEAD `8c19a1d`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | CH1 | Deliver | 1 | 08-26 22:08 | 0:59 | Advanced | CH1.1 CH1.2 | 5 | engine-fast:OK · face-fast:OK | $27.1701 | $0.0119 | 310,589/176,545 |
-| 2 | CH1 | Deliver | 1 | 08-26 23:09 | 0:59 | Advanced | CH1.3 | 4 | engine-fast:OK · face-fast:OK | $15.4400 | $0.0091 | 205,846/101,976 |
-| 3 | CH2 | Deliver | 1 | 08-27 00:16 | 0:24 | Advanced | CH2.1 CH2.2 | 3 | engine-fast:OK · face-fast:OK | $9.3501 | $0.0070 | 151,249/73,219 |
-| 4 | CH3 | Deliver | 1 | 08-27 00:51 | 0:47 | Advanced | CH3.1 CH3.2 CH3.3 | 4 | engine-fast:OK · face-fast:OK | $26.9553 | $0.0088 | 321,102/176,471 |
-| 5 | CH4 | Deliver | 1 | 08-27 01:45 | 0:47 | Advanced | CH4.1 CH4.2 | 4 | engine-fast:OK · face-fast:OK | $27.4686 | $0.0082 | 323,895/170,309 |
-| 6 | CH4 | Deliver | 1 | 08-27 02:33 | 5:36 | TimedOut |  | 3 |  |  |  | 224,343/1,325 |
-| 7 | CH4 | Resume | 2r1 | 08-27 08:10 | 0:07 | Advanced | CH4.4 | 3 | engine-fast:OK · face-fast:OK | $6.3494 | $0.0086 | 251,390/16,229 |
-| 8 | CH5 | Deliver | 1 | 08-27 08:23 | 0:23 | Advanced | CH5.1 | 4 | engine-fast:OK · face-fast:OK | $10.9359 | $0.0146 | 188,430/88,826 |
-| 9 | CH5 | Deliver | 1 | 08-27 08:49 | 0:17 | Advanced | CH5.2 | 3 | engine-fast:OK · face-fast:OK | $5.4510 | $0.0101 | 110,915/55,953 |
+| 1 | PK1 | Deliver | 1 | 09-17 09:31 | 0:51 | Advanced | PK1.1 PK1.2 | 11 | engine-fast:OK · face-fast:OK | $14.8693 | $0.0073 | 282,815/146,031 |
+| 2 | PK1 | Fix | 2 | 09-17 10:33 | 0:03 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $1.3467 | $0.0068 | 51,258/11,346 |
+| 3 | PK2 | Deliver | 1 | 09-17 10:42 | … | running |  | 0 |  |  |  |  |
+| 4 | PK2 | Deliver | 1 | 09-17 10:50 | 0:51 | Advanced | PK2.1 PK2.2 PK2.3 | 11 | engine-fast:OK · face-fast:OK | $21.2274 | $0.0160 | 331,016/162,994 |
+| 5 | PK2 | Fix | 2 | 09-17 11:59 | 0:04 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $1.6869 | $0.0078 | 57,960/14,558 |
+| 6 | PK3 | Deliver | 1 | 09-17 12:09 | 1:06 | Advanced | PK3.1 PK3.2 PK3.3 | 10 | engine-fast:OK · face-fast:OK | $30.5732 | $0.0075 | 413,123/226,173 |
+| 7 | PK3 | Fix | 2 | 09-17 13:27 | 0:02 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $0.8547 | $0.0076 | 36,779/5,655 |
+| 8 | PK4 | Deliver | 1 | 09-17 13:36 | 0:51 | Advanced | PK4.1 PK4.2 | 11 | engine-fast:OK · face-fast:OK | $31.6004 | $0.0074 | 357,936/181,006 |
 
 ## Money
 
@@ -88,61 +100,59 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 9 | 178.9M | 98.5% | $129.20 | 13 | 13.8M | $9.94 |
-| stage CH1 | 2 | 61.7M | 98.7% | $42.63 | 3 | 20.6M | $14.21 |
-| stage CH2 | 1 | 12.2M | 98.2% | $9.36 | 2 | 6.11M | $4.68 |
-| stage CH3 | 1 | 39.1M | 98.7% | $26.96 | 3 | 13M | $8.99 |
-| stage CH4 | 3 | 45.8M | 98.3% | $33.83 | 3 | 15.3M | $11.28 |
-| stage CH5 | 2 | 20M | 97.8% | $16.41 | 2 | 9.98M | $8.21 |
-| 2026-08 | 9 | 178.9M | 98.5% | $129.20 | 13 | 13.8M | $9.94 |
+| **run total** | 6 | 88.3M | 98.0% | $70.61 | 8 | 11M | $8.83 |
+| stage PK1 | 2 | 18.3M | 97.3% | $16.23 | 2 | 9.17M | $8.12 |
+| stage PK2 | 2 | 27.1M | 97.9% | $22.94 | 3 | 9.02M | $7.65 |
+| stage PK3 | 2 | 42.9M | 98.4% | $31.44 | 3 | 14.3M | $10.48 |
+| 2026-09 | 6 | 88.3M | 98.0% | $70.61 | 8 | 11M | $8.83 |
 
-_Where the money goes: agent $129.12 (100%) · gate $0.08 (0%) · blended $0.72/M tokens._
+_Where the money goes: agent $70.56 (100%) · gate $0.05 (0%) · blended $0.80/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-27 02:45:20  ✓ checkpoint CH3.2 confirmed
-08-27 02:45:20  ✓ checkpoint CH3.3 confirmed
-08-27 02:45:20  ▸ stage CH3 confirmed  (53m34s)
-08-27 02:45:20  ▸ stage CH4 entered — The machinery - the era-close stops being prose
-08-27 02:45:20  • session #5 CH4 Deliver started (attempt 1/10)
-08-27 03:33:49  ▪ gate engine-fast pass [session]  (1m04s)
-08-27 03:33:49  ▪ gate face-fast pass [session]  (18.0s)
-08-27 03:33:50  • session #5 CH4 → Advanced · done CH4.1,CH4.2 · 4 commit(s)  (48m29s)
-08-27 03:33:51  • session #6 CH4 Deliver started (attempt 1/10)
-08-27 09:10:07  • session #6 CH4 → TimedOut · 3 commit(s)  (5h36m16s)
-08-27 09:10:11  • session #7 CH4 Resume started (attempt 2/10)
-08-27 09:18:41  ▪ gate engine-fast pass [session]  (1m04s)
-08-27 09:18:41  ▪ gate face-fast pass [session]  (21.2s)
-08-27 09:18:42  • session #7 CH4 → Advanced · done CH4.4 · 3 commit(s)  (8m31s)
-08-27 09:23:32  ▪ gate engine-fast pass [phase]  (0.0s)
-08-27 09:23:32  ▪ gate face-fast pass [phase]  (0.0s)
-08-27 09:23:32  ▪ gate engine-full pass [phase]  (4m44s)
-08-27 09:23:32  ▪ gate face-full pass [phase]  (2.4s)
-08-27 09:23:32  ✓ checkpoint CH4.1 confirmed
-08-27 09:23:32  ✓ checkpoint CH4.2 confirmed
-08-27 09:23:32  ✓ checkpoint CH4.4 confirmed
-08-27 09:23:32  ▸ stage CH4 confirmed  (6h38m11s)
-08-27 09:23:33  ▸ stage CH5 entered — Ship Charkh with the machinery it built
-08-27 09:23:33  • session #8 CH5 Deliver started (attempt 1/4)
-08-27 09:49:23  ▪ gate engine-fast pass [session]  (2m00s)
-08-27 09:49:23  ▪ gate face-fast pass [session]  (25.9s)
-08-27 09:49:24  • session #8 CH5 → Advanced · done CH5.1 · 4 commit(s)  (25m51s)
-08-27 09:49:24  • session #9 CH5 Deliver started (attempt 1/4)
-08-27 10:09:04  ▪ gate engine-fast pass [session]  (1m16s)
-08-27 10:09:04  ▪ gate face-fast pass [session]  (24.5s)
-08-27 10:09:04  • session #9 CH5 → Advanced · done CH5.2 · 3 commit(s)  (19m39s)
-08-27 10:15:02  ▪ gate engine-fast pass [phase]  (0.0s)
-08-27 10:15:02  ▪ gate face-fast pass [phase]  (0.0s)
-08-27 10:15:02  ▪ gate engine-full pass [phase]  (5m48s)
-08-27 10:15:02  ▪ gate face-full pass [phase]  (2.8s)
-08-27 10:15:02  § owner approval requested — CH5
-08-27 10:20:20  § owner approval granted — CH5
-08-27 10:20:20  ✓ checkpoint CH5.1 confirmed
-08-27 10:20:20  ✓ checkpoint CH5.2 confirmed
-08-27 10:20:20  ▸ stage CH5 confirmed  (56m47s)
+09-17 12:59:12  ▪ gate face-fast pass [phase]  (0.0s)
+09-17 12:59:12  ▪ gate engine-full FAIL [phase]  (6m35s)
+09-17 12:59:12  ▪ gate face-full pass [phase]  (4.7s)
+09-17 12:59:13  • session #5 PK2 Fix started (attempt 2/6)
+09-17 13:05:14  ▪ gate engine-fast pass [session]  (1m15s)
+09-17 13:05:14  ▪ gate face-fast pass [session]  (2.5s)
+09-17 13:05:15  • session #5 PK2 → Progress · 1 commit(s)  (6m01s)
+09-17 13:09:51  ▪ gate engine-fast pass [phase]  (0.0s)
+09-17 13:09:51  ▪ gate face-fast pass [phase]  (0.0s)
+09-17 13:09:51  ▪ gate engine-full pass [phase]  (4m33s)
+09-17 13:09:51  ▪ gate face-full pass [phase]  (1.3s)
+09-17 13:09:51  ✓ checkpoint PK2.1 confirmed
+09-17 13:09:51  ✓ checkpoint PK2.2 confirmed
+09-17 13:09:51  ✓ checkpoint PK2.3 confirmed
+09-17 13:09:51  ▸ stage PK2 confirmed  (1h27m34s)
+09-17 13:09:52  ▸ stage PK3 entered — One transport
+09-17 13:09:52  • session #6 PK3 Deliver started (attempt 1/6)
+09-17 14:17:09  ▪ gate engine-fast pass [session]  (1m12s)
+09-17 14:17:09  ▪ gate face-fast pass [session]  (2.7s)
+09-17 14:17:10  • session #6 PK3 → Advanced · done PK3.1,PK3.2,PK3.3 · 10 commit(s)  (1h07m18s)
+09-17 14:27:04  ▪ gate engine-fast pass [phase]  (0.0s)
+09-17 14:27:04  ▪ gate face-fast pass [phase]  (0.0s)
+09-17 14:27:04  ▪ gate engine-full FAIL [phase]  (4m54s)
+09-17 14:27:04  ▪ gate face-full pass [phase]  (1.7s)
+09-17 14:27:05  • session #7 PK3 Fix started (attempt 2/6)
+09-17 14:31:10  ▪ gate engine-fast pass [session]  (1m14s)
+09-17 14:31:10  ▪ gate face-fast pass [session]  (2.2s)
+09-17 14:31:10  • session #7 PK3 → Progress · 2 commit(s)  (4m05s)
+09-17 14:36:05  ▪ gate engine-fast pass [phase]  (0.0s)
+09-17 14:36:05  ▪ gate face-fast pass [phase]  (0.0s)
+09-17 14:36:05  ▪ gate engine-full pass [phase]  (4m51s)
+09-17 14:36:05  ▪ gate face-full pass [phase]  (1.3s)
+09-17 14:36:05  ✓ checkpoint PK3.1 confirmed
+09-17 14:36:05  ✓ checkpoint PK3.2 confirmed
+09-17 14:36:05  ✓ checkpoint PK3.3 confirmed
+09-17 14:36:05  ▸ stage PK3 confirmed  (1h26m13s)
+09-17 14:36:06  ▸ stage PK4 entered — Rooms and the card
+09-17 14:36:06  • session #8 PK4 Deliver started (attempt 1/6)
+09-17 15:28:36  ▪ gate engine-fast pass [session]  (1m11s)
+09-17 15:28:36  ▪ gate face-fast pass [session]  (2.5s)
 ```
 
 ## Health
@@ -150,12 +160,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 9 · retries 1 (11 %) · overall Warn
-⚠ [context-saturation] session #1: 39,286,951 context tokens (≥ 20,000,000)
-⚠ [context-saturation] session #2: 21,648,664 context tokens (≥ 20,000,000)
-⚠ [context-saturation] session #4: 38,650,669 context tokens (≥ 20,000,000)
-⚠ [context-saturation] session #5: 38,222,976 context tokens (≥ 20,000,000)
-⚠ [context-saturation] session #6: 22,020,833 context tokens (≥ 20,000,000)
+sessions 8 · retries 3 (38 %) · overall Warn
+⚠ [context-saturation] session #4: 25,036,574 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #6: 41,561,063 context tokens (≥ 20,000,000)
+⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 5x
 ```
 
 ## Repo
@@ -163,49 +171,67 @@ sessions 9 · retries 1 (11 %) · overall Warn
 _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
-branch: feat/charkh
-working tree: M .conductor/REPORT.md, M plans/charkh/TRACKER.md
+branch: feat/peyk-courier
+working tree: M .conductor/REPORT.md
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s2 (CH1 Deliver)** — 4 commit(s):
-  - [`b4a2092`](https://github.com/shaahink/conductor/commit/b4a2092) docs(CH1.3): the handoff - CH1 is closed, CI is green on master
-  - [`656a06e`](https://github.com/shaahink/conductor/commit/656a06e) chore(CH1.3): the exit, captured - CI green on windows and linux for master
-  - [`349a3a5`](https://github.com/shaahink/conductor/commit/349a3a5) fix(CH1.3): a flush that says an event is durable now means it
-  - [`3750f9a`](https://github.com/shaahink/conductor/commit/3750f9a) fix(CH1.3): the suppression ceiling was made, not moved
-- **s3 (CH2 Deliver)** — 3 commit(s):
-  - [`ac60b4c`](https://github.com/shaahink/conductor/commit/ac60b4c) docs(CH2): the handoff - CH2 is closed, docker was a stopped daemon
-  - [`b373dee`](https://github.com/shaahink/conductor/commit/b373dee) feat(CH2.2): the GIF now fails the build when the product moves past it
-  - [`13a5bfe`](https://github.com/shaahink/conductor/commit/13a5bfe) feat(CH2.1): the tour visits the courier, the inbox and the run switcher
-- **s4 (CH3 Deliver)** — 4 commit(s):
-  - [`252f3e9`](https://github.com/shaahink/conductor/commit/252f3e9) docs(CH3): the handoff - CH3 is closed, full suite 3513/3513
-  - [`0fb578a`](https://github.com/shaahink/conductor/commit/0fb578a) test(CH3.3): the docs battery learns to see its own second assembly
-  - [`2e280fa`](https://github.com/shaahink/conductor/commit/2e280fa) feat(CH3.2): a path is rewritten only when something still reads it
-  - [`ea75bda`](https://github.com/shaahink/conductor/commit/ea75bda) feat(CH3.1): the docs are diffed against a binary, not read and agreed with
-- **s5 (CH4 Deliver)** — 4 commit(s):
-  - [`542f068`](https://github.com/shaahink/conductor/commit/542f068) docs(CH4): the handoff - CH4.1 and CH4.2 are closed, CH4.3 is diagnosed
-  - [`c0dcad5`](https://github.com/shaahink/conductor/commit/c0dcad5) feat(CH4.2): perform what is mechanical, name what is judgement
-  - [`a660c3a`](https://github.com/shaahink/conductor/commit/a660c3a) docs(CH4.1): the handoff block for CH4.2
-  - [`cf8997f`](https://github.com/shaahink/conductor/commit/cf8997f) feat(CH4.1): the era-close checklist gets a failure mode
-- **s6 (CH4 Deliver)** — 3 commit(s):
-  - [`5019261`](https://github.com/shaahink/conductor/commit/5019261) docs(CH4.3): the handoff - the sweep is scoped, the write is ordered
-  - [`74cfe3c`](https://github.com/shaahink/conductor/commit/74cfe3c) docs(CH4.3): the evidence - the A/B that names 23, then 14
-  - [`f4022f6`](https://github.com/shaahink/conductor/commit/f4022f6) feat(CH4.3): the retire sweep asks whose board it is
-- **s7 (CH4 Resume)** — 3 commit(s):
-  - [`d170504`](https://github.com/shaahink/conductor/commit/d170504) docs(CH4.4): the handoff - CH4 is closed, two acts are owed to CH5
-  - [`d1c9b81`](https://github.com/shaahink/conductor/commit/d1c9b81) docs(CH4.4): the evidence, the two generated runbooks, and the verb's row
-  - [`35a4555`](https://github.com/shaahink/conductor/commit/35a4555) feat(CH4.4): the runbook is generated, not written
-- **s8 (CH5 Deliver)** — 4 commit(s):
-  - [`11efa61`](https://github.com/shaahink/conductor/commit/11efa61) docs(CH5.1): the handoff - the record is reconciled, CH5.2 closes the era
-  - [`f1c7ea5`](https://github.com/shaahink/conductor/commit/f1c7ea5) docs(CH5.1): this era's own numbers, and the caveat that moves all of them
-  - [`980ccfc`](https://github.com/shaahink/conductor/commit/980ccfc) docs(CH5.1): the closure ledger, and the row that stopped being re-homed
-  - [`77b9547`](https://github.com/shaahink/conductor/commit/77b9547) docs(CH5.1): the record says what the engine does, measured not repeated
-- **s9 (CH5 Deliver)** — 3 commit(s):
-  - [`8c19a1d`](https://github.com/shaahink/conductor/commit/8c19a1d) docs(CH5.2): the handoff - the era is closed, the acts that are left are the owner's
-  - [`ae9678e`](https://github.com/shaahink/conductor/commit/ae9678e) docs(CH5.2): the era closed through its own machinery, and four findings
-  - [`35043fe`](https://github.com/shaahink/conductor/commit/35043fe) fix(CH5.2): the release notes exist before the tag can, bug #88
+- **s1 (PK1 Deliver)** — 11 commit(s):
+  - [`aca1eba`](https://github.com/shaahink/conductor/commit/aca1eba) docs(peyk): handoff after PK1 - the courier is its own exe in its own directory; PK2.1 next
+  - [`9262a55`](https://github.com/shaahink/conductor/commit/9262a55) docs(evidence): PK1.2 live proof - 27/27 on c50bf01, scratch install and scratch courier
+  - [`c50bf01`](https://github.com/shaahink/conductor/commit/c50bf01) test(install): PK1.2 rig quotes -clp:ErrorsOnly (5.1 splits it when passed through $args)
+  - [`be821b4`](https://github.com/shaahink/conductor/commit/be821b4) test(install): PK1.2 rig hashes with the BCL (Get-FileHash is not loadable in a 5.1 child of pwsh 7)
+  - [`d6eb4bc`](https://github.com/shaahink/conductor/commit/d6eb4bc) test(install): PK1.2 live proof rig; handoff mid-checkpoint
+  - [`e775bbe`](https://github.com/shaahink/conductor/commit/e775bbe) feat(install): the engine installs around a live courier; -CourierOnly replaces it (PK1.2, D1)
+  - [`5605f8b`](https://github.com/shaahink/conductor/commit/5605f8b) feat(courier): the courier's own install directory; install verb and preflight follow it (PK1.2, D1)
+  - [`d2b42e4`](https://github.com/shaahink/conductor/commit/d2b42e4) docs(peyk): handoff after PK1.1 - the courier is its own exe; PK1.2 next
+  - [`4cf6dcf`](https://github.com/shaahink/conductor/commit/4cf6dcf) docs(evidence): PK1.1 live proof - 13/13 on 2284862, seeded violation and negative control included
+  - [`2284862`](https://github.com/shaahink/conductor/commit/2284862) test(courier): PK1.1 live proof rig; a red kill-together test leaves no orphan
+  - [`ba634a8`](https://github.com/shaahink/conductor/commit/ba634a8) feat(courier): conductor-courier.exe is its own process; courier run is an alias (PK1.1, D1)
+- **s2 (PK1 Fix)** — 1 commit(s):
+  - [`6ead315`](https://github.com/shaahink/conductor/commit/6ead315) fix(courier): the messenger's words go back to the adapter file (PK1 battery red, KS11.1 ratchet)
+- **s4 (PK2 Deliver)** — 11 commit(s):
+  - [`195ee71`](https://github.com/shaahink/conductor/commit/195ee71) docs(peyk): handoff after PK2 - courier armed 11:37:30Z pid 20052, PK6.1 reading procedure, keep-alive measured
+  - [`13c7d03`](https://github.com/shaahink/conductor/commit/13c7d03) docs(evidence): PK2.3 the real courier armed at 2026-09-17T11:37:30Z, pid 20052, keep-alive read back
+  - [`24dd990`](https://github.com/shaahink/conductor/commit/24dd990) test(courier): PK2.3 arming and read-out script for the real courier; interim handoff before arming
+  - [`3239a5b`](https://github.com/shaahink/conductor/commit/3239a5b) docs(evidence): PK2.2 live proof 25/25 on b1a3b0a - keep-alive restarts an exit 0 in 272s and 280s, a run restarts a dead courier
+  - [`b1a3b0a`](https://github.com/shaahink/conductor/commit/b1a3b0a) docs(peyk): interim handoff - PK2.2 code and rig committed, live rig running
+  - [`7e05c72`](https://github.com/shaahink/conductor/commit/7e05c72) test(courier): PK2.2 live rig - exit journaling, keep-alive measured against a no-trigger control, a run restarts a dead scratch courier
+  - [`be76d1f`](https://github.com/shaahink/conductor/commit/be76d1f) feat(courier): PK2.2 exit journaling, five-minute keep-alive trigger, run restarts a dead courier at the boundary
+  - [`727b036`](https://github.com/shaahink/conductor/commit/727b036) docs(peyk): handoff after PK2.1 - heartbeat, alive/stale/dead, death record; a running task's last result is 267009
+  - [`f1c1a31`](https://github.com/shaahink/conductor/commit/f1c1a31) docs(evidence): PK2.1 live proof 18/18 on 1334051 and affected courier classes 124/124
+  - [`1334051`](https://github.com/shaahink/conductor/commit/1334051) test(courier): PK2.1 live rig - scratch courier killed, status reads dead, restart journals the death record
+  - [`4affb95`](https://github.com/shaahink/conductor/commit/4affb95) feat(courier): PK2.1 heartbeat, alive/stale/dead status and the startup death record
+- **s5 (PK2 Fix)** — 1 commit(s):
+  - [`59cfe04`](https://github.com/shaahink/conductor/commit/59cfe04) fix(courier): PK2 architecture ratchet - CourierTaskRun and the queue's surface sources get their own files
+- **s6 (PK3 Deliver)** — 10 commit(s):
+  - [`1b50136`](https://github.com/shaahink/conductor/commit/1b50136) docs(peyk): handoff after PK3 - protocol 3, say and the direct fallback, the run's hello all claimed
+  - [`0968027`](https://github.com/shaahink/conductor/commit/0968027) docs(evidence): PK3.3 live proof 12/12 - a fresh plan in an allowed repo is parked, the run's first boundary hello adds it by run <id>, the next note is filed
+  - [`9f63a5f`](https://github.com/shaahink/conductor/commit/9f63a5f) feat(courier): PK3.3 a live run names its own project - POST /hello adds the allowlist entry by run <id>
+  - [`eea0e4f`](https://github.com/shaahink/conductor/commit/eea0e4f) docs(peyk): handoff after PK3.2 - say and the direct fallback claimed, rig helpers named, PK3.3 next
+  - [`da2626f`](https://github.com/shaahink/conductor/commit/da2626f) docs(evidence): PK3.2 live proof 20/20 - say around a stopped courier, a run's pushes sent directly, one real send (id 3821) deleted
+  - [`a9c6a70`](https://github.com/shaahink/conductor/commit/a9c6a70) test(say): PK3.2 live proof rig - say through and around a scratch courier, a scratch run's direct fallback, one real send
+  - [`965a6dd`](https://github.com/shaahink/conductor/commit/965a6dd) feat(say): PK3.2 conductor say and the direct fallback - a send no courier takes goes out with the run's own token
+  - [`e80c862`](https://github.com/shaahink/conductor/commit/e80c862) docs(peyk): handoff after PK3.1 - protocol 3 claimed, the TelegramSender transport and the relay method for PK3.2
+  - [`04a58b0`](https://github.com/shaahink/conductor/commit/04a58b0) docs(evidence): PK3.1 live proof 23/23 - scratch courier answers protocol 3, one real send to the admin DM (id 3820) ledgered and deleted
+  - [`0d43747`](https://github.com/shaahink/conductor/commit/0d43747) feat(courier): PK3.1 protocol 3 - /send, /react, /delete, /chats with message ids and messages.jsonl
+- **s7 (PK3 Fix)** — 2 commit(s):
+  - [`f5ef7dc`](https://github.com/shaahink/conductor/commit/f5ef7dc) docs(peyk): handoff after the PK3 fix - say joins the completion verb list
+  - [`2dc1985`](https://github.com/shaahink/conductor/commit/2dc1985) fix(peyk): PK3.2 say reaches shell completion - the exhaustive verb test named it missing
+- **s8 (PK4 Deliver)** — 11 commit(s):
+  - [`705f9e5`](https://github.com/shaahink/conductor/commit/705f9e5) feat(rooms): PK4.3 part 1 - RoomVoiceBattery and the embedded character, not yet wired; handoff with the remaining steps
+  - [`68f0f2f`](https://github.com/shaahink/conductor/commit/68f0f2f) docs(peyk): handoff after PK4.2 - the card at the verdict, the held words, the stage card
+  - [`2a6af97`](https://github.com/shaahink/conductor/commit/2a6af97) docs(evidence): PK4.2 rig 3/3 - one card with its pair at the verdict, nothing on red with the words held in prompt 2, one stage card; neighbours 596/596
+  - [`1a90426`](https://github.com/shaahink/conductor/commit/1a90426) test(card): PK4.2 the card through a real run - green posts one card with its pair, red posts nothing and prompt 2 holds the words, a stage confirm posts one stage card
+  - [`80743dd`](https://github.com/shaahink/conductor/commit/80743dd) fix(card): PK4.1/PK4.2 the architecture ratchet - one more type per file and three more RunLoop lines than allowed
+  - [`b636bba`](https://github.com/shaahink/conductor/commit/b636bba) feat(card): PK4.2 the engine composes the checkpoint card at the verdict and posts it to the room's observer chat
+  - [`c97b8c5`](https://github.com/shaahink/conductor/commit/c97b8c5) feat(card): PK4.2 task --done --tell stores the room's words on the claim event
+  - [`c03a674`](https://github.com/shaahink/conductor/commit/c03a674) docs(peyk): handoff after PK4.1 - rooms in the courier home, the import, character.md in the tree
+  - [`64c2dc6`](https://github.com/shaahink/conductor/commit/64c2dc6) docs(evidence): PK4.1 live proof 16/16 - the fresh build imports BookToCourse and cv into a scratch courier home by name, voices pointed at, KS11.1 goldens byte-identical
+  - [`e00cad1`](https://github.com/shaahink/conductor/commit/e00cad1) fix(rooms): PK4.1 a room takes the plan's chats as plain pairs - KS11.1's seam test named Room.cs for naming TelegramConfig
+  - [`99cb57e`](https://github.com/shaahink/conductor/commit/99cb57e) feat(rooms): PK4.1 rooms in the courier home - room list|show|add|import, the one-time import points at each voice, character.md in the tree
 
 ## Phase handovers (audit)
 
@@ -228,34 +254,28 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> **CH5.2 done — era closed through its own verbs, bug #88 fixed, four findings**
-> - bug #88 fixed, proven by scratch-rig A/B not inference: changelog act moves from "placeholder (2 non-blank line(s))" to "rename [Unreleased] to [0.6.0]"; all four mechanical acts read "will run", acts verdict OWNER / exit 2
-> - nothing merged, tagged, moved, installed, pushed or backfilled — release perform refuses before planning while this run is live, so the mechanical acts are parked by the engine and version/split/corpus/reinstall/publish by the owner
-> - four findings filed: #93 high (real courier DOWN, exit 1, restart-on-failure never fired, no log anywhere), #94 perform refuses its own dry run, #95 an era-close act nobody taught it, #96 wrong remedy text
+> **PK4.1 rooms and PK4.2 card at the verdict claimed; PK4.3 half done**
+> - PK4.1: `room list|show|add|import`; import into a scratch home shows BookToCourse and cv by name, voices pointed at, KS11.1 goldens identical (16/16)
+> - PK4.2: `--tell` on the claim; engine posts one card with its pair at the verdict, nothing on red, words held in prompt 2, one stage card (rig 3/3, 596/596)
+> - PK4.3: RoomVoiceBattery and embedded character.md committed but not used yet; prompt wiring and the field-plan rewrites are next in the handoff
 >
-> artefacts: CHANGELOG.md, .conductor/evidence/CH5/ch5-2-era-close.md, .conductor/evidence/CH5/ch5-2-bug88-ab.txt, .conductor/evidence/CH5/ch5-2-preflight.txt, .conductor/evidence/CH5/ch5-2-perform-dryrun.txt, .conductor/evidence/CH5/ch5-2-charkh-runbook.md, .conductor/evidence/CH5/ch5-2-runbook-tag-rehearsal.md, 35043fe
+> artefacts: 99cb57e, e00cad1, 64c2dc6, c97b8c5, b636bba, 80743dd, 1a90426, 2a6af97
 >
-> evidence: .conductor/evidence/CH5/ch5-2-era-close.md
+> evidence: .conductor/evidence/PK4/pk4.1.md, .conductor/evidence/PK4/pk4.2.md
 >
-> gaps: the era-close is unperformed by design — tag/merge/docmove wait for this run to end, version/split/corpus/reinstall/publish are the owner's; bug #93 means the courier is down on this machine right now
+> gaps: PK4.3 open: battery not in PromptBuilder, no unit tests or dry-run proof, no SF7_1 --tell pin, report.ps1 not deleted, bg and BookToCourse plan rules not rewritten; the owner's real courier home still needs `conductor room import`
 
 ## Tracker handoff
 
 ```
-last: CH5.2 DONE - the last checkpoint of the plan. Bug #88 fixed in 35043fe: CHANGELOG [Unreleased]
-  now carries what Charkh landed, written from `master..feat/charkh` (32 commits), 108 non-blank
-  lines where there were 2. Proven by A/B in a scratch rig, not inference - same plan, same
-  `--tag 0.6.0` dry run, CHANGELOG.md the only difference: the changelog act moves from "a
-  placeholder (2 non-blank line(s))" to "rename [Unreleased] to [0.6.0]", and here all four
-  mechanical acts read "will run", acts verdict OWNER / exit 2. Nothing was merged, tagged, moved,
-  installed, pushed or backfilled: `release perform` refuses before it plans anything while this run
-  is live, so the mechanical acts are parked by the ENGINE, and version/split/corpus/reinstall/
-  publish are parked because they are the owner's. Four findings filed: #93 high (the real courier
-  died with exit 1, restart-on-failure did not fire, no log anywhere - it is DOWN right now and
-  Telegram drops undelivered notes after 24h), #94, #95, #96.
-next: nothing is owed to a session. The close is `.conductor/evidence/CH5/ch5-2-era-close.md`.
+last: s8 claimed PK4.1 (evidence pk4.1.md, rig 16/16) and PK4.2 (evidence pk4.2.md, rig 3/3 via HarnessTests.Cards.cs, neighbours 596/596). PK4.3 IN PROGRESS, half done - budget nudge.
+  PK4.3 landed (unwired, builds): src/Conductor.Core/RoomVoiceBattery.cs (character + room voice, fair split of its 4096 cap, clip says so; ReadVoice/EmbeddedCharacter public), docs/rooms/character.md embedded in Conductor.Core.csproj as Conductor.Core.Rooms.character.md, PlanConfig.ChatPairs() (neutral (id, profile) pairs so Core callers never name Telegram*).
+  PK4.3 NEXT, in order: (1) wire in PromptBuilder.BatterySection after HeldWordsBattery: `if (_plan.Repo is {Length:>0} r && Courier.Rooms.Resolve(r, _plan.ChatPairs(), Courier.CourierSettings.Load()) is {} room)` add RoomVoiceBattery when !IsEmpty - then RUN prompt/golden tests + ArchitectureTests: the courier.json fallback (one observer chat on the machine) turns the battery on for every repo, check no test state home carries one. (2) RoomVoiceBattery unit tests with a FIXTURE voice (never the owner's). (3) SF7_1 pin: the cli.md `task` row names `--tell` and the verdict; cli.md/operating.md never tell a session to run report.ps1. (4) dry-run proof: fresh build `run --dry-run -p <scratch plan>` with CONDUCTOR_STATE_HOME scratch + a room with observer + fixture voice - the prompt carries `### room-voice` within batteries.maxBytes. (5) delete ~/.claude/skills/telegram-notify/report.ps1 and drop its mentions from that SKILL.md. (6) rewrite rule 11 in C:/Code/bg/plans/conductor.plan.json AND conductor.feel.plan.json, rule 17 in C:/Code/BookToCourse/conductor.hardening.plan.json to `task --done --tell "<title> | <sentences>"` (engine posts at the verdict, red posts nothing and the words are held, before/after = <id>-before.png/<id>-after.png in the watched evidence dir, never post a card yourself, say --to observer for findings, and: if the engine refuses --tell claim without it). Raw string replace of the JSON-escaped rule, json.loads to verify, commit nothing there; `conductor ps` showed no run live in those repos at 14:25Z. BookToCourse rule 17 also cites session.md step 5 (not a plan file - name it in the handoff); bg keeps an in-repo skill copy with its own report.ps1 (leave it).
+  PK4.1/PK4.2 facts: a stage is CONFIRMED only under gatePolicy perPhase; the composer must FlushEvents before reading; ArchitectureTests = 3 types/file and RunLoop.cs AT 500 lines; KS11_1SeamBoundary forbids Telegram* in new Core files. The owner's real courier home has no rooms yet - `conductor room import` after the reinstall; bg has no room (its chats live in the repo's .claude copy) - `room add --repo C:/Code/bg --observer <id>`.
+  PK2 (still true): real 'Conductor Courier' ARMED 2026-09-17T11:37:30Z, protocol 2; bug #93 OPEN for PK6.1 (`tools/peyk/pk2-3-arm-real-courier.ps1 -ReadOnly`).
+next: PK4.3 steps (1)-(6) above, then claim with a pk4.3.md evidence. Do not restart, stop or reinstall the armed courier.
 ```
