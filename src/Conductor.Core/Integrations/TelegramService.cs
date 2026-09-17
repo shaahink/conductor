@@ -63,6 +63,16 @@ public interface IRunNotifier
     /// method rather than adding a second path. The owner's case is a screenshot nobody forwards.</summary>
     Task PushEvidenceAsync(IReadOnlyList<Evidence.EvidenceArtifact> artifacts, CancellationToken ct = default);
 
+    /// <summary>PK4.2 / D7: the checkpoint card, to the room's observer chat, for a claim the verdict
+    /// has just CONFIRMED. Nothing when the claim carried no words or the room has no observer chat.
+    /// Defaulted: a notifier that reaches nobody (a dry run, a plan with no messenger) has no room.</summary>
+    Task PushCheckpointCardAsync(string checkpointId, CancellationToken ct = default) => Task.CompletedTask;
+
+    /// <summary>PK4.2 / D7: the stage card - what changed, from its commit subjects - once, when the
+    /// stage is confirmed.</summary>
+    Task PushStageCardAsync(string stageId, IReadOnlyList<string> commitSubjects, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
     /// <summary>DV6.3: the board page goes OUT — one self-contained HTML file, as a document, at
     /// every boundary. Publish, not serve: ADR-0005 keeps the read view off any inbound route, and a
     /// file that has already left the machine needs none.

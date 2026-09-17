@@ -27,6 +27,26 @@ public static class NotifyDefaults
 {report}
 """;
 
+    /// <summary>PK4.2 / D7 - the checkpoint card, posted to the room's observer chat when the verdict
+    /// confirms a claim that carried words. Facts: title and line (the session's words), bar, done,
+    /// total, live, counters (the room's counts line, filled), footer (the room's live or pending
+    /// footer, filled), stage, checkpoint.</summary>
+    public const string CheckpointCard = """
+<b>{title}</b>
+{bar}  {counters}
+{line}
+<i>{footer}</i>
+""";
+
+    /// <summary>PK4.2 / D7 - the stage card, posted once when a stage is confirmed. Facts: stage, title
+    /// (the stage's), changes (its commit subjects), bar, done, total, live, counters, footer.</summary>
+    public const string StageCard = """
+<b>{stage} · {title}</b>
+{bar}  {counters}
+{changes}
+<i>{footer}</i>
+""";
+
     /// <summary>Facts: outcome, duration, checkpoints, skipped, telemetry, report (and cost, kept
 /// for overrides). The order is the ask —
     /// outcome, cost, checkpoint count, duration, report — rather than the engine build string the

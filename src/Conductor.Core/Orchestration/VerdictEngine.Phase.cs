@@ -158,7 +158,9 @@ public sealed partial class VerdictEngine
         }
         basis ??= GateRunner.ConfirmationBasis(
             stage != null ? GateRunner.ConfiguredForStage(_ctx.Plan, stage) : _ctx.Plan.Gates.Count, _ctx.LastGates);
-        if (!_ctx.State.ConfirmedStages.Contains(id)) _ctx.State.ConfirmedStages.Add(id);
+        // PK4.2 / D7: the stage card is posted once, by the call that first confirms the stage.
+        var firstConfirmation = !_ctx.State.ConfirmedStages.Contains(id);
+        if (firstConfirmation) _ctx.State.ConfirmedStages.Add(id);
         // SF0.2 (bug #10): the last place a pending claim can still be confirmed. Only two sites
         // drained PendingConfirmation — a passing verify and a skipped-as-passed workflow hop — so a
         // claim made during an AUDIT session (which queues a phase gate, not a verify) would sit
@@ -186,12 +188,16 @@ public sealed partial class VerdictEngine
         }
         _ctx.Events.Emit(new StageConfirmed { StageId = id, Audited = _ctx.State.AuditedStages.Contains(id) });
         _ctx.Store?.ConfirmStage(_ctx.State.RunId, id);
+        // Read before the squash rewrites the stage's history; the engine's own commits are left out anyway.
+        var changes = firstConfirmation ? StageChangeSubjects(id) : null;
         // SC6.1: state write FIRST, squash after. The other order collapsed the stage's bookkeeping and
         // then appended to it one second later — devcontext #14 watched stage G2 finish with two
         // identical chore commits despite the cleanup reporting success. Nothing below this line writes
         // history for the stage, so the squash is now the last word on it.
         _saveAndReport();
         SquashBookkeeping(id);
+        await PostDueCardsAsync(ct).ConfigureAwait(false);
+        if (changes is not null) await PostStageCardAsync(id, changes, ct).ConfigureAwait(false);
     }
 
     internal bool HasNextUnconfirmedStage(string stageId)

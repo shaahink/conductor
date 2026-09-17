@@ -274,6 +274,7 @@ with no `{prompt}`, an unknown `output` kind and a `timeoutMinutes` below 1 all 
 | `workflow` | string | Name of the workflow this stage runs (see `workflows` below). Falls back to `defaultWorkflow`, then to `deliver-verify`. |
 | `overrides` | object | Per-stage workflow overrides. `skipVerification` (bool) is the one field, and it outranks the plan's `verifyEachDelivery` in both directions. A key this object does not declare is refused at load, naming the key that does the job. |
 | `qa` | object | Per-stage QA dial — same shape as `pipeline.qa` (`mode`: `off` · `everySession` · `phaseGate`, plus `verifierThreshold`). Outranks the plan-level dial for this stage only. |
+| `deploys` | string | **New since `v0.5.0`.** The checkpoint id whose confirmation makes this stage's work live, for the room's checkpoint card (`task --done --tell`). Unset, a stage is live when its last checkpoint is confirmed; either way the live count is the confirmed checkpoints of every live stage. |
 | `pathClaims` | string[] | Repo-relative paths this stage's work is expected to touch. Used to keep concurrent lanes off each other's files; on a single-session plan it is inert by construction, not by accident. |
 
 ### Braces in prose — `{word}` is refused, `{{word}}` is a literal

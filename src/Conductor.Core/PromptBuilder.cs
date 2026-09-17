@@ -337,6 +337,13 @@ public sealed partial class PromptBuilder
             if (cfg.RecentFailure && state != null) list.Add(new RecentFailureBattery(state));
         }
 
+        // PK4.2 / D7: always on, like the ledger - words a room is owed are not an opt-in.
+        if (checkpoints is { Count: > 0 })
+        {
+            var held = new HeldWordsBattery(checkpoints);
+            if (!held.IsEmpty) list.Add(held);
+        }
+
         // KS7.5: the two context-economics batteries. Both are gated on the caller having supplied
         // what they need - the repo map on a repo path that exists, the recap on the folded board -
         // so a caller that composes a prompt without a graph (the control-plane preview) renders the

@@ -44,4 +44,7 @@ public sealed class StageConfig
     /// <summary>Per-stage QA dial (P2) — replaces the plan-wide <c>pipeline.qa</c> rule whole for
     /// this stage. null = inherit the plan dial (or classic behavior when neither is set).</summary>
     public QaRule? Qa { get; set; }
+    /// <summary>PK4.2 / D7 - the checkpoint whose confirmation makes this stage's work live, for the
+    /// card's live count. null = the default rule: the stage is live when its last checkpoint is.</summary>
+    public string? Deploys { get; set; }
 }

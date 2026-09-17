@@ -47,6 +47,8 @@ public sealed partial class VerdictEngine
         // "DONE ✓" and every other view read. Confirmation stays the engine's verdict alone.
         _ctx.Store?.ConfirmCheckpoints(_ctx.State.RunId, ids, sessionNumber);
         _ctx.Log($"confirmed {ids.Length} checkpoint(s) for stage {stageId}: [{string.Join(", ", ids)}]");
+        // PK4.2 / D7: the verdict is the card's moment; VerdictEngine.Cards.cs says why it waits a beat.
+        QueueCards(ids);
         _ctx.State.PendingConfirmation.Clear();
     }
 
