@@ -17,10 +17,10 @@ public static class TaskBoard
     /// <summary>Move a card and report what actually happened. <paramref name="status"/> is graph
     /// vocabulary (todo | in_progress | blocked | done | skipped).</summary>
     public static TaskBoardResult Move(IRunStore store, string runId, string taskId, string status,
-        string? commit = null, string? evidence = null, string source = "agent")
+        string? commit = null, string? evidence = null, string source = "agent", string? tell = null)
     {
         ArgumentNullException.ThrowIfNull(store);
-        var (actual, error) = store.ApplyTaskStatus(runId, taskId, status, commit, evidence, source);
+        var (actual, error) = store.ApplyTaskStatus(runId, taskId, status, commit, evidence, source, tell);
         if (actual is null)
             return new TaskBoardResult(false, taskId, "", $"refused: {error}");
 

@@ -28,6 +28,10 @@ public sealed class TaskItem
     /// <summary>W1.1: evidence carried by the latest done-claim ("-" = none yet).</summary>
     public string Evidence { get; set; } = "-";
 
+    /// <summary>PK4.2 / D7: the words the latest done-claim carried for the room's card ("" = none).
+    /// Held until the verdict confirms the claim; the card is the engine's to post.</summary>
+    public string Tell { get; set; } = "";
+
     /// <summary>W1.1: true once the engine confirmed the claim (M4.1 — gates + verify evidence,
     /// folded from <c>CheckpointConfirmed</c>). Claims flip Status; only the verdict engine
     /// confirms.</summary>

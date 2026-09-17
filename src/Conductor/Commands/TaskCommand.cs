@@ -38,6 +38,10 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
         [Description("Evidence string (for --done).")]
         public string? Evidence { get; init; }
 
+        [CommandOption("--tell <TEXT>")]
+        [Description("For --done: \"<title> | <two to four sentences>\" for the room's observer chat. Posted by the engine as the checkpoint card once the verdict confirms the claim; a red claim posts nothing.")]
+        public string? Tell { get; init; }
+
         [CommandOption("--blocked-until <ISO8601>")]
         [Description("This session cannot proceed until the given UTC instant (e.g. 2026-07-31T15:12:00Z). Requires --reason.")]
         public string? BlockedUntil { get; init; }
@@ -126,7 +130,7 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
                 // SC5.3: one write path for every move, and the answer is the card's POST-FOLD status —
                 // a transition the fold refuses prints what the card really is and exits non-zero.
                 var evidence = move.Status == "done" ? settings.Evidence ?? "marked done via CLI" : settings.Evidence;
-                return Report(TaskBoard.Move(store, runId, move.Id, move.Status, settings.Commit, evidence));
+                return Report(TaskBoard.Move(store, runId, move.Id, move.Status, settings.Commit, evidence, tell: settings.Tell));
             }
             else if (settings.InProgress != null)
             {

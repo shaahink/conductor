@@ -365,10 +365,10 @@ public sealed partial class SqliteRunStore
     /// actually happened rather than what it asked for — the contract <c>POST /tasks/update</c> has had
     /// since G2.1 and the CLI did not. A refused transition is a recorded no-op, never an error.</summary>
     public (string? Status, string? Error) ApplyTaskStatus(string runId, string taskId, string status,
-        string? commit = null, string? evidence = null, string source = "agent")
+        string? commit = null, string? evidence = null, string source = "agent", string? tell = null)
     {
         var graph = FoldGraph(runId);
-        var (evt, error) = TaskWrites.BuildStatusChange(graph, runId, taskId, status, source, commit, evidence);
+        var (evt, error) = TaskWrites.BuildStatusChange(graph, runId, taskId, status, source, commit, evidence, tell);
         if (evt is null) return (null, error);
         EmitForRun(runId, evt);
         FlushEvents();

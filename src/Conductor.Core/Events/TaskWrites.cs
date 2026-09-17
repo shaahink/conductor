@@ -25,7 +25,7 @@ public static class TaskWrites
     /// attribution — one builder, one set of rules, for every ingress.</para></summary>
     public static (TaskStatusChanged? Event, string? Error) BuildStatusChange(
         TaskGraph graph, string runId, string? taskId, string? status, string? source = null,
-        string? commit = null, string? evidence = null)
+        string? commit = null, string? evidence = null, string? tell = null)
     {
         if (string.IsNullOrEmpty(taskId))
             return (null, "taskId is required");
@@ -33,11 +33,17 @@ public static class TaskWrites
             return (null, $"invalid status: '{status}' (must be one of: {string.Join(", ", ValidStatuses)})");
         if (graph.Find(taskId) == null)
             return (null, $"task not found: {taskId}");
+        // PK4.2 / D7: the words ride a done-claim and nothing else, and malformed words are refused at
+        // the claim - the session is still there to fix them; at the verdict nobody is.
+        if (tell is not null && status != "done")
+            return (null, "--tell rides a done-claim only (the card is posted when the claim is confirmed)");
+        if (tell is not null && Integrations.Messaging.CardWords.Refusal(tell) is { } badWords)
+            return (null, badWords);
 
         return (new TaskStatusChanged
         {
             RunId = runId, TaskId = taskId, Status = status, Source = source,
-            Commit = Placeholder(commit), Evidence = Placeholder(evidence),
+            Commit = Placeholder(commit), Evidence = Placeholder(evidence), Tell = tell?.Trim(),
         }, null);
     }
 

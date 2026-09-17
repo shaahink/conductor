@@ -36,16 +36,18 @@ public partial class McpTaskServer
     {
         var taskId = "";
         var status = "";
+        string? tell = null;
         if (args is { } a)
         {
             if (a.TryGetProperty("taskId", out var t)) taskId = t.GetString() ?? "";
             if (a.TryGetProperty("status", out var s)) status = s.GetString() ?? "";
+            if (a.TryGetProperty("tell", out var w) && w.ValueKind == JsonValueKind.String) tell = w.GetString();
         }
 
         // Shared write semantics (G2.1): validation + event shape live in TaskWrites so the HTTP
         // control plane's /tasks/update can't drift from this tool.
         RefreshGraph();
-        var (evt, error) = TaskWrites.BuildStatusChange(_graph, _runId, taskId, status, source: "agent");
+        var (evt, error) = TaskWrites.BuildStatusChange(_graph, _runId, taskId, status, source: "agent", tell: tell);
         if (evt is null)
             return JsonSerializer.SerializeToElement(new { ok = false, error });
 

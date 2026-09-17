@@ -37,6 +37,11 @@ public sealed record TaskStatusChanged : ConductorEvent
     /// <summary>W1.1: who changed the status — tracker | engine | agent | human. Null on pre-W1
     /// events. The verdict engine reads agent-sourced done-claims (W1.3).</summary>
     public string? Source { get; init; }
+
+    /// <summary>PK4.2 / D7: the session's words for the room, <c>"title | two to four sentences"</c>,
+    /// carried by a done-claim. Stored at the claim and posted by the engine only when the verdict
+    /// confirms it. Null = leave unchanged.</summary>
+    public string? Tell { get; init; }
 }
 
 public sealed record NoteAdded : ConductorEvent

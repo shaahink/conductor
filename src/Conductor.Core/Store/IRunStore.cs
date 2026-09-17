@@ -155,7 +155,7 @@ public interface IRunStore : IDisposable
     /// malformed request (unknown id, unknown status); a transition the fold refuses comes back Ok with
     /// the card's unchanged status, exactly as <c>POST /tasks/update</c> answers.</summary>
     (string? Status, string? Error) ApplyTaskStatus(string runId, string taskId, string status,
-        string? commit = null, string? evidence = null, string source = "agent");
+        string? commit = null, string? evidence = null, string source = "agent", string? tell = null);
 
     /// <summary>SC5.3: append a stamped acceptance correction to a card's context, returning the
     /// post-fold context. The correction reaches the next session through the composed prompt.</summary>

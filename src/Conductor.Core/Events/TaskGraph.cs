@@ -84,6 +84,7 @@ public sealed class TaskGraph
                             // a replay reproduces the checkpoint columns byte-for-byte (W1.1).
                             if (sc.Commit is { Length: > 0 }) existing.Commit = sc.Commit;
                             if (sc.Evidence is { Length: > 0 }) existing.Evidence = sc.Evidence;
+                            if (sc.Tell is { Length: > 0 }) existing.Tell = sc.Tell;
                         }
                     }
                     break;
