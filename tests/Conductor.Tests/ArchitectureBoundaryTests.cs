@@ -410,6 +410,106 @@ public class ArchitectureBoundaryTests
             p => p.EndsWith("Conductor.Core.csproj", StringComparison.Ordinal));
     }
 
+    /// <summary>PK1.1 / D1 — the courier's own executable.</summary>
+    private static readonly Assembly Courier = typeof(Conductor.Courier.CourierListener).Assembly;
+
+    /// <summary>The only project the courier may reference. Anything more and the daemon that outlives
+    /// every run starts dragging the engine's shell - its CLI framework, its hosting, its control plane -
+    /// back into the one process that must stay small and always up.</summary>
+    private const string CourierMayReference = "Conductor.Core.csproj";
+
+    /// <summary>PK1.1 / D1, the csproj half: what a courier project file says it references. One function,
+    /// so the real project and the seeded violation below are judged by the same rule.</summary>
+    private static List<string> CourierProjectViolations(string csproj)
+    {
+        static List<string> Includes(string text, string element) =>
+            Regex.Matches(text, $"<{element}\\s+Include=\"(?<v>[^\"]+)\"",
+                    RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(2))
+                .Select(m => m.Groups["v"].Value).ToList();
+
+        var violations = Includes(csproj, "ProjectReference")
+            .Where(p => !Path.GetFileName(p.Replace('\\', '/')).Equals(CourierMayReference, StringComparison.Ordinal))
+            .Select(p => $"  Conductor.Courier.csproj -> ProjectReference {p} — the courier references Conductor.Core and nothing else.")
+            .ToList();
+        violations.AddRange(Includes(csproj, "PackageReference")
+            .Select(p => $"  Conductor.Courier.csproj -> PackageReference {p} — the courier takes its dependencies from Conductor.Core, not beside it."));
+        if (!Includes(csproj, "ProjectReference").Any(p => p.EndsWith(CourierMayReference, StringComparison.Ordinal)))
+            violations.Add("  Conductor.Courier.csproj no longer references Conductor.Core — the daemon, the wire contract and the presence record are core's.");
+        return violations;
+    }
+
+    /// <summary>PK1.1 / D1, the link half: an allowlist of what the compiled courier may name, not a
+    /// denylist of what it may not - the engine's assembly list grows every era, and a rule that has to
+    /// be told about each new assembly to forbid it forbids nothing.</summary>
+    private static List<string> CourierLinkViolations(IEnumerable<string> referencedAssemblyNames) =>
+        referencedAssemblyNames
+            .Where(n => !(n.Equals("Conductor.Core", StringComparison.Ordinal)
+                       || n.Equals("netstandard", StringComparison.Ordinal)
+                       || n.StartsWith("System", StringComparison.Ordinal)
+                       || n.StartsWith("Microsoft.Extensions.", StringComparison.Ordinal)
+                       || n.StartsWith("Microsoft.Win32.", StringComparison.Ordinal)))
+            .Select(n => $"  conductor-courier -> {n} — the courier links Conductor.Core, the BCL and the logging abstractions core already carries; nothing else.")
+            .ToList();
+
+    [Fact]
+    public void TheCourierReferencesCoreAndNothingElse()
+    {
+        var csproj = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor.Courier", "Conductor.Courier.csproj"));
+        var violations = CourierProjectViolations(csproj);
+        violations.AddRange(CourierLinkViolations(Courier.GetReferencedAssemblies().Select(r => r.Name ?? "")));
+
+        Assert.Equal("conductor-courier", Courier.GetName().Name);
+        Assert.True(violations.Count == 0,
+            "PK1.1 / D1 — the courier reached past Conductor.Core:\n" + string.Join("\n", violations));
+    }
+
+    /// <summary>The rule red-teamed: a courier project that grows a reference to the engine's shell, to
+    /// the planning library directly, or to a UI package - and a compiled courier that linked them - is
+    /// named, reference by reference. A rule that has never been seen to fail is a rule nobody knows
+    /// works.</summary>
+    [Fact]
+    public void TheCourierRuleNamesASeededViolation()
+    {
+        const string seeded = """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <ItemGroup>
+                <ProjectReference Include="..\Conductor.Core\Conductor.Core.csproj" />
+                <ProjectReference Include="..\Conductor\Conductor.csproj" />
+                <ProjectReference Include="..\Conductor.Planning\Conductor.Planning.csproj" />
+                <PackageReference Include="Spectre.Console" />
+              </ItemGroup>
+            </Project>
+            """;
+        var project = CourierProjectViolations(seeded);
+        Assert.Equal(3, project.Count);
+        Assert.Contains(project, v => v.Contains(@"ProjectReference ..\Conductor\Conductor.csproj", StringComparison.Ordinal));
+        Assert.Contains(project, v => v.Contains("Conductor.Planning.csproj", StringComparison.Ordinal));
+        Assert.Contains(project, v => v.Contains("PackageReference Spectre.Console", StringComparison.Ordinal));
+
+        var unmoored = CourierProjectViolations("""<Project><ItemGroup /></Project>""");
+        Assert.Contains(unmoored, v => v.Contains("no longer references Conductor.Core", StringComparison.Ordinal));
+
+        var linked = CourierLinkViolations(["System.Runtime", "Conductor.Core", "conductor", "Spectre.Console", "Microsoft.Extensions.Logging.Abstractions"]);
+        Assert.Equal(2, linked.Count);
+        Assert.Contains(linked, v => v.Contains("conductor-courier -> conductor ", StringComparison.Ordinal));
+        Assert.Contains(linked, v => v.Contains("conductor-courier -> Spectre.Console", StringComparison.Ordinal));
+    }
+
+    /// <summary>PK1.1 / D1, the other direction: the engine references the courier project only so the build
+    /// puts <c>conductor-courier.exe</c> beside it. It manages that binary; it never hosts the daemon in its
+    /// own process - that is the file-lock coupling D1 exists to remove, back through a side door.</summary>
+    [Fact]
+    public void TheEngineNeverLinksTheCourier()
+    {
+        var hosted = Shell.GetReferencedAssemblies()
+            .Where(r => string.Equals(r.Name, Courier.GetName().Name, StringComparison.OrdinalIgnoreCase))
+            .Select(r => $"  {Shell.GetName().Name} -> {r.Name} — the engine starts the courier binary; it does not run the daemon in-process.")
+            .ToList();
+
+        Assert.True(hosted.Count == 0,
+            "PK1.1 / D1 — the engine linked the courier:\n" + string.Join("\n", hosted));
+    }
+
     /// <summary>
     /// KS9.1 — the GitHub mirror pushes and NEVER ingests. L6.3 rejected two-way sync, D-7 and ADR
     /// 0005 wrote it down, and this is the rule that keeps it true once someone finds it convenient

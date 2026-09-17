@@ -239,42 +239,13 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
         return "[green]ready[/] [dim]— `conductor courier run` starts polling.[/]";
     }
 
-    /// <summary>Findings §6.3, in the words a person reads at the terminal. It is a limit of the Bot
-    /// API and not of this program, and saying so is the difference between a tool somebody trusts
-    /// with something they said once and a tool that quietly loses it.</summary>
-    internal const string RetentionNotice =
-        "Telegram keeps an undelivered message for 24 hours. The courier answers \"no run live\", "
-      + "not \"machine off\": a note sent to a sleeping machine is gone before it wakes, and nothing "
-      + "on this machine can change that.";
+    /// <summary>Findings §6.3 - the wording is core's, shared with the courier binary that prints it
+    /// at startup.</summary>
+    internal const string RetentionNotice = CourierDaemon.RetentionNotice;
 
-    private static string? Blocker(CourierSettings courier, string? token) =>
-        token is { Length: > 0 }
-            ? courier.Refusal()
-            : $"no bot token. Set {TelegramCourierSource.TokenEnvVar} in this machine's environment.";
+    private static string? Blocker(CourierSettings courier, string? token) => courier.StartBlocker(token);
 
-    /// <summary>The courier's token, and ONLY from the environment. A machine-level daemon reading a
-    /// project's <c>secrets.local.json</c> would be one project deciding who may write to all the
-    /// others — so the run's second source is deliberately not inherited here.</summary>
-    private static string? Token() =>
-        Environment.GetEnvironmentVariable(TelegramCourierSource.TokenEnvVar)?.Trim();
-
-    // ── run ─────────────────────────────────────────────────────────────────────────────────
-
-    /// <summary>What the daemon does with a push a run handed over the loopback seam.
-    ///
-    /// <para>The chat comes from the RUN, not from the courier's allowlist, and that is deliberate:
-    /// the allowlist governs what the courier will FILE against — which checkouts on this disk a
-    /// stranger's message can reach — while the chats a run pushes to are the run's own plan, and
-    /// were reachable by that run when it held the token itself. Delivering them grants no authority
-    /// that did not already exist; refusing them would silently break every plan that names a
-    /// stakeholder group this machine does not answer.</para></summary>
-    private static async Task<CourierAck> DeliverAsync(ICourierSource source, CourierPush push,
-        CancellationToken ct)
-    {
-        var why = await source.SendAsync(push, ct).ConfigureAwait(false);
-        return why is { Length: > 0 } ? new CourierAck(false, why) : new CourierAck(true);
-    }
-
+    private static string? Token() => TelegramCourierSource.TokenFromEnvironment();
     // ── the allowlist ───────────────────────────────────────────────────────────────────────
 
     private static int Allow(Settings settings)

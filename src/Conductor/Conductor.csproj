@@ -20,6 +20,10 @@
          P0: the planning library is referenced transitively through Core and stays engine-free.
          The global usings keep the moved vocabulary available without churning every file. -->
     <ProjectReference Include="..\Conductor.Core\Conductor.Core.csproj" />
+    <!-- PK1.1 / D1: built with the engine and copied beside it, because `conductor courier run` starts
+         it from this directory. The engine manages the courier binary; it never hosts the daemon, and
+         ArchitectureBoundaryTests holds the shell to that. -->
+    <ProjectReference Include="..\Conductor.Courier\Conductor.Courier.csproj" />
     <Using Include="Conductor.Planning" />
   </ItemGroup>
 

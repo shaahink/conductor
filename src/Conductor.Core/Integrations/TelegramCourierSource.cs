@@ -30,6 +30,12 @@ public sealed class TelegramCourierSource : ICourierSource, IDisposable
     /// one consumer, and §6.9's precedence rule is what settles which process it belongs to.</summary>
     public const string TokenEnvVar = "CONDUCTOR_TELEGRAM_TOKEN";
 
+    /// <summary>The courier's token, and ONLY from the environment. A machine-level daemon reading a
+    /// project's <c>secrets.local.json</c> would be one project deciding who may write to all the
+    /// others - so the run's second source is deliberately not inherited here.</summary>
+    public static string? TokenFromEnvironment() =>
+        Environment.GetEnvironmentVariable(TokenEnvVar)?.Trim();
+
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(65) };
     private readonly CourierSettings _settings;
     private readonly TelegramMediaFetcher _media;

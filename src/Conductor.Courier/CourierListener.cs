@@ -6,12 +6,12 @@ using System.Text.Json;
 using Conductor.Core.Courier;
 using Microsoft.Extensions.Logging;
 
-namespace Conductor.Http;
+namespace Conductor.Courier;
 
 /// <summary>DV4.3 / findings §6.5 — the courier's end of the loopback seam.
 ///
-/// <para>It lives in this assembly and not in core for the reason the project file states outright:
-/// core may not host an HTTP server, and that boundary is a test, not a convention
+/// <para>It lives in the courier's own executable (PK1.1 / D1 moved it out of the engine's) and not in
+/// core, because core may not host an HTTP server, and that boundary is a test, not a convention
 /// (<c>ArchitectureBoundaryTests</c>). The wire CONTRACT — <see cref="CourierPush"/>,
 /// <see cref="CourierAck"/>, <see cref="CourierPresence"/> — is core, because the run's client end
 /// speaks it and the run's client end is core.</para>

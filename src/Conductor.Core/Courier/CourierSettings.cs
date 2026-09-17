@@ -89,6 +89,14 @@ public sealed class CourierSettings
         AtomicFile.Write(path, JsonSerializer.Serialize(this, Json));
     }
 
+    /// <summary>What stops a courier holding <paramref name="token"/> from starting, or null. PK1.1: in
+    /// core because two binaries ask it - <c>conductor courier status</c> in the engine, and
+    /// <c>conductor-courier</c> itself at startup - and two copies of a refusal drift apart.</summary>
+    public string? StartBlocker(string? token) =>
+        token is { Length: > 0 }
+            ? Refusal()
+            : $"no bot token. Set {Integrations.TelegramCourierSource.TokenEnvVar} in this machine's environment.";
+
     /// <summary>What stops this courier from doing its job, in one sentence, or null. The same
     /// name-what-is-missing shape the rest of the repo refuses with — never a bare false.</summary>
     public string? Refusal()

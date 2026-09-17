@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Conductor/Conductor.csproj" />
     <Project Path="src/Conductor.Core/Conductor.Core.csproj" />
+    <Project Path="src/Conductor.Courier/Conductor.Courier.csproj" />
     <Project Path="src/Conductor.Planning/Conductor.Planning.csproj" />
   </Folder>
   <Folder Name="/tests/">

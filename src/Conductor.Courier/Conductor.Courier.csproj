@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- PK1.1 / D1: the courier is its own executable. Before this project existed `conductor courier run`
+       WAS conductor.exe, so a running courier held the published engine binary open and the installer had
+       to stop it to publish - the daemon meant to outlive every run shared its file with the thing being
+       reinstalled (findings F-COUR-2).
+
+       The rule, enforced by ArchitectureBoundaryTests:  Conductor.Courier  ->  Conductor.Core  and nothing
+       else. The daemon, the wire contract and the presence record were already core; what lives here is
+       the loopback listener (core may not host HTTP) and the composition root that wires them together.
+       No CLI framework and no UI: under the scheduled task there is no console to draw on, and the
+       courier's own log is the only record. The engine manages this binary (`conductor courier
+       install|status|restart|stop`) and `conductor courier run` is an alias that starts it. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>conductor-courier</AssemblyName>
+    <RootNamespace>Conductor.Courier</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Conductor.Core\Conductor.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Conductor.Tests" />
+  </ItemGroup>
+
+  <!-- The same build stamp as the engine, so `conductor-courier` and `conductor` built from one tree
+       answer with one version. See src/BuildStamp.targets. -->
+  <Import Project="..\BuildStamp.targets" />
+
+</Project>

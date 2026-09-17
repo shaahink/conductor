@@ -36,6 +36,13 @@ public sealed record CourierTick(int Received, int Filed, int Duplicates, int Pa
 /// </summary>
 public sealed class CourierDaemon
 {
+    /// <summary>Findings §6.3, in the words a person reads at the terminal. It is a limit of the Bot
+    /// API and not of this program, and saying so is the difference between a tool somebody trusts
+    /// with something they said once and a tool that quietly loses it.</summary>
+    public const string RetentionNotice =
+        "Telegram keeps an undelivered message for 24 hours. The courier answers \"no run live\", "
+      + "not \"machine off\": a note sent to a sleeping machine is gone before it wakes, and nothing "
+      + "on this machine can change that.";
     private readonly ICourierSource _source;
     private readonly CourierSettings _settings;
     private readonly CourierOffset _offset;

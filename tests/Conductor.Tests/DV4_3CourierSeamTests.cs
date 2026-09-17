@@ -6,7 +6,7 @@ using Conductor.Core.Courier;
 using Conductor.Core.Integrations;
 using Conductor.Core.Integrations.Messaging;
 using Conductor.Core.Store;
-using Conductor.Http;
+using Conductor.Courier;
 using Conductor.Models;
 
 using Microsoft.Extensions.Hosting;
