@@ -146,7 +146,7 @@ $courier = Join-Path $RepoRoot "src\Conductor.Courier\bin\Debug\net10.0\conducto
 function New-CourierHome($name, $apiBase, $chats) {
     $h = Join-Path $OutDir $name
     New-Item -ItemType Directory -Path (Join-Path $h "courier") | Out-Null
-    $settings = @{ projects = @(); chats = $chats; pollIntervalSeconds = 2; apiBaseUrl = $apiBase } | ConvertTo-Json -Depth 4
+    $settings = @{ projects = @(@{ plan = "pk31-scratch"; repo = $OutDir }); chats = $chats; pollIntervalSeconds = 2; apiBaseUrl = $apiBase } | ConvertTo-Json -Depth 4
     Set-Content -Path (Join-Path $h "courier\courier.json") -Value $settings -Encoding ASCII
     return $h
 }

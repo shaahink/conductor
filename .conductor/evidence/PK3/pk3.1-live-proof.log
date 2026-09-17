@@ -1,0 +1,66 @@
+PK3.1 proof at 2026-09-17T12:30:49Z on commit 0d43747
+  courier C:\Code\conductor\src\Conductor.Courier\bin\Debug\net10.0\conductor-courier.exe  built 2026-09-17 12:22:10Z
+
+==== A. a scratch courier answers protocol 3 (stub Bot API) ====
+  scratch courier pid 3424 on port 51725, home C:\Users\shahi\AppData\Local\Temp\pk31-proof-20260917T123049\home-a, stub Bot API on 51724
+  PASS  GET /hello answers protocol 3
+        {"protocol":3,"pid":3424,"engine":"0.5.1-alpha.0.69\u002B59cfe04fcad8.dirty","exe":"C:\\Code\\conductor\\src\\Conductor.Courier\\bin\\Debug\\net10.0\\conductor-courier.exe","taskName":"Conductor Courier (pk31 scratch A)","startedUtc":"2026-09-17T12:30:49.575627+00:00","port":51725}
+  PASS  POST /send text to a PROFILE answers 200 with its message id and the chat it resolved to
+        {"accepted":true,"detail":"","messageIds":[5001],"chatId":"770000001"}
+  PASS  POST /send a media group of two photos answers with two ids
+        {"accepted":true,"detail":"","messageIds":[5002,5003],"chatId":"770000002"}
+  PASS  POST /send one document answers with its id
+        {"accepted":true,"detail":"","messageIds":[5004],"chatId":"770000001"}
+  PASS  POST /react on that id is accepted
+        {"accepted":true,"detail":"","messageIds":[5001],"chatId":"770000001"}
+  PASS  POST /delete on that id is accepted
+        {"accepted":true,"detail":"","messageIds":[5001],"chatId":"770000001"}
+  PASS  GET /chats lists both chats with their profiles
+        [{"chatId":"770000001","profile":"admin"},{"chatId":"770000002","profile":"observer"}]
+  PASS  a protocol-2 POST /push is accepted, and now answers with its id
+        {"accepted":true,"detail":"","messageIds":[5005],"chatId":"770000001"}
+  PASS  a protocol-4 send is refused by name (409)
+        {"accepted":false,"detail":"this courier speaks protocol 3; the run speaks 4. Restart it: conductor courier restart"}
+  PASS  a send without the secret is refused (401)
+  PASS  a 4097-character text is refused by name
+        the text is 4097 characters, over Telegram's 4096-character message ceiling.
+  PASS  a chat that is neither an id nor a profile is refused by name
+        "stakeholders" is neither a chat id nor a profile; the profiles are admin, observer.
+  messages.jsonl:
+    {"id":5001,"chat":"770000001","origin":"pk3-1-live-proof","stamp":"conductor@feat/peyk-courier - PK3 - PK3.1","when":"2026-09-17T12:30:51.459823+00:00","verb":"send"}
+    {"id":5002,"chat":"770000002","origin":"pk3-1-live-proof","when":"2026-09-17T12:30:51.491059+00:00","verb":"send"}
+    {"id":5003,"chat":"770000002","origin":"pk3-1-live-proof","when":"2026-09-17T12:30:51.491059+00:00","verb":"send"}
+    {"id":5004,"chat":"770000001","origin":"pk3-1-live-proof","when":"2026-09-17T12:30:51.4988812+00:00","verb":"send"}
+    {"id":5001,"chat":"770000001","origin":"pk3-1-live-proof","when":"2026-09-17T12:30:51.5185835+00:00","verb":"delete"}
+    {"id":5005,"chat":"770000001","origin":"run pk31-rig","stamp":"installed engine","when":"2026-09-17T12:30:51.5370029+00:00","verb":"push"}
+  PASS  messages.jsonl holds send x1, send x2, send x1, delete, push - in order
+        send,send,send,send,delete,push
+  PASS  every ledger line carries id, chat, origin and when
+  PASS  the text send's line carries its stamp
+        conductor@feat/peyk-courier - PK3 - PK3.1
+  PASS  the stub saw exactly the Bot API calls those verbs imply
+        sendMessage,sendMediaGroup,sendDocument,setMessageReaction,deleteMessage,sendMessage
+  PASS  courier.log names each send with its ids
+        4 lines
+
+==== B. ONE real send to the admin DM through a scratch courier behind a send-only relay ====
+  scratch courier pid 22216 on port 51742, home C:\Users\shahi\AppData\Local\Temp\pk31-proof-20260917T123049\home-b, relay on 51741 (forwards sendMessage + deleteMessage only)
+  PASS  the real /send is accepted and answers with a Telegram message id
+        {"accepted":true,"detail":"","messageIds":[3820],"chatId":"99205495"}
+  PASS  messages.jsonl carries the id the real send returned
+        {"id":3820,"chat":"99205495","origin":"pk3-1-live-proof","stamp":"conductor@feat/peyk-courier - PK3 - PK3.1","when":"2026-09-17T12:30:57.8099623+00:00","verb":"send"}
+  PASS  the real message is deleted through /delete
+        {"accepted":true,"detail":"","messageIds":[3820],"chatId":"99205495"}
+  messages.jsonl:
+    {"id":3820,"chat":"99205495","origin":"pk3-1-live-proof","stamp":"conductor@feat/peyk-courier - PK3 - PK3.1","when":"2026-09-17T12:30:57.8099623+00:00","verb":"send"}
+    {"id":3820,"chat":"99205495","origin":"pk3-1-live-proof","when":"2026-09-17T12:30:58.3878079+00:00","verb":"delete"}
+  PASS  messages.jsonl records the delete of the same id
+  relay: forwarded sendMessage -> 200; forwarded deleteMessage -> 200; getUpdates answered locally x2; refused: 
+  PASS  the relay forwarded exactly sendMessage then deleteMessage to Telegram, both 200
+  PASS  no getUpdates reached Telegram (the real courier's poll was never contended)
+        2 polls answered by the relay
+
+  REAL SEND: chat id 99205495 (the admin DM), message id 3820 - sent 2026-09-17T12:30:59Z, deleted
+
+==== result ====
+  23/23 checks passed; scratch dir C:\Users\shahi\AppData\Local\Temp\pk31-proof-20260917T123049
