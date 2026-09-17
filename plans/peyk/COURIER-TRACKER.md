@@ -4,14 +4,13 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s9 claimed PK4.3 (evidence .conductor/evidence/PK4/pk4.3.md, commits f83104e e5e316c 712171d, neighbours 456/456). PK4 is fully claimed; PK5.1 is next.
-  PK4.3 as built: RoomVoiceBattery is on only for a plan that names telegram chats AND whose resolved room has an observer (same condition a card needs); PromptBuilder.CourierStateHome is the test seam. The group's tail cut always lost the room's voice, so a battery may implement IFittingBattery (PromptBattery.cs) and the group asks it to recompose inside its share. Character is 7.1k chars, so at the default maxBytes 2048 it is mostly cut - the owner raises batteries.maxBytes per plan if the character should arrive whole.
-  This machine's courier.json has exactly ONE observer chat, so under the D6 fallback every plan with telegram.chats and no room of its own is voiced (and carded) toward that group. Decided by D6; worth the owner's eye at the reinstall.
-  Card rig now launches through powershell -File: its prompt passed the 8191 chars cmd.exe takes. Bug #99 (low): the argv guard grants agent.command cmd.exe the CreateProcess ceiling and cmd refuses silently.
-  Outside this repo (nothing committed there): report.ps1 deleted from ~/.claude/skills/telegram-notify (a copy of the folder is under the temp dir as pk43/skill-backup), SKILL.md and its character.md rewritten to --tell. Rules rewritten to --tell: C:/Code/bg/plans/conductor.plan.json line 205 (rule 11), conductor.feel.plan.json line 150 (rule 11), C:/Code/BookToCourse/conductor.hardening.plan.json line 133 (rule 17). Still naming report.ps1, left alone: BookToCourse templates/session.md line 86 (step 5) and bg's in-repo .claude skill copy. None of the three plans sets stages[].deploys.
-  PK4.1/PK4.2 facts: a stage is CONFIRMED only under gatePolicy perPhase; ArchitectureTests = 3 types/file, RunLoop.cs AT 500 lines; KS11_1SeamBoundary forbids Telegram* in new Core files. Real courier home has no rooms yet - `conductor room import` after the reinstall.
-  PK2 (still true): real 'Conductor Courier' ARMED 2026-09-17T11:37:30Z, protocol 2; bug #93 OPEN for PK6.1 (`tools/peyk/pk2-3-arm-real-courier.ps1 -ReadOnly`).
-next: PK5.1 (D9: InboxNote sender fields, reaction ack, inbox list sender+id, say --reply-to by note or message id, walk-ids.ps1 deleted). Do not restart, stop or reinstall the armed courier.
+last: s10 claimed PK5.1 (evidence .conductor/evidence/PK5/pk5.1.md, commits 321c73b c5527c3; rig tools/peyk/pk5-1-live-proof.ps1 -RealSend 25/25; tests 63 + 156 neighbours green). PK5.2 is next.
+  PK5.1 as built: InboxNote gains MessageId/SenderId/SenderName/SenderUsername (TgMessage.From, TgUser first/last name); both producers build the record through InboundNote.ToInboxNote. The courier reacts InboundAck.Reaction on the note and sends no message (CourierDaemon.Notes.cs); refusals (observer, parked, too big) stay words; `/note` (reply to a note, or bare = newest from the chat) answers with where it went and the Promote button. NoteLookup searches every allowed inbox; say --reply-to resolves a note id through it, else passes a message id.
+  Measured: Telegram takes the bare U+270D (real admin-DM message 3854, reacted, cleared, deleted). The in-run RemoteSurface ack is unchanged (IMessageChannel cannot react) - courier only, stated in the evidence.
+  Outside this repo: walk-ids.ps1 deleted from ~/.claude/skills/telegram-notify (folder copy under the temp dir as pk51/skill-backup); its SKILL.md section and watch-live/SKILL.md rewritten. bg WATCH-HANDOFF.md and BookToCourse docs/FEEDBACK-LOOP.md still mention it as history, left alone.
+  PK5.2 pointers: courier commands are routed in CourierDaemon.HandleCommandAsync (verbs project, note) - add the figure verbs in a partial like CourierDaemon.Notes.cs (CourierDaemon.cs ~380 lines; 500 ceiling, 3 types/file). F-COUR-7: TelegramService.AllowsControl is false under a courier. Trap 19: read-only store opens only; a test must assert no write.
+  Still true: stage CONFIRMED only under gatePolicy perPhase; RunLoop.cs AT 500 lines; KS11_1SeamBoundary forbids Telegram* in new Core Messaging files. Real 'Conductor Courier' ARMED 2026-09-17T11:37:30Z, protocol 2, no rooms yet; bug #93 OPEN for PK6.1; bug #99 (cmd.exe 8191) open, low.
+next: PK5.2 (D10: /progress /money /tokens /status answered by the courier from the chat's project's newest run.db, read-only; /evidence from the registry). Do not restart, stop or reinstall the armed courier.
 
 
 ## Baseline numbers (from run.db)
@@ -20,7 +19,7 @@ next: PK5.1 (D9: InboxNote sender fields, reaction ack, inbox list sender+id, sa
 |---|---|
 | Total checkpoints | 17 |
 | Done | 8 |
-| Claimed (unconfirmed) | 2 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -56,7 +55,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | PK4.1 | rooms/<slug>.json in the courier home; conductor room add / show / list; the one-time import of the private config files; docs/rooms/character.md in the tree; the voice file only ever pointed at. room list shows the two migrated rooms; an old-shape plan on a room-less machine replays byte-identically | DONE | 99cb57e | .conductor/evidence/PK4/pk4.1.md |
 | PK4.2 | conductor task --done --tell stores the session's words; the engine composes the checkpoint card at the verdict and pushes it to the room's observer chat; a red claim posts nothing and the next prompt carries the held words; the card is a NotifyTemplate; stages[].deploys; a stage confirm posts a stage card. Proven on a rig with a fake agent | DONE | 99cb57e | .conductor/evidence/PK4/pk4.2.md |
-| PK4.3 | RoomVoiceBattery under the byte cap; report.ps1 deleted from the shared skill; the three field plans' report.ps1 rule rewritten to --tell (their plan files only, nothing committed there); SF7_1DocsMatchRealityTests pins --tell in docs/cli.md | IN PROGRESS | - | - |
+| PK4.3 | RoomVoiceBattery under the byte cap; report.ps1 deleted from the shared skill; the three field plans' report.ps1 rule rewritten to --tell (their plan files only, nothing committed there); SF7_1DocsMatchRealityTests pins --tell in docs/cli.md | DONE | f83104e | .conductor/evidence/PK4/pk4.3.md |
 
 ### PK5 — Inbound with a name
 
