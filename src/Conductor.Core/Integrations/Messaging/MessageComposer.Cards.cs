@@ -23,6 +23,10 @@ public sealed partial class MessageComposer
     public async Task<CardPush?> CheckpointCardAsync(string checkpointId, Room? room)
     {
         if (_store is null) return null;
+        // The confirmation and the session's evidence were emitted a moment ago and persist through an
+        // async drain; a card read before it would count one checkpoint short and lose its pair
+        // (measured on the PK4.2 rig: the card went out as text with both images registered).
+        _store.FlushEvents();
         var events = _store.ReadAllEvents(_state.RunId);
         var graph = new TaskGraph();
         graph.Fold(events);
@@ -44,7 +48,11 @@ public sealed partial class MessageComposer
     {
         ArgumentNullException.ThrowIfNull(commitSubjects);
         var graph = new TaskGraph();
-        if (_store is not null) graph.Fold(_store.ReadAllEvents(_state.RunId));
+        if (_store is not null)
+        {
+            _store.FlushEvents();
+            graph.Fold(_store.ReadAllEvents(_state.RunId));
+        }
 
         var counts = CardFacts.Count(_plan, graph, stageId);
         var facts = CardFactsFor(counts, stageId, room);
