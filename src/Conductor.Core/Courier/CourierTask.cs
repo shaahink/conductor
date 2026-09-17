@@ -68,7 +68,8 @@ public sealed record CourierTaskState(string Name, bool Registered, string? Sche
 /// <para><b>Why XML rather than <c>schtasks /Create /SC ONLOGON</c>.</b> The command-line form cannot
 /// express restart-on-failure at all, and restart-on-failure is the entire point: the machine wakes
 /// from sleep with no network, the first poll throws, and a daemon that exits there stopped answering
-/// the phone weeks ago without saying so. The XML carries <c>RestartOnFailure</c> every minute,
+/// the phone weeks ago without saying so. The XML carries <c>RestartOnFailure</c> every minute (which
+/// never fires on exit 0 and did not fire on exit 1 either, bug #93 - hence PK2.2's five-minute keep-alive trigger),
 /// <c>ExecutionTimeLimit PT0S</c> (a daemon has no deadline) and <c>IgnoreNew</c> — a second logon
 /// must not start a second poller, because Telegram allows ONE getUpdates consumer per token.</para>
 ///
@@ -216,6 +217,17 @@ public sealed class CourierTask
         return fields;
     }
 
+    /// <summary>PK2.2 / D2(d) - the keep-alive: a calendar trigger that fires every five minutes, for
+    /// ever. With <c>IgnoreNew</c> a tick that finds the courier running does nothing; a tick that finds
+    /// it gone starts it, WHATEVER it exited with. That is the whole reason it exists: bug #93 measured
+    /// that <c>RestartOnFailure</c> did not fire on exit 1, and it never fires on exit 0, so a courier
+    /// that ended by any path the scheduler did not call a failure stayed down until the next logon.</summary>
+    public const string KeepAliveInterval = "PT5M";
+
+    /// <summary>A fixed boundary in the past, local time: the repetition runs from it indefinitely, so
+    /// the ticks sit on the clock's five-minute marks rather than on whenever the task was installed.</summary>
+    internal const string KeepAliveStartBoundary = "2026-01-01T00:00:00";
+
     /// <summary>The task definition. Element order follows what the Task Scheduler itself exports,
     /// because that is the order its schema validator accepts without argument.</summary>
     internal string BuildXml(string exe, string arguments, string? workingDirectory)
@@ -236,6 +248,14 @@ public sealed class CourierTask
           + "      <Enabled>true</Enabled>\n"
           + "      <UserId>" + user + "</UserId>\n"
           + "    </LogonTrigger>\n"
+          + "    <TimeTrigger>\n"
+          + "      <Repetition>\n"
+          + "        <Interval>" + KeepAliveInterval + "</Interval>\n"
+          + "        <StopAtDurationEnd>false</StopAtDurationEnd>\n"
+          + "      </Repetition>\n"
+          + "      <StartBoundary>" + KeepAliveStartBoundary + "</StartBoundary>\n"
+          + "      <Enabled>true</Enabled>\n"
+          + "    </TimeTrigger>\n"
           + "  </Triggers>\n"
           + "  <Principals>\n"
           + "    <Principal id=\"Author\">\n"
@@ -283,7 +303,8 @@ public sealed class CourierTask
     /// seam boundary test (KS11.1) holds that line through string literals too.</summary>
     internal const string Description =
         "conductor courier - one bot, always awake, outliving the run. Polls for notes and files "
-      + "them into the projects on its allowlist. Started at logon; restarts on failure.";
+      + "them into the projects on its allowlist. Started at logon, and again within five minutes "
+      + "of stopping for any reason.";
 
     private static string Escape(string s) =>
         s.Replace("&", "&amp;", StringComparison.Ordinal)

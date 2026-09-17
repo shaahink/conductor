@@ -102,6 +102,10 @@ public sealed class Orchestrator
 
     public Task<int> RunAsync(CancellationToken ct) => Loop.RunAsync(ct);
 
+    /// <summary>PK2.2: aims the session-boundary courier check somewhere other than this machine's
+    /// courier - a rig's scratch state home and recorded scheduler.</summary>
+    internal void UseCourierKeepAlive(Courier.CourierKeepAlive keepAlive) => _ctx.CourierKeepAlive = keepAlive;
+
     // ── thin facade methods (delegated from RunLoop to avoid exposing it) ──
 
     private void SaveAndReport()

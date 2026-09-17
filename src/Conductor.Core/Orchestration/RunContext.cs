@@ -39,6 +39,15 @@ public sealed partial class RunContext
     /// one — every push in the run path goes through this property, so a preview run cannot reach a
     /// phone through a call site nobody remembered to guard.</summary>
     public IRunNotifier Messenger { get; }
+
+    /// <summary>PK2.2 / D2(e): the check a session boundary makes on the machine's courier. Replaced
+    /// by a test with one aimed at a scratch state home and a recorded scheduler.</summary>
+    public Courier.CourierKeepAlive CourierKeepAlive { get; set; } = new();
+
+    /// <summary>PK2.2 / D2(e) - the boundary check, true when it changed the run state (a restart to
+    /// report). A dry run looks at nothing: a preview that starts a scheduled task is not a preview.</summary>
+    public Task<bool> CheckCourierAsync() =>
+        Options.DryRun ? Task.FromResult(false) : CourierKeepAlive.AtBoundaryAsync(State, Log);
     public WebhookNotifier Webhooks { get; }
 
     /// <summary>KS2.6: the gate every notification passes through — dry-run silence and the

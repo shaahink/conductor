@@ -29,6 +29,17 @@ public static class CourierProgram
     public static async Task<int> Main(string[] args)
     {
         var journal = CourierLog.At();
+
+        // PK2.2 / D2(c): armed before anything else can end the process.
+        var exits = new CourierExitJournal(journal);
+        exits.Arm();
+        var exit = await StartAsync(args, journal).ConfigureAwait(false);
+        exits.Returned(exit);
+        return exit;
+    }
+
+    private static async Task<int> StartAsync(string[] args, CourierLog journal)
+    {
         if (Parse(args, out var error) is not { } options)
         {
             journal.Append("courier run refused its command line: " + error);
@@ -148,6 +159,7 @@ public static class CourierProgram
         // DV4.2 / §6.4: what is running, written down where install.ps1 and a version handshake can
         // both read it. Cleared on the way out so the next reader sees the truth and not a pid.
         presence.Write();
+        ArmFault(Environment.GetEnvironmentVariable(FaultEnvVar), journal);
         try
         {
             if (options.Once)
@@ -169,6 +181,43 @@ public static class CourierProgram
             CourierPresence.Clear();
         }
     }
+
+    /// <summary>PK2.2 - the rig's way to make this binary die the way F-COUR-1's courier dies, from
+    /// outside its own control flow: <c>exit0:N</c> calls <c>Environment.Exit(0)</c> after N seconds,
+    /// <c>throw:N</c> throws on a thread nothing awaits. Never set on the owner's machine; journaled when
+    /// armed, so a courier running with it can never pass for one that died by itself.</summary>
+    internal const string FaultEnvVar = "CONDUCTOR_COURIER_FAULT";
+
+    internal static (string Kind, int Seconds)? ParseFault(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var parts = value.Trim().Split(':', 2);
+        return parts.Length == 2 && parts[0] is "exit0" or "throw"
+               && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var seconds)
+            ? (parts[0], seconds)
+            : null;
+    }
+
+    private static void ArmFault(string? value, CourierLog journal)
+    {
+        if (ParseFault(value) is not { } fault)
+        {
+            if (!string.IsNullOrWhiteSpace(value)) journal.Append($"{FaultEnvVar}='{value}' not understood; no fault armed");
+            return;
+        }
+
+        journal.Append($"FAULT SEAM ARMED ({FaultEnvVar}): {fault.Kind} after {fault.Seconds.ToString(CultureInfo.InvariantCulture)}s - this death is a rig's, not a finding");
+        // A timer callback, not a task: an exception thrown here reaches no await and no catch, which
+        // is exactly the exit the unhandled-exception handler exists for.
+        _fault = new Timer(_ =>
+        {
+            if (fault.Kind == "exit0") Environment.Exit(0);
+            throw new InvalidOperationException("fault seam: an exception on a thread nothing awaits");
+        }, null, TimeSpan.FromSeconds(fault.Seconds), Timeout.InfiniteTimeSpan);
+    }
+
+    /// <summary>Held so the armed fault's timer is not collected before it fires.</summary>
+    private static Timer? _fault;
 
     /// <summary>D2(b) - the death record, or null when the last courier cleared its presence on the way
     /// out. The scheduler is asked about the task the DEAD courier named, falling back to this one's:

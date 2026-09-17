@@ -35,6 +35,11 @@ public sealed class RunState
     public string? BlockedReason { get; set; }
     /// <summary>SC5.1: when the wait was accepted, so a surface can age it like any other park.</summary>
     public DateTime? BlockedSinceUtc { get; set; }
+    /// <summary>PK2.2 / D2(e): the couriers this run restarted at a session boundary. Null until the
+    /// first, and omitted from the file until then, so a run on a machine whose courier never died
+    /// writes the state it always wrote.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public CourierRestarts? CourierRestarts { get; set; }
     public string? AttentionReason { get; set; }
     /// <summary>SC2.2: the instant <see cref="AttentionReason"/> was raised. Without it the reason is a
     /// sticky sentence with no age — a park from four hours ago and one from four seconds ago read
@@ -257,3 +262,9 @@ public sealed class RunState
         File.Move(tmp, path, overwrite: true);
     }
 }
+
+/// <summary>PK2.2 / D2(e) - how many times this run restarted the courier, and the last time in words.</summary>
+/// <param name="Count">Restarts so far.</param>
+/// <param name="LastUtc">When the last one happened.</param>
+/// <param name="Last">The sentence the run logged for it.</param>
+public sealed record CourierRestarts(int Count, DateTime LastUtc, string Last);

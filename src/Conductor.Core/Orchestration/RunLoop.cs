@@ -415,6 +415,7 @@ public sealed partial class RunLoop
                     continue;
                 }
 
+                if (await _ctx.CheckCourierAsync().ConfigureAwait(false)) _saveAndReport();   // PK2.2 / D2(e)
                 _ctx.Notifier.Resolve();   // KS2.6: work is happening — the open park incident is over
                 try { await _sessions.RunAsync(stage, track, ct).ConfigureAwait(false); }
                 catch (PromptCompositionException ex) { ParkOnPromptRefusal(stage, ex); continue; }

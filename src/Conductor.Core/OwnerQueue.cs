@@ -84,6 +84,7 @@ public static class OwnerQueue
         CollectBlockedCheckpoints(track, items);
         CollectSkippedStages(plan, state, items);
         CollectDeadChannels(plan, items);
+        CollectCourierRestarts(state, items);
         CollectCiDivergence(plan, items);
         return [.. items.OrderBy(i => i.Rank).ThenBy(i => i.Id, StringComparer.Ordinal)];
     }
@@ -281,6 +282,26 @@ public static class OwnerQueue
                 Rank: RankChannel,
                 Detail: c.Fix.Length > 0 ? c.Fix : null));
         }
+    }
+
+    /// <summary>PK2.2 / D2(e) - the courier this run restarted. Not an obligation the run is waiting
+    /// on: a restart is a silent death, the cause is still unknown, and the owner is who reads it. The
+    /// title carries the count, so each restart is new to the queue and reaches the phone again.</summary>
+    private static void CollectCourierRestarts(RunState state, List<OwnerQueueItem> items)
+    {
+        if (state.CourierRestarts is not { } restarts) return;
+        items.Add(new OwnerQueueItem(
+            Id: "courier-restarted",
+            Kind: "courier",
+            Title: Clip(restarts.Last, 200),
+            Unblocks: "nothing in the run - the run carries on; what it costs is every note and push "
+                    + "the courier missed while it was down, and a cause nobody has read yet",
+            Command: "conductor courier status",
+            SinceUtc: restarts.LastUtc,
+            Rank: RankChannel,
+            Detail: "restarted " + restarts.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                  + " time(s) by this run. The courier's log carries the death record and the "
+                  + "scheduler's last result."));
     }
 
     /// <summary>CH1.3 - the run's gate battery and CI are not the same battery.
