@@ -1,0 +1,72 @@
+﻿PK3.2 proof at 2026-09-17T12:55:28Z on commit a9c6a70
+  engine  C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe  built 2026-09-17 12:48:25Z
+  courier C:\Code\conductor\src\Conductor.Courier\bin\Debug\net10.0\conductor-courier.exe  built 2026-09-17 12:48:21Z
+
+==== A. say through a scratch courier, then directly with the courier stopped (stub Bot API) ====
+  scratch courier pid 12912 on port 52712, home C:\Users\shahi\AppData\Local\Temp\pk32-proof-20260917T125528\home-a, stub Bot API on 52703
+    | say --dry-run: nothing is sent
+    |   verb:       send
+    |   chat:       observer -> 770000002
+    |   path:       through the courier on port 52712
+    |   method:     sendMessage
+    |   parse mode: HTML
+    |   reply to:   12
+    |   text:    47 characters, 47 UTF-8 bytes
+    | ----- exact bytes -----
+    | <b>PK3.2</b> dry run & exact bytes
+    | second line
+    | ----- end -----
+  PASS  say --dry-run exits 0
+        exit 0 
+  PASS  the dry run names the resolved chat
+  PASS  the dry run names the path: through the courier on its port
+  PASS  the dry run prints the body's exact bytes
+        [<b>PK3.2</b> dry run & exact bytes
+second line
+]
+  PASS  the dry run sent nothing
+    | sent through the courier: chat 770000001, message id(s) 5001
+  PASS  say goes through the live courier and prints the id
+  scratch courier stopped (pid 12912); presence removed
+  PASS  with the courier stopped the dry run names the direct path and why
+          path:       directly, with this environment's token - courier unreachable: no courier is running on this machine. Start one: conductor courier restart
+    | courier unreachable - sent directly: chat 770000001, message id(s) 5002 (no courier is running on this machine. Start one: conductor courier restart)
+  PASS  with the courier stopped say sends directly and says so
+  PASS  messages.jsonl carries both sends, the direct one marked
+        {"id":5001,"chat":"770000001","origin":"conductor say","when":"2026-09-17T12:55:32.1781382+00:00","verb":"send"} {"id":5002,"chat":"770000001","origin":"conductor say (sent directly)","when":"2026-09-17T12:55:32.7123485+00:00","verb":"send"}
+  PASS  a 4097-character text is refused by name, exit 2
+        say refused: the text is 4097 characters, over Telegram's 4096-character message ceiling.
+  PASS  and nothing reached the Bot API
+
+==== B. a scratch run in courier mode, its courier stopped, pushes directly and logs it ====
+  run started 2026-09-17T12:55:33Z, exit 0
+    run log: 2026-09-17 13:55:33.877 [WRN] run= s= stage= gate= courier unreachable - sent directly: no courier is running on this machine. Start one: conductor courier restart
+    run log: 2026-09-17 13:55:33.877 [WRN] run= s= stage= gate= courier unreachable - sent directly: no courier is running on this machine. Start one: conductor courier restart
+  PASS  the run log reads 'courier unreachable - sent directly'
+        5 line(s)
+  PASS  the run's pushes reached the Bot API directly, one per logged line
+        sendMessage,sendMessage,sendMessage,sendMessage,sendDocument
+  PASS  the run stayed in courier mode: polling not started
+        getUpdates the stub saw in total, all the scratch courier's before it stopped: 1
+    REPORT.md: **? Channel DEAD - courier:** no courier is running on this machine. Start one: conductor courier restart; last push went directly at 12:55:33Z · fix: `conductor courier restart`
+  PASS  REPORT.md's courier health line names the path the last push took
+
+==== C. ONE real send to the admin DM with the scratch courier stopped, then deleted ====
+  scratch courier pid 22984 on port 52752 with the environment token behind the relay on 52743
+  scratch courier stopped; its presence record is left naming a dead pid
+    | courier unreachable - sent directly: chat 99205495, message id(s) 3821 (no courier is running on this machine. Start one: conductor courier restart)
+  PASS  say with the courier stopped sends the real message directly and says so
+    | courier unreachable - deleted directly: chat 99205495, message id 3821 (no courier is running on this machine. Start one: conductor courier restart)
+  PASS  say --delete takes it back, directly
+  messages.jsonl:
+    {"id":3821,"chat":"99205495","origin":"conductor say (sent directly)","when":"2026-09-17T12:55:39.97393+00:00","verb":"send"}
+    {"id":3821,"chat":"99205495","origin":"conductor say (sent directly)","when":"2026-09-17T12:55:40.2771026+00:00","verb":"delete"}
+  PASS  messages.jsonl records the direct send and its delete
+  relay: forwarded sendMessage -> 200; forwarded deleteMessage -> 200; getUpdates answered locally x1
+  PASS  the relay forwarded exactly sendMessage then deleteMessage, both 200
+  PASS  no getUpdates reached Telegram
+
+  REAL SEND: chat id 99205495 (the admin DM), message id 3821 - sent directly 2026-09-17T12:55:40Z, deleted
+
+==== result ====
+  20/20 checks passed; scratch dir C:\Users\shahi\AppData\Local\Temp\pk32-proof-20260917T125528
