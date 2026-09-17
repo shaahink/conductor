@@ -1,21 +1,23 @@
-# Peyk courier - the courier stands on its own Phase Tracker
+﻿# Peyk courier - the courier stands on its own Phase Tracker
 
 **Plan:** Peyk courier - the courier stands on its own | **Branch:** `feat/peyk-courier` | **Design doc:** docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-
-last: PK1 both CLAIMED. PK1.1 (ba634a8, rig tools/peyk/pk1-1-live-proof.ps1 13/13): src/Conductor.Courier -> Core only builds conductor-courier.exe; `conductor courier run` is an alias that starts it in a kill-on-close job; ArchitectureBoundaryTests holds courier->core, seeded violation, engine never links the courier.
-  PK1.2 (5605f8b, e775bbe; rig tools/peyk/pk1-2-live-proof.ps1 27/27 on c50bf01): MEASURED that a courier BESIDE the engine still locks the shared dlls (evidence pk1.2-lock-measurement.log), so an install puts the courier in <install>\courier. CourierBinary.Resolve/ShapeOf; `courier install` defaults to that binary with --task-name; install.ps1 leaves an own-directory courier running, moves a pre-D1 one once, and -CourierOnly [-NoCourierStart] stops+republishes+re-registers without touching conductor.exe (it registers via this tree's src/Conductor/bin/<Config> engine, because the installed v0.5.0 would write `courier run` args). Preflight's courier line is shape-aware; --courier-task reads a scratch task.
-  For PK2.3: the real task still runs v0.5.0 `<install>\conductor.exe courier run`; `tools/install.ps1 -CourierOnly` is the arming act (its /End stops that courier). A rig can never START a scheduled task - it runs with the machine's real env, token and courier home.
-  Findings: an orphaned courier inherits its parent's pipes (held dotnet test open); Get-FileHash is not loadable in a 5.1 child of pwsh 7; `-clp:X` through $args splits in 5.1. Bug #97 filed: presence `engine` = Core AssemblyVersion 0.0.0.0 (CourierPresence.cs:60) - PK2.1 touches that record.
+last: FIX s2 - PK1 battery was red on ONE test, KS11_1SeamBoundaryTests.Only_the_declared_adapter_files_name_a_telegram_type. PK1.1 had moved RetentionNotice (a string literal "Telegram keeps...") into CourierDaemon.cs and StartBlocker (naming TelegramCourierSource.TokenEnvVar) into CourierSettings.cs. The ratchet strips comments, not strings, and scans src/Conductor.Core. Fixed by MOVING both to TelegramCourierSource.cs (already on the adapter list); the list is untouched. Callers: CourierCommand.cs, CourierProgram.cs. Affected classes 64/64 in .conductor/evidence/PK1/pk1.1-fix-seam-boundary-tests.log.
+  Rule for later stages: anything courier-side that names the messenger, even inside a string, goes in the adapter file, not in Core/Courier/.
+  PK1.1 (ba634a8, rig tools/peyk/pk1-1-live-proof.ps1 13/13): src/Conductor.Courier -> Core only builds conductor-courier.exe; `conductor courier run` is an alias starting it in a kill-on-close job; ArchitectureBoundaryTests holds courier->core, a seeded violation, and a check that the engine never links the courier.
+  PK1.2 (rig tools/peyk/pk1-2-live-proof.ps1 27/27 on c50bf01): a courier BESIDE the engine still locks the shared dlls, so an install puts the courier in <install>\courier. install.ps1 leaves an own-directory courier running; -CourierOnly [-NoCourierStart] stops, republishes and re-registers it without touching conductor.exe (it registers via this tree's src/Conductor/bin engine).
+  For PK2.3: the real task still runs v0.5.0 `<install>\conductor.exe courier run`; `tools/install.ps1 -CourierOnly` is the arming act. A rig can never START a scheduled task - it runs with the machine's real env, token and courier home.
+  Findings: an orphaned courier inherits its parent's pipes; Get-FileHash is not loadable in a 5.1 child of pwsh 7; `-clp:X` through $args splits in 5.1. Bug #97: presence `engine` = Core AssemblyVersion 0.0.0.0 (CourierPresence.cs:60) - PK2.1 touches that record.
 next: PK2.1 - heartbeat in the presence record; courier status alive/stale/dead; a presence file found at startup becomes a journaled death record. Read D2 and stage PK2 of the design doc. Scratch courier home and port for every proof.
+
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
-| Total checkpoints | 16 |
+| Total checkpoints | 17 |
 | Done | 0 |
-| Claimed (unconfirmed) | 0 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -26,8 +28,8 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| PK1.1 | src/Conductor.Courier is its own project, referencing Conductor.Core and nothing else, building conductor-courier.exe; conductor courier run execs it; ArchitectureBoundaryTests carries the rule and names a seeded violation | TODO | - | - |
-| PK1.2 | tools/install.ps1 publishes both binaries and no longer stops the courier to publish the engine; proven against a scratch install path with a scratch courier live (no restart in its log); release preflight green on the courier check | TODO | - | - |
+| PK1.1 | src/Conductor.Courier is its own project, referencing Conductor.Core and nothing else, building conductor-courier.exe; conductor courier run execs it; ArchitectureBoundaryTests carries the rule and names a seeded violation | DONE | ba634a8 | .conductor/evidence/PK1/pk1.1-live-proof.log |
+| PK1.2 | tools/install.ps1 publishes both binaries and no longer stops the courier to publish the engine; proven against a scratch install path with a scratch courier live (no restart in its log); release preflight green on the courier check | DONE | ba634a8 | .conductor/evidence/PK1/pk1.2-live-proof.log |
 
 ### PK2 — Alive, or known dead
 

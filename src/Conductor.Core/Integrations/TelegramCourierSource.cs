@@ -36,6 +36,28 @@ public sealed class TelegramCourierSource : ICourierSource, IDisposable
     public static string? TokenFromEnvironment() =>
         Environment.GetEnvironmentVariable(TokenEnvVar)?.Trim();
 
+    /// <summary>What stops a courier holding <paramref name="token"/> from starting, or null. PK1.1: in
+    /// core because two binaries ask it - <c>conductor courier status</c> in the engine, and
+    /// <c>conductor-courier</c> itself at startup - and two copies of a refusal drift apart. Here and
+    /// not on <see cref="CourierSettings"/>, because the sentence names this adapter's env var and the
+    /// seam boundary (KS11.1) keeps every file that names the messenger on the adapter's list.</summary>
+    public static string? StartBlocker(CourierSettings settings, string? token)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return token is { Length: > 0 }
+            ? settings.Refusal()
+            : $"no bot token. Set {TokenEnvVar} in this machine's environment.";
+    }
+
+    /// <summary>Findings §6.3, in the words a person reads at the terminal. It is a limit of the Bot
+    /// API and not of this program, and saying so is the difference between a tool somebody trusts
+    /// with something they said once and a tool that quietly loses it. The adapter's to state, since
+    /// it is the messenger's limit and not the daemon's.</summary>
+    public const string RetentionNotice =
+        "Telegram keeps an undelivered message for 24 hours. The courier answers \"no run live\", "
+      + "not \"machine off\": a note sent to a sleeping machine is gone before it wakes, and nothing "
+      + "on this machine can change that.";
+
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(65) };
     private readonly CourierSettings _settings;
     private readonly TelegramMediaFetcher _media;

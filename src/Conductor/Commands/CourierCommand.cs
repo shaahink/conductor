@@ -241,9 +241,10 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
 
     /// <summary>Findings §6.3 - the wording is core's, shared with the courier binary that prints it
     /// at startup.</summary>
-    internal const string RetentionNotice = CourierDaemon.RetentionNotice;
+    internal const string RetentionNotice = TelegramCourierSource.RetentionNotice;
 
-    private static string? Blocker(CourierSettings courier, string? token) => courier.StartBlocker(token);
+    private static string? Blocker(CourierSettings courier, string? token) =>
+        TelegramCourierSource.StartBlocker(courier, token);
 
     private static string? Token() => TelegramCourierSource.TokenFromEnvironment();
     // ── the allowlist ───────────────────────────────────────────────────────────────────────

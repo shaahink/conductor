@@ -89,7 +89,7 @@ public static class CourierProgram
     {
         var courier = CourierSettings.Load();
         var token = TelegramCourierSource.TokenFromEnvironment();
-        if (courier.StartBlocker(token) is { Length: > 0 } why)
+        if (TelegramCourierSource.StartBlocker(courier, token) is { Length: > 0 } why)
         {
             journal.Append("refused to start: " + why);
             await Console.Error.WriteLineAsync("error: the courier will not start - " + why).ConfigureAwait(false);
@@ -154,7 +154,7 @@ public static class CourierProgram
                 return 0;
             }
 
-            await Console.Out.WriteLineAsync(CourierDaemon.RetentionNotice).ConfigureAwait(false);
+            await Console.Out.WriteLineAsync(TelegramCourierSource.RetentionNotice).ConfigureAwait(false);
             await daemon.RunAsync(stopping.Token).ConfigureAwait(false);
             return 0;
         }
