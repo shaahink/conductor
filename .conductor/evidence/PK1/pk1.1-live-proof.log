@@ -1,0 +1,64 @@
+PK1.1 proof at 2026-09-17T09:55:44Z on commit 2284862
+
+==== 1. dotnet build produces both binaries ====
+  C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe  162304 bytes  2026-09-17 09:56:24Z
+  C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor-courier.exe  162304 bytes  2026-09-17 09:56:17Z
+  C:\Code\conductor\src\Conductor.Courier\bin\Debug\net10.0\conductor-courier.exe  162304 bytes  2026-09-17 09:56:17Z
+PASS  engine apphost built  C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe
+PASS  courier apphost built beside the engine  C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor-courier.exe
+  courier csproj references: Project ..\Conductor.Core\Conductor.Core.csproj
+PASS  courier csproj references Conductor.Core only  Project ..\Conductor.Core\Conductor.Core.csproj
+
+==== 2. the boundary rule names a seeded violation ====
+  seeded: ProjectReference ..\Conductor.Planning\Conductor.Planning.csproj
+  Failed Conductor.Tests.ArchitectureBoundaryTests.TheCourierReferencesCoreAndNothingElse [8 ms]
+  Error Message:
+  Conductor.Courier.csproj -> ProjectReference ..\Conductor.Planning\Conductor.Planning.csproj â€” the courier references Conductor.Core and nothing else.
+  Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 8 ms - Conductor.Tests.dll (net10.0)
+PASS  seeded violation turns the rule red  exit=1
+PASS  the failure names the seeded reference  Conductor.Planning.csproj
+  Passed!  - Failed:     0, Passed:     3, Skipped:     0, Total:     3, Duration: 12 ms - Conductor.Tests.dll (net10.0)
+PASS  rule green again with the seed removed  exit=0
+
+==== 3. conductor courier run starts conductor-courier.exe as a child ====
+  scratch state home C:\Users\shahi\AppData\Local\Temp\pk11-rig\state-home, courier port 56552, Bot API http://127.0.0.1:56551 (nothing listens)
+  alias pid 7892
+  presence record: {"protocol":2,"pid":1696,"engine":"0.0.0.0","exe":"C:\\Code\\conductor\\src\\Conductor\\bin\\Debug\\net10.0\\conductor-courier.exe","taskName":"pk11-scratch","startedUtc":"2026-09-17T09:57:53.648511+00:00","port":56552}
+  courier process: pid 1696, name conductor-courier.exe, parent 7892, command line: "C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor-courier.exe" --task-name pk11-scratch
+PASS  presence written by a separate process  presence pid 1696
+PASS  that process is conductor-courier.exe  conductor-courier.exe
+PASS  its parent is the alias  parent 7892
+PASS  the courier bound the scratch port  port 56552
+
+==== 4. terminating the alias ends the courier ====
+PASS  courier exited with the alias  courier pid 1696 gone=True
+  courier.log (scratch):
+    2026-09-17 09:57:53Z courier run starting: pid 1696, engine 0.5.1-alpha.0.46+228486245d73, protocol 2
+    2026-09-17 09:57:53Z [info] courier: Courier listening on http://127.0.0.1:56552 - runs on this machine push through it
+    2026-09-17 09:57:53Z [info] courier: courier polling the telegram bot; offset 0 (nothing acknowledged yet ƒ?" the next poll takes everything still undelivered); 1 project(s) allowed, 1 chat(s) listed
+
+==== 5. negative control: without the job assignment the kill-together test fails ====
+  Failed Conductor.Tests.PK1_1CourierExecutableTests.KillingTheAliasTakesTheCourierWithIt [15 s]
+  Error Message:
+  the courier outlived the alias that started it
+  Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 15 s - Conductor.Tests.dll (net10.0)
+PASS  without the job the courier outlives the alias (test red)  exit=1
+  Passed!  - Failed:     0, Passed:     8, Skipped:     0, Total:     8, Duration: 801 ms - Conductor.Tests.dll (net10.0)
+PASS  restored: every PK1.1 process test green  exit=0
+
+==== summary ====
+PASS  engine apphost built  C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe
+PASS  courier apphost built beside the engine  C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor-courier.exe
+PASS  courier csproj references Conductor.Core only  Project ..\Conductor.Core\Conductor.Core.csproj
+PASS  seeded violation turns the rule red  exit=1
+PASS  the failure names the seeded reference  Conductor.Planning.csproj
+PASS  rule green again with the seed removed  exit=0
+PASS  presence written by a separate process  presence pid 1696
+PASS  that process is conductor-courier.exe  conductor-courier.exe
+PASS  its parent is the alias  parent 7892
+PASS  the courier bound the scratch port  port 56552
+PASS  courier exited with the alias  courier pid 1696 gone=True
+PASS  without the job the courier outlives the alias (test red)  exit=1
+PASS  restored: every PK1.1 process test green  exit=0
+git status of src and tests (must show no perturbation):
+checks: 13, failed: 0
