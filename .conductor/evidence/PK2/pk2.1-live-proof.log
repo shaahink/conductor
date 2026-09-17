@@ -1,0 +1,100 @@
+﻿PK2.1 proof at 2026-09-17T11:03:28Z on commit 1334051
+  engine  C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe  2026-09-17 11:03:49Z
+  courier C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor-courier.exe  2026-09-17 11:03:46Z
+  real task (read only) before: last run 17/09/2026 10:30:42, last result 267009
+  scratch state home C:\Users\shahi\AppData\Local\Temp\pk21-rig\state-home, courier port 62571, Bot API http://127.0.0.1:62570 (nothing listens)
+
+==== 0. scratch scheduled task pk21-scratch-595e3bfb (action: cmd /c exit 3) ====
+  SUCCESS: The scheduled task "pk21-scratch-595e3bfb" has successfully been created.
+PASS  scratch task registered  exit=0
+  scratch task last run 17/09/2026 12:03:59, last result 3
+PASS  scratch task ran and the scheduler recorded exit 3  result=3
+
+==== 1. a scratch courier writes lastPollUtc and keeps advancing it ====
+  started pid 5448 at 2026-09-17T11:04:00Z
+  presence pid 5448 engine 0.5.1-alpha.0.59+1334051a6570.dirty port 62571
+  lastPollUtc first read  2026-09-17T11:04:02.6323851+00:00
+  lastPollUtc 5s later    2026-09-17T11:04:06.6574854+00:00
+PASS  presence carries lastPollUtc  2026-09-17T11:04:02.6323851+00:00
+PASS  heartbeat advances  2026-09-17T11:04:02.6323851+00:00 -> 2026-09-17T11:04:06.6574854+00:00
+PASS  bug #97: engine is the build stamp, not 0.0.0.0  0.5.1-alpha.0.59+1334051a6570.dirty
+
+==== 2. courier status (this tree) reads alive ====
+  2026-09-17T11:04:08Z life=alive  alive (last poll 1 s ago; pid 5448)
+PASS  status reads alive  alive (last poll 1 s ago; pid 5448)
+
+==== 3. Stop-Process, then status reads dead with a time ====
+  killed pid 5448 at 2026-09-17T11:04:08Z; its last heartbeat was 2026-09-17T11:04:06.6574854+00:00
+PASS  record left behind by the killed courier  C:\Users\shahi\AppData\Local\Temp\pk21-rig\state-home\courier\courier.run.json
+  2026-09-17T11:04:08Z life=dead  dead (last seen 2026-09-17 11:04:06Z, 1 s ago; pid 5448 is gone
+and nothing cleared its record)
+  lastSeenUtc 2026-09-17T11:04:06.6574854+00:00  taskLastRun 3 (0x00000003) at 17/09/2026 12:03:59
+PASS  status reads dead  dead (last seen 2026-09-17 11:04:06Z, 1 s ago; pid 5448 is gone
+and nothing cleared its record)
+PASS  dead carries the last-seen time  dead (last seen 2026-09-17 11:04:06Z, 1 s ago; pid 5448 is gone
+and nothing cleared its record)
+PASS  dead is last seen at the last heartbeat  2026-09-17T11:04:06.6574854+00:00 vs 2026-09-17T11:04:06.6574854+00:00
+PASS  status names the task's last result  3 (0x00000003) at 17/09/2026 12:03:59
+
+==== 4. the next start journals the death record ====
+  restarted pid 7780 at 2026-09-17T11:04:08Z
+  courier.log: 2026-09-17 11:04:08Z previous courier pid 5448 died silently; last poll 2026-09-17 11:04:06Z; task last-run result 3 (0x00000003) at 17/09/2026 12:03:59 [task pk21-scratch-595e3bfb]
+PASS  death record journaled  previous courier pid 5448 died silently
+PASS  death record names the last poll  
+PASS  death record carries the scheduler's result for the dead courier's task  
+  2026-09-17T11:04:11Z life=alive  alive (last poll 0 s ago; pid 7780)
+PASS  the new courier reads alive  alive (last poll 0 s ago; pid 7780)
+
+==== 5. negative control: a courier that leaves through its finally leaves no death behind ====
+  --once exited 1; presence file present: False
+PASS  --once cleared the record (the dead one's successor journaled it, then its own finally ran)  
+  'died silently' lines before start: 2, after: 2
+PASS  no death record after a clean exit  2 -> 2
+  scratch task deleted (exit 0)
+
+==== courier.log (scratch) ====
+  2026-09-17 11:04:00Z courier run starting: pid 5448, engine 0.5.1-alpha.0.59+1334051a6570.dirty, protocol 2
+  2026-09-17 11:04:00Z [info] courier: Courier listening on http://127.0.0.1:62571 - runs on this machine push through it
+  2026-09-17 11:04:00Z [info] courier: courier polling the telegram bot; offset 0 (nothing acknowledged yet â€” the next poll takes everything still undelivered); 1 project(s) allowed, 1 chat(s) listed
+  2026-09-17 11:04:02Z [info] courier: courier poll error: No connection could be made because the target machine actively refused it. (127.0.0.1:62570)
+  2026-09-17 11:04:06Z [info] courier: courier poll error: No connection could be made because the target machine actively refused it. (127.0.0.1:62570)
+  2026-09-17 11:04:08Z courier run starting: pid 7780, engine 0.5.1-alpha.0.59+1334051a6570.dirty, protocol 2
+  2026-09-17 11:04:08Z previous courier pid 5448 died silently; last poll 2026-09-17 11:04:06Z; task last-run result 3 (0x00000003) at 17/09/2026 12:03:59 [task pk21-scratch-595e3bfb]
+  2026-09-17 11:04:08Z [info] courier: Courier listening on http://127.0.0.1:62571 - runs on this machine push through it
+  2026-09-17 11:04:08Z [info] courier: courier polling the telegram bot; offset 0 (nothing acknowledged yet â€” the next poll takes everything still undelivered); 1 project(s) allowed, 1 chat(s) listed
+  2026-09-17 11:04:10Z [info] courier: courier poll error: No connection could be made because the target machine actively refused it. (127.0.0.1:62570)
+  2026-09-17 11:04:11Z courier run starting: pid 18808, engine 0.5.1-alpha.0.59+1334051a6570.dirty, protocol 2, --once
+  2026-09-17 11:04:11Z previous courier pid 7780 died silently; last poll 2026-09-17 11:04:10Z; task last-run result 3 (0x00000003) at 17/09/2026 12:03:59 [task pk21-scratch-595e3bfb]
+  2026-09-17 11:04:13Z courier run DIED: HttpRequestException: No connection could be made because the target machine actively refused it. (127.0.0.1:62570)
+  2026-09-17 11:04:13Z System.Net.Http.HttpRequestException: No connection could be made because the target machine actively refused it. (127.0.0.1:62570)  ---> System.Net.Sockets.SocketException (10061): No connection could be made because the target machine actively refused it.    at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)    at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)    at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)    --- End of inner exception stack trace ---    at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)    at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)    at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)    at System.Net.Http.HttpConnectionPool.InjectNewHttp11ConnectionAsync(QueueItem queueItem)    at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)    at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)    at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)    at System.Net.Http.SocketsHttpHandler.<SendAsync>g__CreateHandlerAndSendAsync|115_0(HttpRequestMessage request, CancellationToken cancellationToken)    at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)    at Conductor.Core.Integrations.TelegramService.GetUpdatesAsync(HttpClient http, String apiBase, String token, Int64 offset, Int32 timeoutSeconds, CancellationToken ct) in C:\Code\conductor\src\Conductor.Core\Integrations\TelegramService.Polling.cs:line 114    at Conductor.Core.Integrations.TelegramCourierSource.FetchAsync(Int64 offset, CancellationToken ct) in C:\Code\conductor\src\Conductor.Core\Integrations\TelegramCourierSource.cs:line 102    at Conductor.Core.Courier.CourierDaemon.PollOnceAsync(CancellationToken ct) in C:\Code\conductor\src\Conductor.Core\Courier\CourierDaemon.cs:line 155    at Conductor.Courier.CourierProgram.RunAsync(Options options, CourierLog journal) in C:\Code\conductor\src\Conductor.Courier\CourierProgram.cs:line 155    at Conductor.Courier.CourierProgram.Main(String[] args) in C:\Code\conductor\src\Conductor.Courier\CourierProgram.cs:line 44
+  2026-09-17 11:04:13Z courier run starting: pid 6892, engine 0.5.1-alpha.0.59+1334051a6570.dirty, protocol 2
+  2026-09-17 11:04:14Z [info] courier: Courier listening on http://127.0.0.1:62571 - runs on this machine push through it
+  2026-09-17 11:04:14Z [info] courier: courier polling the telegram bot; offset 0 (nothing acknowledged yet â€” the next poll takes everything still undelivered); 1 project(s) allowed, 1 chat(s) listed
+  2026-09-17 11:04:16Z [info] courier: courier poll error: No connection could be made because the target machine actively refused it. (127.0.0.1:62570)
+
+==== the real courier was only read ====
+  real task after: last run 17/09/2026 10:30:42, last result 267009
+PASS  real task not restarted by the rig  17/09/2026 10:30:42 / 17/09/2026 10:30:42
+
+==== summary ====
+PASS  scratch task registered  exit=0
+PASS  scratch task ran and the scheduler recorded exit 3  result=3
+PASS  presence carries lastPollUtc  2026-09-17T11:04:02.6323851+00:00
+PASS  heartbeat advances  2026-09-17T11:04:02.6323851+00:00 -> 2026-09-17T11:04:06.6574854+00:00
+PASS  bug #97: engine is the build stamp, not 0.0.0.0  0.5.1-alpha.0.59+1334051a6570.dirty
+PASS  status reads alive  alive (last poll 1 s ago; pid 5448)
+PASS  record left behind by the killed courier  C:\Users\shahi\AppData\Local\Temp\pk21-rig\state-home\courier\courier.run.json
+PASS  status reads dead  dead (last seen 2026-09-17 11:04:06Z, 1 s ago; pid 5448 is gone
+and nothing cleared its record)
+PASS  dead carries the last-seen time  dead (last seen 2026-09-17 11:04:06Z, 1 s ago; pid 5448 is gone
+and nothing cleared its record)
+PASS  dead is last seen at the last heartbeat  2026-09-17T11:04:06.6574854+00:00 vs 2026-09-17T11:04:06.6574854+00:00
+PASS  status names the task's last result  3 (0x00000003) at 17/09/2026 12:03:59
+PASS  death record journaled  previous courier pid 5448 died silently
+PASS  death record names the last poll  
+PASS  death record carries the scheduler's result for the dead courier's task  
+PASS  the new courier reads alive  alive (last poll 0 s ago; pid 7780)
+PASS  --once cleared the record (the dead one's successor journaled it, then its own finally ran)  
+PASS  no death record after a clean exit  2 -> 2
+PASS  real task not restarted by the rig  17/09/2026 10:30:42 / 17/09/2026 10:30:42
+18 checks, 0 failed, finished 2026-09-17T11:04:16Z
