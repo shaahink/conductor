@@ -1,0 +1,165 @@
+﻿PK2.2 proof at 2026-09-17T11:18:53Z on commit b1a3b0a
+  engine  C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe  2026-09-17 11:19:27Z
+  courier C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor-courier.exe  2026-09-17 11:19:21Z
+  real task (read only) before: status Running, last run 17/09/2026 10:30:42, last result 267009
+
+==== A. exit journaling ====
+  exit0:3 -> process exit code 0
+PASS  Environment.Exit(0) exits 0  exit=0
+PASS  the seam says it was armed  2026-09-17 11:19:42Z FAULT SEAM ARMED (CONDUCTOR_COURIER_FAULT): exit0 after 3s - this death is a rig's, not a finding
+PASS  ProcessExit journaled an exit Main never returned from  2026-09-17 11:19:45Z courier process exit WITHOUT Main returning: exit code 0 (Environment.Exit or a runtime shutdown)
+  throw:3 -> process exit code -532462766
+PASS  an unhandled throw on a timer thread is journaled  2026-09-17 11:19:49Z courier run DIED (unhandled, terminating): InvalidOperationException: fault seam: an exception on a thread nothing awaits
+PASS  and the process did end non-zero  exit=-532462766
+  Stop-Process control: 0 line(s) after the kill, 0 exit line(s)
+PASS  control: TerminateProcess leaves no exit line (the death record's job)  
+
+==== B. this tree registers the keep-alive trigger; schtasks /query /xml reads it back ====
+  installed pk22-keepalive-a32cba ΓåÆ 
+  C:\Users\shahi\AppData\Local\Temp\pk22-rig\courier-k.cmd courier run
+  starts at your logon ┬╖ started again within five minutes of stopping, whatever 
+  the exit ┬╖ no admin rights, no elevation
+  not started ΓÇö it starts at your next logon, or now with conductor courier 
+  restart --task-name "pk22-keepalive-a32cba"
+PASS  courier install registered the scratch task  exit=0
+  read back: TimeTrigger interval PT5M from 2026-01-01T00:00:00; logon trigger True; IgnoreNew; exec C:\Users\shahi\AppData\Local\Temp\pk22-rig\courier-k.cmd
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <RestartOnFailure>
+    <Interval>PT1M</Interval>
+    </RestartOnFailure>
+    <Triggers>
+    <LogonTrigger>
+    </LogonTrigger>
+    <TimeTrigger>
+    <StartBoundary>2026-01-01T00:00:00</StartBoundary>
+    <Interval>PT5M</Interval>
+    </TimeTrigger>
+    </Triggers>
+    <Command>C:\Users\shahi\AppData\Local\Temp\pk22-rig\courier-k.cmd</Command>
+PASS  read-back XML carries the PT5M keep-alive  PT5M
+PASS  read-back XML keeps the logon trigger  
+PASS  read-back XML keeps IgnoreNew  IgnoreNew
+PASS  the task runs the scratch wrapper  C:\Users\shahi\AppData\Local\Temp\pk22-rig\courier-k.cmd
+PASS  control task (no TimeTrigger) registered  exit=0
+
+==== C. a courier that exits 0 is started again by the keep-alive within five minutes ====
+  both tasks started by hand at 2026-09-17T11:20:17Z; each courier exits 0 after 20s
+  2026-09-17T11:20:33Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 0 start(s)
+  2026-09-17T11:20:49Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:21:04Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:21:20Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:21:35Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:21:50Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:22:05Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:22:20Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:22:35Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:22:50Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:23:05Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:23:20Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:23:35Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:23:50Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:24:05Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:24:21Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:24:36Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:24:51Z  keep-alive task: 1 start(s), 1 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:25:06Z  keep-alive task: 2 start(s), 1 exit(s), scheduler says Running / 267009; control: 1 start(s)
+  2026-09-17T11:25:21Z  keep-alive task: 2 start(s), 1 exit(s), scheduler says Running / 267009; control: 1 start(s)
+  2026-09-17T11:25:36Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:25:51Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:26:06Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:26:22Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:26:37Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:26:52Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:27:07Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:27:22Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:27:37Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:27:52Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:28:07Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:28:22Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:28:38Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:28:53Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:29:08Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:29:23Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:29:38Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:29:53Z  keep-alive task: 2 start(s), 2 exit(s), scheduler says Ready / 0; control: 1 start(s)
+  2026-09-17T11:30:08Z  keep-alive task: 3 start(s), 2 exit(s), scheduler says Running / 267009; control: 1 start(s)
+PASS  the scheduler recorded the courier's exit 0 as the task's last result  
+  keep-alive courier.log timeline:
+    2026-09-17 11:20:02Z courier run starting: pid 10192, engine 0.5.1-alpha.0.64+b1a3b0ab857d.dirty, protocol 2
+    2026-09-17 11:20:30Z courier process exit WITHOUT Main returning: exit code 0 (Environment.Exit or a runtime shutdown)
+    2026-09-17 11:25:02Z courier run starting: pid 20092, engine 0.5.1-alpha.0.64+b1a3b0ab857d.dirty, protocol 2
+    2026-09-17 11:25:02Z previous courier pid 10192 died silently; last poll 2026-09-17 11:20:15Z; task last-run result 267009 (0x00041301), running now - the task's current instance; the previous exit code is not kept at 17/09/2026 12:25:01 [task pk22-keepalive-a32cba]
+    2026-09-17 11:25:22Z courier process exit WITHOUT Main returning: exit code 0 (Environment.Exit or a runtime shutdown)
+    2026-09-17 11:30:02Z courier run starting: pid 9820, engine 0.5.1-alpha.0.64+b1a3b0ab857d.dirty, protocol 2
+    2026-09-17 11:30:02Z previous courier pid 20092 died silently; last poll 2026-09-17 11:25:21Z; task last-run result 267009 (0x00041301), running now - the task's current instance; the previous exit code is not kept at 17/09/2026 12:30:01 [task pk22-keepalive-a32cba]
+PASS  started three times (one by hand, two by the keep-alive)  starts=3
+PASS  restart 1: exit 0 at 11:20:30Z, started again at 11:25:02Z  272s after the exit (limit 300s)
+PASS  restart 1 landed on a five-minute mark  11:25:02Z
+PASS  restart 2: exit 0 at 11:25:22Z, started again at 11:30:02Z  280s after the exit (limit 300s)
+PASS  restart 2 landed on a five-minute mark  11:30:02Z
+  control task: 1 start(s); scheduler last result 0 at 17/09/2026 12:20:17
+PASS  control: without the TimeTrigger, an exit 0 is never restarted (RestartOnFailure does not fire)  starts=1 result=0
+
+==== D. a scratch run restarts the dead scratch courier and says so on its owner queue ====
+  2026-09-17T11:30:35Z before the run: life=dead  dead (last seen 2026-09-17 11:30:21Z, 13 s ago; pid 9820 is 
+gone and nothing cleared its record)
+PASS  the scratch courier reads dead before the run  dead (last seen 2026-09-17 11:30:21Z, 13 s ago; pid 9820 is 
+gone and nothing cleared its record)
+  run started 2026-09-17T11:30:35Z, exit 0
+    2026-09-17 12:30:39.244 [INF] run=62e4ef24282c4ec4be6f515ed727b747 s= stage=H0 gate= courier restarted by this run, 1st time: found dead (last seen 2026-09-17 11:30:21Z, 17 s ago; pid 9820 is gone and nothing cleared its record); task "pk22-keepalive-a32cba" last run 1 (0x00000001) at 17/09/2026 12:30:01
+    [12:30:39] courier restarted by this run, 1st time: found dead (last seen 2026-09-17 11:30:21Z, 17 s ago; pid 9820 is gone and nothing cleared its record); task "pk22-keepalive-a32cba" last run 1 (0x00000001) at 17/09/2026 12:30:01
+    2026-09-17 12:30:40.143 [INF] run=62e4ef24282c4ec4be6f515ed727b747 s= stage=H0 gate= owner queue: 2 new item(s) ΓÇö courier is DEAD - no courier is running on this machine. Start one: conductor courier restart; courier restarted by this run, 1st time: found dead (last seen 2026-09-17 11:30:21Z, 17 s ago; pid 9820 is gone and nothing cleared its record); task "pk22-keepalive-a32cba" last run 1 (0x00000001) aΓÇª
+    [12:30:40] owner queue: 2 new item(s) ΓÇö courier is DEAD - no courier is running on this machine. Start one: conductor courier restart; courier restarted by this run, 1st time: found dead (last seen 2026-09-17 11:30:21Z, 17 s ago; pid 9820 is gone and nothing cleared its record); task "pk22-keepalive-a32cba" last run 1 (0x00000001) aΓÇª
+    2026-09-17 12:30:40.362 [INF] run=62e4ef24282c4ec4be6f515ed727b747 s=1 stage=H0 gate= session #1 start ΓÇö Deliver H0 attempt 1/2
+    [12:30:40] session #1 start ΓÇö Deliver H0 attempt 1/2
+    [12:30:40]   text   PK2.2 rig session.
+    2026-09-17 12:30:40.938 [INF] run=62e4ef24282c4ec4be6f515ed727b747 s=1 stage=H0 gate= session #1 exited (code 0, 0m, $0.00)
+    [12:30:40] session #1 exited (code 0, 0m, $0.00)
+    2026-09-17 12:30:42.026 [INF] run=62e4ef24282c4ec4be6f515ed727b747 s=1 stage=H0 gate= session #1 NoProgress ΓÇö queuing fix session (attempt 2/2)
+    [12:30:42] session #1 NoProgress ΓÇö queuing fix session (attempt 2/2)
+    2026-09-17 12:30:42.952 [INF] run=62e4ef24282c4ec4be6f515ed727b747 s=1 stage=H0 gate= --once: stopping after one session
+    [12:30:42] --once: stopping after one session
+    62e4ef24, 1 session(s)
+  conductor.log: [12:30:39] courier restarted by this run, 1st time: found dead (last seen 2026-09-17 11:30:21Z, 17 s ago; pid 9820 is gone and nothing cleared its record); task "pk22-keepalive-a32cba" last run 1 (0x00000001) at 17/09/2026 12:30:01
+PASS  the run logged the restart  
+  OWNER-QUEUE.md: ### 1. courier restarted by this run, 1st time: found dead (last seen 2026-09-17 11:30:21Z, 17 s ago; pid 9820 is gone and nothing cleared its record); task "pk22-keepalive-a32cba" last run 1 (0x00000001) a…
+PASS  the run's owner queue carries 'courier restarted by this run, 1st time'  C:\Users\shahi\AppData\Local\Temp\pk22-rig\repo\.conductor\OWNER-QUEUE.md
+  courier.log after the run: 2026-09-17 11:30:39Z courier run starting: pid 21528, engine 0.5.1-alpha.0.64+b1a3b0ab857d.dirty, protocol 2
+PASS  the scheduler started the scratch courier after the run asked  
+  2026-09-17T11:30:45Z after the run: life=alive  alive (last poll 2 s ago; pid 21528)
+PASS  the restarted scratch courier reads alive  alive (last poll 2 s ago; pid 21528)
+  stopped scratch courier pid 21528
+  scratch tasks ended and deleted
+
+==== the real courier was only read ====
+  real task after: status Running, last run 17/09/2026 10:30:42, last result 267009
+PASS  real task not restarted by the rig  17/09/2026 10:30:42 / 17/09/2026 10:30:42
+
+==== summary ====
+PASS  Environment.Exit(0) exits 0  exit=0
+PASS  the seam says it was armed  2026-09-17 11:19:42Z FAULT SEAM ARMED (CONDUCTOR_COURIER_FAULT): exit0 after 3s - this death is a rig's, not a finding
+PASS  ProcessExit journaled an exit Main never returned from  2026-09-17 11:19:45Z courier process exit WITHOUT Main returning: exit code 0 (Environment.Exit or a runtime shutdown)
+PASS  an unhandled throw on a timer thread is journaled  2026-09-17 11:19:49Z courier run DIED (unhandled, terminating): InvalidOperationException: fault seam: an exception on a thread nothing awaits
+PASS  and the process did end non-zero  exit=-532462766
+PASS  control: TerminateProcess leaves no exit line (the death record's job)  
+PASS  courier install registered the scratch task  exit=0
+PASS  read-back XML carries the PT5M keep-alive  PT5M
+PASS  read-back XML keeps the logon trigger  
+PASS  read-back XML keeps IgnoreNew  IgnoreNew
+PASS  the task runs the scratch wrapper  C:\Users\shahi\AppData\Local\Temp\pk22-rig\courier-k.cmd
+PASS  control task (no TimeTrigger) registered  exit=0
+PASS  the scheduler recorded the courier's exit 0 as the task's last result  
+PASS  started three times (one by hand, two by the keep-alive)  starts=3
+PASS  restart 1: exit 0 at 11:20:30Z, started again at 11:25:02Z  272s after the exit (limit 300s)
+PASS  restart 1 landed on a five-minute mark  11:25:02Z
+PASS  restart 2: exit 0 at 11:25:22Z, started again at 11:30:02Z  280s after the exit (limit 300s)
+PASS  restart 2 landed on a five-minute mark  11:30:02Z
+PASS  control: without the TimeTrigger, an exit 0 is never restarted (RestartOnFailure does not fire)  starts=1 result=0
+PASS  the scratch courier reads dead before the run  dead (last seen 2026-09-17 11:30:21Z, 13 s ago; pid 9820 is 
+gone and nothing cleared its record)
+PASS  the run logged the restart  
+PASS  the run's owner queue carries 'courier restarted by this run, 1st time'  C:\Users\shahi\AppData\Local\Temp\pk22-rig\repo\.conductor\OWNER-QUEUE.md
+PASS  the scheduler started the scratch courier after the run asked  
+PASS  the restarted scratch courier reads alive  alive (last poll 2 s ago; pid 21528)
+PASS  real task not restarted by the rig  17/09/2026 10:30:42 / 17/09/2026 10:30:42
+25 checks, 0 failed, finished 2026-09-17T11:30:46Z
