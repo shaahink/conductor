@@ -136,6 +136,9 @@ public sealed class CourierListener : IDisposable
                 case ("POST", CourierEndpoint.DeletePath):
                     await HandleAsync<CourierDelete>(ctx, "delete", d => d.Protocol, _desk.DeleteAsync, ct).ConfigureAwait(false);
                     break;
+                case ("POST", CourierEndpoint.HelloPath):
+                    await HandleAsync<CourierHello>(ctx, "hello", h => h.Protocol, _desk.HelloAsync, ct).ConfigureAwait(false);
+                    break;
                 case ("GET", CourierEndpoint.ChatsPath):
                     await WriteAsync(ctx, HttpStatusCode.OK, _desk.Chats()).ConfigureAwait(false);
                     break;

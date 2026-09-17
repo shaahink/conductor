@@ -18,6 +18,9 @@ public interface ICourierDesk
 
     /// <summary>The chats this courier lists, each with its profile.</summary>
     IReadOnlyList<CourierChat> Chats();
+
+    /// <summary>PK3.3 / D4 - a live run naming its own project; the allowlist entry added if absent.</summary>
+    Task<CourierAck> HelloAsync(CourierHello hello, CancellationToken ct);
 }
 
 /// <summary>PK3.1 / D5 - the courier's desk: resolves the chat a sender named, hands the send to the
@@ -90,6 +93,37 @@ public sealed class CourierDesk(ICourierSource source, CourierSettings settings,
 
     /// <inheritdoc />
     public IReadOnlyList<CourierChat> Chats() => settings.ChatList();
+
+    /// <summary>One hello at a time: each re-reads courier.json, adds, and writes it back.</summary>
+    private readonly Lock _hello = new();
+
+    /// <inheritdoc />
+    /// <remarks>courier.json is RE-READ here rather than written from this process's copy: the owner may
+    /// have run <c>courier allow</c> or <c>deny</c> since this courier started, and saving the startup copy
+    /// would silently undo that. The merged list then replaces the one the router reads, so the entry is
+    /// routable at once - no restart - and so is whatever the owner changed.</remarks>
+    public Task<CourierAck> HelloAsync(CourierHello hello, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(hello);
+        var by = "run " + (string.IsNullOrWhiteSpace(hello.RunId) ? "(unnamed)" : hello.RunId.Trim());
+        lock (_hello)
+        {
+            var disk = CourierSettings.Load(stateHomeRoot);
+            if (disk.Unreadable is { Length: > 0 } unreadable)
+                return Task.FromResult(new CourierAck(false, "courier.json is not readable, so nothing was added: " + unreadable));
+
+            if (disk.Introduce(hello.Plan, hello.Repo, by, out var added) is { } refused)
+                return Task.FromResult(new CourierAck(false, refused));
+            if (added) disk.Save(stateHomeRoot);
+            settings.Projects = disk.Projects;
+
+            var entry = $"{hello.Plan.Trim()} at {Path.GetFullPath(hello.Repo.Trim())}";
+            if (added) log?.Invoke($"courier files notes for {entry} from now on - added by {by}");
+            return Task.FromResult(new CourierAck(true, added
+                ? $"the courier files notes for {entry} from now on - added by {by}"
+                : $"the courier already files notes for {entry}"));
+        }
+    }
 
     private void Record(IReadOnlyList<long>? ids, string chatId, string? origin, string? stamp, string verb)
     {

@@ -46,8 +46,18 @@ public sealed partial class RunContext
 
     /// <summary>PK2.2 / D2(e) - the boundary check, true when it changed the run state (a restart to
     /// report). A dry run looks at nothing: a preview that starts a scheduled task is not a preview.</summary>
-    public Task<bool> CheckCourierAsync() =>
-        Options.DryRun ? Task.FromResult(false) : CourierKeepAlive.AtBoundaryAsync(State, Log);
+    public async Task<bool> CheckCourierAsync()
+    {
+        if (Options.DryRun) return false;
+        var restarted = await CourierKeepAlive.AtBoundaryAsync(State, Log).ConfigureAwait(false);
+        // PK3.3 / D4: after the keep-alive, so a courier it just restarted can be asked next boundary.
+        await CourierIntroduction.AtBoundaryAsync(Plan.Name, Plan.Repo, State.RunId, Log).ConfigureAwait(false);
+        return restarted;
+    }
+
+    /// <summary>PK3.3 / D4: the run naming its own project to the courier. Replaced by a test with one
+    /// aimed at a scratch state home.</summary>
+    public Courier.CourierIntroduction CourierIntroduction { get; set; } = new();
     public WebhookNotifier Webhooks { get; }
 
     /// <summary>KS2.6: the gate every notification passes through — dry-run silence and the

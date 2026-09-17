@@ -12,7 +12,9 @@ namespace Conductor.Core.Courier;
 /// courier must be able to tell them apart without a run to ask.</summary>
 /// <param name="Plan">The plan name — what a push's identity line says and what a person types.</param>
 /// <param name="Repo">The checkout. Its <c>.conductor</c> is where notes land.</param>
-public sealed record CourierProject(string Plan, string Repo);
+/// <param name="By">PK3.3 / D4 - who added the entry when it was not the owner: <c>run &lt;id&gt;</c> for a
+/// live run that named its own project. Null for <c>courier allow</c>.</param>
+public sealed record CourierProject(string Plan, string Repo, string? By = null);
 
 /// <summary>One chat the courier answers, and what it is allowed to do. Same two-value shape the
 /// plan's chat entries have, spelled out again here rather than shared: the courier has no plan, and
@@ -149,6 +151,45 @@ public sealed class CourierSettings
             return ChatProfiles.TryParse(named) ?? ChatProfile.Observer;
         }
         return null;
+    }
+
+    /// <summary>PK3.3 / D4 - adds <paramref name="plan"/> at <paramref name="repo"/> to the allowlist,
+    /// marked <paramref name="by"/>, unless that pair is already there. Never removes or rewrites an
+    /// entry: the owner's <c>courier allow</c> keeps one entry per repository, and a run naming a new plan
+    /// in the same repository sits BESIDE it rather than replacing it. The list is replaced, never
+    /// mutated in place, so a router reading the old one mid-swap reads a whole list.</summary>
+    /// <returns>Why the entry cannot be added, or null (with <paramref name="added"/> false when it was
+    /// already there).</returns>
+    public string? Introduce(string? plan, string? repo, string by, out bool added)
+    {
+        added = false;
+        if (string.IsNullOrWhiteSpace(plan)) return "a hello has to name the run's plan.";
+        if (string.IsNullOrWhiteSpace(repo)) return "a hello has to name the run's checkout.";
+
+        string full;
+        try { full = Path.GetFullPath(repo.Trim()).TrimEnd(Path.DirectorySeparatorChar); }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return $"\"{repo}\" is not a path ({ex.Message}).";
+        }
+        // The same refusal courier allow makes: an entry for a path that is not there parks every note.
+        if (!Directory.Exists(full)) return $"{full} is not a directory on this machine.";
+
+        var name = plan.Trim();
+        if (Projects.Any(p => string.Equals(p.Plan?.Trim(), name, StringComparison.OrdinalIgnoreCase)
+                              && string.Equals(SafeFull(p.Repo), full, StringComparison.OrdinalIgnoreCase)))
+            return null;
+
+        Projects = [.. Projects, new CourierProject(name, full, by)];
+        added = true;
+        return null;
+    }
+
+    private static string SafeFull(string? repo)
+    {
+        if (string.IsNullOrWhiteSpace(repo)) return "";
+        try { return Path.GetFullPath(repo).TrimEnd(Path.DirectorySeparatorChar); }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return repo; }
     }
 
     /// <summary>PK3.1 / D5 - the chats as <c>GET /chats</c> serves them: each id with the profile

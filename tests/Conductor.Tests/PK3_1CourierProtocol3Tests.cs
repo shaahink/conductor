@@ -108,7 +108,9 @@ public sealed class PK3_1CourierProtocol3Tests : IDisposable
             .Where(f => f.IsLiteral && f.Name.EndsWith("Path", StringComparison.Ordinal))
             .Select(f => (string)f.GetRawConstantValue()!);
 
-    private static bool IsGet(string path) => path is CourierEndpoint.HelloPath or CourierEndpoint.ChatsPath;
+    /// <summary>The paths served ONLY on GET. The hello is served on both since PK3.3 (a run's POST names
+    /// its project), so it counts as a POST verb here and carries a body below.</summary>
+    private static bool IsGet(string path) => path is CourierEndpoint.ChatsPath;
 
     // -- the four verbs --------------------------------------------------------------------------
 
@@ -233,6 +235,7 @@ public sealed class PK3_1CourierProtocol3Tests : IDisposable
             [CourierEndpoint.SendPath] = new CourierSend(AdminChat, "x", Protocol: newer),
             [CourierEndpoint.ReactPath] = new CourierReact(AdminChat, 1, "\U0001F44D", Protocol: newer),
             [CourierEndpoint.DeletePath] = new CourierDelete(AdminChat, 1, Protocol: newer),
+            [CourierEndpoint.HelloPath] = new CourierHello(_tmp, "PK31", "pk31", Protocol: newer),
         };
         // The property holds for every POST verb the endpoint names; a new one without a body here fails.
         Assert.Equal(ServedPaths().Where(p => !IsGet(p)).Order(StringComparer.Ordinal), bodies.Keys.Order(StringComparer.Ordinal));

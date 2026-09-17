@@ -268,6 +268,13 @@ every checkout this machine has ever run, so it files only into projects written
 `courier allow`. Anything else is **parked** in `<state home>/dead-letter/` with the reason, and the
 sender is told where it is.
 
+**A live run names its own project.** At its first session boundary a run tells the courier its plan
+name and checkout (`POST /hello`), and the courier adds that entry — marked `"by": "run <id>"` in
+`courier.json` — if it is not already there, beside any entry you made; routing sees it at once, no
+restart. So a new plan in a repository you already allowed needs no `courier allow --plan`. This adds no
+reach: the allowlist keeps a daemon holding the token out of arbitrary checkouts, and a run already
+writes to its own. `courier allow` is unchanged, and is still how you allow a project with no run live.
+
 **Which project a note is about** is DV3.4's ladder, unchanged: a reply to a push files against that
 push's project, else this chat's (or this topic's) `/project` selection. The selection lives in the
 machine's state home, so the courier and a live run read the same one. A courier has no local run, so

@@ -132,6 +132,8 @@ public sealed class DV4_3CourierSeamTests : IDisposable
         public Task<CourierAck> DeleteAsync(CourierDelete delete, CancellationToken ct) => throw new NotSupportedException();
 
         public IReadOnlyList<CourierChat> Chats() => [];
+
+        public Task<CourierAck> HelloAsync(CourierHello hello, CancellationToken ct) => throw new NotSupportedException();
     }
 
     private PlanConfig Plan(string apiRoot, bool twoWay = true) => new()

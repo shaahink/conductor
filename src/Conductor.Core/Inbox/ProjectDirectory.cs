@@ -59,13 +59,19 @@ public sealed class ProjectDirectory
     /// default, is the run's behaviour unchanged: the catalogue is the list. The courier passes one,
     /// because a machine-level daemon holding the bot token would otherwise be able to write into
     /// every checkout this machine has ever run — see <c>CourierSettings</c>.</param>
+    /// <param name="allowed">PK3.3 - the explicit list, READ ON EVERY LOOKUP. Wins over
+    /// <paramref name="only"/>. The courier passes one so a project a live run named (D4) is routable
+    /// from the next note on, without a restart.</param>
     public ProjectDirectory(string? stateHomeRoot = null, ProjectRef? local = null,
-        IReadOnlyList<ProjectRef>? only = null)
+        IReadOnlyList<ProjectRef>? only = null, Func<IReadOnlyList<ProjectRef>>? allowed = null)
     {
         _root = string.IsNullOrWhiteSpace(stateHomeRoot) ? StateHome.Root : stateHomeRoot;
         _local = local;
         _only = only;
+        _allowed = allowed;
     }
+
+    private readonly Func<IReadOnlyList<ProjectRef>>? _allowed;
 
     /// <summary>The machine's state home, as this directory resolved it. Where the dead-letter box
     /// and the sticky selections live too.</summary>
@@ -82,9 +88,9 @@ public sealed class ProjectDirectory
 
         // DV4.1: an explicit list is the WHOLE list. The catalogue is not consulted at all — not as a
         // fallback and not to fill in a name — because a fallback is how an allowlist stops being one.
-        if (_only is not null)
+        if ((_allowed?.Invoke() ?? _only) is { } only)
         {
-            foreach (var project in _only) byKey[project.Slug] = project;
+            foreach (var project in only) byKey[project.Slug] = project;
             if (_local is { } named) byKey[named.Slug] = named;
             return [.. byKey.Values.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)];
         }

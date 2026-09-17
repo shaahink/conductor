@@ -68,7 +68,7 @@ public sealed class CourierDaemon
         // names nothing routable is parked, which is the honest answer — a machine-level daemon
         // guessing at a default project is how notes end up in the wrong inbox for a week.
         _router = new NoteRouter(
-            new ProjectDirectory(root, local: null, only: settings.Allowed()),
+            new ProjectDirectory(root, local: null, allowed: settings.Allowed),
             new ChatRoutes(root));
     }
 

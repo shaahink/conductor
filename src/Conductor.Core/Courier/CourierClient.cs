@@ -97,6 +97,10 @@ public sealed class CourierClient : IDisposable
     public Task<CourierAck> ReactAsync(CourierReact react, CancellationToken ct = default) =>
         PostAsync(CourierEndpoint.ReactPath, react, ct);
 
+    /// <summary>PK3.3 / D4 - the run names its own project; the ack says whether the courier added it.</summary>
+    public Task<CourierAck> IntroduceAsync(CourierHello hello, CancellationToken ct = default) =>
+        PostAsync(CourierEndpoint.HelloPath, hello, ct);
+
     /// <summary>PK3.2 / D5 - a delete by message id.</summary>
     public Task<CourierAck> DeleteAsync(CourierDelete delete, CancellationToken ct = default) =>
         PostAsync(CourierEndpoint.DeletePath, delete, ct);
