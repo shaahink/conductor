@@ -4,12 +4,11 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: launched 2026-09-17 by the owner's babysitter session after housekeeping - master pushed at b125405, feat/charkh deleted (merged), stale agent worktrees removed, the #72 editor fix parked on wip/face-bug-72-editor-clip. Charkh stays merged and UNTAGGED: PK6.4 carries both eras in one CHANGELOG section, the way Divan carried edge; the owner picks the version there.
-  Token pair re-derived on the Charkh ledger: budget prescribes 45M/0.95; the plan runs 45M/0.90 per TOKEN-BUDGET-TUNING section 14's own caution (headroom 4.5M, 2.5x the largest wrap-up). Model claude-opus-5, which this CLI runs as the 1M variant. Fast-tier gates run without the retry; timeouts bounded to about 3x measured.
-  The real courier was DEAD at launch (task last result 1, since 2026-09-16 19:48Z); restarted from the installed build so this run's pushes reach the admin DM. It will die again - that is PK2.
-  OWNER'S GO FOR PK2.3 is given: the owner asked for the plan to be improved and launched today, and the courier PK2.3 replaces is the one that dies silently. Arming = install.ps1 -CourierOnly (PK1.2 builds it) + the task re-registered on conductor-courier.exe; the 48-hour read-out moved to PK6.1 (at least 24 hours, both timestamps) so no session waits on a clock. If the owner wants the full 48, the babysitter pauses the run at PK6 until it elapses.
-next: PK1.1 - src/Conductor.Courier as its own project building conductor-courier.exe, the boundary rule in ArchitectureBoundaryTests. Read decision D1 and stage PK1 of the design doc, nothing else. Every proof uses a scratch courier home and port.
-
+last: PK1.1 CLAIMED (ba634a8, 2284862, evidence 4cf6dcf). src/Conductor.Courier -> Core only builds conductor-courier.exe; CourierListener + the daemon's composition root (CourierProgram.cs) moved there; token/StartBlocker/RetentionNotice now core. `conductor courier run` (CourierCommand.Run.cs) starts CourierBinary.Beside(AppContext.BaseDirectory), inherits the console, returns the child's exit code, and holds it in a kill-on-close JobObject.
+  Measured: a plain ProjectReference engine->courier makes the SDK copy conductor-courier.exe/.dll/deps/runtimeconfig beside conductor.exe and into the test bin. ArchitectureBoundaryTests: courier csproj + link allowlist, seeded violation, and TheEngineNeverLinksTheCourier. Proof rig tools/peyk/pk1-1-live-proof.ps1 (13/13, includes a negative control).
+  Finding: an orphaned courier inherits its parent's pipes (held `dotnet test` open 7+ min in the negative control) - why the job matters for a pre-D1 task that still runs `conductor.exe courier run`.
+  Bug #97 filed: presence `engine` reads Core's AssemblyVersion = 0.0.0.0 (CourierPresence.cs:60); PK2.1 touches the presence record and could take it.
+next: PK1.2 - install.ps1 publishes both (measure whether `dotnet publish src/Conductor` already carries conductor-courier.exe), stops NOTHING to publish the engine, gains -CourierOnly; `courier install` still registers `<conductor.exe> courier run` (CourierTask.InstallAsync default args, Lifecycle.cs:17 exe default) - that keeps conductor.exe locked, so point the task at conductor-courier.exe and prove it with a scratch --task-name read back via schtasks /query /xml (trap 15). Release preflight courier check re-measured. Scratch install path + scratch courier only.
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
