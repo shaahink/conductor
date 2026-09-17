@@ -1,0 +1,20 @@
+PK3.2 fix (session 7) - engine-full battery red after s6
+red: B11_2DoctorAndCompletionTests.Completion_ContainsAllRegisteredVerbs_Exhaustive - Not found: "say" (s006-engine-full.log, 3757/3758)
+cause: PK3.2 registered c.AddCommand<SayCommand>("say") in src/Conductor/Program.cs but did not add say to CompletionCommand.Verbs, the one list both the PowerShell and bash completion generators read
+fix: src/Conductor/Commands/CompletionCommand.cs Verbs gains 'say'; the test (which scans Program.cs for the truth) is unchanged
+narrow rerun 2026-09-17T13:29:27Z: dotnet test tests/Conductor.Tests --filter FullyQualifiedName~B11_2DoctorAndCompletionTests
+---
+
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Conductor.Planning -> C:\Code\conductor\src\Conductor.Planning\bin\Debug\net10.0\Conductor.Planning.dll
+  Conductor.Core -> C:\Code\conductor\src\Conductor.Core\bin\Debug\net10.0\Conductor.Core.dll
+  Conductor.Courier -> C:\Code\conductor\src\Conductor.Courier\bin\Debug\net10.0\conductor-courier.dll
+  Conductor -> C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.dll
+  Conductor.Tests -> C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+Test run for C:\Code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     8, Skipped:     0, Total:     8, Duration: 42 ms - Conductor.Tests.dll (net10.0)
+---
+say verb behaviour (PK3.2 rig 20/20, real send 3821 deleted) stands as proven in .conductor/evidence/PK3/pk3.2.md
