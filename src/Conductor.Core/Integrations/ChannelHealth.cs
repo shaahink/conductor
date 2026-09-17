@@ -193,11 +193,13 @@ public static class ChannelHealthProbe
         var configured = CourierPrecedence.Configured(stateHomeRoot);
         using var client = CourierClient.TryOpen(stateHomeRoot, out var refusal);
 
+        // PK3.2 / D3: which path the last push took, when this process has pushed at all.
+        var delivered = Messaging.CourierChannel.LastDeliveryFor(stateHomeRoot) is { } last ? "; " + last.Describe() : "";
         if (refusal is null)
         {
             var live = CourierPresence.Live(stateHomeRoot);
             return new ChannelHealth(CourierChannel, ChannelState.Ready,
-                live?.Describe() ?? "running", "", "");
+                (live?.Describe() ?? "running") + delivered, "", "");
         }
 
         if (!configured)
@@ -209,8 +211,8 @@ public static class ChannelHealthProbe
                     + ", so nothing can be filed against a project",
                 "list a chat and a project for it", "conductor courier status");
 
-        return new ChannelHealth(CourierChannel, ChannelState.Dead, refusal,
-            "start the courier again - until it is back, this run's pushes go nowhere",
+        return new ChannelHealth(CourierChannel, ChannelState.Dead, refusal + delivered,
+            "start the courier again - until it is back, a run with its own token sends directly and no note is filed",
             CourierProtocol.RestartVerb);
     }
 

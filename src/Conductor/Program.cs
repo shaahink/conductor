@@ -158,6 +158,8 @@ app.Configure(c =>
         .WithDescription("DV3.3: the project's inbox of owner notes - `inbox list [[--unseen]] [[--full]]`, `inbox show --id N`, `inbox prune --seen|--older-than DAYS|--id N [[--yes]]`, `inbox parked`. Prune is the only deletion path.");
     c.AddCommand<CourierCommand>("courier")
         .WithDescription(CourierCommand.VerbDescription);
+    c.AddCommand<SayCommand>("say")
+        .WithDescription(SayCommand.VerbDescription);
     c.AddCommand<PsCommand>("ps")
         .WithDescription("SF5.4: every conductor run on this machine — repo, plan, run id, port, pid, status. Read-only; --json for machines.");
     c.AddCommand<VersionCommand>("version")

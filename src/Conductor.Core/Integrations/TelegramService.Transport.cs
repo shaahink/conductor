@@ -131,7 +131,9 @@ public sealed partial class TelegramService
             AddField(form, k, Convert.ToString(v, CultureInfo.InvariantCulture) ?? "");
 
         var caption = FormattableString.Invariant($"{_composer.Stamp(item.SessionNumber, item.StageId)}\n{att.Caption}");
-        AddField(form, "caption", MessageComposer.Clip(caption, TelegramLimits.MaxCaptionChars));
+        // One short of the ceiling: Clip appends its ellipsis AFTER cutting, so clipping at the ceiling
+        // made a 1025-character caption that Telegram refused, losing the evidence it carried.
+        AddField(form, "caption", MessageComposer.Clip(caption, TelegramLimits.MaxCaptionChars - 1));
         AddField(form, "parse_mode", "HTML");
         await AddFileAsync(form, method == "sendPhoto" ? "photo" : "document", att.Path, ct).ConfigureAwait(false);
 

@@ -44,8 +44,10 @@ public sealed class CourierClient : IDisposable
     /// <param name="stateHomeRoot">The machine's state home, or null for the resolved one.</param>
     /// <param name="refusal">Why there is no client, or null when there is one.</param>
     /// <param name="probe">Pid liveness, for a rig. See <see cref="CourierPresence.Live"/>.</param>
+    /// <param name="http">A client to send on (PK3.2: <c>say</c> uploads files through the courier and
+    /// needs longer than the run's ten seconds). Null makes one.</param>
     public static CourierClient? TryOpen(string? stateHomeRoot, out string? refusal,
-        Func<int, DateTimeOffset?>? probe = null)
+        Func<int, DateTimeOffset?>? probe = null, HttpClient? http = null)
     {
         var live = CourierPresence.Live(stateHomeRoot, probe);
         refusal = CourierEndpoint.Unreachable(live) ?? CourierProtocol.RefuseStale(live);
@@ -60,7 +62,7 @@ public sealed class CourierClient : IDisposable
             return null;
         }
 
-        return new CourierClient(live!.Port!.Value, secret);
+        return new CourierClient(live!.Port!.Value, secret, http);
     }
 
     /// <summary>What the daemon says it is, asked over the socket. Null when it did not answer —
@@ -84,12 +86,29 @@ public sealed class CourierClient : IDisposable
     /// <summary>Hands one message to the daemon. Never throws: every caller on the
     /// <c>IMessageChannel</c> seam is fire-and-forget by contract, so a dead daemon has to come back
     /// as a refusal with a sentence, not as an exception crossing the seam.</summary>
-    public async Task<CourierAck> PushAsync(CourierPush push, CancellationToken ct = default)
+    public Task<CourierAck> PushAsync(CourierPush push, CancellationToken ct = default) =>
+        PostAsync(CourierEndpoint.PushPath, push, ct);
+
+    /// <summary>PK3.2 / D5 - one protocol-3 send. The ack carries the message ids.</summary>
+    public Task<CourierAck> SendAsync(CourierSend send, CancellationToken ct = default) =>
+        PostAsync(CourierEndpoint.SendPath, send, ct);
+
+    /// <summary>PK3.2 / D5 - a reaction by message id.</summary>
+    public Task<CourierAck> ReactAsync(CourierReact react, CancellationToken ct = default) =>
+        PostAsync(CourierEndpoint.ReactPath, react, ct);
+
+    /// <summary>PK3.2 / D5 - a delete by message id.</summary>
+    public Task<CourierAck> DeleteAsync(CourierDelete delete, CancellationToken ct = default) =>
+        PostAsync(CourierEndpoint.DeletePath, delete, ct);
+
+    /// <summary>One POST, answered as an ack whatever happened. <see cref="CourierAck.Unanswered"/> is
+    /// set only when the connection itself failed - see its remarks for why a timeout is not that.</summary>
+    private async Task<CourierAck> PostAsync<T>(string path, T payload, CancellationToken ct)
     {
         try
         {
-            using var req = Request(HttpMethod.Post, CourierEndpoint.PushPath);
-            req.Content = JsonContent.Create(push, options: CourierJson.Options);
+            using var req = Request(HttpMethod.Post, path);
+            req.Content = JsonContent.Create(payload, options: CourierJson.Options);
             using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
 
             if (resp.StatusCode == HttpStatusCode.Unauthorized)
@@ -105,7 +124,10 @@ public sealed class CourierClient : IDisposable
         catch (Exception ex) when (Transport(ex, ct))
         {
             return new CourierAck(false, $"the courier on port {Port.ToString(System.Globalization.CultureInfo.InvariantCulture)} "
-                + $"did not answer ({ex.Message}). Restart it: " + CourierProtocol.RestartVerb);
+                + $"did not answer ({ex.Message}). Restart it: " + CourierProtocol.RestartVerb)
+            {
+                Unanswered = ex is HttpRequestException { HttpRequestError: HttpRequestError.ConnectionError },
+            };
         }
     }
 

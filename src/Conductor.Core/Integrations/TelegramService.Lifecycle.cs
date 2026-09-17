@@ -99,7 +99,11 @@ public sealed partial class TelegramService
             CourierStateHome,
             origin: _plan.Name,
             log: m => _log.LogWarning("{Message}", m),
-            stamp: _composer.Stamp);
+            stamp: _composer.Stamp,
+            // PK3.2 / D3: with no courier to take a push, this run's own transport sends it - the
+            // same SendAsync a courier-less run uses. Sending is outside the one-consumer rule; the
+            // poll loop, which is not, stays off.
+            direct: _token is null ? null : SendAsync);
         _started = true;
 
         _log.LogWarning("Telegram polling not started: {Reason}", _pollingRefusedBy);

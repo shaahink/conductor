@@ -108,4 +108,13 @@ public sealed record CourierButton(string Text, string CallbackData);
 /// courier could be replied to or taken back, because nothing came back.</param>
 /// <param name="ChatId">The chat the send resolved to - a profile name goes in, an id comes out.</param>
 public sealed record CourierAck(bool Accepted, string Detail = "",
-    IReadOnlyList<long>? MessageIds = null, string? ChatId = null);
+    IReadOnlyList<long>? MessageIds = null, string? ChatId = null)
+{
+    /// <summary>PK3.2 / D3 - no courier took the request at all: there was none to dial, or the
+    /// connection was refused. The one refusal that licenses a sender to go DIRECTLY. Never on the
+    /// wire - a courier that answers has by definition not gone unanswered - and never set for a
+    /// timeout, because a courier that is slow may already have delivered, and sending again would put
+    /// the message in the chat twice.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool Unanswered { get; init; }
+}

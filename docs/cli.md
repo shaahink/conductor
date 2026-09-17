@@ -310,7 +310,42 @@ Its state lives at `<state home>/courier/` — `courier.json` (what you configur
 far it has acknowledged, written *after* each delivery is handled so a crash replays rather than
 loses), `courier.run.json` (what the running daemon says about itself: pid, protocol, engine, the exe
 it holds open, the task that started it — written at startup, cleared on the way out), and `media/`
-(where bytes land before they are adopted into a project's inbox).
+(where bytes land before they are adopted into a project's inbox), and `messages.jsonl` — one line
+per message the courier put in a chat or took out of one: `id`, `chat`, `origin`, `stamp`, `when`,
+`verb` (`send`, `push`, `delete`).
+
+**Protocol 3 — everything anyone sends, on one loopback.** Beside the hello and the run's `/push`
+(protocol 2, still accepted), the courier serves `POST /send` (text, one photo or document, or a media
+group of up to ten; the chat by id or by profile; `replyTo`, `parseMode`, `silent`), `POST /react`,
+`POST /delete` and `GET /chats`, all behind the install secret. Every send answers with the Telegram
+**message ids** it became, so anything that went through the courier can be replied to, reacted to or
+taken back.
+
+## `say` — one verb for everything sent to a chat
+
+`conductor say` sends through the courier when one takes the request, and **directly** with
+`CONDUCTOR_TELEGRAM_TOKEN` when none does (no courier, a stale one, a refused connection) — and it
+prints which path delivered: `sent through the courier: …` or `courier unreachable - sent directly: …`.
+Sending is outside Telegram's one-consumer rule (only polling is limited), so neither path polls.
+A live run does the same with its own pushes: a push no courier takes goes out through the run's own
+transport, the run log reads `courier unreachable - sent directly`, and the courier's channel-health
+line says which path the last push took.
+
+| Form | What it does |
+|---|---|
+| `say [--to <CHAT>] --text "<TEXT>"` | Send a message. `--to` is a chat id or a profile this machine's courier lists exactly one chat under (`admin`, `observer`); the default is `admin`. |
+| `say --file <PATH>` | The message is the file's contents, byte for byte. Not with `--text`. |
+| `say --photo a.png,b.png` · `say --document a.md,b.md` | Files, with `--text` as the caption. Two or more go as one media group; a group is photos or documents, never both. |
+| `say ... --reply-to <ID>` | Answer that message. |
+| `say ... --parse-mode HTML\|MarkdownV2\|none` | How Telegram reads the text. HTML by default. |
+| `say --react <EMOJI> --message <ID>` | React to a message instead of sending. |
+| `say --delete <ID>` | Take a message back. |
+| `say ... --dry-run` | Print the exact bytes, the resolved chat, the method and the path it would take; send nothing. |
+
+**Telegram's ceilings are refused by name before anything is sent** — a text over 4096 characters, a
+caption over 1024, more than ten files, a photo over 10 MB, a document over 50 MB. Exit codes: `0`
+delivered, `1` not delivered (the sentence says why), `2` refused before anything was tried. A direct
+send is still written to `messages.jsonl`.
 
 ## The cloud — `/cloud`, and why there is no `conductor cloud`
 
