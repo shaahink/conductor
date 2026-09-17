@@ -281,8 +281,12 @@ public sealed class DV4_2CourierLifecycleTests : IDisposable
 
     // ── the installer's half of §6.4 ────────────────────────────────────────────────────────
 
+    /// <summary>PK1.2 / D1 changed this contract on purpose: before D1 every install stopped the courier,
+    /// because the courier WAS the engine. Now only a courier that still holds the engine's files is
+    /// stopped - before the engine publish, and started again after it - and a courier in its own
+    /// directory is not stopped at all. The live half is tools/peyk/pk1-2-live-proof.ps1.</summary>
     [Fact]
-    public void The_installer_stops_the_courier_before_the_publish_and_starts_it_after()
+    public void The_installer_stops_only_a_courier_holding_the_engine_before_the_publish_and_starts_it_after()
     {
         var repo = RepoRoot();
         var guard = Path.Combine(repo, "tools", "lib", "courier-guard.ps1");
@@ -291,13 +295,25 @@ public sealed class DV4_2CourierLifecycleTests : IDisposable
         Assert.True(File.Exists(guard), guard + " is what install.ps1 dot-sources");
         Assert.Contains("courier-guard.ps1", installer, StringComparison.Ordinal);
 
-        // Order is the whole point: a courier stopped AFTER the publish has already broken it with a
-        // file lock, and one never restarted keeps yesterday's engine running indefinitely.
-        var stop = installer.IndexOf("Stop-ConductorCourier", StringComparison.Ordinal);
-        var publish = installer.IndexOf("dotnet publish", StringComparison.Ordinal);
-        var start = installer.IndexOf("Start-ConductorCourier", StringComparison.Ordinal);
-        Assert.True(stop > 0 && publish > stop, "install.ps1 must stop the courier before publishing");
-        Assert.True(start > publish, "install.ps1 must start the courier again after publishing");
+        var full = installer[installer.IndexOf("# ---- the full install", StringComparison.Ordinal)..];
+        var own = full[full.IndexOf("\"own\" {", StringComparison.Ordinal)..full.IndexOf("\"engine\" {", StringComparison.Ordinal)];
+        var engine = full[full.IndexOf("\"engine\" {", StringComparison.Ordinal)..full.IndexOf("\"elsewhere\" {", StringComparison.Ordinal)];
+        Assert.DoesNotContain("Stop-ConductorCourier", own, StringComparison.Ordinal);
+        Assert.Contains("Stop-ConductorCourier", engine, StringComparison.Ordinal);
+
+        // Order still matters for the one it does stop: stopped AFTER the publish has already broken it
+        // with a file lock, and one never restarted keeps yesterday's engine running indefinitely.
+        var stop = full.IndexOf("Stop-ConductorCourier", StringComparison.Ordinal);
+        var publish = full.IndexOf("dotnet publish", StringComparison.Ordinal);
+        var start = full.IndexOf("Start-CourierAgain", StringComparison.Ordinal);
+        Assert.True(stop > 0 && publish > stop, "install.ps1 must stop a courier holding the engine before publishing");
+        Assert.True(start > publish, "install.ps1 must start that courier again after publishing");
+
+        // -CourierOnly never publishes the engine: that is how the real courier is replaced while the
+        // engine driving a run stays installed.
+        var courierOnly = installer[installer.IndexOf("if ($CourierOnly) {", StringComparison.Ordinal)..installer.IndexOf("# ---- the full install", StringComparison.Ordinal)];
+        Assert.DoesNotContain("-o $InstallDir", courierOnly, StringComparison.Ordinal);
+        Assert.All(installer, c => Assert.True(c < 128, "install.ps1 must be ASCII"));
 
         // Trap 12: Windows PowerShell 5.1 reads a BOM-less UTF-8 script as ANSI.
         var guardText = File.ReadAllText(guard);

@@ -64,13 +64,81 @@ function Test-ConductorCourierTask {
     return ((Invoke-CourierSchtasks /Query /TN "$TaskName" /FO CSV /NH) -eq 0)
 }
 
+# PK1.2 / D1: where the live courier runs from, relative to an install, decides what a reinstall
+# must do to it. Measured on a scratch install: a courier running from the engine's directory
+# locks the shared dlls and the engine publish fails; one running from <install>\courier does not.
+#   none      - nothing is polling
+#   own       - conductor-courier.exe in <install>\courier: the engine installs around it
+#   engine    - it holds the engine's files: an engine binary running `courier run` (before D1),
+#               a courier beside the engine, or a courier whose parent is this install's engine alias
+#   elsewhere - a courier from another directory; this install's files are not its files
+function Get-ConductorCourierShape {
+    param([Parameter(Mandatory = $true)][string]$InstallDir, [string]$StateHome)
+    $presence = Get-ConductorCourierPresence -StateHome $StateHome
+    $shape = "none"
+    $holder = $null
+    $livePid = $null
+    $liveExe = $null
+    if ($presence) {
+        $livePid = $presence.pid
+        $liveExe = [string]$presence.exe
+        $root = [IO.Path]::GetFullPath($InstallDir).TrimEnd('\') + '\'
+        $own = $root + 'courier\'
+        if ($liveExe -and $liveExe.StartsWith($own, [StringComparison]::OrdinalIgnoreCase)) {
+            $shape = "own"
+            # The alias case: `<install>\conductor.exe courier run` starts the courier from its own
+            # directory but stays alive itself, holding the engine open.
+            $parent = Get-ConductorCourierParent -ProcessId $livePid
+            if ($parent -and $parent.ExecutablePath -and
+                $parent.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase) -and
+                -not $parent.ExecutablePath.StartsWith($own, [StringComparison]::OrdinalIgnoreCase)) {
+                $shape = "engine"
+                $holder = $parent.ProcessId
+            }
+        } elseif ($liveExe -and $liveExe.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) {
+            $shape = "engine"
+        } else {
+            $shape = "elsewhere"
+        }
+    }
+    return [pscustomobject]@{ Shape = $shape; Pid = $livePid; Exe = $liveExe; HolderPid = $holder }
+}
+
+function Get-ConductorCourierParent {
+    param([int]$ProcessId)
+    $proc = Get-CimInstance Win32_Process -Filter ("ProcessId = {0}" -f $ProcessId) -ErrorAction SilentlyContinue
+    if (-not $proc) { return $null }
+    return (Get-CimInstance Win32_Process -Filter ("ProcessId = {0}" -f $proc.ParentProcessId) -ErrorAction SilentlyContinue)
+}
+
+# Ends a courier the scheduler did not start (a hand-started one, which /End cannot reach) - but
+# only when its binary lives under $InstallDir, and its engine alias parent with it. Never anything
+# else. Safe to end: the daemon writes its offset only after a delivery is handled, so a killed
+# courier re-receives what was in flight and files it exactly once.
+function Stop-ConductorCourierProcess {
+    param([int]$ProcessId, [string]$InstallDir)
+    $root = [IO.Path]::GetFullPath($InstallDir).TrimEnd('\') + '\'
+    $proc = Get-CimInstance Win32_Process -Filter ("ProcessId = {0}" -f $ProcessId) -ErrorAction SilentlyContinue
+    if (-not ($proc -and $proc.ExecutablePath -and $proc.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase))) {
+        return $false
+    }
+    $parent = Get-ConductorCourierParent -ProcessId $ProcessId
+    Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+    if ($parent -and $parent.ExecutablePath -and $parent.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) {
+        Stop-Process -Id $parent.ProcessId -Force -ErrorAction SilentlyContinue
+    }
+    return $true
+}
+
 # Stops the courier and reports whether it WAS running, so the caller knows whether to start it
 # again. A courier that was stopped by hand before the reinstall stays stopped afterwards.
+# PK1.2: with -InstallDir, a courier from that install which /End did not reach is ended by pid.
 function Stop-ConductorCourier {
     param(
         [string]$TaskName = $script:CourierDefaultTaskName,
         [string]$StateHome,
-        [int]$TimeoutSeconds = 20
+        [int]$TimeoutSeconds = 20,
+        [string]$InstallDir
     )
 
     $registered = Test-ConductorCourierTask -TaskName $TaskName
@@ -93,10 +161,17 @@ function Stop-ConductorCourier {
 
     # Wait for the process to actually go: /End returns as soon as the scheduler has asked.
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $forceAt = (Get-Date).AddSeconds([Math]::Min(5, $TimeoutSeconds / 2))
+    $forced = $false
     while ((Get-Date) -lt $deadline) {
-        if (-not (Get-ConductorCourierPresence -StateHome $StateHome)) {
+        $still = Get-ConductorCourierPresence -StateHome $StateHome
+        if (-not $still) {
             $result.Stopped = $true
             return $result
+        }
+        if ($InstallDir -and -not $forced -and ((Get-Date) -gt $forceAt)) {
+            [void](Stop-ConductorCourierProcess -ProcessId $still.pid -InstallDir $InstallDir)
+            $forced = $true
         }
         Start-Sleep -Milliseconds 500
     }

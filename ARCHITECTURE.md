@@ -513,10 +513,16 @@ dropped.
 "machine on". Telegram holds an undelivered update for 24 hours. A note sent to a sleeping laptop on
 Friday is gone by Monday — dropped by Telegram, never handed over.
 
-**The installer owns the restart.** A running courier holds the published exe open, so
-`tools/install.ps1` stops it at step 0 and puts it back on the *new* engine afterwards
-(`install.ps1:77-99`, `tools/lib/courier-guard.ps1`). Publishing the engine around a live courier by
-hand is how you get a file lock, or worse, a daemon quietly running last month's build forever.
+**The courier is its own executable, in its own directory (PK1 / D1).** `src/Conductor.Courier`
+references `Conductor.Core` only and builds `conductor-courier.exe`; the engine manages it
+(`courier install|status|restart|stop`) and `conductor courier run` is an alias that starts it in a
+kill-on-close job. An install publishes it to `<install>\courier\`, and that directory is the point:
+measured on a scratch install, a courier running beside the engine locked the shared
+`Conductor.Core`/`Microsoft.Extensions` dlls and the next engine publish failed, while one running
+from its own directory did not. So `tools/install.ps1` publishes the engine without stopping a
+courier in its own directory, moves one that still holds the engine's files exactly once, and
+`install.ps1 -CourierOnly` is the one path that replaces a live courier (`tools/lib/courier-guard.ps1`
+says which shape is live). The protocol version still refuses a stale courier; `restart` is the fix.
 
 ### The inbox — what the courier files, and what a session reads
 
