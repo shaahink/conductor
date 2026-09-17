@@ -4,13 +4,13 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s10 claimed PK5.1 (evidence .conductor/evidence/PK5/pk5.1.md, commits 321c73b c5527c3; rig tools/peyk/pk5-1-live-proof.ps1 -RealSend 25/25; tests 63 + 156 neighbours green). PK5.2 is next.
-  PK5.1 as built: InboxNote gains MessageId/SenderId/SenderName/SenderUsername (TgMessage.From, TgUser first/last name); both producers build the record through InboundNote.ToInboxNote. The courier reacts InboundAck.Reaction on the note and sends no message (CourierDaemon.Notes.cs); refusals (observer, parked, too big) stay words; `/note` (reply to a note, or bare = newest from the chat) answers with where it went and the Promote button. NoteLookup searches every allowed inbox; say --reply-to resolves a note id through it, else passes a message id.
-  Measured: Telegram takes the bare U+270D (real admin-DM message 3854, reacted, cleared, deleted). The in-run RemoteSurface ack is unchanged (IMessageChannel cannot react) - courier only, stated in the evidence.
-  Outside this repo: walk-ids.ps1 deleted from ~/.claude/skills/telegram-notify (folder copy under the temp dir as pk51/skill-backup); its SKILL.md section and watch-live/SKILL.md rewritten. bg WATCH-HANDOFF.md and BookToCourse docs/FEEDBACK-LOOP.md still mention it as history, left alone.
-  PK5.2 pointers: courier commands are routed in CourierDaemon.HandleCommandAsync (verbs project, note) - add the figure verbs in a partial like CourierDaemon.Notes.cs (CourierDaemon.cs ~380 lines; 500 ceiling, 3 types/file). F-COUR-7: TelegramService.AllowsControl is false under a courier. Trap 19: read-only store opens only; a test must assert no write.
-  Still true: stage CONFIRMED only under gatePolicy perPhase; RunLoop.cs AT 500 lines; KS11_1SeamBoundary forbids Telegram* in new Core Messaging files. Real 'Conductor Courier' ARMED 2026-09-17T11:37:30Z, protocol 2, no rooms yet; bug #93 OPEN for PK6.1; bug #99 (cmd.exe 8191) open, low.
-next: PK5.2 (D10: /progress /money /tokens /status answered by the courier from the chat's project's newest run.db, read-only; /evidence from the registry). Do not restart, stop or reinstall the armed courier.
+last: s11 claimed PK5.2 (evidence .conductor/evidence/PK5/pk5.2.md, commits 6bd8150 e9d40a6 f391cb2; rig tools/peyk/pk5-2-live-proof.ps1 27/27; 7 new tests + 551 neighbours green, twice). PK5 is fully claimed; PK6 is next.
+  PK5.2 as built: CourierFigures (Core/Courier) answers /status /progress /money /tokens /evidence [id] for the note's own routed project from its newest run: plan file found by name (repo, plans/, plans/*/), db by pointer > catalogue > StateHome.Peek(honourEnvOverride:false), PlanConfig.PinState, SqliteRunStore.OpenReadOnly. Money/tokens/progress = MessageComposer (saved run_state row), status = StatusReportBuilder, evidence = EvidenceRegistry fold ordered this plan's stages > other checkpoints > unclaimed. CourierDaemon.Figures.cs routes them BEFORE the filing gate by SurfaceCommands scope (all Browse: observers may ask, still may not file).
+  Measured: PlanConfig.RunDbPath WRITES the catalogue (Resolve -> Upsert) - any read-only surface must pin first. Rig: fresh courier vs sqlite3 .backup copy of the live store: $124.46 / 9 sessions / $10.37 per checkpoint identical to fresh `money --json`; /status verdict and figures identical to fresh `status`; no file changed under home or checkout.
+  Open, stated in evidence: /evidence names files, does not send (bug #76 still open); an observer chat cannot /project (Steer), so it gets figures by replying to a push or via a selection set elsewhere. Real courier gets PK5.x only at the owner's reinstall.
+  PK6 pointers: PK6.1 is docs (cli.md already has a PK5.2 paragraph under "The courier"; operating.md courier row does not name the figure verbs yet), ARCHITECTURE seam recount, ADR-0009 amending 0008. PK6.2 is the telegram-notify skill rewrite (walk-ids.ps1 already gone since PK5.1).
+  Still true: stage CONFIRMED only under gatePolicy perPhase; RunLoop.cs AT 500 lines; KS11_1SeamBoundary forbids Telegram* in new Core Messaging files. Real 'Conductor Courier' ARMED 2026-09-17T11:37:30Z (24 h window ends 2026-09-18T11:37:30Z), protocol 2; bug #93 OPEN for PK6; bug #99 (cmd.exe 8191) open, low.
+next: PK6 (docs, skill, close). Do not restart, stop or reinstall the armed courier.
 
 
 ## Baseline numbers (from run.db)
@@ -18,8 +18,8 @@ next: PK5.2 (D10: /progress /money /tokens /status answered by the courier from 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 17 |
-| Done | 8 |
-| Claimed (unconfirmed) | 3 |
+| Done | 11 |
+| Claimed (unconfirmed) | 1 |
 
 ## Checkpoints
 
@@ -53,15 +53,15 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| PK4.1 | rooms/<slug>.json in the courier home; conductor room add / show / list; the one-time import of the private config files; docs/rooms/character.md in the tree; the voice file only ever pointed at. room list shows the two migrated rooms; an old-shape plan on a room-less machine replays byte-identically | DONE | 99cb57e | .conductor/evidence/PK4/pk4.1.md |
-| PK4.2 | conductor task --done --tell stores the session's words; the engine composes the checkpoint card at the verdict and pushes it to the room's observer chat; a red claim posts nothing and the next prompt carries the held words; the card is a NotifyTemplate; stages[].deploys; a stage confirm posts a stage card. Proven on a rig with a fake agent | DONE | 99cb57e | .conductor/evidence/PK4/pk4.2.md |
-| PK4.3 | RoomVoiceBattery under the byte cap; report.ps1 deleted from the shared skill; the three field plans' report.ps1 rule rewritten to --tell (their plan files only, nothing committed there); SF7_1DocsMatchRealityTests pins --tell in docs/cli.md | DONE | f83104e | .conductor/evidence/PK4/pk4.3.md |
+| PK4.1 | rooms/<slug>.json in the courier home; conductor room add / show / list; the one-time import of the private config files; docs/rooms/character.md in the tree; the voice file only ever pointed at. room list shows the two migrated rooms; an old-shape plan on a room-less machine replays byte-identically | DONE ✓ | 99cb57e | .conductor/evidence/PK4/pk4.1.md |
+| PK4.2 | conductor task --done --tell stores the session's words; the engine composes the checkpoint card at the verdict and pushes it to the room's observer chat; a red claim posts nothing and the next prompt carries the held words; the card is a NotifyTemplate; stages[].deploys; a stage confirm posts a stage card. Proven on a rig with a fake agent | DONE ✓ | 99cb57e | .conductor/evidence/PK4/pk4.2.md |
+| PK4.3 | RoomVoiceBattery under the byte cap; report.ps1 deleted from the shared skill; the three field plans' report.ps1 rule rewritten to --tell (their plan files only, nothing committed there); SF7_1DocsMatchRealityTests pins --tell in docs/cli.md | DONE ✓ | f83104e | .conductor/evidence/PK4/pk4.3.md |
 
 ### PK5 — Inbound with a name
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| PK5.1 | InboxNote carries MessageId, SenderId, SenderName, SenderUsername; the ack is a reaction, never a message; inbox list shows sender and id; say --reply-to takes a note id or a message id; walk-ids.ps1 deleted; the no-authority rule in the note file's header. An old note without the fields still lists | TODO | - | - |
+| PK5.1 | InboxNote carries MessageId, SenderId, SenderName, SenderUsername; the ack is a reaction, never a message; inbox list shows sender and id; say --reply-to takes a note id or a message id; walk-ids.ps1 deleted; the no-authority rule in the note file's header. An old note without the fields still lists | DONE | 321c73b | .conductor/evidence/PK5/pk5.1.md |
 | PK5.2 | The figure verbs (/progress, /money, /tokens, /status, /evidence) answered by the courier from the project's newest run.db, read-only, whether or not a run is live; a test asserts no store write on that path; the in-run handlers stay for a courier-less machine | TODO | - | - |
 
 ### PK6 — The docs, the skill, the close
