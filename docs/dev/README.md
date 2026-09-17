@@ -7,13 +7,17 @@ what a good change looks like. The material here is what sits behind that page.
 
 ## Current work
 
-**Charkh is open**, on `feat/charkh` since 2026-08-26, and
-[`CHARKH-PLAN-2026-08-26.md`](CHARKH-PLAN-2026-08-26.md) **is** the design authority for current
-work until it tags. It moves to [`../history/`](../history/) at the close, per the convention below
-— and at CH4.2 that move stopped being a thing a person remembers: `conductor release perform`
-carries it as one of its five mechanical acts, **with** the plan's `tracker`, `planDoc` and
-`readOrder` repointed in the same act, because a move without the repoint means the next session
-reads nothing.
+**Peyk is open**, on `feat/peyk-courier` since 2026-09-17, and
+[`NEXT-ERA-FINDINGS-2026-09-17.md`](NEXT-ERA-FINDINGS-2026-09-17.md) **is** the design authority for
+current work: two plans in [`plans/peyk/`](../../plans/peyk/), the courier plan first and the watch
+plan after it tags. Both docs move to [`../history/`](../history/) at the watch plan's close (PW7.3),
+per the convention below, through `conductor release perform` **with** the plans' `tracker`,
+`planDoc` and `readOrder` repointed in the same act — a move without the repoint means the next
+session reads nothing.
+
+Charkh closed on 2026-08-27 (14/14, $129) and is merged to `master` **untagged** — the shape edge was
+in before Divan. The courier plan's close carries both eras in one CHANGELOG section, as Divan's did;
+the version number is the owner's call there.
 
 Divan closed on 2026-08-26 and shipped as `v0.5.0` together with karvansara-edge, which had been
 sitting on `master` untagged; both eras' briefs and trackers moved to `../history/` at DV7.3.
@@ -22,7 +26,8 @@ sitting on `master` untagged; both eras' briefs and trackers moved to `../histor
 | Doc | What it is |
 |---|---|
 | [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) | The map: the three assemblies and which way they point, one session's lifecycle end to end, the seams (thirteen since Divan), the surfaces (four since DV4), the courier - the one process that outlives a run - and where to add a new thing. Start here. Reconciled against the engine at CH5.1, 2026-08-27 (Charkh's three new areas, the seam count re-counted, the ratchet numbers re-measured); before that at DV7.1, 2026-08-26 and KS12.1, 2026-08-19. |
-| [`CHARKH-PLAN-2026-08-26.md`](CHARKH-PLAN-2026-08-26.md) | **The open era's brief.** The wheel: what the owner still does by hand becomes machinery — the two batteries that differed in silence for an era, the demo that stopped matching the product, the docs read-and-agreed-with instead of diffed against a binary, and the era-close itself as three verbs (`release preflight`, `perform`, `runbook`) instead of a runbook a person carries out. Its per-stage decisions are the section a session reads, not the whole document. |
+| [`NEXT-ERA-FINDINGS-2026-09-17.md`](NEXT-ERA-FINDINGS-2026-09-17.md) | **The next era's findings-turned-spec — Peyk.** Compiled 2026-09-17 from the seven field runs conductor drove on three other repositories after Charkh (149 checkpoints, 231 sessions, $4,321) and from what their babysitters wrote down: the courier that died silently twenty-two times, the four different things that speak to Telegram on one token, the argv ceiling, the decisions nobody in the loop could take, the attempts burned by 429s and reboots. Twenty-six decisions taken in the document, two plans designed from them and authored as [`plans/peyk/`](../../plans/peyk/) (`courier.plan.json` first, `watch.plan.json` after it tags; both `doctor`-clean on the plan side, neither launched), and the babysitters' 100-entry ledger as its appendix. |
+| [`CHARKH-PLAN-2026-08-26.md`](CHARKH-PLAN-2026-08-26.md) | **Charkh's brief** — closed 2026-08-27, merged, untagged until Peyk's close. The wheel: what the owner still does by hand becomes machinery — the two batteries that differed in silence for an era, the demo that stopped matching the product, the docs read-and-agreed-with instead of diffed against a binary, and the era-close itself as three verbs (`release preflight`, `perform`, `runbook`) instead of a runbook a person carries out. Its per-stage decisions are the section a session reads, not the whole document. |
 | [`DIVAN-BUG-SWEEP-2026-08-25.md`](DIVAN-BUG-SWEEP-2026-08-25.md) | The strand doc for Divan's DV2 sweep: the three defect ledgers (run.db bugs, followups OPEN rows, and field-observed engine defects that were in no repo ledger until this doc) with triage rules. |
 | [`OBSERVABILITY-AND-MARKET-2026-08-22.md`](OBSERVABILITY-AND-MARKET-2026-08-22.md) | Where conductor sits in the 2026 market and why observability hurts: the orchestrator lane is commoditised, the referee is not; the edge run's GitHub mirror died to two log lines; the owner queue is the best agent inbox here and cannot leave the machine. Its ranked backlog feeds the document above. |
 | [`CHAPAR-REMOTE-SURFACE-2026-08-18.md`](CHAPAR-REMOTE-SURFACE-2026-08-18.md) | The messenger/remote-surface spec KS11 was built from - the channel seam, chat profiles, the push grammar, evidence and metrics on demand. |

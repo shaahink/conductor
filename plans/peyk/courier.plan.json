@@ -1,0 +1,226 @@
+{
+  "version": "1.0",
+  "planVersion": 1,
+  "name": "Peyk courier - the courier stands on its own",
+  "repo": "../..",
+  "satelliteRepos": [],
+  "tracker": "plans/peyk/COURIER-TRACKER.md",
+  "planDoc": "docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md",
+  "branchPattern": "^feat/peyk-courier$",
+  "pauseOnBlocked": true,
+  "agent": {
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--session-id",
+      "{sessionId}"
+    ],
+    "resumeArgs": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--resume",
+      "{claudeSessionId}"
+    ],
+    "output": "stream-json",
+    "model": "claude-opus-5"
+  },
+  "advisor": {
+    "enabled": true,
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "json",
+      "--model",
+      "claude-haiku-4-5-20251001"
+    ],
+    "output": "json",
+    "timeoutMinutes": 6
+  },
+  "setup": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "teardown": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "progress": {
+    "kind": "markdown-table"
+  },
+  "stages": [
+    {
+      "id": "PK1",
+      "title": "Its own process",
+      "sessions": 2,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md, decision D1 and plan A stage PK1; findings F-COUR-2. PK1.1: a new project src/Conductor.Courier that references Conductor.Core and nothing else, building conductor-courier.exe; conductor courier run becomes an alias that execs it; ArchitectureBoundaryTests gains the rule (Courier -> Core only) and names a seeded violation. The daemon code already lives in Core/Courier/ and Http/CourierListener.cs is constructed only by CourierCommand.Run.cs:276 - the move is the listener and the run verb's composition root, not the daemon. Acceptance: dotnet build produces both binaries; the boundary test names a violation when one is seeded. PK1.2: tools/install.ps1 publishes both binaries and NO LONGER stops the courier to publish the engine - the file-lock coupling is the thing D1 exists to remove; it also gains a -CourierOnly switch that publishes conductor-courier.exe alone, re-registers the scheduled task to point at that exe, and restarts it, never touching conductor.exe - this is how PK2.3 arms the real courier while the engine driving this run stays live on the box; release preflight's courier check re-measured against the new shape. Prove it against a SCRATCH install path under the temp directory with a scratch courier of its own (--home under temp, its own CONDUCTOR_COURIER_PORT): the install succeeds with that courier live, its log shows no restart, and release preflight is green on the courier check. Never touch the real install path or the real courier."
+    },
+    {
+      "id": "PK2",
+      "title": "Alive, or known dead",
+      "sessions": 3,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: decision D2 and stage PK2; findings F-COUR-1 (bug #93 is this stage's), Appendix A2. PK2.1: a heartbeat - courier.run.json gains lastPollUtc written every poll; conductor courier status prints alive / stale (last poll N min ago) / dead (last seen T) rather than pid liveness alone; the DEATH RECORD - a presence file found at startup means the previous instance did not clear it, and the new instance journals previous courier pid N died silently, last poll T, task last-run result R, with R read from the scheduler (schtasks /query /v for the task's last result and last run time). Acceptance: a scratch courier killed with Stop-Process is reported dead with a time by the next status, and the next start logs the death record. PK2.2: ProcessExit and unhandled-exception handlers that journal before dying; the KEEP-ALIVE trigger in the task XML - a repeating calendar trigger every five minutes with MultipleInstancesPolicy IgnoreNew, because RestartOnFailure does not fire on exit 0 and did not fire on exit 1 either (#93); a run checks the heartbeat at every session boundary and, when stale, starts the task itself and says so in the log and the owner queue (courier restarted by this run, Nth time). Acceptance: a scratch task (--task-name of its own) restarts a courier that exited 0 within five minutes, MEASURED with timestamps; a rig run's owner queue carries the restarted-by-this-run item. PK2.3: ARM THE INSTRUMENTS ON THE REAL COURIER. This is the one checkpoint that touches the real courier, and the owner's go for it is already recorded in the tracker's handoff (2026-09-17). Publish ONLY the courier: tools/install.ps1 -CourierOnly (PK1.2 built it) puts conductor-courier.exe into the real install dir, re-registers the 'Conductor Courier' task to run that exe with PK2.2's keep-alive trigger, and starts it - conductor.exe is never touched, the engine driving you stays the installed one and keeps pushing protocol 2 through the new courier (trap 21). Then prove it: courier status through the fresh build reads alive with a heartbeat; the task XML read back with schtasks /query /xml carries the trigger; one protocol-2 push (the next session boundary's, or a rig's) lands through it. Record the arming time (UTC), the courier pid and the exact reading procedure for the window in the evidence AND the handoff. Acceptance: the real courier is running the instrumented build with the keep-alive trigger, proven by read-back, and the arming time is recorded. THE READ-OUT IS PK6.1, not this checkpoint - do not wait here, do not leave it IN PROGRESS for a clock. If the -CourierOnly publish fails, put the task back on the previous exe, say so in the handoff, and stop."
+    },
+    {
+      "id": "PK3",
+      "title": "One transport",
+      "sessions": 3,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: decisions D3, D4, D5 and stage PK3; findings F-COUR-3, F-COUR-4, section 2's table. PK3.1: protocol 3 - the courier's loopback grows POST /send (text or file, replyTo, chat by id or by room profile, parse mode, media group), POST /react, POST /delete, GET /chats; every send RETURNS THE TELEGRAM MESSAGE ID; the courier keeps messages.jsonl (id, chat, origin, stamp, when) in its home; /push (protocol 2) stays accepted for this era because the installed engine driving you pushes protocol 2. Acceptance: a scratch courier answers all four; a protocol-2 push is accepted; the ledger carries the id a REAL send returned - exactly one live send to the admin DM 99205495, then deleted, both ids in the evidence. PK3.2: conductor say with every switch in D5 (--to profile-or-id, --file, --text, --reply-to, --react E --message N, --delete N, --document a,b, --photo a,b, --parse-mode, --dry-run); the DIRECT FALLBACK (D3) - when the courier is unreachable a run, and say, send through TelegramService's own transport with the environment token, log courier unreachable - sent directly, and the channel-health line says which path delivered; ceilings refused by name as TelegramLimits already knows them (4096 / 1024 / ten photos of 10 MB). The one-consumer rule constrains getUpdates only - do not add a poller. Acceptance: say --dry-run prints the exact bytes and the resolved chat; with the scratch courier stopped, a send lands (the same one-real-message-then-delete rule) and the log reads sent directly; the ceilings are refused by name in tests. PK3.3: a live run names its own project - the run's /hello carries repo path and plan name and the courier adds the allowlist entry marked by: run <id> if absent; courier allow unchanged. Acceptance: on a rig, a fresh plan name in an allowed repo files an inbound note on the first session boundary without courier allow; the security note in D4 is restated in the evidence."
+    },
+    {
+      "id": "PK4",
+      "title": "Rooms and the card",
+      "sessions": 3,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: decisions D6, D7, D8 and stage PK4; findings F-OBS-1 through F-OBS-5, F-COUR-9. PK4.1: rooms - rooms/<project-slug>.json in the courier home ({project, chats: {admin, observer}, footer strings, voice: <path>}); conductor room add|show|list --repo; the one-time import that reads every ~/.claude/telegram/*/config.json and offers to import it; character.md moved into the tree as docs/rooms/character.md (it names no person, no project and no poet). The voice file stays wherever the owner keeps it and is only ever POINTED AT - never copied into this repo, a fixture or an evidence file; tests use a fixture voice of their own. Acceptance: room list shows the two migrated rooms (BookToCourse, cv) by name only; a plan with no room and an old-shape telegram block behaves byte-identically under the KS11.1 golden replay. PK4.2: the card - conductor task --done <id> --evidence <path> --tell \"<title> | <two to four sentences>\" stores the words on the claim event; when the verdict CONFIRMS the claim the engine composes the card (bar from the work graph, counts and the live rule from the plan, footer from the room, the words from the claim, the before/after pair from the evidence registry) and pushes it to the room's observer chat through PK3; a claim whose gates go red posts nothing and the next prompt carries the held words; the card is a NotifyTemplate with the bar, done, total, live, title, line and footer tokens (write them as the template grammar's placeholders in the template file, never in prose); stages[].deploys names a stage's deploy checkpoint, else the default live rule (DONE checkpoints of every stage whose last checkpoint is DONE); a stage CONFIRMED also posts a stage card with what changed from the commit subjects. Acceptance: on a rig with a fake agent, a green claim posts exactly one card with the right bar, counts and pair; a red claim posts nothing and the next prompt carries the held words; a stage confirm posts one stage card. PK4.3: RoomVoiceBattery (character + the room's voice, bounded in bytes, on for a plan whose room has an observer chat); report.ps1 DELETED from ~/.claude/skills/telegram-notify; the three field plans' promptExtra rule about report.ps1 (bg trap 11, BookToCourse trap 17, pdf-challenge if present) rewritten to --tell - those are other repos: edit the plan files only, commit nothing there, and say in the handoff which lines changed. Acceptance: a dry-run prompt for a rig plan with a room carries the battery under the byte cap; SF7_1DocsMatchRealityTests pins --tell in docs/cli.md."
+    },
+    {
+      "id": "PK5",
+      "title": "Inbound with a name",
+      "sessions": 2,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: decisions D9, D10 and stage PK5; findings F-COUR-5, F-COUR-6, F-COUR-7, F-COUR-8. PK5.1: InboxNote gains MessageId, SenderId, SenderName, SenderUsername - all four are in the update TelegramCourierSource already parses (msg.MessageId, msg.From); the ack becomes a REACTION on the note, never a message; the Promote button moves to the reply the courier sends only when asked; conductor inbox list shows sender and message id; say --reply-to takes a note id OR a message id; walk-ids.ps1 DELETED from the skill. The no-authority rule (F-OBS-4) is restated in the note file's own header: identity is for addressing, never for permission. Acceptance: a note filed from a rig update carries sender and message id; an old note without them still lists; the reaction is sent instead of a message (one real reaction on a real message in the admin DM, then cleared). PK5.2: the figure verbs answered by the COURIER from run.db, read-only - /progress, /money, /tokens, /status for a chat's project resolve through the catalogue to that project's newest run and answer from the store the way conductor status and money do, whether or not a run is live; /evidence from the evidence registry; the in-run handlers stay for a courier-less machine. Acceptance: with no run live, /money in a rig chat answers the same figures conductor money prints for that store; a test asserts no write to any store on that path; ADR-0005 and ADR-0008's invariant (nothing inbound writes run state) is cited."
+    },
+    {
+      "id": "PK6",
+      "title": "The docs, the skill, the close",
+      "sessions": 4,
+      "ownerGate": true,
+      "kind": "deliver",
+      "notes": "SPEC: decision D2 (the read-out), decision D20 (the Telegram half) and stage PK6. PK6.1: THE CAUSE - the read-out of the window PK2.3 armed. Read the real courier's log (the death records, the ProcessExit and unhandled-exception journal lines), the task's last-run results and the heartbeat gaps, and report the FIRST recorded death. The window is the time between PK2.3's arming timestamp and this session, at least 24 hours: if fewer have elapsed when this stage opens, deliver PK6.2 and PK6.3 first and take this one after them; the close (PK6.4) comes last either way. Acceptance: a dated finding naming the exit path, or a dated statement that no death occurred in the window with the instruments listed and both timestamps - and in either case the reading procedure written into docs/operating.md, so a death after the close is read out the same way by the watch plan's ledger checkpoint or the owner (the instruments outlive this run). If the cause is the machine sleeping, the record says so and PK2.2's trigger is still the fix. Bug #93 closes on this finding, in the same commit. This checkpoint READS the real courier and changes nothing on it. PK6.2: docs/cli.md, operating.md, plan-config.md, ARCHITECTURE.md (the courier section rewritten for a separate binary, the seam count re-counted), and ADR-0009 amending ADR-0008 for D3 (direct fallback), D4 (self-registration) and D5 (protocol 3) - it states 0008's four conditions and the two new ones. Acceptance: the docs battery green; every new verb and key pinned by SF7_1DocsMatchRealityTests with a negative control. PK6.3: ~/.claude/skills/telegram-notify rewritten to two pages around conductor say and --tell (what earns a message and how to write one); the private room files left in place and pointed at; send.ps1, walk-ids.ps1 and lib/ deleted; ~/.claude/skills/watch-live re-pointed at the verbs. Acceptance: a grep of the skill folder finds no Bot API URL; one real post to the admin DM through say from a shell outside any run, then deleted, ids in the evidence. PK6.4: the close - release preflight, then release perform for the mechanical acts, the CHANGELOG section written from master..feat/peyk-courier, the era's own numbers via conductor budget and money against a sqlite3 BACKUP COPY of the store. The acts the preflight refuses are the OWNER's: this stage is ownerGate, a session pre-flights and parks. Acceptance: owner acts printed; the plan doc is NOT moved yet - plan B reads it too; record that in the handoff."
+    }
+  ],
+  "gates": [
+    {
+      "name": "engine-fast",
+      "command": "dotnet build Conductor.slnx -clp:ErrorsOnly",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 8,
+      "retry": false
+    },
+    {
+      "name": "face-fast",
+      "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go build ./... && go vet ./...\"",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 5,
+      "retry": false
+    },
+    {
+      "name": "engine-full",
+      "command": "dotnet test Conductor.slnx",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 25
+    },
+    {
+      "name": "face-full",
+      "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go test ./...\"",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 5
+    }
+  ],
+  "gatePolicy": "perPhase",
+  "verifyEachDelivery": true,
+  "limits": {
+    "stallMinutes": 15,
+    "stallGraceMinutes": 3,
+    "sessionTimeoutMinutes": 120,
+    "batterySettleSeconds": 120,
+    "authPreflight": true,
+    "maxResumesPerSession": 2,
+    "stageSlackFactor": 2,
+    "backoffMinutes": 30,
+    "maxBackoffs": 10,
+    "maxRunCostUsd": 300,
+    "approvalMode": false,
+    "maxSessionTokens": 45000000,
+    "softBreakRatio": 0.9,
+    "maxConcurrentLanes": 2,
+    "stallPatternTermination": true,
+    "sameFailureCircuitBreaker": true,
+    "stallBackoffMinutes": 12,
+    "overheadCostPerSecond": 0.0001,
+    "verifierThreshold": 80
+  },
+  "batteries": {
+    "ledgerMaxEntries": 3,
+    "maxBytes": 6144
+  },
+  "report": {
+    "commit": false,
+    "push": false,
+    "heartbeatMinutes": 0
+  },
+  "telegram": {
+    "allowedChatIds": [
+      "99205495"
+    ],
+    "pollIntervalSeconds": 4,
+    "enableTwoWay": true
+  },
+  "github": {
+    "enabled": true,
+    "repo": "shaahink/conductor",
+    "board": "issues",
+    "liveMirror": true,
+    "runHistoryIssue": true
+  },
+  "promptExtra": "TRAPS THIS REPO HAS ALREADY PAID FOR, in order of cost:\n0. THIS REPO'S .conductor/ IS THE LIVE STATE OF THE RUN DRIVING YOU. The claim and note verbs (conductor task, note, bug, bg) and the read-only verbs (status, task --list) are yours; NEVER aim a run-control verb (run, pause, resume, abort, approve, plan set, plan reload, goto, skip, retry-stage, rollback, kill) at this repo. Any live-run proof spawns YOUR build against a scratch repo with its own tiny plan and its own state dir - under the temp directory - never against this checkout.\n1. NEVER run tools/install.ps1 against the real install path or overwrite the published engine. The conductor driving you runs from that published copy. PK1.2 CHANGES the installer: prove it against a scratch install path under the temp directory, with a scratch courier, never the real one. The owner reinstalls between plans, never a session. The ONE exception is PK2.3's install.ps1 -CourierOnly, which publishes conductor-courier.exe and re-registers the courier task and touches conductor.exe never.\n2. The conductor on PATH is the published engine driving you - NOT your working tree; doctor's update line at launch names its version. Exercise YOUR changes through the fresh build: dotnet run --project src/Conductor -- VERB, and for the courier dotnet run --project src/Conductor.Courier once PK1.1 exists. Testing a new verb through the PATH shim only proves the published engine lacks it. Exception by design: task claims go through the PATH copy, because they target the driving run.\n3. A SECOND CONDUCTOR RUN MAY SHARE THIS MACHINE (C:/Code/pdf-challenge, C:/Code/bg, C:/Code/BookToCourse have all run here this month). Never kill a conductor.exe, conductor-courier.exe, conductor-face.exe or stray dotnet process by pid without checking its command line with Get-CimInstance Win32_Process first; leave anything whose path is not this repo alone. Give every scratch rig its own port, its own state dir and its own CONDUCTOR_COURIER_PORT, pass -p explicitly to every verb, and clear CONDUCTOR_PLAN in any shell you spawn.\n4. THE REAL COURIER IS INSTALLED ON THIS MACHINE AS THE SCHEDULED TASK 'Conductor Courier' AND IT OWNS THE REAL BOT TOKEN. It was DOWN when this plan was authored (courier status: running no) and it dies silently - that is what this plan is for. Telegram allows ONE getUpdates consumer per token, so a rig that polls the real token STARVES the real courier. Scratch tokens, scratch chats and a scratch courier home (--home under the temp directory) for every proof; TelegramConfig.ApiBaseUrl is the stub seam for wire tests. Never run courier run/restart/stop/uninstall/install against the real courier home or the real task - the ONE exception is PK2.3, which replaces the real courier's BINARY and task XML through install.ps1 -CourierOnly (never its home, its config or its token) with the owner's go already in the handoff; PK6.1 then only READS its log and task results. Sending never conflicts: the one-consumer rule constrains getUpdates only, which is why D3 is safe and why you never add a second poller.\n5. REAL TELEGRAM SENDS ARE RATIONED. A proof that must send a real message sends exactly ONE to the admin DM 99205495 through the environment's token, records the message id in the evidence, and deletes it. Never to a group. Never through a rig that holds the real token for anything but that one send.\n6. THE GITHUB BOARD MIRROR IS THE ENGINE'S JOB. This plan's github block mirrors the run to shaahink/conductor via the engine's own reconciler - never create, edit or close issues there by hand or by gh from a session. Any change to the reconciler is proven against a PRIVATE scratch repo with the CONDUCTOR_GITHUB_TOKEN override.\n7. .conductor/evidence/ IS GITIGNORED BY STAR AND FORCE-ADDED. A plain git add -A silently drops a new evidence artifact; every evidence file needs git add -f, and the claim's evidence path must exist in the COMMIT, not just on disk.\n8. NO GATE MAY REBUILD THE RUNNING ENGINE. This plan's gates build the solution, which is safe - conductor-courier.exe under bin/ is not the installed one; never add a gate or proof step that runs tools/install.ps1 or publishes to the install path.\n9. A literal brace token in a file under this plan's templates directory KILLS THE ENGINE - the template text is validated for unresolved placeholders, the refusal goes to stderr only, and it fires when a stage first renders that template. After any template edit, sweep it: only real placeholder names may appear, and a doubled brace emits a literal one.\n10. Keep the escalation token out of the tracker's handoff block unless you are escalating right now. The match is a plain substring, so prose describing the convention parks the run as hard as raising one. Write escalation in prose; the literal form is the word HUMAN followed by a colon.\n11. THE ROOM FILES ARE THE OWNER'S AND PRIVATE. ~/.claude/telegram/<repo>/voice.md describes the people in a stakeholder group; it is only ever POINTED AT - never copied into this repo, a test fixture, an evidence file or a prompt you commit. Tests use a fixture voice of their own. The same goes for chat ids other than the admin DM: they appear in evidence as room names, not numbers.\n12. THE DECISIONS ARE TAKEN. The plan doc's D1-D26 are decisions, each with its rejected alternative; build them, do not re-open them, and never raise an escalation for one. If a decision is wrong BY MEASUREMENT, say so in the handoff with the measurement and stop - that is a finding worth more than the checkpoint.\n13. face-go: this era touches the Face only where a doc row says so. Pad plain text then style, never width-format an ANSI string; goldens pin UTC and are regenerated only in a separate rebaseline commit; read face-go/STYLE.md first.\n14. Orphaned dotnet test hosts flake the full suite. Stopping one is sanctioned ONLY after trap 3's command-line check proves it belongs to this repo; never kill a conductor process, yours or anyone's.\n15. PowerShell tooling targets Windows PowerShell 5.1 and must stay ASCII-only - em-dashes have torn string literals here before. The scheduled-task XML in CourierTask.cs is read by the OS: prove any change to it by registering a task with a scratch --task-name and reading it back with schtasks /query /xml, never by asserting the string.\n16. Commit per checkpoint with the repo's trailer convention and push feat/peyk-courier. NEVER prefix your own commits chore(conductor): - that is the engine's bookkeeping prefix, and the stage squash collapses consecutive ones after you have pushed, which is the reject-merge-reject cycle F-STORE-8 describes. Go sources are checked out LF; keep them that way. If you move a file this run depends on - the plan's readOrder target, the tracker, a template - update the plan and reload it in the same checkpoint, or the next session reads nothing.\n17. This era's token ceiling is 45M with the nudge at 40.5M (softBreakRatio 0.90): conductor budget on the Charkh ledger prescribed 45M/0.95 and TOKEN-BUDGET-TUNING section 14 names 45M/0.90 as the pair to take when the 0.95 headroom is only 1.24x the largest measured wrap-up - re-derived 2026-09-17, bound to claude-opus-5. If you believe it is wrong, say so with a measurement in the handoff - do not split a checkpoint to work around it.\n18. ANY BATCH THAT RUNS LONGER THAN TEN MINUTES MUST BE A TRACKED BACKGROUND CHILD, or the stall watchdog kills your session while it is working - it samples agent output, tool output and live bg children only. conductor bg start --purpose LABEL -- COMMAND, then conductor bg status and conductor bg logs -t 40. A WAIT HAPPENS INSIDE A TOOL CALL - a status loop with a sub-timeout that prints a line per minute - never by ending your turn: in claude -p the end of the turn is the end of the process, and a battery you armed dies with it (2026-09-06 cost a session 17 minutes of battery and its whole handoff this way). Write the handoff BEFORE you start anything long. PK2.3 arms a window and ends; nothing in this plan waits for a clock.\n19. NEVER open the live run.db for WRITE with a fresh build whose MigrationRunner.CurrentVersion exceeds the installed engine's - it migrates the store forward and the driving engine then refuses it, killing task, note and bug for the rest of the era. Measurement verbs (budget, money, history) run against a sqlite3 backup COPY of the store; check both versions first.\n20. THE BUG LEDGER IS ALREADY LOADED and rides in your prompt's open-bugs battery. Bug #93 (the courier's silent death) and #76 (courier file upload) are THIS plan's: close each with the conductor bug verb in the same commit as its fix and regression test. Never re-file a bug that is already there.\n21. PROTOCOL 2 STAYS ACCEPTED. The installed engine driving you pushes protocol 2 through the real courier; a courier built from your tree must still accept those pushes - that is what the protocol version is for. You never restart the real courier anyway (trap 4); the owner does, at the reinstall between plans.\n22. A PROPERTY TEST BEATS AN EXAMPLE TEST WHERE THE VOCABULARY MOVES. When you pin a behaviour, ask what happens to the assertion when the list it names grows - the courier's verb list, the room schema, the push kinds all grow this era.\n23. PAYESH IS NOT A SATELLITE AND NO STAGE TOUCHES IT. C:/code/conductor-site is shaahink/payesh and a push to its main deploys to the world. Do not open it, harvest it, or push to it.",
+  "templatesDir": "templates",
+  "packs": [],
+  "batteryCollapse": false,
+  "readOrder": [
+    "docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md"
+  ],
+  "analysisLanes": [],
+  "workflows": {
+    "deliver": {
+      "name": "deliver",
+      "description": "Deliver until the stage's checkpoints are confirmed; fix only when gates are red.",
+      "steps": [
+        {
+          "id": "deliver",
+          "kind": "deliver",
+          "deliver": true
+        },
+        {
+          "id": "fix-if-red",
+          "kind": "fix",
+          "runIf": "!gatesGreen",
+          "deliver": true
+        }
+      ],
+      "repeat": true
+    }
+  },
+  "defaultWorkflow": "deliver"
+}

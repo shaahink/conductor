@@ -1,0 +1,234 @@
+{
+  "version": "1.0",
+  "planVersion": 1,
+  "name": "Peyk watch - the watch stops being a person",
+  "repo": "../..",
+  "satelliteRepos": [],
+  "tracker": "plans/peyk/WATCH-TRACKER.md",
+  "planDoc": "docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md",
+  "branchPattern": "^feat/peyk-watch$",
+  "pauseOnBlocked": true,
+  "agent": {
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--session-id",
+      "{sessionId}"
+    ],
+    "resumeArgs": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--resume",
+      "{claudeSessionId}"
+    ],
+    "output": "stream-json",
+    "model": "claude-opus-5"
+  },
+  "advisor": {
+    "enabled": true,
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "json",
+      "--model",
+      "claude-haiku-4-5-20251001"
+    ],
+    "output": "json",
+    "timeoutMinutes": 6
+  },
+  "setup": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "teardown": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "progress": {
+    "kind": "markdown-table"
+  },
+  "stages": [
+    {
+      "id": "PW1",
+      "title": "The ledger first",
+      "sessions": 1,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md, decision D20 and plan B stage PW1; this is the one checkpoint that reads Appendix A in full. PW1.1: every entry of Appendix A (A1 through N8) triaged into conductor bug list with one disposition each - fixed <commit>, open this plan: <checkpoint>, open sweep, or not a bug: <why> - each bug title carrying the entry's letter-number and the log's date; the engine-tagged entries of ~/.claude/skills/conductor-drive/FIELD-LOG.md that the appendix did not already carry get the same pass. Check each disposition against the CODE, not the log's own status line - the log says bug #75 is open and this repo's round 3 closed it. Acceptance: a table in the tracker with one row per appendix entry and its disposition; the count of open-sweep rows is written into the handoff as PW7.2's input. Filing goes through the bug verb against the driving run (trap 2's exception); keep titles ASCII (Appendix D12)."
+    },
+    {
+      "id": "PW2",
+      "title": "The prompt has no ceiling",
+      "sessions": 3,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: decisions D11, D12, D19 and stage PW2; findings F-ARGV-1 through F-ARGV-8. PW2.1: MEASURE FIRST - a 60,000-character prompt handed to the installed Claude CLI on stdin with -p and no positional, read back byte-identical through a probe that echoes it; the CLI version in the evidence. Only then agent.promptVia: stdin | argv (default stdin for provider claude, argv otherwise) in AgentSession.Start, with preflight and doctor estimates including queued injections, card amendments and the failed-gate block so the number they print is the number that spawns; the card's amendment context capped like a battery (batteries.cardMaxBytes). Acceptance: the evidence file with the byte comparison; on a rig with three queued injections and two amendments, preflight prints the same number the spawn's session-NNN.prompt.md measures. PW2.2: inject --file <path> and - for stdin, --list, --cancel <n>, --for deliver|fix|any, --stage <id>; whole-text storage; the success line prints stored AND input lengths; consumption at SPAWN, not at composition; an injection consumed by a session that ends with no verdict (killed, crashed, parked at compose) is re-queued marked redelivered. Acceptance: a 5,000-character three-paragraph injection containing double quotes round-trips through the fresh build; a composition refused before spawn leaves it pending; a killed rig session's injection reappears marked redelivered; a --for deliver steer survives a fix session. PW2.3: the six generic traps (bg start for long batches, claim with task --done before the handoff, the watched evidence dirs, commit per checkpoint, never weaken a measurement, the checkpoint card) move into the built-in tool contract and plan new's scaffold, worded once; the ## Conductor tools block measured and trimmed against its 44 percent; the three field plans' promptExtra (C:/Code/bg/plans/conductor.feel.plan.json, C:/Code/pdf-challenge/conductor.plan.json, C:/Code/BookToCourse/conductor.hardening.plan.json) shortened by those rules - their plan files only, nothing committed there, the diff in the evidence. Acceptance: a test diffs a dry-run prompt with and without the six rules in promptExtra and finds every rule present either way; the block's byte size before and after in the evidence."
+    },
+    {
+      "id": "PW3",
+      "title": "Decisions are banked",
+      "sessions": 2,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: decision D13 and stage PW3; findings F-DEC-1, F-DEC-2 and the owner's ruling quoted there. PW3.1: conductor decision ask \"<question>\" --vote \"<the session's own answer>\" --for <checkpoint> and the matching MCP tool; DecisionAsked / DecisionAnswered events; .conductor/decisions.md regenerated from the events; decision list with ages; decision answer <n> --accept | --reject --note, and --as delegate recorded on the event; the unanswered list carried into the next stage's prompt as a bounded battery. The session KEEPS GOING on its vote - a decision never parks. Acceptance: a rig session asks two decisions and keeps going; list shows them with age; the next prompt carries them. PW3.2: the owner-queue kind with an age (OwnerQueue gains the item kind; the report and the owner queue render it); the push to the admin chat with two buttons (accept the vote / reject) through plan A's say and the courier's callback path; the answer injected at the next boundary; a drain by a delegate is decision answer --as delegate. Acceptance: pressing accept in the admin DM on a rig chat answers the decision and the next prompt carries the answer; the queue item disappears when answered and carries its age until then. One real button press on one real message in the admin DM, then deleted."
+    },
+    {
+      "id": "PW4",
+      "title": "Nothing the agent did not do burns an attempt",
+      "sessions": 2,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: decision D14 and stage PW4; findings F-VERD-1 through F-VERD-8, F-DEC-7, Appendix F3-F6, H1-H3. PW4.1: the new outcome BackendUnavailable in SessionRunner: a session that exits non-zero having spent $0.00, produced no assistant text and lived under limits.backendFailureSeconds (default 90) - or whose stream opened with a rate_limit_event of status rejected, or whose tail carries a 5xx - backs off (to the envelope's resetsAt when it names one, else backoffMinutes), burns NO attempt, does not count toward the same-failure breaker, and does NOT consult the advisor; the log line names the shape (backend unavailable - 429 five_hour rejected, reset 22:00 UTC / 529 / no route to host); a reboot between sessions (LastBootUpTime after the last log line) is logged and resumed rather than parked. Acceptance: C:/Code/bg/.conductor/logs/session-051.jsonl's opening envelope, replayed on a rig with the fake agent, backs off to its resetsAt and burns no attempt; a 529 tail and a DNS failure each land as backend unavailable; the breaker's count is unchanged after three of them; the existing usage-limit detection still passes its tests. PW4.2: (a) a stage whose last verdict was GatesRed cannot advance on AllEffectivelyDone in StageSelection.Decide - the queued fix session runs first; (b) limits.maxProgressWithoutClaim (default 3) consults the advisor with the recent handoffs then parks as churn, an owner-queue kind cleared by resume or skip; (d) status prints delivered n/N and confirmed m/N; (e) a session killed at the wall with a tracked bg job alive is TimedOut (bg alive) and consumes a resume, not an attempt, and a rolled-over session's commitCount is recorded from git; (f) verdict.dirtyIgnore globs; (g) a BLOCKED checkpoint whose stage has nothing else runnable is an owner-queue item with age and status says stage X cannot close: 1 BLOCKED. Acceptance: a rig with a red fast gate and a full board runs the fix session before advancing; three no-claim greens park churn; a stage with one BLOCKED card is named in status and the owner queue; one test per letter."
+    },
+    {
+      "id": "PW5",
+      "title": "The record tells the truth",
+      "sessions": 3,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: decisions D15, D23, D24 and stage PW5; findings F-GATE-1/2/3/7, F-WATCH-4, F-STORE-10, F-DEC-6, F-DEC-8, F-COUR-11. PW5.1: every failed gate attempt's output written WHEN IT FAILS, named <stage>-<tier>-<utc>-attempt<n>.log; the header states this attempt's own verdict and, once it exists, the retry's (bug #86's pass-case sentence never on the fail path); batteries.maxBytes applies to the body and keeps HEAD AND TAIL with a marker between; the phase-gate output file streamed as the gate runs; session gate logs no longer tail-only. Acceptance: a two-attempt red battery on a rig leaves two files whose headers name their own verdicts and whose tails carry the verdict block; the phase-gate file exists and grows while the gate runs. PW5.2: conductor events --follow [--json] [--since <seq>] streaming the event log with the event TYPE NAME and the fields a watcher filters on; conductor ps listing every engine, courier and watch on the machine from the presence records (repo, plan, run id, pid, port, state); --dry-run writes nothing to conductor.log and pushes nothing; status stops reporting interrupted while its own engine is alive (it checks the engine's presence, not spawned pids); attentionReason and what-hurt carry the timestamp of the event that set them; conductor.log lines carry the UTC stamp the filenames do; log --query opens with FileShare.ReadWrite; a --port that fell back prints the port it got. Acceptance: the two skills' monitor filters replaced by one events line, and a test proves it catches every wake in docs/operating.md's wake table; ps on a rig with two engines names both; a dry run on a rig leaves conductor.log byte-identical. PW5.3: the park matcher equals the queue matcher (a HUMAN-colon token at the START of a line in the handoff block, both sides); a park emits one Parked event and one push, and the loop that re-evaluates a parked run does not re-push; approve prints the arithmetic and refuses --amount above the remaining authorisation unless --reset; a reload that satisfies a budget park un-parks it; the cap is checked AFTER a pending reload is consumed; the --once exit path persists the session's cost; resume on a still-present token refuses by name; kill prints the run is now Paused; goto applies once. Acceptance: one test per rule naming the text docs/cli.md prints; the 553-line loop's fixture (Appendix A1's shape) replayed produces exactly one push."
+    },
+    {
+      "id": "PW6",
+      "title": "The cards and the tree",
+      "sessions": 2,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: decisions D17, D25, D26, D18 and stage PW6; findings F-STORE-2/3/4/5/6/7/8/9, F-GATE-6, followups FU-F1-06 and #24. PW6.1: conductor task --add <stage> \"<title>\", --retitle <id> \"<title>\", --split <id> \"<a>\" \"<b>\" as TaskAdded / TaskRetitled events with the tracker regenerated from the graph; a session's hand edit of the checkpoint table detected at the boundary and REPORTED (tracker rows edited by hand and discarded: ...) instead of silently reverted; a plan file changed on disk reloads the plan and does NOT regenerate the handoff block (WorkGraphSync rewrites the checkpoint table only); a gatePolicy reload with a pending phase gate RUNS the gate. Acceptance: a rig session's tracker edit is reported at the boundary and the store is unchanged; a park-clearing handoff edit survives a plan-file change; the pending gate runs on the reload; --add shows on the next board. PW6.2: report.squash defaults false, and when true refuses while .git/rebase-merge exists and checks --ff-only against the remote before rewriting; the report is written before the last bookkeeping commit so a completed run ends clean; plan set edits the JSONC in place (comments kept, no BOM, defaults not materialised, .bak in the state home) and refuses an unknown leaf key; run against a repo whose state pointer names a different plan refuses and prints the four steps; evidence.dirs as a plan key; bug new writes UTF-8; bg_status returns live processes unless --all; the engine's own directory prepended to the session's PATH; the MCP task tool gains amend, blocked, todo, skipped; owner-queue items carry the timestamp of the event that raised them; conductor ci accept silences an acknowledged CI disagreement; run close --status completed allowed on an aborted run whose board is full; FU-F1-06 - a run that ends NeedsHuman, Paused or AwaitingOwner is recorded so, and the history's orphaned rows become what the store can prove; AgentConfig.Merge keeps Env (#24). Acceptance: one test per item naming the text docs/cli.md prints; a completed rig run ends with a clean tree; a rig session runs conductor task --amend from Git Bash with no path."
+    },
+    {
+      "id": "PW7",
+      "title": "Two runs, one box; the sweep; the close",
+      "sessions": 3,
+      "ownerGate": true,
+      "kind": "deliver",
+      "notes": "SPEC: decisions D16, D20 (the watch half) and stage PW7; findings F-GATE-4, F-DEC-2, F-WATCH-1/2/3, Appendix K. PW7.1: gates.exclusive (default true for the full tier) takes a machine-level lock file in the state home carrying pid, run id and started-at; the second run waits with a heartbeat line every minute up to gates.exclusiveWaitMinutes (default 45), then proceeds and stamps the gate record contended; a dead holder (pid gone, or older than the gate's own timeout) is reaped; conductor watches lists the other runs on the box with their stage and whether they hold the lock, AND lists live conductor watch processes so the SUPERVISOR column stops reading none with a watcher attached (F-DEC-2). Every rig for this checkpoint uses its OWN state home - never a lock file in the real one. Acceptance: two rig runs on one scratch state home serialise their full batteries and both logs show the wait; a stale lock is reaped; watches shows a live conductor watch. PW7.2: the one-seam sweep of PW1.1's open-sweep rows in rounds, each bug closed with the bug verb in the commit that fixes it, exactly as the three sweep rounds of 2026-08-27 did; a row that turns out not to be one seam is re-homed with a reason, never left. Acceptance: every open-sweep row is fixed or re-homed with a reason; conductor bug list shows none open in that class. PW7.3: ~/.claude/skills/conductor-drive and conductor-watch rewritten around the verbs this era added, reference/intervene.md reduced to what still needs a person, the silent-failure table re-verified line by line against THIS build with the stale lines struck; then release preflight, release perform for the mechanical acts, the CHANGELOG section written from master..feat/peyk-watch, the era's numbers via budget and money against a sqlite3 BACKUP COPY of the store, and BOTH plan docs' move to docs/history/ with the repoints in the same act (plan A left the doc in place for this plan). The acts the preflight refuses are the OWNER's: this stage is ownerGate, a session pre-flights and parks. Acceptance: owner acts printed; docs/dev/README.md names no open era once the owner performs them."
+    }
+  ],
+  "gates": [
+    {
+      "name": "engine-fast",
+      "command": "dotnet build Conductor.slnx -clp:ErrorsOnly",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 8,
+      "retry": false
+    },
+    {
+      "name": "face-fast",
+      "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go build ./... && go vet ./...\"",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 5,
+      "retry": false
+    },
+    {
+      "name": "engine-full",
+      "command": "dotnet test Conductor.slnx",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 25
+    },
+    {
+      "name": "face-full",
+      "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go test ./...\"",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 5
+    }
+  ],
+  "gatePolicy": "perPhase",
+  "verifyEachDelivery": true,
+  "limits": {
+    "stallMinutes": 15,
+    "stallGraceMinutes": 3,
+    "sessionTimeoutMinutes": 120,
+    "batterySettleSeconds": 120,
+    "authPreflight": true,
+    "maxResumesPerSession": 2,
+    "stageSlackFactor": 2,
+    "backoffMinutes": 30,
+    "maxBackoffs": 10,
+    "maxRunCostUsd": 350,
+    "approvalMode": false,
+    "maxSessionTokens": 45000000,
+    "softBreakRatio": 0.9,
+    "maxConcurrentLanes": 2,
+    "stallPatternTermination": true,
+    "sameFailureCircuitBreaker": true,
+    "stallBackoffMinutes": 12,
+    "overheadCostPerSecond": 0.0001,
+    "verifierThreshold": 80
+  },
+  "batteries": {
+    "ledgerMaxEntries": 3,
+    "maxBytes": 6144
+  },
+  "report": {
+    "commit": false,
+    "push": false,
+    "heartbeatMinutes": 0
+  },
+  "telegram": {
+    "allowedChatIds": [
+      "99205495"
+    ],
+    "pollIntervalSeconds": 4,
+    "enableTwoWay": true
+  },
+  "github": {
+    "enabled": true,
+    "repo": "shaahink/conductor",
+    "board": "issues",
+    "liveMirror": true,
+    "runHistoryIssue": true
+  },
+  "promptExtra": "TRAPS THIS REPO HAS ALREADY PAID FOR, in order of cost:\n0. THIS REPO'S .conductor/ IS THE LIVE STATE OF THE RUN DRIVING YOU. The claim and note verbs (conductor task, note, bug, bg, decision once it exists) and the read-only verbs (status, task --list) are yours; NEVER aim a run-control verb (run, pause, resume, abort, approve, plan set, plan reload, goto, skip, retry-stage, rollback, kill, inject) at this repo. Any live-run proof spawns YOUR build against a scratch repo with its own tiny plan and its own state dir - under the temp directory - never against this checkout.\n1. NEVER run tools/install.ps1 or overwrite the published engine. The conductor driving you runs from that published copy; the owner reinstalls between plans, never a session.\n2. The conductor on PATH is the published engine driving you - NOT your working tree; doctor's update line at launch names its version, and it is the Peyk-courier build. Exercise YOUR changes through the fresh build: dotnet run --project src/Conductor -- VERB. Testing a new verb through the PATH shim only proves the published engine lacks it. Exception by design: task claims, notes and bugs go through the PATH copy, because they target the driving run.\n3. A SECOND CONDUCTOR RUN MAY SHARE THIS MACHINE (C:/Code/pdf-challenge, C:/Code/bg, C:/Code/BookToCourse have all run here). Never kill a conductor.exe, conductor-courier.exe, conductor-face.exe or stray dotnet process by pid without checking its command line with Get-CimInstance Win32_Process first; leave anything whose path is not this repo alone. Give every scratch rig its own port, its own state dir and its own CONDUCTOR_COURIER_PORT, pass -p explicitly to every verb, and clear CONDUCTOR_PLAN in any shell you spawn. PW7.1's lock lives in the state home: a rig for it uses its OWN state home, never the real one.\n4. THE REAL COURIER IS INSTALLED ON THIS MACHINE AS THE SCHEDULED TASK 'Conductor Courier' AND OWNS THE REAL BOT TOKEN. Telegram allows ONE getUpdates consumer per token, so a rig that polls the real token STARVES it. Scratch tokens, scratch chats and a scratch courier home (--home under the temp directory) for every proof; TelegramConfig.ApiBaseUrl is the stub seam. Never run courier run/restart/stop/uninstall/install against the real courier home or task.\n5. REAL TELEGRAM SENDS ARE RATIONED. A proof that must send a real message sends exactly ONE to the admin DM 99205495 through conductor say, records the message id in the evidence, and deletes it. Never to a group.\n6. THE GITHUB BOARD MIRROR IS THE ENGINE'S JOB. Never create, edit or close issues on shaahink/conductor by hand or by gh from a session; reconciler changes are proven against a PRIVATE scratch repo with the CONDUCTOR_GITHUB_TOKEN override.\n7. .conductor/evidence/ IS GITIGNORED BY STAR AND FORCE-ADDED. Every evidence file needs git add -f, and the claim's evidence path must exist in the COMMIT.\n8. NO GATE MAY REBUILD THE RUNNING ENGINE. The gates build the solution, which is safe; never add a gate or proof step that runs tools/install.ps1 or publishes to the install path.\n9. A literal brace token in a file under this plan's templates directory KILLS THE ENGINE. After any template edit, sweep it: only real placeholder names may appear, and a doubled brace emits a literal one.\n10. Keep the escalation token out of the tracker's handoff block unless you are escalating right now - PW5.3 changes the matcher, but the engine driving you is the old one and matches a plain substring. Write escalation in prose; the literal form is the word HUMAN followed by a colon.\n11. THE DECISIONS ARE TAKEN. The plan doc's D1-D26 are decisions, each with its rejected alternative; build them, do not re-open them, never raise an escalation for one. If a decision is wrong BY MEASUREMENT, say so in the handoff with the measurement and stop - that is a finding worth more than the checkpoint. PW2.1's stdin measurement is the first such gate: nothing in PW2 depends on stdin until the byte comparison is in the evidence.\n12. THE FIELD PLANS ARE OTHER PEOPLE'S REPOS. PW2.3 edits three plan files under C:/Code/bg, C:/Code/pdf-challenge and C:/Code/BookToCourse: edit those files only, commit nothing there, run nothing there, and put the diff in the evidence. The room files under ~/.claude/telegram/<repo>/ are the owner's and are only ever pointed at.\n13. face-go: this era touches the Face only where a doc row says so. Pad plain text then style, never width-format an ANSI string; goldens pin UTC and are regenerated only in a separate rebaseline commit; read face-go/STYLE.md first.\n14. Orphaned dotnet test hosts flake the full suite. Stopping one is sanctioned ONLY after trap 3's command-line check proves it belongs to this repo; never kill a conductor process, yours or anyone's.\n15. PowerShell tooling targets Windows PowerShell 5.1 and must stay ASCII-only - em-dashes have torn string literals here before.\n16. Commit per checkpoint with the repo's trailer convention and push feat/peyk-watch. NEVER prefix your own commits chore(conductor): - that is the engine's bookkeeping prefix, and the stage squash collapses consecutive ones after you have pushed (F-STORE-8) until PW6.2 turns it off. Go sources are checked out LF; keep them that way. If you move a file this run depends on - the plan's readOrder target, the tracker, a template - update the plan and reload it in the same checkpoint, or the next session reads nothing. Both plan docs move to history ONLY at PW7.3, in the same act as the repoints.\n17. This era's token ceiling is 45M with the nudge at 40.5M (softBreakRatio 0.90), the pair the courier plan ran on (re-derived from the Charkh ledger 2026-09-17; TOKEN-BUDGET-TUNING section 14); the owner re-derives it on the courier plan's ledger before launch. If you believe it is wrong, say so with a measurement in the handoff - do not split a checkpoint to work around it.\n18. ANY BATCH THAT RUNS LONGER THAN TEN MINUTES MUST BE A TRACKED BACKGROUND CHILD, or the stall watchdog kills your session while it is working. conductor bg start --purpose LABEL -- COMMAND, then conductor bg status and conductor bg logs -t 40. A rig that WAITS (a battery lock, a backoff) runs under bg too, and the wait happens INSIDE A TOOL CALL - a status loop with a sub-timeout printing a line per minute - never by ending your turn: in claude -p the end of the turn is the end of the process. Write the handoff BEFORE you start anything long.\n19. NEVER open the live run.db for WRITE with a fresh build whose MigrationRunner.CurrentVersion exceeds the installed engine's - it migrates the store forward and the driving engine then refuses it, killing task, note and bug for the rest of the era. Measurement verbs run against a sqlite3 backup COPY; check both versions first. This plan ADDS events (DecisionAsked, TaskAdded, Parked): a new event type is a schema change, so the migration version moves and this trap binds harder than usual.\n20. THE BUG LEDGER IS ALREADY LOADED and rides in your prompt's open-bugs battery; PW1.1 adds the appendix to it. Close each bug with the conductor bug verb in the same commit as its fix and regression test; never re-file one that is already there; keep titles ASCII.\n21. THE ENGINE DRIVING YOU HAS THE OLD BEHAVIOURS THIS PLAN FIXES. Its inject keeps only what the old parser keeps, its argv ceiling is 32,767, its Progress verdict burns no attempt, its status lies about interruption during the verdict window. When you read this run's own log or queue, read it with the old rules; when you build the new ones, prove them on a rig.\n22. A PROPERTY TEST BEATS AN EXAMPLE TEST WHERE THE VOCABULARY MOVES. The event-type list, the owner-queue kinds and the outcome enum all grow this era; when you pin a behaviour, ask what happens to the assertion when the list it names grows.\n23. PAYESH IS NOT A SATELLITE AND NO STAGE TOUCHES IT. C:/code/conductor-site is shaahink/payesh and a push to its main deploys to the world.",
+  "templatesDir": "templates",
+  "packs": [],
+  "batteryCollapse": false,
+  "readOrder": [
+    "docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md"
+  ],
+  "analysisLanes": [],
+  "workflows": {
+    "deliver": {
+      "name": "deliver",
+      "description": "Deliver until the stage's checkpoints are confirmed; fix only when gates are red.",
+      "steps": [
+        {
+          "id": "deliver",
+          "kind": "deliver",
+          "deliver": true
+        },
+        {
+          "id": "fix-if-red",
+          "kind": "fix",
+          "runIf": "!gatesGreen",
+          "deliver": true
+        }
+      ],
+      "repeat": true
+    }
+  },
+  "defaultWorkflow": "deliver"
+}
