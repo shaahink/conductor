@@ -1,0 +1,87 @@
+PK5.1 proof at 2026-09-17T15:15:21Z on commit 321c73b
+  engine  C:\Code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe  built 2026-09-17 15:09:17Z
+  courier C:\Code\conductor\src\Conductor.Courier\bin\Debug\net10.0\conductor-courier.exe  built 2026-09-17 15:09:13Z
+
+==== setup: a scratch repo with a plan, a note written before PK5.1, a stub Bot API and a scratch courier ====
+  scratch courier pid 12204 on port 57922, home C:\Users\shahi\AppData\Local\Temp\pk51-proof-20260917T151521\home-a, stub Bot API on 57909
+
+==== A1. a note from a rig update carries its sender and message id ====
+  PASS  the courier took the update
+  PASS  it was filed into the scratch repo's inbox
+    | {"Id":700001,"ReceivedUtc":"2026-09-17T15:15:25.5806764Z","ChatId":"770000001","Kind":"text","Text":"PK5.1 rig note from Ada","ReplyToMessageId":800,"ReplyToText":"PK51Rig · s1\nsession 1 ended","MessageId":41,"SenderId":5550001,"SenderName":"Ada Lovelace","SenderUsername":"ada_l"}
+  PASS  MessageId is 41
+  PASS  SenderId is 5550001
+  PASS  SenderName is Ada Lovelace
+  PASS  SenderUsername is ada_l
+
+==== A2. the acknowledgement is a reaction, never a message ====
+    | calls after the note: setMessageReaction
+  PASS  setMessageReaction was sent once
+  PASS  and no sendMessage (nor any other send)
+
+==== A3. /note, as a reply to the note, is the one message - the answer with the button ====
+  PASS  the courier took the /note
+    | calls after /note: sendMessage
+  PASS  exactly one sendMessage answers it, and no reaction
+  PASS  a /note files nothing
+        2 notes (the old one and Ada's)
+  scratch courier A stopped
+
+==== A4. the fresh engine's inbox list shows sender and msg id, and still lists the old note ====
+    | ╭──────────┬───────────────┬──────┬──────────────┬─────┬────────┬──────────────╮
+    | │ id       │ received      │ kind │ from         │ msg │        │ summary      │
+    | │          │ (UTC)         │      │              │     │        │              │
+    | ├──────────┼───────────────┼──────┼──────────────┼─────┼────────┼──────────────┤
+    | │ 700001   │ 2026-09-17    │ text │ Ada Lovelace │ 41  │ unread │ PK5.1 rig    │
+    | │          │ 15:15         │      │ (@ada_l)     │     │        │ note from    │
+    | │          │               │      │              │     │        │ Ada          │
+    | │ 83806400 │ 2026-09-05    │ text │ -            │ -   │ unread │ PK5.1 rig: a │
+    | │          │ 10:00         │      │              │     │        │ note written │
+    | │          │               │      │              │     │        │ before PK5.1 │
+    | ╰──────────┴───────────────┴──────┴──────────────┴─────┴────────┴──────────────╯
+    | 2 note(s) ·
+    | C:\Users\shahi\AppData\Local\Temp\pk51-proof-20260917T151521\repo\.conductor\inb
+    | ox · read through id 0 · nothing here is ever deleted except by conductor inbox
+    | prune
+  PASS  inbox list exits 0
+        exit 0 
+  PASS  it has from and msg columns
+  PASS  Ada's row names her and message 41
+  PASS  the note written before PK5.1 still lists, with - for sender and msg
+
+==== A5. say --reply-to takes a note id; the old note is refused by name ====
+    | say --dry-run: nothing is sent
+    |   verb:       send
+    |   chat:       770000001
+    |   path:       directly, with this environment's token - courier unreachable: no courier is running on this machine. Start one: conductor courier restart
+    |   method:     sendMessage
+    |   parse mode: HTML
+    |   reply to:   note 700001 of PK51Rig: message 41 in chat 770000001, from Ada Lovelace (@ada_l)
+    |   text:    8 characters, 8 UTF-8 bytes
+    | ----- exact bytes -----
+    | answered
+    | ----- end -----
+  PASS  a note id answers that note's message in its chat
+    | say refused: --reply-to 83806400 is a note of PK51Rig filed before notes carried a message id, so there is nothing to answer; give the message id itself.
+  PASS  the old note is refused by name (exit 2)
+  PASS  a number that is no note is a message id, as before
+
+==== B. ONE real message to the admin DM; the fresh courier reacts on it through the relay; cleared; deleted ====
+    | courier unreachable - sent directly: chat 99205495, message id(s) 3854 (no courier is running on this machine. Start one: conductor courier restart)
+  PASS  say sends ONE real message directly to the admin DM
+  scratch courier B pid 7472 on port 51088, home C:\Users\shahi\AppData\Local\Temp\pk51-proof-20260917T151521\home-b, relay on 51073
+  PASS  the courier was served the synthesized update
+  PASS  the fresh courier's reaction reached Telegram: setMessageReaction -> 200
+  PASS  the note was filed with the real message id
+  PASS  the reaction is cleared (setMessageReaction with no reactions -> 200)
+    | courier unreachable - deleted directly: chat 99205495, message id 3854 (no courier is running on this machine. Start one: conductor courier restart)
+  PASS  say --delete takes the message back
+    | relay: forwarded sendMessage -> 200 | forwarded setMessageReaction -> 200 | forwarded setMessageReaction -> 200 | forwarded deleteMessage -> 200
+  PASS  the relay forwarded exactly sendMessage (say), setMessageReaction (courier), setMessageReaction (clear), deleteMessage
+    | relay refused (not forwarded to Telegram): 
+
+  REAL SEND: chat id 99205495 (the admin DM), message id 3854 - reacted by the fresh courier, reaction cleared, message deleted 2026-09-17T15:15:48Z
+
+==== result ====
+  25/25 checks passed; scratch dir C:\Users\shahi\AppData\Local\Temp\pk51-proof-20260917T151521
+

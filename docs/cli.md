@@ -216,7 +216,7 @@ boundary; these verbs are how a person reads the same inbox.
 
 | Verb | What it does |
 |---|---|
-| `inbox list` | Every note: id, when it arrived, kind, whether a session has read it, whether audio is sitting there untranscribed. `--unseen` for only the unread, `--full` for whole texts rather than summaries, `--json` for machines. |
+| `inbox list` | Every note: id, when it arrived, kind, who sent it and its message id (blank on a note filed before they were kept), whether a session has read it, whether audio is sitting there untranscribed. `--unseen` for only the unread, `--full` for whole texts rather than summaries, `--json` for machines. |
 | `inbox show --id N` | One note, whole — what the prompt's `CLIPPED` marker points at. Names the audio file and the transcript sidecar on disk. |
 | `inbox add --file <PATH> [--text ...]` | File a note from this machine: an exported voice message, a meeting recording, a document. The file is copied into the inbox and the note goes through the same store the bot writes to. |
 | `inbox transcribe --id N \| --all` | Run the configured `courier.transcribe.command` over notes whose audio has no transcript yet — the verb behind "the audio is kept and can be read out later". Low-confidence stretches come back marked `[?: like this]`. |
@@ -294,8 +294,15 @@ because it is built to survive everything else. It states the protocol it speaks
 is still running, and names `conductor courier restart` as the fix. A NEWER courier than the run is
 not an error — that is the ordinary state of a machine between a reinstall and the next logon.
 
-**Promotion: a note becomes work by one tap, and never by itself.** Every acknowledgement the
-courier sends for a filed note carries a **Promote to followup** button. Press it and that note
+**The courier acknowledges a filed note with a reaction, never a message.** A ✍ lands on the note
+itself; a refusal (a file too big to fetch, a note it could only park, a chat that may not file) is
+still said in words. Every note carries its sender and its message id — `conductor inbox list`
+shows both, and `conductor say --reply-to <note id>` answers that message in the chat it came from.
+The sender is for addressing, never for permission: the chat's profile decides what a message may do.
+
+**Promotion: a note becomes work by one tap, and never by itself.** Reply `/note` to a filed note
+(or send it bare, for the newest one) and the courier answers with where it went, who sent it, and
+a **Promote to followup** button. Press it and that note
 becomes a row in that project's `.conductor/followups.md` — which is what `LaneCoordinator` turns
 into a Tier-B fix lane at the next stage confirmation. Three things about it are deliberate:
 
@@ -343,7 +350,7 @@ line says which path the last push took.
 | `say [--to <CHAT>] --text "<TEXT>"` | Send a message. `--to` is a chat id or a profile this machine's courier lists exactly one chat under (`admin`, `observer`); the default is `admin`. |
 | `say --file <PATH>` | The message is the file's contents, byte for byte. Not with `--text`. |
 | `say --photo a.png,b.png` · `say --document a.md,b.md` | Files, with `--text` as the caption. Two or more go as one media group; a group is photos or documents, never both. |
-| `say ... --reply-to <ID>` | Answer that message. |
+| `say ... --reply-to <ID>` | Answer that message. A note id from the courier's inboxes answers that note's message, in the chat it came from; any other number is a message id. |
 | `say ... --parse-mode HTML\|MarkdownV2\|none` | How Telegram reads the text. HTML by default. |
 | `say --react <EMOJI> --message <ID>` | React to a message instead of sending. |
 | `say --delete <ID>` | Take a message back. |
