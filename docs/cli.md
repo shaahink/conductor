@@ -280,6 +280,15 @@ push's project, else this chat's (or this topic's) `/project` selection. The sel
 machine's state home, so the courier and a live run read the same one. A courier has no local run, so
 there is no bottom rung — a note that names nothing routable is parked rather than guessed at.
 
+**The figures, whether or not a run is live** (PK5.2). `/status`, `/progress`, `/money`, `/tokens`
+and `/evidence [checkpoint]` are answered by the courier for the same project that ladder picks, from
+that project's newest run in its `run.db` — the database the catalogue (or the repo's state pointer)
+names, opened **read-only**: nothing the courier answers writes run state, the catalogue or an inbox.
+Money and tokens are the figures `conductor money` prints for that store; `/status` is `conductor
+status`'s report; `/evidence` reads the evidence registry, this plan's checkpoints first, and names
+files rather than sending them. They are browse verbs, so an `observer` chat may ask them while it
+still may not file. The in-run handlers still answer on a machine with no courier.
+
 > **Telegram keeps an undelivered message for 24 hours, and nothing on this machine can change
 > that.** The courier answers *"no run live"*, not *"machine off"*: a voice note sent on Friday night
 > to a laptop that sleeps until Monday was never handed over by Telegram at all. This is the honest

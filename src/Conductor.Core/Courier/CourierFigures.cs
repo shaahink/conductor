@@ -65,7 +65,8 @@ public static class CourierFigures
         var body = verb switch
         {
             "status" => StatusText(StatusReportBuilder.Build(plan, store)),
-            "evidence" => EvidenceText(plan.Name, arg, EvidenceRegistry.From(store.ReadAllEvents(runId))),
+            "evidence" => EvidenceText(plan.Name, arg, EvidenceRegistry.From(store.ReadAllEvents(runId)),
+                [.. plan.Stages.Select(s => s.Id)]),
             _ => Composed(verb, plan, StateOf(store, plan, runId), store, warn),
         };
         return body.TrimEnd() + "\n\n<i>" + Escape($"the courier, from {project.RepoLeaf}'s run.db (run {Short(runId)}), read-only") + "</i>";
@@ -172,7 +173,7 @@ public static class CourierFigures
     {
         ArgumentNullException.ThrowIfNull(report);
         var sb = new StringBuilder();
-        sb.AppendLine($"<b>Conductor - {Escape(report.PlanName)}</b>");
+        sb.AppendLine($"<b>Conductor — {Escape(report.PlanName)}</b>");
         sb.AppendLine();
         sb.AppendLine(Escape(report.Verdict));
         sb.AppendLine(Escape(
@@ -197,17 +198,34 @@ public static class CourierFigures
     /// <summary><c>/evidence</c>, from the evidence registry - the artifacts the run REGISTERED, with
     /// their bytes and hashes, rather than the tracker's evidence cell. Bare, the newest few; with a
     /// checkpoint id, everything registered against it. The courier names a file; it does not send
-    /// one.</summary>
-    public static string EvidenceText(string planName, string checkpointId, EvidenceRegistry registry)
+    /// one.
+    /// <para>Bare lists THIS plan's checkpoints first, then other checkpoints', then what nothing
+    /// claimed - newest registration first within each. Measured on this era's own store (PK5.2 rig):
+    /// all 471 artifacts were registered in one sweep with one timestamp, and the newest ten were
+    /// another era's files - by time or by registration alone, an answer made of noise.</para></summary>
+    /// <param name="stageIds">The plan's stage ids; an artifact is this plan's when its stage is one.</param>
+    public static string EvidenceText(string planName, string checkpointId, EvidenceRegistry registry,
+        IReadOnlyCollection<string>? stageIds = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         var id = (checkpointId ?? "").Trim();
+        var stages = new HashSet<string>(stageIds ?? [], StringComparer.OrdinalIgnoreCase);
+        int Tier(EvidenceArtifact a) =>
+            a.CheckpointId is not { Length: > 0 } cp ? 0
+            : stages.Contains(a.StageId ?? "") || stages.Any(s => cp.StartsWith(s + ".", StringComparison.OrdinalIgnoreCase)) ? 2
+            : 1;
+
         var rows = id.Length == 0
-            ? registry.Latest(EvidenceListMax)
-            : registry.ForCheckpoint(id).OrderByDescending(a => a.CreatedUtc).ToList();
+            ? [.. registry.Artifacts
+                .Select((a, order) => (a, order))
+                .OrderByDescending(x => Tier(x.a))
+                .ThenByDescending(x => x.order)
+                .Take(EvidenceListMax)
+                .Select(x => x.a)]
+            : registry.ForCheckpoint(id).Reverse().ToList();
 
         var sb = new StringBuilder();
-        sb.AppendLine($"<b>{Escape(planName)} - evidence{(id.Length == 0 ? "" : " for " + Escape(id))}</b>");
+        sb.AppendLine($"<b>{Escape(planName)} — evidence{(id.Length == 0 ? "" : " for " + Escape(id))}</b>");
         sb.AppendLine();
         if (rows.Count == 0)
         {
@@ -222,7 +240,13 @@ public static class CourierFigures
                 + Escape($"· {a.Kind} · {Size(a.Bytes)} · sha {Short(a.Sha256)} · {a.CreatedUtc.UtcDateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)}Z"));
 
         if (id.Length == 0 && registry.Count > rows.Count)
-            sb.AppendLine(Escape($"…and {registry.Count - rows.Count} older. /evidence <checkpoint> lists one checkpoint's."));
+        {
+            var loose = registry.Artifacts.Count(a => Tier(a) == 0);
+            var elsewhere = registry.Artifacts.Count(a => Tier(a) == 1);
+            sb.AppendLine(Escape($"…and {registry.Count - rows.Count} more registered ({elsewhere} for other plans' checkpoints, "
+                + $"{loose} not tied to a checkpoint). "
+                + "/evidence <checkpoint> lists one checkpoint's."));
+        }
         return sb.ToString();
     }
 

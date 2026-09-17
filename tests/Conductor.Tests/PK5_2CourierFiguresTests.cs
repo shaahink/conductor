@@ -89,6 +89,18 @@ public sealed class PK5_2CourierFiguresTests : IDisposable
                 Bytes = 2048, CheckpointId = "PK5.1", StageId = "PK5", SessionNumber = 1, Source = "claim",
                 Ts = new DateTimeOffset(2026, 9, 17, 10, 0, 0, TimeSpan.Zero),
             });
+            // Newer again: another plan's checkpoint, registered after this plan's claim.
+            store.Emit(new EvidenceRegistered
+            {
+                RunId = RunId, Path = ".conductor/evidence/SF5/SF5.4-other-era.md", Kind = EvidenceKinds.Text, Sha256 = "0e0e0e0e0e0e",
+                Bytes = 4096, CheckpointId = "SF5.4", StageId = "SF5", Source = "watcher", Ts = new DateTimeOffset(2026, 9, 17, 10, 30, 0, TimeSpan.Zero),
+            });
+            // Newer, and swept up by the watcher rather than claimed: bare /evidence must still lead with the claim.
+            store.Emit(new EvidenceRegistered
+            {
+                RunId = RunId, Path = ".conductor/evidence/OLD/sweep.json", Kind = EvidenceKinds.Data, Sha256 = "5weep5weep5weep",
+                Bytes = 964, Source = "watcher", Ts = new DateTimeOffset(2026, 9, 17, 11, 0, 0, TimeSpan.Zero),
+            });
             store.FlushEvents();
             store.SaveRunState(RunId, PlanName, JsonSerializer.Serialize(
                 new RunState { RunId = RunId, PlanName = PlanName, CurrentStage = "PK5", SessionCounter = 1, History = { new SessionRecord { Number = 1, Stage = "PK5", CostUsd = 32.75m } } },
@@ -206,6 +218,9 @@ public sealed class PK5_2CourierFiguresTests : IDisposable
         Assert.Contains(report.Verdict.Split(" ")[0], status, StringComparison.Ordinal);
 
         var evidence = CourierFigures.Answer("evidence", "", Project, _stateHome);
+        Assert.True(evidence.IndexOf("pk5.1.md", StringComparison.Ordinal) < evidence.IndexOf("SF5.4-other-era.md", StringComparison.Ordinal)
+            && evidence.IndexOf("SF5.4-other-era.md", StringComparison.Ordinal) < evidence.IndexOf("sweep.json", StringComparison.Ordinal),
+            "bare /evidence leads with this plan's checkpoints, then other plans', then what nothing claimed");
         Assert.Contains(".conductor/evidence/PK5/pk5.1.md", evidence, StringComparison.Ordinal);
         Assert.Contains("PK5.1", evidence, StringComparison.Ordinal);
         Assert.Contains(".conductor/evidence/PK5/pk5.1.md", CourierFigures.Answer("evidence", "PK5.1", Project, _stateHome), StringComparison.Ordinal);
