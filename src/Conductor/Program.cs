@@ -160,6 +160,8 @@ app.Configure(c =>
         .WithDescription(CourierCommand.VerbDescription);
     c.AddCommand<SayCommand>("say")
         .WithDescription(SayCommand.VerbDescription);
+    c.AddCommand<RoomCommand>("room")
+        .WithDescription(RoomCommand.VerbDescription);
     c.AddCommand<PsCommand>("ps")
         .WithDescription("SF5.4: every conductor run on this machine — repo, plan, run id, port, pid, status. Read-only; --json for machines.");
     c.AddCommand<VersionCommand>("version")

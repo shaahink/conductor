@@ -354,6 +354,27 @@ caption over 1024, more than ten files, a photo over 10 MB, a document over 50 M
 delivered, `1` not delivered (the sentence says why), `2` refused before anything was tried. A direct
 send is still written to `messages.jsonl`.
 
+## Rooms — where a project speaks, kept off the repo
+
+**New since `v0.5.0`; not in the released binary yet.** A **room** is the pair of chats a project
+talks to (`admin`, the owner; `observer`, the stakeholder group), the words its card closes with, and
+the path to its voice file. It lives in the courier home as `rooms/<project-slug>.json` and nowhere
+else: a stakeholder group's chat id and the file that describes the people in it are exactly what a
+shared checkout must not carry. The voice file is **pointed at, never copied** — it stays wherever you
+keep it. The part of the voice every room shares is in the tree: [docs/rooms/character.md](rooms/character.md).
+
+A run finds its room by the checkout: the room whose `repo` is this one, else the room named like the
+repo's folder. With no room at all it falls back to what an unmigrated repo already had — the plan's
+`telegram.chats`, then this machine's `courier chat` entries — so nothing stops working. A room
+authorises nothing; orders still come from the terminal.
+
+| Form | What it does |
+|---|---|
+| `room list` | The rooms on this machine, **by name only**, and the directory they are in. When `~/.claude/telegram` still holds a room that is not imported, it says so and names the verb. The default. |
+| `room show [--repo <PATH>\|--project <NAME>]` | One room: its file, its repo, whether each chat is set (never the id), the voice path and whether it is there, and the footer strings. `--repo` defaults to the current directory. |
+| `room add --repo <PATH> [--project <NAME>] [--admin <CHAT_ID>] [--observer <CHAT_ID>] [--voice <PATH>] [--counters <TEXT>] [--footer-live <TEXT>] [--footer-pending <TEXT>]` | Make or update a room; only the fields you pass change. The name defaults to the repo's folder name. A chat id must be numeric, and a voice path that is not a file is refused rather than stored. |
+| `room import [--from <DIR>]` | **The one-time move** from the old private home (`~/.claude/telegram/<repo>/config.json`, or `--from`): each folder becomes a room of its name — `chats.admin`/`chats.observer`, `report.counters`/`footerLive`/`footerPending` — with `voice` set to the folder's `voice.md` path. It never overwrites a room that exists, so running it twice is harmless. |
+
 ## The cloud — `/cloud`, and why there is no `conductor cloud`
 
 **There is deliberately no CLI verb here.** `/cloud` is an **owner-only chat verb** (admin profile,
