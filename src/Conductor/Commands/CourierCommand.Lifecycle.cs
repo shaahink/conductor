@@ -46,7 +46,7 @@ public sealed partial class CourierCommand
 
         AnsiConsole.MarkupLine("[green]installed[/] " + Markup.Escape(task.Name)
             + " [dim]→ " + Markup.Escape(exe) + " " + Markup.Escape(arguments) + "[/]");
-        AnsiConsole.MarkupLine("[dim]starts at your logon · restarts on failure every minute · "
+        AnsiConsole.MarkupLine("[dim]starts at your logon · started again within five minutes of stopping, whatever the exit · "
             + "no admin rights, no elevation[/]");
 
         if (settings.NoStart)
