@@ -42,17 +42,22 @@ public sealed class CourierDaemon
     private readonly NoteRouter _router;
     private readonly DeadLetterBox _parked;
     private readonly Action<string> _log;
+    private readonly Action<DateTimeOffset> _beat;
 
     /// <param name="stateHomeRoot">The machine's state home, or null for the resolved one. A rig
     /// passes its own, which is what keeps a test off the operator's real inbox.</param>
+    /// <param name="beat">PK2.1 / D2(a) - called with the time every time the poll loop comes round,
+    /// whatever the poll did. The composition root writes it into the presence record; the daemon
+    /// does not own that file and does not need to.</param>
     public CourierDaemon(ICourierSource source, CourierSettings settings, string? stateHomeRoot = null,
-        Action<string>? log = null)
+        Action<string>? log = null, Action<DateTimeOffset>? beat = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(settings);
         _source = source;
         _settings = settings;
         _log = log ?? (_ => { });
+        _beat = beat ?? (_ => { });
 
         var root = string.IsNullOrWhiteSpace(stateHomeRoot) ? Store.StateHome.Root : stateHomeRoot;
         _offset = new CourierOffset(root);
@@ -77,6 +82,7 @@ public sealed class CourierDaemon
     {
         var interval = TimeSpan.FromSeconds(_settings.PollIntervalSeconds);
         var conflicts = 0;
+        var beatFailures = 0;
 
         _log($"courier polling {_source.Describe}; {_offset.Describe()}; "
            + $"{_settings.Projects.Count.ToString(CultureInfo.InvariantCulture)} project(s) allowed, "
@@ -105,6 +111,20 @@ public sealed class CourierDaemon
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _log("courier poll error: " + ex.Message);
+            }
+
+            // The heartbeat marks the LOOP, not a successful poll: a courier backing off a conflict or
+            // riding out a network error is alive and says so in its log; a loop that stops coming
+            // round is the silent death D2 is here to see. A heartbeat that cannot be written must not
+            // become the thing that kills the loop, so it is said once per streak and polling goes on.
+            try
+            {
+                _beat(DateTimeOffset.UtcNow);
+                beatFailures = 0;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                if (beatFailures++ == 0) _log("courier heartbeat not written: " + ex.Message);
             }
 
             try { await Task.Delay(wait, ct).ConfigureAwait(false); }

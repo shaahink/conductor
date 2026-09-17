@@ -31,6 +31,10 @@ namespace Conductor.Core.Courier;
 /// none (a courier from before the listener existed, or one whose named port was taken). A run
 /// reads the port from the SAME record it reads the protocol from rather than assuming the
 /// constant, so a rig's port override cannot make a run dial a stranger.</param>
+/// <param name="LastPollUtc">PK2.1 / D2(a) - the heartbeat: when the poll loop last came round,
+/// rewritten on every iteration. A live pid says a process exists; this says it is still doing the
+/// one thing it exists for. Null in a record from a courier built before the heartbeat, or one that
+/// has not finished its first poll.</param>
 public sealed record CourierPresence(
     int Protocol,
     int Pid,
@@ -38,7 +42,8 @@ public sealed record CourierPresence(
     string? Exe,
     string? TaskName,
     DateTimeOffset StartedUtc,
-    int? Port = null)
+    int? Port = null,
+    DateTimeOffset? LastPollUtc = null)
 {
     private static readonly JsonSerializerOptions Json = new()
     {
@@ -57,7 +62,9 @@ public sealed record CourierPresence(
         return new CourierPresence(
             Protocol: CourierProtocol.Version,
             Pid: Environment.ProcessId,
-            Engine: typeof(CourierPresence).Assembly.GetName().Version?.ToString(),
+            // Bug #97: the assembly version is MAJOR.0.0.0 under MinVer, so every 0.x courier said
+            // "engine 0.0.0.0" and two builds could not be told apart. The stamp is what the log says.
+            Engine: EngineStamp.Current.Full,
             Exe: Environment.ProcessPath,
             TaskName: string.IsNullOrWhiteSpace(taskName) ? null : taskName,
             StartedUtc: StartTimeOf(self) ?? DateTimeOffset.UtcNow,
@@ -71,6 +78,15 @@ public sealed record CourierPresence(
         var path = CourierHome.PresencePathFor(stateHomeRoot);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         AtomicFile.Write(path, JsonSerializer.Serialize(this, Json));
+    }
+
+    /// <summary>PK2.1 - the heartbeat: this record with the poll that just came round, written down.
+    /// Returns the record it wrote, so the loopback hello serves the same answer the file does.</summary>
+    public CourierPresence Beat(DateTimeOffset polledUtc, string? stateHomeRoot = null)
+    {
+        var beat = this with { LastPollUtc = polledUtc };
+        beat.Write(stateHomeRoot);
+        return beat;
     }
 
     /// <summary>The record as written, alive or not. Null when there is no file or it is unreadable —
@@ -126,7 +142,8 @@ public sealed record CourierPresence(
       + (string.IsNullOrWhiteSpace(Engine) ? "" : $" · engine {Engine}")
       + (Port is > 0 ? $" · port {Port.Value.ToString(CultureInfo.InvariantCulture)}" : " · no listener")
       + (string.IsNullOrWhiteSpace(TaskName) ? " · started by hand" : $" · task {TaskName}")
-      + $" · since {StartedUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture)}";
+      + $" · since {StartedUtc.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture)}"
+      + (LastPollUtc is { } polled ? $" · last poll {polled.ToUniversalTime().ToString("u", CultureInfo.InvariantCulture)}" : "");
 
     private static DateTimeOffset? StartTimeOf(int pid)
     {

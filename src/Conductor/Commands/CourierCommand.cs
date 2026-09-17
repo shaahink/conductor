@@ -129,6 +129,16 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
         var state = await task.StateAsync().ConfigureAwait(false);
         var stale = CourierProtocol.RefuseStale(state.Running);
 
+        // PK2.1 / D2(a): liveness from the heartbeat, not the pid alone - and for a courier that is
+        // not doing its job, what the scheduler remembers of the task's last run, read NOW, before a
+        // restart overwrites it with "running".
+        var now = DateTimeOffset.UtcNow;
+        var vitals = CourierVitals.Of(CourierPresence.Read(), state.Running,
+            CourierVitals.StaleAfter(courier.PollIntervalSeconds), now);
+        var lastRun = vitals.Life is CourierLife.Dead or CourierLife.Stale && state.Registered
+            ? (await task.LastRunAsync().ConfigureAwait(false)).Run
+            : null;
+
         if (settings.Json)
         {
             AnsiConsole.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
@@ -143,6 +153,15 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
                 protocol = CourierProtocol.Version,
                 task = new { state.Name, state.Registered, state.SchedulerState },
                 running = state.Running,
+                vitals = new
+                {
+                    life = vitals.Word,
+                    lastPollUtc = vitals.Record?.LastPollUtc,
+                    lastSeenUtc = vitals.LastSeenUtc,
+                    staleAfterSeconds = (int)CourierVitals.StaleAfter(courier.PollIntervalSeconds).TotalSeconds,
+                    describe = vitals.Describe(now),
+                    taskLastRun = lastRun?.Describe(),
+                },
                 stale,
                 port = state.Running?.Port,
                 unreachable = CourierEndpoint.Unreachable(state.Running),
@@ -189,6 +208,8 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
             : "[yellow]no[/] [dim]— nothing is polling for this machine[/]")
             + " [dim]· this build speaks protocol "
             + CourierProtocol.Version.ToString(CultureInfo.InvariantCulture) + "[/]");
+        AnsiConsole.MarkupLine("[dim]life:[/] " + LifeColour(vitals.Life) + Markup.Escape(vitals.Describe(now)) + "[/]"
+            + (lastRun is { } run ? " [dim]· task last run " + Markup.Escape(run.Describe()) + "[/]" : ""));
 
         // §6.5: the seam a run pushes through, and the file that is its whole access control. A
         // secret nothing has locked down is a secret every process running as this user already has,
@@ -215,7 +236,11 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
         foreach (var line in tail)
             AnsiConsole.MarkupLine("  [dim]" + Markup.Escape(line) + "[/]");
 
-        AnsiConsole.MarkupLine(VerdictLine(Blocker(courier, token), state.Running));
+        // A live pid whose loop has stopped is not "polling", whatever the pid says.
+        AnsiConsole.MarkupLine(vitals.Life is CourierLife.Stale && state.Running is { } hung
+            ? "[yellow]not polling:[/] [dim]pid " + hung.Pid.ToString(CultureInfo.InvariantCulture)
+              + " is running but its loop has stopped coming round; `conductor courier restart` replaces it.[/]"
+            : VerdictLine(Blocker(courier, token), state.Running));
 
         AnsiConsole.MarkupLine("[dim]" + Markup.Escape(RetentionNotice) + "[/]");
         return 0;
@@ -238,6 +263,13 @@ public sealed partial class CourierCommand : AsyncCommand<CourierCommand.Setting
             return "[yellow]not ready:[/] " + Markup.Escape(blocker);
         return "[green]ready[/] [dim]— `conductor courier run` starts polling.[/]";
     }
+
+    private static string LifeColour(CourierLife life) => life switch
+    {
+        CourierLife.Alive => "[green]",
+        CourierLife.Dead => "[red]",
+        _ => "[yellow]",
+    };
 
     /// <summary>Findings §6.3 - the wording is core's, shared with the courier binary that prints it
     /// at startup.</summary>

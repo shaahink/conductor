@@ -111,13 +111,20 @@ public static class CourierProgram
             return 1;
         }
 
+        // PK2.1 / D2(b): a record that is still here, naming a process that is not, is a courier that
+        // died without reaching the finally below that clears it. Said now, before this one overwrites it.
+        if (await DeathRecordAsync(stateHomeRoot: null, options.TaskName).ConfigureAwait(false) is { } death)
+            journal.Append(death);
+
         // Bug #93: every logger line reaches the courier's own file as well as the console, because
         // under the scheduled task there IS no console and the file is the only record.
         using var factory = Logging(journal);
         var log = factory.CreateLogger("courier");
 
         using var source = new TelegramCourierSource(courier, token!, log);
-        var daemon = new CourierDaemon(source, courier, stateHomeRoot: null, log: m => log.LogInformation("{Line}", m));
+        var presence = CourierPresence.Current(options.TaskName);
+        var daemon = new CourierDaemon(source, courier, stateHomeRoot: null, log: m => log.LogInformation("{Line}", m),
+            beat: polled => presence = presence.Beat(polled));
 
         // Ctrl-C is a STOP, not a kill: the loop finishes the delivery it is on and writes its offset
         // before returning, which is the difference between a clean restart and a replayed note.
@@ -129,7 +136,6 @@ public static class CourierProgram
         // no run to serve, and binding the named port from a rig is how a test starves the real
         // courier of the socket its runs are dialling.
         var secret = CourierSecret.Resolve();
-        var presence = CourierPresence.Current(options.TaskName);
         using var listener = options.Once
             ? null
             : new CourierListener(() => presence, (push, c) => DeliverAsync(source, push, c), secret, log);
@@ -162,6 +168,22 @@ public static class CourierProgram
         {
             CourierPresence.Clear();
         }
+    }
+
+    /// <summary>D2(b) - the death record, or null when the last courier cleared its presence on the way
+    /// out. The scheduler is asked about the task the DEAD courier named, falling back to this one's:
+    /// that is the run whose result says how it ended.</summary>
+    /// <param name="tasks">Builds the task to ask, by name. Null for the real scheduler.</param>
+    internal static async Task<string?> DeathRecordAsync(string? stateHomeRoot, string? taskName,
+        Func<string, CourierTask>? tasks = null)
+    {
+        if (CourierPresence.Read(stateHomeRoot) is not { } previous) return null;
+
+        var name = previous.TaskName ?? taskName;
+        if (name is null) return CourierVitals.DeathRecord(previous, null, null);
+
+        var (run, unread) = await (tasks ?? (n => new CourierTask(n)))(name).LastRunAsync().ConfigureAwait(false);
+        return CourierVitals.DeathRecord(previous, name, run, unread);
     }
 
     private static ILoggerFactory Logging(CourierLog journal) =>
