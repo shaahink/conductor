@@ -72,6 +72,10 @@ public sealed partial class PlanConfig
     public ReportConfig Report { get; set; } = new();
     public NotifyConfig? Notify { get; set; }
     public TelegramConfig? Telegram { get; set; }
+
+    /// <summary>PK4.3 / D6: the chats this plan names, as plain (id, profile) pairs - what a room falls
+    /// back to - for the callers the KS11.1 seam forbids from naming the messenger's config.</summary>
+    public IEnumerable<(string ChatId, string? Profile)> ChatPairs() => Telegram?.ResolvedChats() ?? [];
     /// <summary>DV3.3 — the courier block: how this machine turns a voice note into text, and (from
     /// DV4) the daemon that receives one. null → transcription is not configured, which is a
     /// supported state: a voice note still files, with its audio, and the reply says it was not

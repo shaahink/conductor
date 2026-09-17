@@ -40,6 +40,8 @@
     <!-- Resource names are RootNamespace + path, so these stay `Conductor.Core.Store.Migrations.*`
          exactly as MigrationRunner's ResourcePrefix expects. -->
     <EmbeddedResource Include="Store\Migrations\*.sql" />
+    <!-- PK4.3 / D8: the character every room shares ships with the engine, so a run in any repo carries it. -->
+    <EmbeddedResource Include="..\..\docs\rooms\character.md" LogicalName="Conductor.Core.Rooms.character.md" Link="Rooms\character.md" />
   </ItemGroup>
 
   <ItemGroup>
