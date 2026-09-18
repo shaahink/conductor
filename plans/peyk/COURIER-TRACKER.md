@@ -4,20 +4,18 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s12 claimed PK6.3 (skill: .conductor/evidence/PK6/pk6.3.md, f47eab3; real say 3871 to admin DM sent directly + deleted) and PK6.2 (docs: pk6.2.md, 081fa60 + 123b95e; 9 new SF7_1 Peyk facts, 73/73 docs, 247/247 neighbours). PK6.1 set blocked-until 2026-09-18T11:40Z (window must reach 24 h); PK6.4 last.
-  PK6.1 is mostly READ already - see s12's "PK6.1 PRE-READ" ledger note: first window death 2026-09-17 12:23:18Z, pid 20052, `courier run DIED (unhandled, terminating): TaskCanceledException ... HttpClient.Timeout of 65 seconds` from GetUpdatesAsync; pid 3232 up 12:25:01Z (keep-alive). Source cause still in tree: CourierDaemon.cs:102/:113 filters let a timeout-TaskCanceledException (ct not cancelled) escape. No death record for it (Main's finally clears presence, CourierProgram.cs:183) - only the exit journal names it.
-  PK6.1 to do after 11:37:30Z: re-read courier.log (%LOCALAPPDATA%\conductor\courier) for any death after 12:25Z, schtasks /query /tn "Conductor Courier" /v, System log for sleep; write the dated finding; FOLLOW the procedure PK6.2 already wrote in docs/operating.md "The courier died - reading out why" and correct it where the reading disproves it (add the finally-clears-presence gap); close bug #93 in the same commit. Whether the 2-line catch fix + regression test lands here or as a new bug is that session's call - D2 says measure first, then fix. READ ONLY on the real courier: no restart.
-  PK6.4 (ownerGate): release preflight/perform through the fresh build only after checking MigrationRunner.CurrentVersion vs the installed engine (trap 19); money/budget against a sqlite3 .backup COPY; the plan doc is NOT moved - plan B (peyk/watch) reads docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md; pre-flight, print owner acts, park.
-  Still true: the PATH engine (0.5.1-alpha.0.43) has no say/room - the rewritten skill works from the owner's reinstall; `say --to admin` refuses on this machine (2 admin chats) - use the id. Real courier pid 3232 speaks protocol 2. Bug #99 open, low.
-next: PK6.1 at/after 2026-09-18T11:37:30Z, then PK6.4. Do not restart, stop or reinstall the real courier.
-
+last: s13 claimed **PK6.1** (evidence `.conductor/evidence/PK6/pk6.1.md`, commit c714b41). THE CAUSE, measured over 2026-09-17T11:37:30Z→2026-09-18T11:40:33Z (24h03m): the first death is 2026-09-17 12:23:18Z, pid 20052, unhandled `TaskCanceledException` = HttpClient's 65 s `getUpdates` timeout escaping the poll loop; it recurred 2026-09-18 10:42:33Z on pid 1972. Those two are the ONLY `DIED` lines in the log's whole history. Not sleep: no Kernel-Power 42/107, no boot, no shutdown in the window. The keep-alive trigger recovered all three outages on the next five-minute boundary (1m43s / 2m29s / 4m34s).
+  Three doc corrections the reading forced, now in `docs/operating.md` "The courier died — reading out why": an unhandled-exception death leaves NO death record (the unwind runs `CourierProgram.cs:181`'s `finally { CourierPresence.Clear() }`); a SIGHUP death reads as "died silently" and the signal line is the truth; `courier process exit:` has never been written once. Task `Last Result 0x800710E0` on a Running task is IgnoreNew refusing the keep-alive, i.e. it working — not a failure. Docs battery 56/56 green after the edits.
+  Bug #93 re-affirmed fixed (it was closed in the Charkh run, 2026-08-27, stage CH5). The cause is **bug #100** (high, new): `CourierDaemon.cs:102` catches `OperationCanceledException` only when `ct` is cancelled and `:113` excluded it by type, so the timeout fell between the clauses. Fixed in the tree (`:113` widened to `catch (Exception ex)`) with `PK6_1CourierPollSurvivalTests` (commit 9fb16ef) — a property over eight things a poll can throw, plus the negative control that our own cancellation still breaks the loop silently. Controlled both ways: old filter restored → exactly the four OCE cases fail; fix in → courier battery 165/165.
+  The real courier is UNTOUCHED and still runs the old binary (pid 20860 since 10:45:02Z): the fix reaches it at the owner's reinstall, not before. Do not restart, stop or reinstall it.
+next: **PK6.4** is the only checkpoint left and it is ownerGate — pre-flight, print the owner's acts, park. Check `MigrationRunner.CurrentVersion` against the installed engine BEFORE any store write (trap 19); run `budget`/`money` against a `sqlite3 .backup` COPY; write the CHANGELOG section from `master..feat/peyk-courier`; the plan doc is NOT moved to `history/` — plan B (peyk/watch) still reads `docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md`. Branch CI is still red on the Courier complexity budget.
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 17 |
-| Done | 11 |
+| Done | 13 |
 | Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
@@ -60,16 +58,16 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| PK5.1 | InboxNote carries MessageId, SenderId, SenderName, SenderUsername; the ack is a reaction, never a message; inbox list shows sender and id; say --reply-to takes a note id or a message id; walk-ids.ps1 deleted; the no-authority rule in the note file's header. An old note without the fields still lists | DONE | 321c73b | .conductor/evidence/PK5/pk5.1.md |
-| PK5.2 | The figure verbs (/progress, /money, /tokens, /status, /evidence) answered by the courier from the project's newest run.db, read-only, whether or not a run is live; a test asserts no store write on that path; the in-run handlers stay for a courier-less machine | DONE | 6bd8150 | .conductor/evidence/PK5/pk5.2.md |
+| PK5.1 | InboxNote carries MessageId, SenderId, SenderName, SenderUsername; the ack is a reaction, never a message; inbox list shows sender and id; say --reply-to takes a note id or a message id; walk-ids.ps1 deleted; the no-authority rule in the note file's header. An old note without the fields still lists | DONE ✓ | 321c73b | .conductor/evidence/PK5/pk5.1.md |
+| PK5.2 | The figure verbs (/progress, /money, /tokens, /status, /evidence) answered by the courier from the project's newest run.db, read-only, whether or not a run is live; a test asserts no store write on that path; the in-run handlers stay for a courier-less machine | DONE ✓ | 6bd8150 | .conductor/evidence/PK5/pk5.2.md |
 
 ### PK6 — The docs, the skill, the close
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | PK6.1 | The cause: the read-out of PK2.3's window (at least 24 hours, both timestamps) - a dated finding naming the first recorded exit path, or a dated statement that none occurred with the instruments listed; the reading procedure in docs/operating.md so a later death is read the same way; bug #93 closed on it | TODO | - | - |
-| PK6.2 | docs/cli.md, operating.md, plan-config.md and ARCHITECTURE.md reconciled (the courier section rewritten for a separate binary, seams re-counted); ADR-0009 amending ADR-0008 for D3, D4 and D5; the docs battery green with a negative control per new verb and key | TODO | - | - |
-| PK6.3 | The telegram-notify skill rewritten to two pages around conductor say and --tell; send.ps1, walk-ids.ps1 and lib/ deleted; watch-live re-pointed; a grep of the skill folder finds no Bot API URL; one real post through say from outside any run, then deleted | TODO | - | - |
+| PK6.2 | docs/cli.md, operating.md, plan-config.md and ARCHITECTURE.md reconciled (the courier section rewritten for a separate binary, seams re-counted); ADR-0009 amending ADR-0008 for D3, D4 and D5; the docs battery green with a negative control per new verb and key | DONE | f47eab3 | .conductor/evidence/PK6/pk6.2.md |
+| PK6.3 | The telegram-notify skill rewritten to two pages around conductor say and --tell; send.ps1, walk-ids.ps1 and lib/ deleted; watch-live re-pointed; a grep of the skill folder finds no Bot API URL; one real post through say from outside any run, then deleted | DONE | f47eab3 | .conductor/evidence/PK6/pk6.3.md |
 | PK6.4 | The close through the machinery: release preflight, the mechanical acts performed, the CHANGELOG section written, the era's numbers measured against a backup copy of the store; the owner's acts printed and parked; the plan doc left in place for plan B | TODO | - | - |
 
 ## Dependencies

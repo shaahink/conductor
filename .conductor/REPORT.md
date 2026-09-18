@@ -1,15 +1,16 @@
 ﻿# Conductor — Peyk courier - the courier stands on its own run report
 
-_Updated 2026-09-17 14:28 UTC · branch `feat/peyk-courier` · HEAD `705f9e5`_
+_Updated 2026-09-17 16:23 UTC · branch `feat/peyk-courier` · HEAD `98dbfce`_
 
-**Status:** Idle
-**Stage:** PK4 — Rooms and the card · attempts used 0 · working ▸ PK4.3
-**Checkpoints:** 10/17 done · **Sessions run:** 8 · **Cost:** $102.2190 (agent $102.1587 + gates $0.0603) · **Tokens:** 1,530,887 in / 747,763 out
-**Confirmed phases:** PK1, PK2, PK3
+**Status:** Waiting
+**Stage:** PK6 — The docs, the skill, the close · attempts used 0 · working ▸ PK6.1
+**Checkpoints:** 15/17 done · **Sessions run:** 12 · **Cost:** $159.0203 (agent $158.9380 + gates $0.0823) · **Tokens:** 2,410,335 in / 1,140,663 out
+**Waiting:** waiting until 2026-09-18 11:40:00Z (19h16m from now) — PK6.1 reads out PK2.3's window, which must reach 24 h (armed 2026-09-17T11:37:30Z). PK6.2 and PK6.3 are claimed; the first death is already pre-read in the ledger (12:23:18Z TaskCanceledException from GetUpdatesAsync). Wake, re-read the log for anything later, write the finding, close #93, then PK6.4. [0s ago, 16:23:53Z]
+**Confirmed phases:** PK1, PK2, PK3, PK4, PK5
 **Channels:** telegram ready · github ready · courier ready
 **CI battery:** ci-battery DEGRADED · ci-verdict DEGRADED
 **⚠ CI DEGRADED — ci-battery:** CI runs 'powershell tools/gates/ratchet.ps1' that this run's gates do not - a checkpoint can pass one battery and fail the other · fix: add 'powershell tools/gates/ratchet.ps1' to plan.gates, or drop it from ci.yml. 
-**⚠ CI DEGRADED — ci-verdict:** CI has no verdict for 705f9e5, the commit this run is on: CI's newest run is for b125405 - a branch reads green when the workflow that would have failed never ran on this head · fix: push the commit, or re-ask once CI has run: conductor github ci
+**⚠ CI DEGRADED — ci-verdict:** CI has no verdict for 98dbfce, the commit this run is on: CI's newest run is for b125405 - a branch reads green when the workflow that would have failed never ran on this head · fix: push the commit, or re-ask once CI has run: conductor github ci
 
 ## Stage progress
 
@@ -18,9 +19,9 @@ _Updated 2026-09-17 14:28 UTC · branch `feat/peyk-courier` · HEAD `705f9e5`_
 | PK1 | Its own process | ██████████ 2/2 | confirmed ✓ |
 | PK2 | Alive, or known dead | ██████████ 3/3 | confirmed ✓ |
 | PK3 | One transport | ██████████ 3/3 | confirmed ✓ |
-| PK4 | Rooms and the card | ███████░░░ 2/3 | **← active** |
-| PK5 | Inbound with a name | ░░░░░░░░░░ 0/2 | todo |
-| PK6 | The docs, the skill, the close | ░░░░░░░░░░ 0/4 | todo |
+| PK4 | Rooms and the card | ██████████ 3/3 | confirmed ✓ |
+| PK5 | Inbound with a name | ██████████ 2/2 | confirmed ✓ |
+| PK6 | The docs, the skill, the close | █████░░░░░ 2/4 | **← active** |
 
 <details> ✅<summary>PK1 — Its own process (2/2)</summary>
 
@@ -51,32 +52,32 @@ _Updated 2026-09-17 14:28 UTC · branch `feat/peyk-courier` · HEAD `705f9e5`_
 
 </details>
 
-<details><summary>PK4 — Rooms and the card (2/3)</summary>
+<details> ✅<summary>PK4 — Rooms and the card (3/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| PK4.1 | rooms/<slug>.json in the courier home; conductor room add / show / list; the one-time import of the private config files; docs/rooms/character.md in the tree; the voice file only ever pointed at. room list shows the two migrated rooms; an old-shape plan on a room-less machine replays byte-identically | ✅ DONE | - |
-| PK4.2 | conductor task --done --tell stores the session's words; the engine composes the checkpoint card at the verdict and pushes it to the room's observer chat; a red claim posts nothing and the next prompt carries the held words; the card is a NotifyTemplate; stages[].deploys; a stage confirm posts a stage card. Proven on a rig with a fake agent | ✅ DONE | - |
-| PK4.3 | RoomVoiceBattery under the byte cap; report.ps1 deleted from the shared skill; the three field plans' report.ps1 rule rewritten to --tell (their plan files only, nothing committed there); SF7_1DocsMatchRealityTests pins --tell in docs/cli.md | 🔄 IN PROGRESS | - |
+| PK4.1 | rooms/<slug>.json in the courier home; conductor room add / show / list; the one-time import of the private config files; docs/rooms/character.md in the tree; the voice file only ever pointed at. room list shows the two migrated rooms; an old-shape plan on a room-less machine replays byte-identically | ✅ DONE | [`99cb57e`](https://github.com/shaahink/conductor/commit/99cb57e) |
+| PK4.2 | conductor task --done --tell stores the session's words; the engine composes the checkpoint card at the verdict and pushes it to the room's observer chat; a red claim posts nothing and the next prompt carries the held words; the card is a NotifyTemplate; stages[].deploys; a stage confirm posts a stage card. Proven on a rig with a fake agent | ✅ DONE | [`99cb57e`](https://github.com/shaahink/conductor/commit/99cb57e) |
+| PK4.3 | RoomVoiceBattery under the byte cap; report.ps1 deleted from the shared skill; the three field plans' report.ps1 rule rewritten to --tell (their plan files only, nothing committed there); SF7_1DocsMatchRealityTests pins --tell in docs/cli.md | ✅ DONE | [`f83104e`](https://github.com/shaahink/conductor/commit/f83104e) |
 
 </details>
 
-<details><summary>PK5 — Inbound with a name (0/2)</summary>
+<details> ✅<summary>PK5 — Inbound with a name (2/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| PK5.1 | InboxNote carries MessageId, SenderId, SenderName, SenderUsername; the ack is a reaction, never a message; inbox list shows sender and id; say --reply-to takes a note id or a message id; walk-ids.ps1 deleted; the no-authority rule in the note file's header. An old note without the fields still lists | ⬜ TODO | - |
-| PK5.2 | The figure verbs (/progress, /money, /tokens, /status, /evidence) answered by the courier from the project's newest run.db, read-only, whether or not a run is live; a test asserts no store write on that path; the in-run handlers stay for a courier-less machine | ⬜ TODO | - |
+| PK5.1 | InboxNote carries MessageId, SenderId, SenderName, SenderUsername; the ack is a reaction, never a message; inbox list shows sender and id; say --reply-to takes a note id or a message id; walk-ids.ps1 deleted; the no-authority rule in the note file's header. An old note without the fields still lists | ✅ DONE | [`321c73b`](https://github.com/shaahink/conductor/commit/321c73b) |
+| PK5.2 | The figure verbs (/progress, /money, /tokens, /status, /evidence) answered by the courier from the project's newest run.db, read-only, whether or not a run is live; a test asserts no store write on that path; the in-run handlers stay for a courier-less machine | ✅ DONE | [`6bd8150`](https://github.com/shaahink/conductor/commit/6bd8150) |
 
 </details>
 
-<details><summary>PK6 — The docs, the skill, the close (0/4)</summary>
+<details><summary>PK6 — The docs, the skill, the close (2/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | PK6.1 | The cause: the read-out of PK2.3's window (at least 24 hours, both timestamps) - a dated finding naming the first recorded exit path, or a dated statement that none occurred with the instruments listed; the reading procedure in docs/operating.md so a later death is read the same way; bug #93 closed on it | ⬜ TODO | - |
-| PK6.2 | docs/cli.md, operating.md, plan-config.md and ARCHITECTURE.md reconciled (the courier section rewritten for a separate binary, seams re-counted); ADR-0009 amending ADR-0008 for D3, D4 and D5; the docs battery green with a negative control per new verb and key | ⬜ TODO | - |
-| PK6.3 | The telegram-notify skill rewritten to two pages around conductor say and --tell; send.ps1, walk-ids.ps1 and lib/ deleted; watch-live re-pointed; a grep of the skill folder finds no Bot API URL; one real post through say from outside any run, then deleted | ⬜ TODO | - |
+| PK6.2 | docs/cli.md, operating.md, plan-config.md and ARCHITECTURE.md reconciled (the courier section rewritten for a separate binary, seams re-counted); ADR-0009 amending ADR-0008 for D3, D4 and D5; the docs battery green with a negative control per new verb and key | ✅ DONE | - |
+| PK6.3 | The telegram-notify skill rewritten to two pages around conductor say and --tell; send.ps1, walk-ids.ps1 and lib/ deleted; watch-live re-pointed; a grep of the skill folder finds no Bot API URL; one real post through say from outside any run, then deleted | ✅ DONE | - |
 | PK6.4 | The close through the machinery: release preflight, the mechanical acts performed, the CHANGELOG section written, the era's numbers measured against a backup copy of the store; the owner's acts printed and parked; the plan doc left in place for plan B | ⬜ TODO | - |
 
 </details>
@@ -93,6 +94,10 @@ _Updated 2026-09-17 14:28 UTC · branch `feat/peyk-courier` · HEAD `705f9e5`_
 | 6 | PK3 | Deliver | 1 | 09-17 12:09 | 1:06 | Advanced | PK3.1 PK3.2 PK3.3 | 10 | engine-fast:OK · face-fast:OK | $30.5732 | $0.0075 | 413,123/226,173 |
 | 7 | PK3 | Fix | 2 | 09-17 13:27 | 0:02 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $0.8547 | $0.0076 | 36,779/5,655 |
 | 8 | PK4 | Deliver | 1 | 09-17 13:36 | 0:51 | Advanced | PK4.1 PK4.2 | 11 | engine-fast:OK · face-fast:OK | $31.6004 | $0.0074 | 357,936/181,006 |
+| 9 | PK4 | Deliver | 1 | 09-17 14:28 | 0:19 | Advanced | PK4.3 | 4 | engine-fast:OK · face-fast:OK | $9.7180 | $0.0072 | 164,708/73,587 |
+| 10 | PK5 | Deliver | 1 | 09-17 14:53 | 0:28 | Advanced | PK5.1 | 3 | engine-fast:OK · face-fast:OK | $12.5092 | $0.0073 | 211,567/92,373 |
+| 11 | PK5 | Deliver | 1 | 09-17 15:23 | 0:30 | Advanced | PK5.2 | 4 | engine-fast:OK · face-fast:OK | $17.2329 | $0.0074 | 260,448/110,267 |
+| 12 | PK6 | Deliver | 1 | 09-17 16:00 | 0:22 | BlockedUntil | PK6.2 PK6.3 | 4 |  | $17.3193 |  | 242,725/116,673 |
 
 ## Money
 
@@ -100,50 +105,21 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 6 | 88.3M | 98.0% | $70.61 | 8 | 11M | $8.83 |
+| **run total** | 10 | 166.5M | 98.1% | $141.70 | 13 | 12.8M | $10.90 |
 | stage PK1 | 2 | 18.3M | 97.3% | $16.23 | 2 | 9.17M | $8.12 |
 | stage PK2 | 2 | 27.1M | 97.9% | $22.94 | 3 | 9.02M | $7.65 |
 | stage PK3 | 2 | 42.9M | 98.4% | $31.44 | 3 | 14.3M | $10.48 |
-| 2026-09 | 6 | 88.3M | 98.0% | $70.61 | 8 | 11M | $8.83 |
+| stage PK4 | 2 | 44.7M | 98.3% | $41.33 | 3 | 14.9M | $13.78 |
+| stage PK5 | 2 | 33.4M | 98.0% | $29.76 | 2 | 16.7M | $14.88 |
+| 2026-09 | 10 | 166.5M | 98.1% | $141.70 | 13 | 12.8M | $10.90 |
 
-_Where the money goes: agent $70.56 (100%) · gate $0.05 (0%) · blended $0.80/M tokens._
+_Where the money goes: agent $141.62 (100%) · gate $0.08 (0%) · blended $0.85/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-09-17 12:59:12  ▪ gate face-fast pass [phase]  (0.0s)
-09-17 12:59:12  ▪ gate engine-full FAIL [phase]  (6m35s)
-09-17 12:59:12  ▪ gate face-full pass [phase]  (4.7s)
-09-17 12:59:13  • session #5 PK2 Fix started (attempt 2/6)
-09-17 13:05:14  ▪ gate engine-fast pass [session]  (1m15s)
-09-17 13:05:14  ▪ gate face-fast pass [session]  (2.5s)
-09-17 13:05:15  • session #5 PK2 → Progress · 1 commit(s)  (6m01s)
-09-17 13:09:51  ▪ gate engine-fast pass [phase]  (0.0s)
-09-17 13:09:51  ▪ gate face-fast pass [phase]  (0.0s)
-09-17 13:09:51  ▪ gate engine-full pass [phase]  (4m33s)
-09-17 13:09:51  ▪ gate face-full pass [phase]  (1.3s)
-09-17 13:09:51  ✓ checkpoint PK2.1 confirmed
-09-17 13:09:51  ✓ checkpoint PK2.2 confirmed
-09-17 13:09:51  ✓ checkpoint PK2.3 confirmed
-09-17 13:09:51  ▸ stage PK2 confirmed  (1h27m34s)
-09-17 13:09:52  ▸ stage PK3 entered — One transport
-09-17 13:09:52  • session #6 PK3 Deliver started (attempt 1/6)
-09-17 14:17:09  ▪ gate engine-fast pass [session]  (1m12s)
-09-17 14:17:09  ▪ gate face-fast pass [session]  (2.7s)
-09-17 14:17:10  • session #6 PK3 → Advanced · done PK3.1,PK3.2,PK3.3 · 10 commit(s)  (1h07m18s)
-09-17 14:27:04  ▪ gate engine-fast pass [phase]  (0.0s)
-09-17 14:27:04  ▪ gate face-fast pass [phase]  (0.0s)
-09-17 14:27:04  ▪ gate engine-full FAIL [phase]  (4m54s)
-09-17 14:27:04  ▪ gate face-full pass [phase]  (1.7s)
-09-17 14:27:05  • session #7 PK3 Fix started (attempt 2/6)
-09-17 14:31:10  ▪ gate engine-fast pass [session]  (1m14s)
-09-17 14:31:10  ▪ gate face-fast pass [session]  (2.2s)
-09-17 14:31:10  • session #7 PK3 → Progress · 2 commit(s)  (4m05s)
-09-17 14:36:05  ▪ gate engine-fast pass [phase]  (0.0s)
-09-17 14:36:05  ▪ gate face-fast pass [phase]  (0.0s)
-09-17 14:36:05  ▪ gate engine-full pass [phase]  (4m51s)
 09-17 14:36:05  ▪ gate face-full pass [phase]  (1.3s)
 09-17 14:36:05  ✓ checkpoint PK3.1 confirmed
 09-17 14:36:05  ✓ checkpoint PK3.2 confirmed
@@ -153,6 +129,37 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 09-17 14:36:06  • session #8 PK4 Deliver started (attempt 1/6)
 09-17 15:28:36  ▪ gate engine-fast pass [session]  (1m11s)
 09-17 15:28:36  ▪ gate face-fast pass [session]  (2.5s)
+09-17 15:28:37  • session #8 PK4 → Advanced · done PK4.1,PK4.2 · 11 commit(s)  (52m30s)
+09-17 15:28:37  • session #9 PK4 Deliver started (attempt 1/6)
+09-17 15:48:58  ▪ gate engine-fast pass [session]  (1m10s)
+09-17 15:48:58  ▪ gate face-fast pass [session]  (2.2s)
+09-17 15:48:59  • session #9 PK4 → Advanced · done PK4.3 · 4 commit(s)  (20m21s)
+09-17 15:53:51  ▪ gate engine-fast pass [phase]  (0.0s)
+09-17 15:53:51  ▪ gate face-fast pass [phase]  (0.0s)
+09-17 15:53:51  ▪ gate engine-full pass [phase]  (4m47s)
+09-17 15:53:51  ▪ gate face-full pass [phase]  (2.0s)
+09-17 15:53:51  ✓ checkpoint PK4.1 confirmed
+09-17 15:53:51  ✓ checkpoint PK4.2 confirmed
+09-17 15:53:51  ✓ checkpoint PK4.3 confirmed
+09-17 15:53:51  ▸ stage PK4 confirmed  (1h17m44s)
+09-17 15:53:52  ▸ stage PK5 entered — Inbound with a name
+09-17 15:53:52  • session #10 PK5 Deliver started (attempt 1/4)
+09-17 16:23:51  ▪ gate engine-fast pass [session]  (1m11s)
+09-17 16:23:51  ▪ gate face-fast pass [session]  (2.2s)
+09-17 16:23:52  • session #10 PK5 → Advanced · done PK5.1 · 3 commit(s)  (30m00s)
+09-17 16:23:52  • session #11 PK5 Deliver started (attempt 1/4)
+09-17 16:55:53  ▪ gate engine-fast pass [session]  (1m11s)
+09-17 16:55:53  ▪ gate face-fast pass [session]  (2.7s)
+09-17 16:55:53  • session #11 PK5 → Advanced · done PK5.2 · 4 commit(s)  (32m00s)
+09-17 17:00:54  ▪ gate engine-fast pass [phase]  (0.0s)
+09-17 17:00:54  ▪ gate face-fast pass [phase]  (0.0s)
+09-17 17:00:54  ▪ gate engine-full pass [phase]  (4m57s)
+09-17 17:00:54  ▪ gate face-full pass [phase]  (1.4s)
+09-17 17:00:54  ✓ checkpoint PK5.1 confirmed
+09-17 17:00:54  ✓ checkpoint PK5.2 confirmed
+09-17 17:00:54  ▸ stage PK5 confirmed  (1h07m02s)
+09-17 17:00:55  ▸ stage PK6 entered — The docs, the skill, the close
+09-17 17:00:55  • session #12 PK6 Deliver started (attempt 1/8)
 ```
 
 ## Health
@@ -160,9 +167,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 8 · retries 3 (38 %) · overall Warn
+sessions 12 · retries 3 (25 %) · overall Warn
+⚠ [context-saturation] session #11: 20,701,549 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 25,036,574 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 41,561,063 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #8: 31,495,224 context tokens (≥ 20,000,000)
 ⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 5x
 ```
 
@@ -178,32 +187,6 @@ vs upstream: up to date
 
 ### Commits by session
 
-- **s1 (PK1 Deliver)** — 11 commit(s):
-  - [`aca1eba`](https://github.com/shaahink/conductor/commit/aca1eba) docs(peyk): handoff after PK1 - the courier is its own exe in its own directory; PK2.1 next
-  - [`9262a55`](https://github.com/shaahink/conductor/commit/9262a55) docs(evidence): PK1.2 live proof - 27/27 on c50bf01, scratch install and scratch courier
-  - [`c50bf01`](https://github.com/shaahink/conductor/commit/c50bf01) test(install): PK1.2 rig quotes -clp:ErrorsOnly (5.1 splits it when passed through $args)
-  - [`be821b4`](https://github.com/shaahink/conductor/commit/be821b4) test(install): PK1.2 rig hashes with the BCL (Get-FileHash is not loadable in a 5.1 child of pwsh 7)
-  - [`d6eb4bc`](https://github.com/shaahink/conductor/commit/d6eb4bc) test(install): PK1.2 live proof rig; handoff mid-checkpoint
-  - [`e775bbe`](https://github.com/shaahink/conductor/commit/e775bbe) feat(install): the engine installs around a live courier; -CourierOnly replaces it (PK1.2, D1)
-  - [`5605f8b`](https://github.com/shaahink/conductor/commit/5605f8b) feat(courier): the courier's own install directory; install verb and preflight follow it (PK1.2, D1)
-  - [`d2b42e4`](https://github.com/shaahink/conductor/commit/d2b42e4) docs(peyk): handoff after PK1.1 - the courier is its own exe; PK1.2 next
-  - [`4cf6dcf`](https://github.com/shaahink/conductor/commit/4cf6dcf) docs(evidence): PK1.1 live proof - 13/13 on 2284862, seeded violation and negative control included
-  - [`2284862`](https://github.com/shaahink/conductor/commit/2284862) test(courier): PK1.1 live proof rig; a red kill-together test leaves no orphan
-  - [`ba634a8`](https://github.com/shaahink/conductor/commit/ba634a8) feat(courier): conductor-courier.exe is its own process; courier run is an alias (PK1.1, D1)
-- **s2 (PK1 Fix)** — 1 commit(s):
-  - [`6ead315`](https://github.com/shaahink/conductor/commit/6ead315) fix(courier): the messenger's words go back to the adapter file (PK1 battery red, KS11.1 ratchet)
-- **s4 (PK2 Deliver)** — 11 commit(s):
-  - [`195ee71`](https://github.com/shaahink/conductor/commit/195ee71) docs(peyk): handoff after PK2 - courier armed 11:37:30Z pid 20052, PK6.1 reading procedure, keep-alive measured
-  - [`13c7d03`](https://github.com/shaahink/conductor/commit/13c7d03) docs(evidence): PK2.3 the real courier armed at 2026-09-17T11:37:30Z, pid 20052, keep-alive read back
-  - [`24dd990`](https://github.com/shaahink/conductor/commit/24dd990) test(courier): PK2.3 arming and read-out script for the real courier; interim handoff before arming
-  - [`3239a5b`](https://github.com/shaahink/conductor/commit/3239a5b) docs(evidence): PK2.2 live proof 25/25 on b1a3b0a - keep-alive restarts an exit 0 in 272s and 280s, a run restarts a dead courier
-  - [`b1a3b0a`](https://github.com/shaahink/conductor/commit/b1a3b0a) docs(peyk): interim handoff - PK2.2 code and rig committed, live rig running
-  - [`7e05c72`](https://github.com/shaahink/conductor/commit/7e05c72) test(courier): PK2.2 live rig - exit journaling, keep-alive measured against a no-trigger control, a run restarts a dead scratch courier
-  - [`be76d1f`](https://github.com/shaahink/conductor/commit/be76d1f) feat(courier): PK2.2 exit journaling, five-minute keep-alive trigger, run restarts a dead courier at the boundary
-  - [`727b036`](https://github.com/shaahink/conductor/commit/727b036) docs(peyk): handoff after PK2.1 - heartbeat, alive/stale/dead, death record; a running task's last result is 267009
-  - [`f1c1a31`](https://github.com/shaahink/conductor/commit/f1c1a31) docs(evidence): PK2.1 live proof 18/18 on 1334051 and affected courier classes 124/124
-  - [`1334051`](https://github.com/shaahink/conductor/commit/1334051) test(courier): PK2.1 live rig - scratch courier killed, status reads dead, restart journals the death record
-  - [`4affb95`](https://github.com/shaahink/conductor/commit/4affb95) feat(courier): PK2.1 heartbeat, alive/stale/dead status and the startup death record
 - **s5 (PK2 Fix)** — 1 commit(s):
   - [`59cfe04`](https://github.com/shaahink/conductor/commit/59cfe04) fix(courier): PK2 architecture ratchet - CourierTaskRun and the queue's surface sources get their own files
 - **s6 (PK3 Deliver)** — 10 commit(s):
@@ -232,6 +215,25 @@ vs upstream: up to date
   - [`64c2dc6`](https://github.com/shaahink/conductor/commit/64c2dc6) docs(evidence): PK4.1 live proof 16/16 - the fresh build imports BookToCourse and cv into a scratch courier home by name, voices pointed at, KS11.1 goldens byte-identical
   - [`e00cad1`](https://github.com/shaahink/conductor/commit/e00cad1) fix(rooms): PK4.1 a room takes the plan's chats as plain pairs - KS11.1's seam test named Room.cs for naming TelegramConfig
   - [`99cb57e`](https://github.com/shaahink/conductor/commit/99cb57e) feat(rooms): PK4.1 rooms in the courier home - room list|show|add|import, the one-time import points at each voice, character.md in the tree
+- **s9 (PK4 Deliver)** — 4 commit(s):
+  - [`125acf9`](https://github.com/shaahink/conductor/commit/125acf9) docs(peyk): handoff after PK4.3 - the room's voice as a battery, report.ps1 retired, three field rules on --tell; PK5.1 next
+  - [`712171d`](https://github.com/shaahink/conductor/commit/712171d) docs(evidence): PK4.3 the room's voice in a dry-run prompt under the cap, report.ps1 retired, three field rules on --tell; neighbours 456/456
+  - [`e5e316c`](https://github.com/shaahink/conductor/commit/e5e316c) test(docs): PK4.3 pin --tell in the cli.md task row and retire report.ps1 from every shipped doc
+  - [`f83104e`](https://github.com/shaahink/conductor/commit/f83104e) feat(rooms): PK4.3 part 2 - the room's voice rides the prompt where a card can go
+- **s10 (PK5 Deliver)** — 3 commit(s):
+  - [`cb40e10`](https://github.com/shaahink/conductor/commit/cb40e10) docs(peyk): handoff after PK5.1 - notes carry sender and message id, the courier reacts, /note carries the button; PK5.2 next
+  - [`c5527c3`](https://github.com/shaahink/conductor/commit/c5527c3) docs(evidence): PK5.1 the reaction on a real admin-DM message (3854, cleared, deleted), rig 25/25; docs name /note and say --reply-to by note
+  - [`321c73b`](https://github.com/shaahink/conductor/commit/321c73b) feat(courier): PK5.1 - a note carries its sender and message id, the courier acknowledges with a reaction
+- **s11 (PK5 Deliver)** — 4 commit(s):
+  - [`1f8a790`](https://github.com/shaahink/conductor/commit/1f8a790) docs(peyk): handoff after PK5.2 - the courier answers the figure verbs from run.db, read-only; PK6 next
+  - [`f391cb2`](https://github.com/shaahink/conductor/commit/f391cb2) docs(evidence): PK5.2 the courier answers /money /tokens /progress /status /evidence from a copy of the live store, read-only; rig 27/27, engine money and status match; neighbours 551/551
+  - [`e9d40a6`](https://github.com/shaahink/conductor/commit/e9d40a6) feat(courier): PK5.2 - bare /evidence leads with this plan's checkpoints; the live rig and the docs
+  - [`6bd8150`](https://github.com/shaahink/conductor/commit/6bd8150) feat(courier): PK5.2 - the figure verbs answered by the courier from run.db, read-only
+- **s12 (PK6 Deliver)** — 4 commit(s):
+  - [`98dbfce`](https://github.com/shaahink/conductor/commit/98dbfce) docs(peyk): handoff after PK6.2 and PK6.3 - docs and skill claimed; PK6.1 waits for the 24 h window with its first death already read; PK6.4 last
+  - [`123b95e`](https://github.com/shaahink/conductor/commit/123b95e) test(docs): PK6.2 - Peyk's surface pinned in SF7_1DocsMatchRealityTests, each with a negative control
+  - [`081fa60`](https://github.com/shaahink/conductor/commit/081fa60) docs(peyk): PK6.2 - the courier docs for a separate binary, protocol 3 and the heartbeat; seams recounted to fifteen; ADR-0009 amends 0008
+  - [`f47eab3`](https://github.com/shaahink/conductor/commit/f47eab3) docs(evidence): PK6.3 telegram-notify rewritten to two pages around conductor say and --tell; send.ps1 and lib/ deleted, watch-live re-pointed; no Bot API URL in the folder; one real say to the admin DM (3871) sent directly and deleted
 
 ## Phase handovers (audit)
 
@@ -254,28 +256,28 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> **PK4.1 rooms and PK4.2 card at the verdict claimed; PK4.3 half done**
-> - PK4.1: `room list|show|add|import`; import into a scratch home shows BookToCourse and cv by name, voices pointed at, KS11.1 goldens identical (16/16)
-> - PK4.2: `--tell` on the claim; engine posts one card with its pair at the verdict, nothing on red, words held in prompt 2, one stage card (rig 3/3, 596/596)
-> - PK4.3: RoomVoiceBattery and embedded character.md committed but not used yet; prompt wiring and the field-plan rewrites are next in the handoff
+> **PK6.2 docs, pins and ADR-0009 claimed; PK6.3 skill rewrite claimed; PK6.1 blocked-until window end**
+> - PK6.3: telegram-notify rewritten around say and --tell, send.ps1 and lib/ deleted, watch-live re-pointed, no Bot API URL; real say 3871 sent directly and deleted
+> - PK6.2: cli/operating/plan-config/ARCHITECTURE reconciled, seams recounted to 15, ADR-0009 amends 0008 (4+2 conditions); 9 Peyk facts with negative controls, 73/73 docs, 247/247 neighbours
+> - PK6.1 pre-read: first death 12:23:18Z TaskCanceledException from GetUpdatesAsync (CourierDaemon.cs:102/:113); blocked until 2026-09-18T11:40Z
 >
-> artefacts: 99cb57e, e00cad1, 64c2dc6, c97b8c5, b636bba, 80743dd, 1a90426, 2a6af97
+> artefacts: f47eab3, 081fa60, 123b95e, 98dbfce, ~/.claude/skills/telegram-notify/SKILL.md, ~/.claude/skills/watch-live/SKILL.md, docs/dev/adr/0009-the-courier-is-its-own-binary-and-one-wire.md, tests/Conductor.Tests/SF7_1DocsMatchRealityTests.Peyk.cs
 >
-> evidence: .conductor/evidence/PK4/pk4.1.md, .conductor/evidence/PK4/pk4.2.md
+> evidence: .conductor/evidence/PK6/pk6.3.md, .conductor/evidence/PK6/pk6.2.md
 >
-> gaps: PK4.3 open: battery not in PromptBuilder, no unit tests or dry-run proof, no SF7_1 --tell pin, report.ps1 not deleted, bg and BookToCourse plan rules not rewritten; the owner's real courier home still needs `conductor room import`
+> gaps: PK6.1 waits for the 24 h window (read-out, bug #93 close, fix decision for the timeout catch); PK6.4 close is owner-gated and last; the plan doc stays in place because plan B reads it
 
 ## Tracker handoff
 
 ```
-last: s8 claimed PK4.1 (evidence pk4.1.md, rig 16/16) and PK4.2 (evidence pk4.2.md, rig 3/3 via HarnessTests.Cards.cs, neighbours 596/596). PK4.3 IN PROGRESS, half done - budget nudge.
-  PK4.3 landed (unwired, builds): src/Conductor.Core/RoomVoiceBattery.cs (character + room voice, fair split of its 4096 cap, clip says so; ReadVoice/EmbeddedCharacter public), docs/rooms/character.md embedded in Conductor.Core.csproj as Conductor.Core.Rooms.character.md, PlanConfig.ChatPairs() (neutral (id, profile) pairs so Core callers never name Telegram*).
-  PK4.3 NEXT, in order: (1) wire in PromptBuilder.BatterySection after HeldWordsBattery: `if (_plan.Repo is {Length:>0} r && Courier.Rooms.Resolve(r, _plan.ChatPairs(), Courier.CourierSettings.Load()) is {} room)` add RoomVoiceBattery when !IsEmpty - then RUN prompt/golden tests + ArchitectureTests: the courier.json fallback (one observer chat on the machine) turns the battery on for every repo, check no test state home carries one. (2) RoomVoiceBattery unit tests with a FIXTURE voice (never the owner's). (3) SF7_1 pin: the cli.md `task` row names `--tell` and the verdict; cli.md/operating.md never tell a session to run report.ps1. (4) dry-run proof: fresh build `run --dry-run -p <scratch plan>` with CONDUCTOR_STATE_HOME scratch + a room with observer + fixture voice - the prompt carries `### room-voice` within batteries.maxBytes. (5) delete ~/.claude/skills/telegram-notify/report.ps1 and drop its mentions from that SKILL.md. (6) rewrite rule 11 in C:/Code/bg/plans/conductor.plan.json AND conductor.feel.plan.json, rule 17 in C:/Code/BookToCourse/conductor.hardening.plan.json to `task --done --tell "<title> | <sentences>"` (engine posts at the verdict, red posts nothing and the words are held, before/after = <id>-before.png/<id>-after.png in the watched evidence dir, never post a card yourself, say --to observer for findings, and: if the engine refuses --tell claim without it). Raw string replace of the JSON-escaped rule, json.loads to verify, commit nothing there; `conductor ps` showed no run live in those repos at 14:25Z. BookToCourse rule 17 also cites session.md step 5 (not a plan file - name it in the handoff); bg keeps an in-repo skill copy with its own report.ps1 (leave it).
-  PK4.1/PK4.2 facts: a stage is CONFIRMED only under gatePolicy perPhase; the composer must FlushEvents before reading; ArchitectureTests = 3 types/file and RunLoop.cs AT 500 lines; KS11_1SeamBoundary forbids Telegram* in new Core files. The owner's real courier home has no rooms yet - `conductor room import` after the reinstall; bg has no room (its chats live in the repo's .claude copy) - `room add --repo C:/Code/bg --observer <id>`.
-  PK2 (still true): real 'Conductor Courier' ARMED 2026-09-17T11:37:30Z, protocol 2; bug #93 OPEN for PK6.1 (`tools/peyk/pk2-3-arm-real-courier.ps1 -ReadOnly`).
-next: PK4.3 steps (1)-(6) above, then claim with a pk4.3.md evidence. Do not restart, stop or reinstall the armed courier.
+last: s12 claimed PK6.3 (skill: .conductor/evidence/PK6/pk6.3.md, f47eab3; real say 3871 to admin DM sent directly + deleted) and PK6.2 (docs: pk6.2.md, 081fa60 + 123b95e; 9 new SF7_1 Peyk facts, 73/73 docs, 247/247 neighbours). PK6.1 set blocked-until 2026-09-18T11:40Z (window must reach 24 h); PK6.4 last.
+  PK6.1 is mostly READ already - see s12's "PK6.1 PRE-READ" ledger note: first window death 2026-09-17 12:23:18Z, pid 20052, `courier run DIED (unhandled, terminating): TaskCanceledException ... HttpClient.Timeout of 65 seconds` from GetUpdatesAsync; pid 3232 up 12:25:01Z (keep-alive). Source cause still in tree: CourierDaemon.cs:102/:113 filters let a timeout-TaskCanceledException (ct not cancelled) escape. No death record for it (Main's finally clears presence, CourierProgram.cs:183) - only the exit journal names it.
+  PK6.1 to do after 11:37:30Z: re-read courier.log (%LOCALAPPDATA%\conductor\courier) for any death after 12:25Z, schtasks /query /tn "Conductor Courier" /v, System log for sleep; write the dated finding; FOLLOW the procedure PK6.2 already wrote in docs/operating.md "The courier died - reading out why" and correct it where the reading disproves it (add the finally-clears-presence gap); close bug #93 in the same commit. Whether the 2-line catch fix + regression test lands here or as a new bug is that session's call - D2 says measure first, then fix. READ ONLY on the real courier: no restart.
+  PK6.4 (ownerGate): release preflight/perform through the fresh build only after checking MigrationRunner.CurrentVersion vs the installed engine (trap 19); money/budget against a sqlite3 .backup COPY; the plan doc is NOT moved - plan B (peyk/watch) reads docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md; pre-flight, print owner acts, park.
+  Still true: the PATH engine (0.5.1-alpha.0.43) has no say/room - the rewritten skill works from the owner's reinstall; `say --to admin` refuses on this machine (2 admin chats) - use the id. Real courier pid 3232 speaks protocol 2. Bug #99 open, low.
+next: PK6.1 at/after 2026-09-18T11:37:30Z, then PK6.4. Do not restart, stop or reinstall the real courier.
 ```
