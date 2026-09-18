@@ -1,16 +1,15 @@
 ﻿# Conductor — Peyk courier - the courier stands on its own run report
 
-_Updated 2026-09-17 16:23 UTC · branch `feat/peyk-courier` · HEAD `98dbfce`_
+_Updated 2026-09-18 12:16 UTC · branch `feat/peyk-courier` · HEAD `fa99849`_
 
-**Status:** Waiting
-**Stage:** PK6 — The docs, the skill, the close · attempts used 0 · working ▸ PK6.1
-**Checkpoints:** 15/17 done · **Sessions run:** 12 · **Cost:** $159.0203 (agent $158.9380 + gates $0.0823) · **Tokens:** 2,410,335 in / 1,140,663 out
-**Waiting:** waiting until 2026-09-18 11:40:00Z (19h16m from now) — PK6.1 reads out PK2.3's window, which must reach 24 h (armed 2026-09-17T11:37:30Z). PK6.2 and PK6.3 are claimed; the first death is already pre-read in the ledger (12:23:18Z TaskCanceledException from GetUpdatesAsync). Wake, re-read the log for anything later, write the finding, close #93, then PK6.4. [0s ago, 16:23:53Z]
-**Confirmed phases:** PK1, PK2, PK3, PK4, PK5
+**Status:** Completed
+**Stage:** PK6 — The docs, the skill, the close · attempts used 0
+**Checkpoints:** 17/17 done · **Sessions run:** 14 · **Cost:** $168.0218 (agent $167.9230 + gates $0.0988) · **Tokens:** 2,619,638 in / 1,228,625 out
+**Confirmed phases:** PK1, PK2, PK3, PK4, PK5, PK6
 **Channels:** telegram ready · github ready · courier ready
 **CI battery:** ci-battery DEGRADED · ci-verdict DEGRADED
 **⚠ CI DEGRADED — ci-battery:** CI runs 'powershell tools/gates/ratchet.ps1' that this run's gates do not - a checkpoint can pass one battery and fail the other · fix: add 'powershell tools/gates/ratchet.ps1' to plan.gates, or drop it from ci.yml. 
-**⚠ CI DEGRADED — ci-verdict:** CI has no verdict for 98dbfce, the commit this run is on: CI's newest run is for b125405 - a branch reads green when the workflow that would have failed never ran on this head · fix: push the commit, or re-ask once CI has run: conductor github ci
+**⚠ CI DEGRADED — ci-verdict:** CI has no verdict for fa99849, the commit this run is on: CI's newest run is for b125405 - a branch reads green when the workflow that would have failed never ran on this head · fix: push the commit, or re-ask once CI has run: conductor github ci
 
 ## Stage progress
 
@@ -21,7 +20,7 @@ _Updated 2026-09-17 16:23 UTC · branch `feat/peyk-courier` · HEAD `98dbfce`_
 | PK3 | One transport | ██████████ 3/3 | confirmed ✓ |
 | PK4 | Rooms and the card | ██████████ 3/3 | confirmed ✓ |
 | PK5 | Inbound with a name | ██████████ 2/2 | confirmed ✓ |
-| PK6 | The docs, the skill, the close | █████░░░░░ 2/4 | **← active** |
+| PK6 | The docs, the skill, the close | ██████████ 4/4 | confirmed ✓ |
 
 <details> ✅<summary>PK1 — Its own process (2/2)</summary>
 
@@ -71,14 +70,14 @@ _Updated 2026-09-17 16:23 UTC · branch `feat/peyk-courier` · HEAD `98dbfce`_
 
 </details>
 
-<details><summary>PK6 — The docs, the skill, the close (2/4)</summary>
+<details> ✅<summary>PK6 — The docs, the skill, the close (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| PK6.1 | The cause: the read-out of PK2.3's window (at least 24 hours, both timestamps) - a dated finding naming the first recorded exit path, or a dated statement that none occurred with the instruments listed; the reading procedure in docs/operating.md so a later death is read the same way; bug #93 closed on it | ⬜ TODO | - |
-| PK6.2 | docs/cli.md, operating.md, plan-config.md and ARCHITECTURE.md reconciled (the courier section rewritten for a separate binary, seams re-counted); ADR-0009 amending ADR-0008 for D3, D4 and D5; the docs battery green with a negative control per new verb and key | ✅ DONE | - |
-| PK6.3 | The telegram-notify skill rewritten to two pages around conductor say and --tell; send.ps1, walk-ids.ps1 and lib/ deleted; watch-live re-pointed; a grep of the skill folder finds no Bot API URL; one real post through say from outside any run, then deleted | ✅ DONE | - |
-| PK6.4 | The close through the machinery: release preflight, the mechanical acts performed, the CHANGELOG section written, the era's numbers measured against a backup copy of the store; the owner's acts printed and parked; the plan doc left in place for plan B | ⬜ TODO | - |
+| PK6.1 | The cause: the read-out of PK2.3's window (at least 24 hours, both timestamps) - a dated finding naming the first recorded exit path, or a dated statement that none occurred with the instruments listed; the reading procedure in docs/operating.md so a later death is read the same way; bug #93 closed on it | ✅ DONE | [`c714b41`](https://github.com/shaahink/conductor/commit/c714b41) |
+| PK6.2 | docs/cli.md, operating.md, plan-config.md and ARCHITECTURE.md reconciled (the courier section rewritten for a separate binary, seams re-counted); ADR-0009 amending ADR-0008 for D3, D4 and D5; the docs battery green with a negative control per new verb and key | ✅ DONE | [`f47eab3`](https://github.com/shaahink/conductor/commit/f47eab3) |
+| PK6.3 | The telegram-notify skill rewritten to two pages around conductor say and --tell; send.ps1, walk-ids.ps1 and lib/ deleted; watch-live re-pointed; a grep of the skill folder finds no Bot API URL; one real post through say from outside any run, then deleted | ✅ DONE | [`f47eab3`](https://github.com/shaahink/conductor/commit/f47eab3) |
+| PK6.4 | The close through the machinery: release preflight, the mechanical acts performed, the CHANGELOG section written, the era's numbers measured against a backup copy of the store; the owner's acts printed and parked; the plan doc left in place for plan B | ✅ DONE | [`10e4eee`](https://github.com/shaahink/conductor/commit/10e4eee) |
 
 </details>
 
@@ -98,6 +97,8 @@ _Updated 2026-09-17 16:23 UTC · branch `feat/peyk-courier` · HEAD `98dbfce`_
 | 10 | PK5 | Deliver | 1 | 09-17 14:53 | 0:28 | Advanced | PK5.1 | 3 | engine-fast:OK · face-fast:OK | $12.5092 | $0.0073 | 211,567/92,373 |
 | 11 | PK5 | Deliver | 1 | 09-17 15:23 | 0:30 | Advanced | PK5.2 | 4 | engine-fast:OK · face-fast:OK | $17.2329 | $0.0074 | 260,448/110,267 |
 | 12 | PK6 | Deliver | 1 | 09-17 16:00 | 0:22 | BlockedUntil | PK6.2 PK6.3 | 4 |  | $17.3193 |  | 242,725/116,673 |
+| 13 | PK6 | Deliver | 1 | 09-18 11:40 | 0:13 | Advanced | PK6.1 | 3 | engine-fast:OK · face-fast:OK | $4.9684 | $0.0093 | 110,171/49,805 |
+| 14 | PK6 | Deliver | 1 | 09-18 11:59 | 0:10 | Advanced | PK6.4 | 2 | engine-fast:OK · face-fast:OK | $4.0166 | $0.0072 | 99,132/38,157 |
 
 ## Money
 
@@ -105,40 +106,22 @@ _What this run has cost, from its own `costs` rows. Same numbers as `conductor m
 
 | scope | sessions | tokens | cache reads | cost | checkpoints | tok/ckpt | $/ckpt |
 |---|---|---|---|---|---|---|---|
-| **run total** | 10 | 166.5M | 98.1% | $141.70 | 13 | 12.8M | $10.90 |
+| **run total** | 13 | 195.5M | 98.0% | $168.02 | 17 | 11.5M | $9.88 |
 | stage PK1 | 2 | 18.3M | 97.3% | $16.23 | 2 | 9.17M | $8.12 |
 | stage PK2 | 2 | 27.1M | 97.9% | $22.94 | 3 | 9.02M | $7.65 |
 | stage PK3 | 2 | 42.9M | 98.4% | $31.44 | 3 | 14.3M | $10.48 |
 | stage PK4 | 2 | 44.7M | 98.3% | $41.33 | 3 | 14.9M | $13.78 |
 | stage PK5 | 2 | 33.4M | 98.0% | $29.76 | 2 | 16.7M | $14.88 |
-| 2026-09 | 10 | 166.5M | 98.1% | $141.70 | 13 | 12.8M | $10.90 |
+| stage PK6 | 3 | 29M | 97.7% | $26.32 | 4 | 7.26M | $6.58 |
+| 2026-09 | 13 | 195.5M | 98.0% | $168.02 | 17 | 11.5M | $9.88 |
 
-_Where the money goes: agent $141.62 (100%) · gate $0.08 (0%) · blended $0.85/M tokens._
+_Where the money goes: agent $167.92 (100%) · gate $0.10 (0%) · blended $0.86/M tokens._
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-09-17 14:36:05  ▪ gate face-full pass [phase]  (1.3s)
-09-17 14:36:05  ✓ checkpoint PK3.1 confirmed
-09-17 14:36:05  ✓ checkpoint PK3.2 confirmed
-09-17 14:36:05  ✓ checkpoint PK3.3 confirmed
-09-17 14:36:05  ▸ stage PK3 confirmed  (1h26m13s)
-09-17 14:36:06  ▸ stage PK4 entered — Rooms and the card
-09-17 14:36:06  • session #8 PK4 Deliver started (attempt 1/6)
-09-17 15:28:36  ▪ gate engine-fast pass [session]  (1m11s)
-09-17 15:28:36  ▪ gate face-fast pass [session]  (2.5s)
-09-17 15:28:37  • session #8 PK4 → Advanced · done PK4.1,PK4.2 · 11 commit(s)  (52m30s)
-09-17 15:28:37  • session #9 PK4 Deliver started (attempt 1/6)
-09-17 15:48:58  ▪ gate engine-fast pass [session]  (1m10s)
-09-17 15:48:58  ▪ gate face-fast pass [session]  (2.2s)
-09-17 15:48:59  • session #9 PK4 → Advanced · done PK4.3 · 4 commit(s)  (20m21s)
-09-17 15:53:51  ▪ gate engine-fast pass [phase]  (0.0s)
-09-17 15:53:51  ▪ gate face-fast pass [phase]  (0.0s)
-09-17 15:53:51  ▪ gate engine-full pass [phase]  (4m47s)
-09-17 15:53:51  ▪ gate face-full pass [phase]  (2.0s)
-09-17 15:53:51  ✓ checkpoint PK4.1 confirmed
 09-17 15:53:51  ✓ checkpoint PK4.2 confirmed
 09-17 15:53:51  ✓ checkpoint PK4.3 confirmed
 09-17 15:53:51  ▸ stage PK4 confirmed  (1h17m44s)
@@ -160,6 +143,25 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 09-17 17:00:54  ▸ stage PK5 confirmed  (1h07m02s)
 09-17 17:00:55  ▸ stage PK6 entered — The docs, the skill, the close
 09-17 17:00:55  • session #12 PK6 Deliver started (attempt 1/8)
+09-17 17:23:53  • session #12 PK6 → BlockedUntil · done PK6.2,PK6.3 · 4 commit(s)  (22m58s)
+09-18 12:40:01  • session #13 PK6 Deliver started (attempt 1/8)
+09-18 12:54:59  ▪ gate engine-fast pass [session]  (1m11s)
+09-18 12:54:59  ▪ gate face-fast pass [session]  (22.2s)
+09-18 12:55:00  • session #13 PK6 → Advanced · done PK6.1 · 3 commit(s)  (14m58s)
+09-18 12:59:42  • session #14 PK6 Deliver started (attempt 1/8)
+09-18 13:10:59  ▪ gate engine-fast pass [session]  (1m09s)
+09-18 13:10:59  ▪ gate face-fast pass [session]  (2.6s)
+09-18 13:11:00  • session #14 PK6 → Advanced · done PK6.4 · 2 commit(s)  (11m17s)
+09-18 13:16:00  ▪ gate engine-fast pass [phase]  (0.0s)
+09-18 13:16:00  ▪ gate face-fast pass [phase]  (0.0s)
+09-18 13:16:00  ▪ gate engine-full pass [phase]  (4m56s)
+09-18 13:16:00  ▪ gate face-full pass [phase]  (2.1s)
+09-18 13:16:00  § owner approval requested — PK6
+09-18 13:16:06  § owner approval granted — PK6
+09-18 13:16:06  ✓ checkpoint PK6.1 confirmed
+09-18 13:16:06  ✓ checkpoint PK6.4 confirmed
+09-18 13:16:06  ▸ stage PK6 confirmed  (20h15m10s)
+09-18 13:16:06  ◆ run finished — Completed · 17/17 checkpoints  (26h45m04s)
 ```
 
 ## Health
@@ -167,7 +169,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 12 · retries 3 (25 %) · overall Warn
+sessions 14 · retries 3 (21 %) · overall Warn
 ⚠ [context-saturation] session #11: 20,701,549 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 25,036,574 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 41,561,063 context tokens (≥ 20,000,000)
@@ -181,25 +183,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/peyk-courier
-working tree: M .conductor/REPORT.md
+working tree: M .conductor/REPORT.md, M plans/peyk/COURIER-TRACKER.md
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s5 (PK2 Fix)** — 1 commit(s):
-  - [`59cfe04`](https://github.com/shaahink/conductor/commit/59cfe04) fix(courier): PK2 architecture ratchet - CourierTaskRun and the queue's surface sources get their own files
-- **s6 (PK3 Deliver)** — 10 commit(s):
-  - [`1b50136`](https://github.com/shaahink/conductor/commit/1b50136) docs(peyk): handoff after PK3 - protocol 3, say and the direct fallback, the run's hello all claimed
-  - [`0968027`](https://github.com/shaahink/conductor/commit/0968027) docs(evidence): PK3.3 live proof 12/12 - a fresh plan in an allowed repo is parked, the run's first boundary hello adds it by run <id>, the next note is filed
-  - [`9f63a5f`](https://github.com/shaahink/conductor/commit/9f63a5f) feat(courier): PK3.3 a live run names its own project - POST /hello adds the allowlist entry by run <id>
-  - [`eea0e4f`](https://github.com/shaahink/conductor/commit/eea0e4f) docs(peyk): handoff after PK3.2 - say and the direct fallback claimed, rig helpers named, PK3.3 next
-  - [`da2626f`](https://github.com/shaahink/conductor/commit/da2626f) docs(evidence): PK3.2 live proof 20/20 - say around a stopped courier, a run's pushes sent directly, one real send (id 3821) deleted
-  - [`a9c6a70`](https://github.com/shaahink/conductor/commit/a9c6a70) test(say): PK3.2 live proof rig - say through and around a scratch courier, a scratch run's direct fallback, one real send
-  - [`965a6dd`](https://github.com/shaahink/conductor/commit/965a6dd) feat(say): PK3.2 conductor say and the direct fallback - a send no courier takes goes out with the run's own token
-  - [`e80c862`](https://github.com/shaahink/conductor/commit/e80c862) docs(peyk): handoff after PK3.1 - protocol 3 claimed, the TelegramSender transport and the relay method for PK3.2
-  - [`04a58b0`](https://github.com/shaahink/conductor/commit/04a58b0) docs(evidence): PK3.1 live proof 23/23 - scratch courier answers protocol 3, one real send to the admin DM (id 3820) ledgered and deleted
-  - [`0d43747`](https://github.com/shaahink/conductor/commit/0d43747) feat(courier): PK3.1 protocol 3 - /send, /react, /delete, /chats with message ids and messages.jsonl
 - **s7 (PK3 Fix)** — 2 commit(s):
   - [`f5ef7dc`](https://github.com/shaahink/conductor/commit/f5ef7dc) docs(peyk): handoff after the PK3 fix - say joins the completion verb list
   - [`2dc1985`](https://github.com/shaahink/conductor/commit/2dc1985) fix(peyk): PK3.2 say reaches shell completion - the exhaustive verb test named it missing
@@ -234,6 +223,13 @@ vs upstream: up to date
   - [`123b95e`](https://github.com/shaahink/conductor/commit/123b95e) test(docs): PK6.2 - Peyk's surface pinned in SF7_1DocsMatchRealityTests, each with a negative control
   - [`081fa60`](https://github.com/shaahink/conductor/commit/081fa60) docs(peyk): PK6.2 - the courier docs for a separate binary, protocol 3 and the heartbeat; seams recounted to fifteen; ADR-0009 amends 0008
   - [`f47eab3`](https://github.com/shaahink/conductor/commit/f47eab3) docs(evidence): PK6.3 telegram-notify rewritten to two pages around conductor say and --tell; send.ps1 and lib/ deleted, watch-live re-pointed; no Bot API URL in the folder; one real say to the admin DM (3871) sent directly and deleted
+- **s13 (PK6 Deliver)** — 3 commit(s):
+  - [`1d7cd32`](https://github.com/shaahink/conductor/commit/1d7cd32) docs(peyk): handoff after PK6.1 - the cause is measured and fixed; PK6.4 is the last one and it is ownerGate
+  - [`9fb16ef`](https://github.com/shaahink/conductor/commit/9fb16ef) fix(courier): bug #100 - an HttpClient timeout no longer kills the courier
+  - [`c714b41`](https://github.com/shaahink/conductor/commit/c714b41) docs(peyk): PK6.1 - the cause: HttpClient's 65s getUpdates timeout kills the courier, twice in the window
+- **s14 (PK6 Deliver)** — 2 commit(s):
+  - [`fa99849`](https://github.com/shaahink/conductor/commit/fa99849) docs(peyk): PK6.4 - the close pre-flighted and parked; the owner's acts printed
+  - [`10e4eee`](https://github.com/shaahink/conductor/commit/10e4eee) docs(release): PK6.4 - the release section carries Peyk beside Charkh
 
 ## Phase handovers (audit)
 
@@ -260,24 +256,24 @@ engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> **PK6.2 docs, pins and ADR-0009 claimed; PK6.3 skill rewrite claimed; PK6.1 blocked-until window end**
-> - PK6.3: telegram-notify rewritten around say and --tell, send.ps1 and lib/ deleted, watch-live re-pointed, no Bot API URL; real say 3871 sent directly and deleted
-> - PK6.2: cli/operating/plan-config/ARCHITECTURE reconciled, seams recounted to 15, ADR-0009 amends 0008 (4+2 conditions); 9 Peyk facts with negative controls, 73/73 docs, 247/247 neighbours
-> - PK6.1 pre-read: first death 12:23:18Z TaskCanceledException from GetUpdatesAsync (CourierDaemon.cs:102/:113); blocked until 2026-09-18T11:40Z
+> **PK6.4 landed — the era-close pre-flighted, the owner's acts printed, Plan A complete**
+> - CHANGELOG section written for both eras in one `[Unreleased]` block; heading left intact so the mechanical rename still matches
+> - preflight/perform-dry-run/runbook all captured; 4 reds, every one a state only the owner's acts clear
+> - bug #101 filed: docmove would move the plan doc out from under plan B, and there is no per-act skip
 >
-> artefacts: f47eab3, 081fa60, 123b95e, 98dbfce, ~/.claude/skills/telegram-notify/SKILL.md, ~/.claude/skills/watch-live/SKILL.md, docs/dev/adr/0009-the-courier-is-its-own-binary-and-one-wire.md, tests/Conductor.Tests/SF7_1DocsMatchRealityTests.Peyk.cs
+> artefacts: CHANGELOG.md, plans/peyk/COURIER-TRACKER.md, commits 10e4eee, fa99849
 >
-> evidence: .conductor/evidence/PK6/pk6.3.md, .conductor/evidence/PK6/pk6.2.md
+> evidence: .conductor/evidence/PK6/pk6.4.md, .conductor/evidence/PK6/pk6.4-runbook.md, .conductor/evidence/PK6/pk6.4-preflight.txt, .conductor/evidence/PK6/pk6.4-perform-dryrun.txt, .conductor/evidence/PK6/pk6.4-money.txt, .conductor/evidence/PK6/pk6.4-budget.txt
 >
-> gaps: PK6.1 waits for the 24 h window (read-out, bug #93 close, fix decision for the timeout catch); PK6.4 close is owner-gated and last; the plan doc stays in place because plan B reads it
+> gaps: the merge, tag, reinstall and both pushes are the owner's and unperformed; docmove must not run until plan B is launched or repointed (bug #101); the GitHub backfill stays declined; the real courier is still on the old binary and gets bug #100's fix only at the reinstall.
 
 ## Tracker handoff
 
 ```
-last: s12 claimed PK6.3 (skill: .conductor/evidence/PK6/pk6.3.md, f47eab3; real say 3871 to admin DM sent directly + deleted) and PK6.2 (docs: pk6.2.md, 081fa60 + 123b95e; 9 new SF7_1 Peyk facts, 73/73 docs, 247/247 neighbours). PK6.1 set blocked-until 2026-09-18T11:40Z (window must reach 24 h); PK6.4 last.
-  PK6.1 is mostly READ already - see s12's "PK6.1 PRE-READ" ledger note: first window death 2026-09-17 12:23:18Z, pid 20052, `courier run DIED (unhandled, terminating): TaskCanceledException ... HttpClient.Timeout of 65 seconds` from GetUpdatesAsync; pid 3232 up 12:25:01Z (keep-alive). Source cause still in tree: CourierDaemon.cs:102/:113 filters let a timeout-TaskCanceledException (ct not cancelled) escape. No death record for it (Main's finally clears presence, CourierProgram.cs:183) - only the exit journal names it.
-  PK6.1 to do after 11:37:30Z: re-read courier.log (%LOCALAPPDATA%\conductor\courier) for any death after 12:25Z, schtasks /query /tn "Conductor Courier" /v, System log for sleep; write the dated finding; FOLLOW the procedure PK6.2 already wrote in docs/operating.md "The courier died - reading out why" and correct it where the reading disproves it (add the finally-clears-presence gap); close bug #93 in the same commit. Whether the 2-line catch fix + regression test lands here or as a new bug is that session's call - D2 says measure first, then fix. READ ONLY on the real courier: no restart.
-  PK6.4 (ownerGate): release preflight/perform through the fresh build only after checking MigrationRunner.CurrentVersion vs the installed engine (trap 19); money/budget against a sqlite3 .backup COPY; the plan doc is NOT moved - plan B (peyk/watch) reads docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md; pre-flight, print owner acts, park.
-  Still true: the PATH engine (0.5.1-alpha.0.43) has no say/room - the rewritten skill works from the owner's reinstall; `say --to admin` refuses on this machine (2 admin chats) - use the id. Real courier pid 3232 speaks protocol 2. Bug #99 open, low.
-next: PK6.1 at/after 2026-09-18T11:37:30Z, then PK6.4. Do not restart, stop or reinstall the real courier.
+last: s14 claimed **PK6.4** (evidence `.conductor/evidence/PK6/pk6.4.md`). **Stage PK6 is complete and Plan A has no checkpoints left.** The close is pre-flighted and parked, which is what ownerGate means here: `release perform --yes` is refused outright while a run is live in the plan's state dir (`ReleaseCommand.Perform.cs:53`), so a session can only rehearse — and it did, through the fresh build, against `--tag 0.6.0`.
+  Landed: the CHANGELOG section for **both** eras in one `[Unreleased]` block (commit `10e4eee`, 91 lines inserted, nothing deleted). The heading is **deliberately still `## [Unreleased]`** — `DoChangelogAsync` renames exactly that literal, so renaming it by hand would take the mechanical act away from the owner and make the verb report a failure for work already done.
+  Measured: tree and installed engine (0.5.1-alpha.0.43) BOTH carry `MigrationRunner.CurrentVersion` 15 — no skew either way, trap 19 clear. **`C:\Code\conductor\.conductor\run.db` is NOT the live store**; it is a stale artifact at schema 9. The real one is under `%LOCALAPPDATA%\conductor\runs\...-308cfb9b\`, and `budget`/`money` ran off a `sqlite3 .backup` copy of it: Peyk 12 sessions, 191.2M tokens, 98.1% cache, USD 164.00, 16 checkpoints; Charkh 9 / 178.9M / USD 129.20 / 13; v0.6.0 total USD 293.20 over 29. Both are floors. The tuner prescribes 48M/0.90 for the next era.
+  Preflight is 4-of-7 red and **not one red is a defect in the branch**: merge (dirty tree — `.conductor/REPORT.md` is rewritten every stage while the run is live), changelog (no 0.6.0 section yet, by design), docs (11 rows the docs act rewrites), processes (this engine, pid 15672). Migration and courier are green; the real courier is untouched, still on the old binary at pid 20860.
+  **New: bug #101 (medium).** `release perform`'s `docmove` act derives its moves from THIS plan only and repoints only THIS plan file, so it would `git mv` `docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md` into `docs/history` while `plans/peyk/watch.plan.json:8` and `:210`, `plans/peyk/templates/session.md:32` and `plans/peyk/WATCH-TRACKER.md:3` all still name the old path — plan B's sessions would open nothing. `MechanicalOrder` has no per-act skip. **The plan doc is NOT moved, and must not be until plan B has launched or been repointed by hand.**
+next: nothing is left for a session on Plan A. The remaining acts are the owner's and are printed verbatim in section 6 of the evidence and in the generated `.conductor/evidence/PK6/pk6.4-runbook.md`: version (0.6.0), split (one release — decided), corpus (**declined**, bug #84), reinstall (`tools/install.ps1` — this is what finally delivers bug #100's fix to the real courier), publish (`git push origin master` then `git push origin v0.6.0`). Branch CI was last red only on the Courier complexity budget, fixed in `4955e9f`.
 ```

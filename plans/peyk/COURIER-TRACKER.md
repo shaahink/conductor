@@ -11,13 +11,14 @@ last: s14 claimed **PK6.4** (evidence `.conductor/evidence/PK6/pk6.4.md`). **Sta
   **New: bug #101 (medium).** `release perform`'s `docmove` act derives its moves from THIS plan only and repoints only THIS plan file, so it would `git mv` `docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md` into `docs/history` while `plans/peyk/watch.plan.json:8` and `:210`, `plans/peyk/templates/session.md:32` and `plans/peyk/WATCH-TRACKER.md:3` all still name the old path — plan B's sessions would open nothing. `MechanicalOrder` has no per-act skip. **The plan doc is NOT moved, and must not be until plan B has launched or been repointed by hand.**
 next: nothing is left for a session on Plan A. The remaining acts are the owner's and are printed verbatim in section 6 of the evidence and in the generated `.conductor/evidence/PK6/pk6.4-runbook.md`: version (0.6.0), split (one release — decided), corpus (**declined**, bug #84), reinstall (`tools/install.ps1` — this is what finally delivers bug #100's fix to the real courier), publish (`git push origin master` then `git push origin v0.6.0`). Branch CI was last red only on the Courier complexity budget, fixed in `4955e9f`.
 
+
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 17 |
 | Done | 13 |
-| Claimed (unconfirmed) | 3 |
+| Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
 
@@ -69,7 +70,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | PK6.1 | The cause: the read-out of PK2.3's window (at least 24 hours, both timestamps) - a dated finding naming the first recorded exit path, or a dated statement that none occurred with the instruments listed; the reading procedure in docs/operating.md so a later death is read the same way; bug #93 closed on it | DONE | c714b41 | .conductor/evidence/PK6/pk6.1.md |
 | PK6.2 | docs/cli.md, operating.md, plan-config.md and ARCHITECTURE.md reconciled (the courier section rewritten for a separate binary, seams re-counted); ADR-0009 amending ADR-0008 for D3, D4 and D5; the docs battery green with a negative control per new verb and key | DONE | f47eab3 | .conductor/evidence/PK6/pk6.2.md |
 | PK6.3 | The telegram-notify skill rewritten to two pages around conductor say and --tell; send.ps1, walk-ids.ps1 and lib/ deleted; watch-live re-pointed; a grep of the skill folder finds no Bot API URL; one real post through say from outside any run, then deleted | DONE | f47eab3 | .conductor/evidence/PK6/pk6.3.md |
-| PK6.4 | The close through the machinery: release preflight, the mechanical acts performed, the CHANGELOG section written, the era's numbers measured against a backup copy of the store; the owner's acts printed and parked; the plan doc left in place for plan B | TODO | - | - |
+| PK6.4 | The close through the machinery: release preflight, the mechanical acts performed, the CHANGELOG section written, the era's numbers measured against a backup copy of the store; the owner's acts printed and parked; the plan doc left in place for plan B | DONE | 10e4eee | .conductor/evidence/PK6/pk6.4.md |
 
 ## Dependencies
 
