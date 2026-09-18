@@ -18,6 +18,11 @@ Between releases, `conductor version` answers with a tag-height prerelease such 
 `0.1.1-alpha.0.54+1c2330f5a47e` — patch bumped, `alpha.0.<commits since the tag>`, plus the commit
 it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique per commit.
 
+## [Unreleased]
+
+_Nothing yet — entries for the next era go here, and this heading is renamed to the version when it
+is tagged._
+
 ## [0.6.0] - 2026-09-18
 
 **Charkh — the wheel: what the owner still does by hand becomes machinery.** 0.5.0 shipped two eras

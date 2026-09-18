@@ -4,7 +4,7 @@
   "name": "Peyk courier - the courier stands on its own",
   "repo": "../..",
   "satelliteRepos": [],
-  "tracker": "docs/history/archive/trackers/COURIER-TRACKER.md",
+  "tracker": "plans/peyk/COURIER-TRACKER.md",
   "planDoc": "docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md",
   "branchPattern": "^feat/peyk-courier$",
   "pauseOnBlocked": true,
