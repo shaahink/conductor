@@ -5,7 +5,7 @@
   "repo": "../..",
   "satelliteRepos": [],
   "tracker": "docs/history/archive/trackers/COURIER-TRACKER.md",
-  "planDoc": "docs/history/NEXT-ERA-FINDINGS-2026-09-17.md",
+  "planDoc": "docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md",
   "branchPattern": "^feat/peyk-courier$",
   "pauseOnBlocked": true,
   "agent": {
@@ -199,7 +199,7 @@
   "packs": [],
   "batteryCollapse": false,
   "readOrder": [
-    "docs/history/NEXT-ERA-FINDINGS-2026-09-17.md"
+    "docs/dev/NEXT-ERA-FINDINGS-2026-09-17.md"
   ],
   "analysisLanes": [],
   "workflows": {
