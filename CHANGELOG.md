@@ -133,6 +133,97 @@ README, recorded against a Face that predated two eras, which no gate could see 
   when this heading is renamed — the numbers in a release section are a measurement with a date on
   it, and the section is what the world reads.
 
+**Peyk — the courier stands on its own.** The courier was a thread inside the engine, and it had been
+dying silently for weeks: `courier status` answered from a pid, a process that exited took the
+messenger with it, and the only thing that noticed was the owner, later, wondering why the phone had
+gone quiet. This era makes the messenger a **separate process with its own binary, its own install
+directory, its own supervision and its own protocol**, and then it goes and finds out what was
+actually killing it. It also stops a run from having to know how to talk to Telegram at all: one
+transport, one verb, and a room — chats plus a voice — that a plan points at by name.
+
+### Added
+
+- **`conductor-courier.exe` is its own process** (`src/Conductor.Courier`, D1). The listener and the
+  run verb's composition root moved out of the engine; the daemon stayed in `Core/Courier/`.
+  `conductor courier run` is now an alias that execs the new binary, and `ArchitectureBoundaryTests`
+  carries the rule — **Courier → Core only** — with a seeded violation proving it can fail.
+- **`tools/install.ps1` installs the engine around a live courier**, and gains **`-CourierOnly`**:
+  publish `conductor-courier.exe` alone, re-register the scheduled task at it, restart it, and never
+  touch `conductor.exe`. The file-lock coupling that made every engine install stop the messenger is
+  gone; the courier has its own install directory.
+- **The courier has a pulse and a death record** (D2). `courier.run.json` carries `lastPollUtc`
+  written every poll; `conductor courier status` answers **alive / stale (last poll N min ago) /
+  dead (last seen T)** instead of pid liveness. A presence file still on disk at startup means the
+  previous instance did not clear it, and the new one journals *previous courier pid N died silently,
+  last poll T, task last-run result R* — R read from the scheduler, not guessed.
+- **A five-minute keep-alive trigger, and a run that restarts its own messenger.** `RestartOnFailure`
+  does not fire on exit 0 — and did not fire on exit 1 either (#93) — so the task XML carries a
+  repeating calendar trigger with `IgnoreNew`. `ProcessExit` and unhandled-exception handlers journal
+  before dying. A run checks the heartbeat at every session boundary and, when it is stale, starts the
+  task itself and says so in the log and the owner queue.
+- **Protocol 3** (D5): `/send`, `/react`, `/delete` and `/chats`, message ids returned to the caller,
+  and `messages.jsonl` as the courier's own record. **Protocol 2 pushes are still accepted** — that is
+  what the version number is for.
+- **`conductor say`** — one verb for every outward message, with the **direct fallback** (D3): a send
+  no courier takes goes out with the run's own token, says `sent directly` in the log, and shows up on
+  the health line. `say --dry-run` prints the exact bytes and the resolved chat; ceilings are refused
+  by name.
+- **A run names its own project** (D4). The first session boundary `POST /hello`s the courier, which
+  files the allowlist entry by run id — a fresh plan in an allowed repo no longer needs
+  `courier allow` typed for it.
+- **Rooms** (D6). `rooms/<slug>.json` in the courier home, `conductor room add|show|list|import`, and
+  a one-time import of the old `~/.claude/telegram/*/config.json`. A room is chats *plus* a voice; the
+  private voice files stay where they are and are **pointed at**, never copied. A plan with no room and
+  an old-shape `telegram` block behaves byte-identically.
+- **The checkpoint card** (D7). `conductor task --done --tell "<words>"` hands the claim's words to
+  the engine, which composes a card at the **verdict** — not at the claim — and posts exactly one to
+  the room's observer chat. A red claim posts nothing and the words ride into the next session's
+  prompt instead of being lost.
+- **The room's voice rides the prompt** (D8). `RoomVoiceBattery` puts the people a card will be read
+  by into the session that writes it, under the prompt's byte cap.
+- **An inbound note has a sender** (D9). `InboxNote` carries the four identity fields, `inbox list`
+  shows sender and message id, the acknowledgement is a **reaction** rather than a reply, and
+  `conductor say --reply-to <note>` answers the message it came from. Notes without the fields still
+  list.
+- **The figure verbs are answered by the courier** (D10), from the project's newest `run.db`,
+  **read-only**, whether or not a run is live: `/money`, `/tokens`, `/progress`, `/status`,
+  `/evidence` give the same figures the CLI prints, with a test asserting no store write on that path.
+- **ADR-0009** amends ADR-0008 for D3, D4 and D5 — it restates 0008's four conditions and adds the two
+  new ones.
+
+### Fixed
+
+- **Bug #100 — an `HttpClient` timeout no longer kills the courier.** `CourierDaemon` caught
+  `OperationCanceledException` only when its own token was cancelled, and the next clause excluded that
+  type: the 65-second `getUpdates` timeout fell **between the two clauses** and escaped the poll loop
+  as an unhandled exception. The catch is widened, and `PK6_1CourierPollSurvivalTests` is a property
+  over eight things a poll can throw plus the negative control that our *own* cancellation still ends
+  the loop silently. Controlled both ways: the old filter restored fails exactly the four
+  `OperationCanceledException` cases.
+- **`conductor say` reaches shell completion** — the exhaustive verb test is what noticed it missing.
+
+### Changed
+
+- **`docs/operating.md` gains "The courier died — reading out why"**, written from the read-out of a
+  real 24-hour window on the owner's machine (PK6.1, 2026-09-17 → 2026-09-18) and correcting three
+  things the docs had wrong: an unhandled-exception death leaves **no** death record, because the
+  unwind runs the `finally` that clears the presence file; a death by signal reads as *"died
+  silently"* and the signal line is the truth; and `courier process exit:` has never once been
+  written. A scheduled task's `Last Result 0x800710E0` while it is Running is `IgnoreNew` **refusing
+  the keep-alive** — that is the supervision working, not a failure.
+- **`ARCHITECTURE.md`'s courier section is rewritten for a separate binary**, and the seam count is
+  **re-counted rather than asserted**: `src/Conductor.Core` declares **fifteen** public seams, thirteen
+  before this era. Peyk added two, and neither is a wire we do not own, so each is justified in its own
+  row.
+- **The `telegram-notify` skill is two pages about `conductor say` and `--tell`**, and nothing else:
+  `send.ps1`, `walk-ids.ps1` and `lib/` are deleted, `watch-live` is re-pointed at the verbs, and a
+  grep of the skill folder finds no Bot API URL. The wire is the engine's now.
+- **What this era cost, measured from its own ledger** (`conductor money`, 2026-09-18): Peyk, **12
+  sessions, 191.2M tokens at 98.1% cache, $164.00 across 16 checkpoints** — $10.25 a checkpoint.
+  Charkh, in the same release, was 9 sessions, 178.9M tokens, $129.20 across 13. Both are **floors**:
+  a session that times out records no cost rows at all. Re-run `conductor budget` and `conductor money`
+  when this heading is renamed.
+
 ## [0.5.0] - 2026-08-26
 
 **Two eras — gates that cannot be gamed, and the chancellery.** 0.4.1 opened the door; this release
