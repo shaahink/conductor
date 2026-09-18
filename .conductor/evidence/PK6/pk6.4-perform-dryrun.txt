@@ -1,0 +1,75 @@
+note: a conductor run is live in C:\Code\conductor\.conductor (engine pid 15672)
+— this rehearsal writes nothing; the real run (--yes) is refused until that run 
+ends.
+conductor release perform — Peyk courier - the courier stands on its own
+repo: C:\Code\conductor  ·  release: 0.6.0  ·  DRY RUN (nothing is written; add 
+--yes to perform)
+
+→ changelog  mechanical rename '## [Unreleased]' to '## [0.6.0] - 2026-09-18' 
+over 190 lines
+             after this, `sh tools/changelog-section.sh 0.6.0` exits 0 and 
+prints that body
+→ docs       mechanical rewrite 11 row(s) in 2 file(s) to name v0.6.0
+             docs/cli.md:150
+             docs/cli.md:151
+             docs/cli.md:152
+             docs/cli.md:393
+             docs/cli.md:453
+             docs/operating.md:76
+             docs/operating.md:77
+             docs/operating.md:78
+             each 'New since `v<prev>`; not in the released binary yet' becomes 
+'New in `v0.6.0`'; the rest of the row is untouched
+✗ merge      mechanical the preflight's merge line is not green: 
+feat/peyk-courier is 69 ahead of master and would fast-forward, but the working 
+tree is not clean
+             the working tree has uncommitted changes - commit or stash first, 
+or the merge takes them along
+             origin/master is read as of your last fetch - this verb does not 
+fetch, and a stale remote ref is a stale verdict
+             `conductor release preflight` is the measurement; this act only 
+acts on it
+✗ tag        mechanical not attempted - an earlier act refused or failed
+             the era-close is ordered; performing this one on a half-done 
+sequence is how a release goes wrong quietly
+✗ docmove    mechanical not attempted - an earlier act refused or failed
+             the era-close is ordered; performing this one on a half-done 
+sequence is how a release goes wrong quietly
+? version    owner      the release is named 0.6.0 because you said so
+             MinVer derives a build id, not a release name; nothing in this repo
+can decide which number an era is
+             everything mechanical above takes it as input - `--tag <x.y.z>`
+? split      owner      one release or two is a call about what the world reads,
+not about the tree
+             a single section covering both eras is one rename; splitting means 
+tagging an intermediate commit
+             and cutting one section into two by hand. History usually makes one
+branch much cheaper - it does not make it right
+? corpus     owner      4 run(s) have no GitHub record
+             conductor github sync --backfill 9491891fe700463ba0d876c06280cce2 
+--dry-run   # then once, for real
+             conductor github sync --backfill 9647f1b80d1841e9997a801562a267c7 
+--dry-run   # then once, for real
+             conductor github sync --backfill 8cefa5de8f164848bd42b275e14ba9cf 
+--dry-run   # then once, for real
+             conductor github sync --backfill e9e21d10aedf4390a1580ac6930bac3e 
+--dry-run   # then once, for real
+             whether a run joins the published corpus is a decision about what 
+the world sees, so this engine will not take it
+             a second pass is safe: the backfill remembers what it created under
+the state home's github-maps/ (bug #79)
+? reinstall  owner      the reinstall cannot happen yet - a conductor is live on
+this machine
+             tools/install.ps1, then `conductor version` to confirm it matches 
+the tag
+             re-check the process table at the moment you type it: another 
+repository's run may have started since
+? publish    owner      pushing is what makes any of this public
+             git push origin master
+             git push origin v0.6.0   # this is what starts the release build 
+across five platforms
+             the merge and the tag above are LOCAL; nothing this engine did has 
+left the machine
+
+STOPPED - 3 act(s) refused or failed: merge, tag, docmove; would perform 
+changelog, docs. Nothing after the first refusal was attempted.

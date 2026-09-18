@@ -1,0 +1,101 @@
+conductor release preflight — Peyk courier - the courier stands on its own
+repo: C:\Code\conductor  ·  release: 0.6.0
+
+✗ merge      feat/peyk-courier is 68 ahead of master and would fast-forward, but
+the working tree is not clean
+           the working tree has uncommitted changes - commit or stash first, or 
+the merge takes them along
+           origin/master is read as of your last fetch - this verb does not 
+fetch, and a stale remote ref is a stale verdict
+✗ changelog  no CHANGELOG section for 0.6.0
+           exit 1 - release.yml runs this as the first job of a tag build, so 
+the tag would be refused
+           `conductor release perform --tag 0.6.0` renames '## [Unreleased]' to 
+'## [0.6.0] - <date>' (and refuses if the body is a placeholder); re-run this 
+preflight after it
+           sections found: ## [Unreleased], ## [0.5.0] - 2026-08-26, ## [0.4.1] 
+- 2026-08-15, ## [0.4.0] - 2026-08-05, ## [0.3.0] - 2026-08-01, ## [0.2.2] - 
+2026-08-01
+           changelog-section: no section for 0.6.0 in CHANGELOG.md.
+  Expected a heading '## [0.6.0] - <date>' with at least one line under it.
+  Sections found:
+## [Unreleased]
+## [0.5.0] - 2026-08-26
+## [0.4.1] - 2026-08-15
+## [0.4.0] - 2026-08-05
+## [0.3.0] - 2026-08-01
+## [0.2.2] - 2026-08-01
+## [0.2.1] - 2026-08-01
+## [0.2.0] - 2026-07-31
+## [0.1.0] - 2026-07-28
+✗ docs       11 docs row(s) say 'not in the released binary yet' and become 
+false at the tag
+           docs/cli.md:150
+           docs/cli.md:151
+           docs/cli.md:152
+           docs/cli.md:393
+           docs/cli.md:453
+           docs/operating.md:76
+           docs/operating.md:77
+           docs/operating.md:78
+           ... and 3 more
+           `conductor release perform --tag 0.6.0` rewrites each to 'New in 
+`v0.6.0`' as its own commit (the docs act); tools/ch3/docs-surface-diff.py exits
+1 against the installed binary until then, by design
+✗ processes  3 reason(s) a binary swap is unsafe right now
+           pid 15672 
+C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe <- CONDUCTOR_PID, 
+the run asking this question
+           pid 25164 
+C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe
+           a run is live in C:\Code\conductor\.conductor (engine pid 15672) — 
+stop it with `conductor pause` or `conductor kill`, then update
+           another conductor is running from 
+C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe (pid 15672) — exit
+it, then update
+           another conductor is running from 
+C:\Users\shahi\AppData\Local\Programs\conductor\conductor.exe (pid 25164) — exit
+it, then update
+           the reinstall belongs AFTER the run has ended - a live engine holding
+an old image is exactly trap 18's shape
+✓ migration  no schema skew: tree v15, installed engine 0.5.1-alpha.0.43 carries
+the same migrations
+           store: 
+C:\Users\shahi\AppData\Local\conductor\runs\conductor-karvansara-core---the-open
+-door-308cfb9b\run.db at schema 15
+✓ courier    the courier is installed, running and reachable, and its token is 
+persisted where the task can see it
+           token set, persisted at User scope - 3 chat(s), 6 project(s) allowed
+           task registered, running pid 20860
+           the courier runs 
+C:\Users\shahi\AppData\Local\Programs\conductor\courier\conductor-courier.exe 
+from its own directory - tools/install.ps1 publishes the engine without stopping
+it; `tools/install.ps1 -CourierOnly` replaces the courier (one restart)
+? backfill   4 finished run(s) have no GitHub record - whether they join the 
+published corpus is yours
+           f85c0bd7e8e1 Peyk courier - the courier stands on its own - still 
+running; its own backfill is the closing act, not something owed yet
+           9491891fe700463ba0d876c06280cce2 - Karvansara edge - gates that can't
+be gamed, and the courier (needs_human) has 0 issues on shaahink/conductor
+             conductor github sync --backfill 9491891fe700463ba0d876c06280cce2 
+--dry-run   # then once, for real, without --dry-run
+           9647f1b80d1841e9997a801562a267c7 - Karvansara core - the open door 
+(Aborted) has 0 issues on shaahink/conductor
+             conductor github sync --backfill 9647f1b80d1841e9997a801562a267c7 
+--dry-run   # then once, for real, without --dry-run
+           8cefa5de8f164848bd42b275e14ba9cf - Sarban face - the watcher and the 
+surfaces (Completed) has 0 issues on shaahink/conductor
+             conductor github sync --backfill 8cefa5de8f164848bd42b275e14ba9cf 
+--dry-run   # then once, for real, without --dry-run
+           e9e21d10aedf4390a1580ac6930bac3e - Sarban core - the engine says what
+it knows (Completed) has 0 issues on shaahink/conductor
+             conductor github sync --backfill e9e21d10aedf4390a1580ac6930bac3e 
+--dry-run   # then once, for real, without --dry-run
+           pass the FULL run id: several eras share one store directory and a 
+slug cannot pick between them
+           run it ONCE - a second pass inside GitHub's replica lag mints the 
+board again (bug #79)
+
+NOT READY - 4 of 7 red: merge, changelog, docs, processes; 1 waiting on the 
+owner: backfill (4799ms)
+nothing was merged, tagged, installed or pushed — this verb only measures.
