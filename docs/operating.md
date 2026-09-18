@@ -245,9 +245,9 @@ scheduler remembers about the last run.
 |---|---|---|
 | The heartbeat | `conductor courier status` (`--json`: `vitals`) | `alive`, `stale (last poll N min ago; pid P is still running)`, `dead (last seen T; pid P is gone and nothing cleared its record)`, or `absent` — somebody's clean `courier stop` |
 | The courier's own log | `courier.log` in the courier home (`%LOCALAPPDATA%\conductor\courier\`), plus `courier.log.1`, the previous 1 MB generation; `courier status` prints the path | One `courier run starting: pid N, engine E, protocol P` per start, and the lines below |
-| The exit journal | the same log, written by the dying process | `courier process exit: Main returned N` (an orderly end) · `courier process exit WITHOUT Main returning: exit code N` (`Environment.Exit` or the runtime ended it) · `courier run DIED (unhandled[, terminating]): <Type>: <message>` · `courier received <signal> - the process is being asked to end` (Ctrl-C, logoff, shutdown) |
-| The death record | the same log, written by the **next** start | `previous courier pid N died silently; last poll T; task last-run result R`. The presence record was never cleared, so nothing orderly happened |
-| The scheduler | `schtasks /query /tn "Conductor Courier" /v /fo list` (Last Run Time, Last Result); Event Viewer → `Microsoft-Windows-TaskScheduler/Operational` if task history is enabled | What started it, and the exit code the task saw. `0x41301` means running now |
+| The exit journal | the same log, written by the dying process. **Read this one first** | `courier process exit: Main returned N` (an orderly end) · `courier process exit WITHOUT Main returning: exit code N` (`Environment.Exit` or the runtime ended it) · `courier run DIED (unhandled[, terminating]): <Type>: <message>` · `courier received <signal> - the process is being asked to end` (Ctrl-C, logoff, shutdown) |
+| The death record | the same log, written by the **next** start | `previous courier pid N died silently; last poll T; task last-run result R`. The presence record was never cleared. This says the previous process was ended from *outside* its own control flow — **not** that the death is unexplained, and **not** that a death without this line was orderly |
+| The scheduler | `schtasks /query /tn "Conductor Courier" /v /fo list` (Last Run Time, Last Result); Event Viewer → `Microsoft-Windows-TaskScheduler/Operational` if task history is enabled | What started it, and the exit code the task saw. `0x41301` means running now; **`-2147020576` (`0x800710E0`) against a `Status: Running` task is not a failure** — it is the five-minute keep-alive trigger being refused by `MultipleInstancesPolicy IgnoreNew`, which is the trigger working |
 | The machine | Event Viewer → System: `Kernel-Power` 42 (sleep) and 107 (resume), `Power-Troubleshooter` 1 (wake), 41 / 6008 (unexpected shutdown), 6006 (clean shutdown) | Whether the machine was asleep or off around the last poll |
 | The runs | a run log's `courier restarted by this run, Nth time: …`, and the same line on the owner queue | A live run found it dead or stale at a session boundary and started the task |
 
@@ -265,10 +265,18 @@ scheduler remembers about the last run.
    - `FAULT SEAM ARMED (CONDUCTOR_COURIER_FAULT)` anywhere in that life: a rig killed it on purpose.
      This is not a finding, so read the next death.
    - `DIED (unhandled …)`: an exception. The type and message are the cause; find the throw site.
+     **Expect no death record and no `process exit` line for this one** — the exception unwinds
+     through `CourierProgram`'s `finally { CourierPresence.Clear() }`, so the next start finds
+     nothing stale to report, and the CLR does not raise `ProcessExit` when it terminates on an
+     unhandled exception. The `DIED` line is the whole record; read its stack for the throw site.
    - `WITHOUT Main returning`: something called `Environment.Exit`, or the runtime tore the process
      down. Read the exit code.
-   - `received <signal>` then `Main returned`: it was asked to end (logoff, shutdown, a console
-     close). Check the System log at that minute.
+   - `received <signal>`: it was asked to end (logoff, shutdown, a console close). Usually there is
+     **no** `Main returned` after it and there **is** a death record calling it "died silently" —
+     the OS tears the process down once the handler returns, before the `finally` clears presence.
+     The signal line is the truth and the record's wording is not: this is a requested end, not a
+     silent death. Check the System log at that minute; if nothing there names the sender, only
+     task history can, so see the note below the procedure.
    - `Main returned` alone, and no death record: an orderly stop. `courier stop`, `restart` or an
      installer cleared its record, so it is not a silent death.
    - **A death record and no exit journal at all**: it was killed from outside (`Stop-Process`,
@@ -283,6 +291,17 @@ scheduler remembers about the last run.
 6. **Write the finding** with its date: the window (`T0`, `T1`), the pid that died, the exit path,
    the lines that show it (quoted, not paraphrased), and what the supervision did. If nothing died,
    write a dated statement naming the instruments read and both timestamps.
+
+**If nothing names who ended it.** A `received <signal>` with no matching System event is as far as
+these instruments go, because `Microsoft-Windows-TaskScheduler/Operational` ships disabled on this
+machine — `Get-WinEvent -ListLog` reads `IsEnabled=False`, and a disabled log has no history to
+search after the fact. Turning it on is an owner act, once, from an elevated shell
+(`wevtutil sl Microsoft-Windows-TaskScheduler/Operational /e:true`); from then on that log names
+what started and stopped the task, and this step can answer instead of noting the gap.
+
+**A worked example.** `.conductor/evidence/PK6/pk6.1.md` is this procedure run end to end over a
+24-hour window (2026-09-17 11:37:30Z → 2026-09-18 11:40:33Z): two deaths by the same exit path, one
+requested end, three keep-alive recoveries, and the System log read to rule out sleep.
 
 ### What the owner said — reading the inbox
 
