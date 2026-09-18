@@ -110,7 +110,15 @@ public sealed partial class CourierDaemon
                     _log("courier getUpdates conflict: " + ex.Message + " Backing off "
                        + wait.TotalSeconds.ToString(CultureInfo.InvariantCulture) + "s.");
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            // Bug #100, measured at PK6.1 and not before: an OperationCanceledException that reaches
+            // HERE is never ours. The clause above takes ours — it is the only token this loop
+            // cancels, and it is checked. What is left is HttpClient's own 65-second timeout, which
+            // throws TaskCanceledException (an OperationCanceledException) with `ct` untouched. The
+            // old filter excluded it by TYPE, so it fell between the two clauses, unwound RunAsync
+            // and terminated the process: 2026-09-17 12:23:18Z and 2026-09-18 10:42:33Z, both on
+            // getUpdates, twenty-two hours apart. A poll that timed out is a poll that failed — say
+            // so and come round again. Cancellation still ends the loop, at the Delay below.
+            catch (Exception ex)
             {
                 _log("courier poll error: " + ex.Message);
             }

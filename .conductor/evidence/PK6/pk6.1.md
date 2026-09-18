@@ -165,3 +165,39 @@ following it, and are now written back into it:
 | Scheduler's own history | `Microsoft-Windows-TaskScheduler/Operational` — **disabled** (`IsEnabled=False`) |
 | Machine | `Get-WinEvent` System, ids 42, 107, 1, 109, 12, 13, from 2026-09-17T11:30:00Z |
 | Source | `CourierDaemon.cs:93-116`, `CourierProgram.cs:176-185`, `CourierExitJournal.cs:33,53-57,72-74` |
+
+## Appendix — the fix for bug #100 and its negative control
+
+`CourierDaemon.cs:121` widened from `catch (Exception ex) when (ex is not
+OperationCanceledException)` to `catch (Exception ex)`. Nothing else changed: our own
+cancellation is still taken by `:102` (checked against `ct`) and by the `Delay`'s own
+`catch … { break; }`, which is why the loop still stops when asked.
+
+`tests/Conductor.Tests/PK6_1CourierPollSurvivalTests.cs` pins it as a **property over the
+eight things a poll can throw**, not an example — the poll's failure vocabulary grows every
+time the source learns a call, and the rule is the same for all of them.
+
+**With the fix** — the whole courier battery:
+
+```
+dotnet test Conductor.slnx --filter "FullyQualifiedName~Courier"
+Passed!  - Failed: 0, Passed: 165, Skipped: 0, Total: 165, Duration: 16 s
+```
+
+**Without it** — the old filter restored, the new class alone:
+
+```
+Failed … NothingAPollThrowsEndsTheProcess(what: "HttpClient's own timeout (bug #100, the measured death)")
+Failed … NothingAPollThrowsEndsTheProcess(what: "a bare TaskCanceledException")
+Failed … NothingAPollThrowsEndsTheProcess(what: "a bare OperationCanceledException on a token nobody holds")
+Failed … NothingAPollThrowsEndsTheProcess(what: "a foreign token's cancellation")
+```
+
+Exactly the four `OperationCanceledException`-family cases fail and the other four pass —
+which is the shape of the hole the read-out found, reproduced in a test: the old filter
+caught transport errors correctly and let precisely this family through. The daemon file
+was restored from a copy immediately after; `docs/operating.md` battery re-run separately,
+`SF7_1Docs` 56/56.
+
+**The real courier still runs the old binary** (pid 20860, started 2026-09-18 10:45:02Z).
+This fix reaches it at the owner's reinstall between plans, not from any session.
